@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Edit, Trash2, Settings, ChevronUp, ChevronDown, Calendar } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar } from "lucide-react";
 import ClientForm from "@/components/forms/client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +45,6 @@ const AVAILABLE_COLUMNS: Column[] = [
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
@@ -52,6 +52,7 @@ export default function Clients() {
   );
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
@@ -176,7 +177,14 @@ export default function Clients() {
   const renderCellContent = (client: Client, columnKey: string) => {
     switch (columnKey) {
       case 'name':
-        return client.name;
+        return (
+          <button
+            onClick={() => setLocation(`/clients/${client.id}`)}
+            className="text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
+          >
+            {client.name}
+          </button>
+        );
       case 'company':
         return client.company || '-';
       case 'phone':
@@ -328,85 +336,54 @@ export default function Clients() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
-                    if (column.sortable) {
-                      return (
-                        <SortableHeader key={column.key} column={column.key as SortField}>
-                          {column.label}
-                        </SortableHeader>
-                      );
-                    } else {
-                      return (
-                        <TableHead key={column.key}>
-                          {column.label}
-                        </TableHead>
-                      );
-                    }
-                  })}
-                  <TableHead className="w-20">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedClients.length === 0 ? (
+          <div className="w-full">
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={visibleColumns.size + 1} className="text-center py-8 text-slate-500">
-                      {searchTerm ? "No clients found matching your search." : "No clients yet. Add your first client to get started."}
-                    </TableCell>
+                    {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
+                      if (column.sortable) {
+                        return (
+                          <SortableHeader key={column.key} column={column.key as SortField}>
+                            <div className="whitespace-nowrap">{column.label}</div>
+                          </SortableHeader>
+                        );
+                      } else {
+                        return (
+                          <TableHead key={column.key}>
+                            <div className="whitespace-nowrap">{column.label}</div>
+                          </TableHead>
+                        );
+                      }
+                    })}
                   </TableRow>
-                ) : (
-                  filteredAndSortedClients.map((client) => (
-                    <TableRow key={client.id} className="hover:bg-slate-50">
-                      {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
-                        <TableCell key={column.key} className="py-3">
-                          {renderCellContent(client, column.key)}
-                        </TableCell>
-                      ))}
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingClient(client)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClient(client.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedClients.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={visibleColumns.size} className="text-center py-8 text-slate-500">
+                        {searchTerm ? "No clients found matching your search." : "No clients yet. Add your first client to get started."}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredAndSortedClients.map((client) => (
+                      <TableRow key={client.id} className="hover:bg-slate-50">
+                        {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                          <TableCell key={column.key} className="py-3">
+                            {renderCellContent(client, column.key)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Edit Client Dialog */}
-      <Dialog open={!!editingClient} onOpenChange={() => setEditingClient(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
-          </DialogHeader>
-          {editingClient && (
-            <ClientForm
-              client={editingClient}
-              onSuccess={() => setEditingClient(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
