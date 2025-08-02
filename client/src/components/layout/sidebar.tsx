@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home,
   Users,
@@ -11,12 +12,16 @@ import {
   FileText,
   BarChart3,
   TrendingUp,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const navigation = [
@@ -30,48 +35,88 @@ const navigation = [
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
   const [location] = useLocation();
   const isMobile = useIsMobile();
 
+  const NavItem = ({ item, showTooltip = false }: { item: typeof navigation[0], showTooltip?: boolean }) => {
+    const Icon = item.icon;
+    const isActive = location === item.href;
+    
+    const linkContent = (
+      <Link href={item.href}>
+        <a className={cn(
+          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+          isActive
+            ? "text-white bg-primary"
+            : "text-slate-700 hover:bg-slate-100",
+          isCollapsed && !isMobile && "justify-center"
+        )}>
+          <Icon className="h-4 w-4" />
+          {(!isCollapsed || isMobile) && item.name}
+        </a>
+      </Link>
+    );
+
+    if (showTooltip && isCollapsed && !isMobile) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {linkContent}
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>{item.name}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return linkContent;
+  };
+
   return (
-    <>
+    <TooltipProvider>
       {/* Desktop sidebar */}
       <aside className={cn(
-        "w-64 bg-white shadow-sm border-r border-slate-200 transition-transform duration-300",
-        isMobile ? "hidden" : "block"
+        "bg-white shadow-sm border-r border-slate-200 transition-all duration-300 relative",
+        isMobile ? "hidden" : "block",
+        isCollapsed ? "w-16" : "w-64"
       )}>
-        <div className="p-6">
-          <div className="flex items-center gap-3">
+        <div className={cn("p-6", isCollapsed && "p-3")}>
+          <div className={cn(
+            "flex items-center gap-3",
+            isCollapsed && "justify-center"
+          )}>
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <TrendingUp className="h-4 w-4 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-slate-900">AgencyFlow</h1>
+            {!isCollapsed && <h1 className="text-xl font-bold text-slate-900">AgencyFlow</h1>}
           </div>
         </div>
         
-        <nav className="px-4 pb-4">
+        {/* Toggle button */}
+        <button
+          onClick={onToggleCollapse}
+          className={cn(
+            "absolute top-6 -right-3 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors z-10",
+            "shadow-sm"
+          )}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-3 w-3 text-slate-600" />
+          ) : (
+            <ChevronLeft className="h-3 w-3 text-slate-600" />
+          )}
+        </button>
+        
+        <nav className={cn("px-4 pb-4", isCollapsed && "px-2")}>
           <ul className="space-y-2">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location === item.href;
-              
-              return (
-                <li key={item.name}>
-                  <Link href={item.href}>
-                    <a className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                      isActive
-                        ? "text-white bg-primary"
-                        : "text-slate-700 hover:bg-slate-100"
-                    )}>
-                      <Icon className="h-4 w-4" />
-                      {item.name}
-                    </a>
-                  </Link>
-                </li>
-              );
-            })}
+            {navigation.map((item) => (
+              <li key={item.name}>
+                <NavItem item={item} showTooltip={isCollapsed} />
+              </li>
+            ))}
           </ul>
         </nav>
       </aside>
@@ -128,6 +173,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
         </aside>
       )}
-    </>
+    </TooltipProvider>
   );
 }
