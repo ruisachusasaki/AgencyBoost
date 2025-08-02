@@ -13,7 +13,7 @@ import {
   ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, 
   Tag, ChevronDown, ChevronRight, GripVertical, Filter, MessageSquare, 
   FileText, CalendarDays, Upload, CreditCard, ExternalLink, PhoneCall,
-  MessageCircle, Plus, Search, X
+  MessageCircle, Plus, Search, X, CheckCircle
 } from "lucide-react";
 import { formatPhoneNumber } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -496,24 +496,24 @@ export default function EnhancedClientDetail() {
                   <p className="text-sm font-medium text-slate-900 mb-2">DND Settings</p>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="dnd-all" checked={client.dndAll} />
+                      <Checkbox id="dnd-all" checked={client.dndAll || false} />
                       <label htmlFor="dnd-all" className="text-sm text-slate-600">DND ALL channels</label>
                     </div>
                     <div className="text-xs text-slate-500 text-center py-1">OR</div>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <Mail className="h-4 w-4 text-slate-400" />
-                        <Checkbox id="dnd-email" checked={client.dndEmail} />
+                        <Checkbox id="dnd-email" checked={client.dndEmail || false} />
                         <label htmlFor="dnd-email" className="text-sm text-slate-600">Emails</label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <MessageCircle className="h-4 w-4 text-slate-400" />
-                        <Checkbox id="dnd-sms" checked={client.dndSms} />
+                        <Checkbox id="dnd-sms" checked={client.dndSms || false} />
                         <label htmlFor="dnd-sms" className="text-sm text-slate-600">Text Messages</label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <PhoneCall className="h-4 w-4 text-slate-400" />
-                        <Checkbox id="dnd-calls" checked={client.dndCalls} />
+                        <Checkbox id="dnd-calls" checked={client.dndCalls || false} />
                         <label htmlFor="dnd-calls" className="text-sm text-slate-600">Calls & Voicemails</label>
                       </div>
                     </div>
@@ -602,16 +602,28 @@ export default function EnhancedClientDetail() {
             </Card>
 
             {/* Communication Tools */}
-            <div className="grid grid-cols-2 gap-4">
-              <Button onClick={sendSMS} className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Send SMS
-              </Button>
-              <Button onClick={sendEmail} variant="outline" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Send Email
-              </Button>
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-medium text-slate-900 mb-3">Communications</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <MessageCircle className="h-4 w-4 text-blue-600" />
+                    <div className="flex-1">
+                      <Input placeholder="Type SMS message..." className="text-sm" />
+                    </div>
+                    <Button size="sm">Send</Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <Mail className="h-4 w-4 text-green-600" />
+                    <div className="flex-1">
+                      <Input placeholder="Type email message..." className="text-sm" />
+                    </div>
+                    <Button size="sm">Send</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Column 3: Notes, Tasks, Appointments, Documents, Payments */}
@@ -620,7 +632,7 @@ export default function EnhancedClientDetail() {
             <div className="flex justify-center gap-2 p-2 bg-white rounded-lg border">
               {[
                 { id: 'notes', icon: FileText, tooltip: 'Notes' },
-                { id: 'tasks', icon: CalendarDays, tooltip: 'Tasks' },
+                { id: 'tasks', icon: CheckCircle, tooltip: 'Tasks' },
                 { id: 'appointments', icon: Calendar, tooltip: 'Appointments' },
                 { id: 'documents', icon: Upload, tooltip: 'Documents' },
                 { id: 'payments', icon: CreditCard, tooltip: 'Payments' },
@@ -756,18 +768,24 @@ export default function EnhancedClientDetail() {
                 {activeRightColumn === 'payments' && (
                   <div className="space-y-4">
                     <h3 className="font-medium">Payments</h3>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="p-2 border rounded">
-                        <p className="text-xs text-slate-500">Transactions</p>
-                        <p className="text-sm font-medium">0</p>
+                    <div className="space-y-3">
+                      <div className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-slate-600">Transactions</p>
+                          <p className="text-lg font-semibold">$0</p>
+                        </div>
                       </div>
-                      <div className="p-2 border rounded">
-                        <p className="text-xs text-slate-500">Subscriptions</p>
-                        <p className="text-sm font-medium">0</p>
+                      <div className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-slate-600">Subscriptions</p>
+                          <p className="text-lg font-semibold">$0</p>
+                        </div>
                       </div>
-                      <div className="p-2 border rounded">
-                        <p className="text-xs text-slate-500">Invoices</p>
-                        <p className="text-sm font-medium">{invoices.length}</p>
+                      <div className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-slate-600">Invoices</p>
+                          <p className="text-lg font-semibold">{invoices.length}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
