@@ -12,8 +12,14 @@ export const clients = pgTable("clients", {
   industry: text("industry"),
   status: text("status").notNull().default("active"), // active, inactive, pending
   address: text("address"),
+  city: text("city"),
+  state: text("state"),
   website: text("website"),
   notes: text("notes"),
+  tags: text("tags").array(), // Array of tags
+  clientVertical: text("client_vertical"), // Live Events, Financial Lead Gen
+  contactOwner: text("contact_owner"),
+  lastActivity: timestamp("last_activity"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

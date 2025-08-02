@@ -72,10 +72,25 @@ export class MemStorage implements IStorage {
 
   async createClient(insertClient: InsertClient): Promise<Client> {
     const id = randomUUID();
+    const now = new Date();
     const client: Client = { 
-      ...insertClient, 
-      id, 
-      createdAt: new Date() 
+      id,
+      name: insertClient.name,
+      email: insertClient.email,
+      phone: insertClient.phone || null,
+      company: insertClient.company || null,
+      industry: insertClient.industry || null,
+      status: insertClient.status || "active",
+      address: insertClient.address || null,
+      city: insertClient.city || null,
+      state: insertClient.state || null,
+      website: insertClient.website || null,
+      notes: insertClient.notes || null,
+      tags: insertClient.tags || null,
+      clientVertical: insertClient.clientVertical || null,
+      contactOwner: insertClient.contactOwner || null,
+      lastActivity: insertClient.lastActivity || null,
+      createdAt: now
     };
     this.clients.set(id, client);
     return client;
@@ -109,10 +124,19 @@ export class MemStorage implements IStorage {
 
   async createProject(insertProject: InsertProject): Promise<Project> {
     const id = randomUUID();
+    const now = new Date();
     const project: Project = { 
-      ...insertProject, 
-      id, 
-      createdAt: new Date() 
+      id,
+      name: insertProject.name,
+      description: insertProject.description || null,
+      clientId: insertProject.clientId,
+      status: insertProject.status || "planning",
+      priority: insertProject.priority || "medium",
+      budget: insertProject.budget || null,
+      startDate: insertProject.startDate || null,
+      endDate: insertProject.endDate || null,
+      progress: insertProject.progress || null,
+      createdAt: now
     };
     this.projects.set(id, project);
     return project;
@@ -150,10 +174,23 @@ export class MemStorage implements IStorage {
 
   async createCampaign(insertCampaign: InsertCampaign): Promise<Campaign> {
     const id = randomUUID();
+    const now = new Date();
     const campaign: Campaign = { 
-      ...insertCampaign, 
-      id, 
-      createdAt: new Date() 
+      id,
+      name: insertCampaign.name,
+      description: insertCampaign.description || null,
+      clientId: insertCampaign.clientId,
+      projectId: insertCampaign.projectId || null,
+      status: insertCampaign.status || "draft",
+      type: insertCampaign.type,
+      budget: insertCampaign.budget || null,
+      spent: insertCampaign.spent || null,
+      impressions: insertCampaign.impressions || null,
+      clicks: insertCampaign.clicks || null,
+      conversions: insertCampaign.conversions || null,
+      startDate: insertCampaign.startDate || null,
+      endDate: insertCampaign.endDate || null,
+      createdAt: now
     };
     this.campaigns.set(id, campaign);
     return campaign;
@@ -183,10 +220,21 @@ export class MemStorage implements IStorage {
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
     const id = randomUUID();
+    const now = new Date();
     const lead: Lead = { 
-      ...insertLead, 
-      id, 
-      createdAt: new Date() 
+      id,
+      name: insertLead.name,
+      email: insertLead.email,
+      phone: insertLead.phone || null,
+      company: insertLead.company || null,
+      source: insertLead.source || null,
+      status: insertLead.status || "new",
+      value: insertLead.value || null,
+      probability: insertLead.probability || null,
+      notes: insertLead.notes || null,
+      assignedTo: insertLead.assignedTo || null,
+      lastContactDate: insertLead.lastContactDate || null,
+      createdAt: now
     };
     this.leads.set(id, lead);
     return lead;
@@ -224,10 +272,20 @@ export class MemStorage implements IStorage {
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = randomUUID();
+    const now = new Date();
     const task: Task = { 
-      ...insertTask, 
-      id, 
-      createdAt: new Date() 
+      id,
+      title: insertTask.title,
+      description: insertTask.description || null,
+      status: insertTask.status || "pending",
+      priority: insertTask.priority || "medium",
+      assignedTo: insertTask.assignedTo || null,
+      clientId: insertTask.clientId || null,
+      projectId: insertTask.projectId || null,
+      campaignId: insertTask.campaignId || null,
+      dueDate: insertTask.dueDate || null,
+      completedAt: null,
+      createdAt: now
     };
     this.tasks.set(id, task);
     return task;
@@ -265,10 +323,21 @@ export class MemStorage implements IStorage {
 
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = randomUUID();
+    const now = new Date();
     const invoice: Invoice = { 
-      ...insertInvoice, 
-      id, 
-      createdAt: new Date() 
+      id,
+      clientId: insertInvoice.clientId,
+      projectId: insertInvoice.projectId || null,
+      invoiceNumber: insertInvoice.invoiceNumber,
+      amount: insertInvoice.amount,
+      tax: insertInvoice.tax || null,
+      total: insertInvoice.total,
+      status: insertInvoice.status || "draft",
+      notes: insertInvoice.notes || null,
+      issueDate: insertInvoice.issueDate || null,
+      dueDate: insertInvoice.dueDate || null,
+      paidDate: insertInvoice.paidDate || null,
+      createdAt: now
     };
     this.invoices.set(id, invoice);
     return invoice;
