@@ -1,4 +1,21 @@
-import { type Client, type InsertClient, type Project, type InsertProject, type Campaign, type InsertCampaign, type Lead, type InsertLead, type Task, type InsertTask, type Invoice, type InsertInvoice } from "@shared/schema";
+import { 
+  type Client, type InsertClient,
+  type Project, type InsertProject,
+  type Campaign, type InsertCampaign,
+  type Lead, type InsertLead,
+  type Task, type InsertTask,
+  type Invoice, type InsertInvoice,
+  type User, type InsertUser,
+  type CustomField, type InsertCustomField,
+  type CustomFieldFolder, type InsertCustomFieldFolder,
+  type ClientGroup, type InsertClientGroup,
+  type Product, type InsertProduct,
+  type ClientProduct, type InsertClientProduct,
+  type Note, type InsertNote,
+  type Appointment, type InsertAppointment,
+  type Document, type InsertDocument,
+  type Activity, type InsertActivity
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -59,7 +76,106 @@ export class MemStorage implements IStorage {
   private tasks: Map<string, Task> = new Map();
   private invoices: Map<string, Invoice> = new Map();
 
-  constructor() {}
+  constructor() {
+    // Add sample data for testing
+    this.addSampleData();
+  }
+
+  private addSampleData() {
+    // Sample client data
+    const sampleClient1: Client = {
+      id: "client-1",
+      name: "Sarah Johnson",
+      email: "sarah@techstartup.com",
+      phone: "14354569857",
+      company: "TechStartup Inc",
+      position: "CEO",
+      status: "active",
+      contactType: "client",
+      contactSource: "referral",
+      address: "123 Main Street",
+      address2: "Suite 100",
+      city: "Austin",
+      state: "Texas",
+      zipCode: "78701",
+      website: "https://techstartup.com",
+      notes: "Very interested in our digital marketing services. Follow up weekly.",
+      tags: ["high-priority", "tech"],
+      clientVertical: "Technology",
+      contactOwner: "user-1",
+      profileImage: null,
+      mrr: "5000.00",
+      invoicingContact: "Sarah Johnson",
+      invoicingEmail: "billing@techstartup.com",
+      paymentTerms: "net_30",
+      upsideBonus: "10.00",
+      clientBrief: "https://drive.google.com/client-brief-1",
+      growthOsDashboard: "https://dashboard.growthos.com/client1",
+      storyBrand: null,
+      styleGuide: "https://brand.techstartup.com/style-guide",
+      googleDriveFolder: "https://drive.google.com/folders/client1",
+      testingLog: null,
+      cornerstoneBlueprint: null,
+      customGpt: null,
+      dndAll: false,
+      dndEmail: false,
+      dndSms: false,
+      dndCalls: false,
+      groupId: null,
+      customFieldValues: null,
+      followers: null,
+      lastActivity: new Date("2024-01-15T10:30:00Z"),
+      createdAt: new Date("2024-01-01T09:00:00Z"),
+    };
+
+    const sampleClient2: Client = {
+      id: "client-2",
+      name: "Michael Brown",
+      email: "michael@healthcorp.com",
+      phone: "12125551234",
+      company: "HealthCorp Solutions",
+      position: "Marketing Director",
+      status: "active",
+      contactType: "client",
+      contactSource: "website",
+      address: "456 Business Ave",
+      address2: null,
+      city: "New York",
+      state: "NY",
+      zipCode: "10001",
+      website: "https://healthcorp.com",
+      notes: "Large healthcare client, needs compliance-focused campaigns.",
+      tags: ["healthcare", "enterprise"],
+      clientVertical: "Healthcare",
+      contactOwner: "user-2",
+      profileImage: null,
+      mrr: "12000.00",
+      invoicingContact: "Finance Department",
+      invoicingEmail: "finance@healthcorp.com",
+      paymentTerms: "net_15",
+      upsideBonus: "15.00",
+      clientBrief: "https://drive.google.com/client-brief-2",
+      growthOsDashboard: null,
+      storyBrand: "https://storybrand.com/healthcorp",
+      styleGuide: null,
+      googleDriveFolder: "https://drive.google.com/folders/client2",
+      testingLog: "https://testing.healthcorp.com/log",
+      cornerstoneBlueprint: null,
+      customGpt: "https://chat.openai.com/g/healthcorp-assistant",
+      dndAll: false,
+      dndEmail: true,
+      dndSms: false,
+      dndCalls: false,
+      groupId: null,
+      customFieldValues: null,
+      followers: null,
+      lastActivity: new Date("2024-01-14T15:45:00Z"),
+      createdAt: new Date("2023-12-15T14:20:00Z"),
+    };
+
+    this.clients.set(sampleClient1.id, sampleClient1);
+    this.clients.set(sampleClient2.id, sampleClient2);
+  }
 
   // Clients
   async getClients(): Promise<Client[]> {
@@ -79,16 +195,52 @@ export class MemStorage implements IStorage {
       email: insertClient.email,
       phone: insertClient.phone || null,
       company: insertClient.company || null,
-      industry: insertClient.industry || null,
+      position: insertClient.position || null,
       status: insertClient.status || "active",
+      contactType: insertClient.contactType || "client",
+      contactSource: insertClient.contactSource || null,
+      
+      // Address fields
       address: insertClient.address || null,
+      address2: insertClient.address2 || null,
       city: insertClient.city || null,
       state: insertClient.state || null,
+      zipCode: insertClient.zipCode || null,
+      
       website: insertClient.website || null,
       notes: insertClient.notes || null,
       tags: insertClient.tags || null,
       clientVertical: insertClient.clientVertical || null,
       contactOwner: insertClient.contactOwner || null,
+      profileImage: insertClient.profileImage || null,
+      
+      // Billing information
+      mrr: insertClient.mrr || null,
+      invoicingContact: insertClient.invoicingContact || null,
+      invoicingEmail: insertClient.invoicingEmail || null,
+      paymentTerms: insertClient.paymentTerms || null,
+      upsideBonus: insertClient.upsideBonus || null,
+      
+      // Important Resources URLs
+      clientBrief: insertClient.clientBrief || null,
+      growthOsDashboard: insertClient.growthOsDashboard || null,
+      storyBrand: insertClient.storyBrand || null,
+      styleGuide: insertClient.styleGuide || null,
+      googleDriveFolder: insertClient.googleDriveFolder || null,
+      testingLog: insertClient.testingLog || null,
+      cornerstoneBlueprint: insertClient.cornerstoneBlueprint || null,
+      customGpt: insertClient.customGpt || null,
+      
+      // DND settings
+      dndAll: insertClient.dndAll || false,
+      dndEmail: insertClient.dndEmail || false,
+      dndSms: insertClient.dndSms || false,
+      dndCalls: insertClient.dndCalls || false,
+      
+      groupId: insertClient.groupId || null,
+      customFieldValues: insertClient.customFieldValues || null,
+      followers: insertClient.followers || null,
+      
       lastActivity: insertClient.lastActivity || null,
       createdAt: now
     };
@@ -284,6 +436,17 @@ export class MemStorage implements IStorage {
       projectId: insertTask.projectId || null,
       campaignId: insertTask.campaignId || null,
       dueDate: insertTask.dueDate || null,
+      dueTime: insertTask.dueTime || null,
+      
+      // Recurring task settings
+      isRecurring: insertTask.isRecurring || false,
+      recurringInterval: insertTask.recurringInterval || null,
+      recurringUnit: insertTask.recurringUnit || null,
+      recurringEndType: insertTask.recurringEndType || null,
+      recurringEndDate: insertTask.recurringEndDate || null,
+      recurringEndOccurrences: insertTask.recurringEndOccurrences || null,
+      createIfOverdue: insertTask.createIfOverdue || false,
+      
       completedAt: null,
       createdAt: now
     };

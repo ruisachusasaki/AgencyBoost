@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,7 +30,7 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
       email: client?.email || "",
       phone: client?.phone || "",
       company: client?.company || "",
-      industry: client?.industry || "",
+      position: client?.position || "",
       status: client?.status || "active",
       address: client?.address || "",
       city: client?.city || "",
@@ -134,7 +135,7 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
               <FormItem>
                 <FormLabel>Phone</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="+1 (555) 123-4567" />
+                  <PhoneInput {...field} placeholder="+1 (555) 123-4567" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -157,12 +158,12 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
 
           <FormField
             control={form.control}
-            name="industry"
+            name="position"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Industry</FormLabel>
+                <FormLabel>Position</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="e.g., Technology, Healthcare" />
+                  <Input {...field} placeholder="e.g., CEO, Marketing Director" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

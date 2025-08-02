@@ -14,6 +14,7 @@ import ClientForm from "@/components/forms/client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { formatPhoneNumber } from "@/lib/utils";
 import type { Client } from "@shared/schema";
 
 type SortField = 'name' | 'company' | 'phone' | 'email' | 'contactOwner' | 'createdAt' | 'lastActivity';
@@ -188,7 +189,7 @@ export default function Clients() {
       case 'company':
         return client.company || '-';
       case 'phone':
-        return client.phone || '-';
+        return client.phone ? formatPhoneNumber(client.phone) : '-';
       case 'email':
         return client.email;
       case 'contactOwner':

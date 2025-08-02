@@ -1,0 +1,129 @@
+1. Phone on the contact record should “format” the phone like this +1 (435) 456-9857
+2. Get rid of the “industry” Field
+3. Allow CRM Admins to create Custom Fields
+4. Allow CRM admins to create contact record GROUPS or Folders
+5. Change the Address form from a BIG FIELD to this:
+    1. One Field for Address
+    2. One Field for Address 2 or Apt/Suite
+    3. One Field for City
+    4. One Field for State (could be drop down)
+    5. One Field for Zip Code
+6. Contact Owner should be a Drop Down of all users (allow me to type their name and pick from the list)
+7. On the Contact SPECIFIC page here’s how I would like the layout:
+    1. 3 Columns
+        1. Column 1: This is where the Client’s Fields would live. I want this to be customizable (from the ADMIN area, not THIS screen). Each Section here should be controlled by the admin area with a section called “Custom Fields”. In the custom fields admin area they can create FOLDERS which display as the SECTIONS in this column of Client Fields.
+            1. Include a breadcrumb with a left arrow that says “Clients” that leads back to the CLIENTS page (font-size should be 12px or 14px)
+            2. Below that:
+            3. Contact’s Name
+            4. Business Name under that
+            5. Profile Image to the left of Name and Business Name
+                1. Ability to add or edit the profile image by clicking on the image
+            6. Under this section create a small line separating the next section
+            7. This is where you would start with the client’s CUSTOM FIELDS as defined in the admin area under custom fields/folders.
+                1. NOTE: We would have 3 sections/folders that would be the defaults for EVERY CLIENT
+                2. When You hover over a SECTION I want to the left of the toggle area I want it to show that you can drag the section/folder so it has the sections/folder in the order that you want. The ONLY section I don’t want you to be able to re-order is this FIRST section as it should ALWAYS be at the top.
+                3. EACH Section/Folder should be able to be “toggled” open and shut so to the left of the name of the section/folder there should be an arrow pointing right when closed and down when open
+            8. FIRST SECTION/FOLDER: Contact Details (default for EVERY CLIENT)
+                1. Include THESE Fields
+                    1. Position
+                    2. Email (I like how you have it displayed with the icon)
+                    3. Phone Number (remember above about formatting the phone number. I like how you have it currently displayed with the icon. We will want this to be CLICKABLE b/c I want to add a VOIP functionality that integrates using TWILIO that allows us to CALL the client THROUGH the CRM)
+                    4. Address (I like how you currently have it displayed with the icon)
+                    5. Website (I like the icon and I want it to be clickable that takes you to their website and opens in a new window)
+                    6. Client Vertical (same field using the drop down that’s already been created)
+                    7. Contact Status (I like how you have it now where it is GREEN if it’s Active but I do want it editable from this screen)
+                    8. Contact Source
+                    9. Contact Type (make this a drop down that has Lead or Client)
+            9. SECOND SECTION/FOLDER: Services (default for EVERY CLIENT)
+                1. This would list out ALL the services they have ACCESS to
+                    1. This would be created from the ADMIN area which would have a section called “Products/Services”
+                        1. In the Products/Service section you would be able to add ALL the products or services you offer
+                        2. Give them a price
+                        3. Select if it is ONE TIME or RECURRING
+                2. NOTE: this is one of the sections/folders that should be allowed to be reordered
+            10. THIRD SECTION/FOLDER: Billing (default for EVERY CLIENT)
+                1. It would have a field that says MRR which should be a monetary field that shows their Monthly Recurring Revenue
+                2. Invoicing Contact (Name field - full name)
+                3. Invoicing Email (email field)
+                4. Payment Terms (Dropdown with the following: Due Upon Receipt, Net 7 and Net 30
+                5. Upside Bonus %
+                6. NOTE: this is one of the sections/folders that should be allowed to be reordered
+            11. THIRD SECTION/FOLDER: Important Resources (default for EVERY CLIENT)
+                1. Client Brief (URL field with a “open in new tab” functionality)
+                2. Growth OS Dashboard (URL field with a “open in new tab” functionality)
+                3. StoryBrand (URL field with a “open in new tab” functionality)
+                4. Style Guide (URL field with a “open in new tab” functionality)
+                5. Google Drive Folder (URL field with a “open in new tab” functionality)
+                6. Testing Log (URL field with a “open in new tab” functionality)
+                7. Cornerstone Blueprint (URL field with a “open in new tab” functionality)
+                8. CustomGPT (URL field with a “open in new tab” functionality)
+            12. Under the Sections/Folders create a separator and a NEW Section called ACTIONS
+                1. Include:
+                    1. Tags (how you have it now where you can add additional tags)
+                    2. Opportunities (would show their opportunities from the pipelines)
+                    3. Have a DND Section
+                        1. In the DND Section have check boxes that include these items
+                            1. “DND ALL channels” (this would be accompanied by a CRM action that WOULD NOT ALLOW ANYONE to contact this record USING the CRM)
+                            2. Separator that says “OR”
+                            3. Allow them to select SPECIFIC channels to mark as DND
+                            4. Include THESE channels here:
+                                1. Emails (icon to the left) checkbox
+                                2. Text Messages (icon to the left) checkbox
+                                3. Calls & Voicemails (icon to the left) checkbox
+            13. Under the ACTIONS section create a new section called CAMPAIGNS
+                1. Here will you show any active campaigns this Client is in (pulled from the campaigns section of the CRM)
+                2. Allow user to click on the active campaigns and go to the campaigns tab
+        2. 2nd Column
+            1. Top row with separator underneath 
+                1. Client Owner
+                    1. Have an profile image and the name of who the contact owner is
+                    2. It should be a pick list allowing you to assign the contact/client record to ANYONE that is a CRM User
+                2. Followers
+                    1. Allow other CRM users to “follow” what’s going on with this record (they would get notifications, updates, etc.)
+                3. Right of this column header section a FILTER Icon that would filter what is below in the column
+            2. Second Row (separated by thin line)
+                1. History of ALL activity on the account
+                    1. Include:
+                        1. Emails
+                        2. Text Messages
+                        3. Opportunity (pipeline) moves, stage or status changes
+                        4. Tickets (I want to include a ticketing system in this CRM)
+                2. 3rd Row (separated by thin line)
+                    1. Ability to send SMS (integration with Twilio)
+                    2. Ability to send EMAIL (integration with SendGrid or SMTP)
+                    3. Since there’s two things in this last section instead of having them stacked vertically I like how you have them side by side w/ a button that when you click on it, it shows the functionality (similar to how you have Projects, Campaigns, Tasks, etc. now)
+                    4. NOTE: the Email & SMS section should allow you to put MERGE TAGS/FIELDS from ANY field the CRM has.
+            3. 3rd Column
+                1. In this column I want it to have icons at the top that go horizontal and when clicked on SHOW the contents
+                    1. First Icon/Section would be NOTES (use a notes icon or pencil icon and have the icon have a tooltip on hover)
+                        1. Under this section they should be able to add a note
+                            1. The note should be LOCKED AFTER the user creates it and ONLY Admins can edit
+                            2. It should log: Date, Time and WHO put the note
+                            3. There should be a search function at the top of the notes to allow people to search JUST the notes
+                    2. Second Icon/section: Tasks
+                        1. This would pull in ANY tasks for this client
+                        2. They should be able to Add a task
+                        3. Each task should include:
+                            1. Task Title
+                            2. Description
+                            3. Due Date & Time
+                            4. Allow it to be set as a “Recurring Task”
+                                1. Toggle
+                                2. If toggle is set to Recurring do they should be able to select the following:
+                                    1. Repeats every (number input) | Dropdown showing “Hour(s), Day(s), Week(s), Month(s), Year(s)”
+                                    2. Ends On: Options: Never, On (choose specific date), After (choose number of occurrences)
+                                    3. Check box that states THIS and creates the functionality: “Create a new task even if previous tasks is overdue”
+                            5. Assignee (pick list/drop down of CRM users)
+                            6. NOTE: I will want to build a workflows section for this CRM that will allow us to create a workflow that allows us to set rules about tasks and overdue tasks, etc. I will also want this data to be viewable in the REPORTS section
+                    3. Third Icon/section: Appointments
+                        1. I want this section to be a full-fledged calendaring functionality similar to calendly (we will have the guts of this functionality in the admin section, but they should be able to schedule appointments here that syncs with their calendar and sends an invite to the client)
+                        2. There should also be the ability to disposition appointments using a drop down called “status” w/ the following options: Confirmed, Showed, No Show, Cancelled
+                    4. Fourth Icon/section: Documents
+                        1. There should be a search field at the top
+                        2. Allow an “add” and allow them to upload files
+                            1. Restrict uploaded files to pdf, xls, jpg, png, .doc
+                    5. Fifth Icon/section: Payments
+                        1. Have sections that show:
+                            1. Transactions
+                            2. Subscriptions
+                            3. Invoices
