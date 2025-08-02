@@ -54,7 +54,7 @@ export default function Leads() {
       case "new":
         return "bg-yellow-100 text-yellow-800 border-l-yellow-500";
       case "qualified":
-        return "bg-blue-100 text-blue-800 border-l-blue-500";
+        return "bg-teal-100 text-teal-800 border-l-teal-500";
       case "proposal":
         return "bg-purple-100 text-purple-800 border-l-purple-500";
       case "negotiation":
@@ -73,7 +73,7 @@ export default function Leads() {
     
     switch (source) {
       case "website":
-        return "bg-blue-100 text-blue-800";
+        return "bg-teal-100 text-teal-800";
       case "referral":
         return "bg-green-100 text-green-800";
       case "social_media":

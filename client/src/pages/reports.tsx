@@ -57,7 +57,7 @@ export default function Reports() {
   };
 
   // Filter data by date range and client
-  const filterData = <T extends { createdAt?: Date | null; clientId?: string }>(data: T[]) => {
+  const filterData = <T extends { createdAt?: Date | null; clientId?: string | null }>(data: T[]) => {
     const dateFilter = getDateFilter();
     return data.filter(item => {
       const dateMatch = !item.createdAt || new Date(item.createdAt) >= dateFilter;
@@ -70,7 +70,12 @@ export default function Reports() {
   const filteredProjects = filterData(projects);
   const filteredCampaigns = filterData(campaigns);
   const filteredLeads = filterData(leads);
-  const filteredTasks = filterData(tasks);
+  const filteredTasks = tasks.filter(task => {
+    const dateFilter = getDateFilter();
+    const dateMatch = !task.createdAt || new Date(task.createdAt) >= dateFilter;
+    const clientMatch = clientFilter === "all" || task.clientId === clientFilter;
+    return dateMatch && clientMatch;
+  });
   const filteredInvoices = filterData(invoices);
 
   // Calculate metrics
@@ -305,13 +310,13 @@ export default function Reports() {
               <div>
                 <p className="text-sm font-medium text-slate-600">Active Projects</p>
                 <p className="text-3xl font-bold text-slate-900">{metrics.activeProjects}</p>
-                <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
+                <p className="text-sm text-teal-600 mt-1 flex items-center gap-1">
                   <FolderOpen className="h-3 w-3" />
                   In progress
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FolderOpen className="h-6 w-6 text-blue-600" />
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                <FolderOpen className="h-6 w-6 text-teal-600" />
               </div>
             </div>
           </CardContent>
@@ -351,7 +356,7 @@ export default function Reports() {
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
                   <div 
-                    className="bg-blue-600 h-2 rounded-full" 
+                    className="bg-teal-600 h-2 rounded-full" 
                     style={{ width: `${Math.min(parseFloat(conversionRate), 100)}%` }}
                   />
                 </div>

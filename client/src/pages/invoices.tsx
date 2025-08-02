@@ -79,7 +79,7 @@ export default function Invoices() {
       case "paid":
         return "bg-green-100 text-green-800";
       case "sent":
-        return "bg-blue-100 text-blue-800";
+        return "bg-teal-100 text-teal-800";
       case "overdue":
         return "bg-red-100 text-red-800";
       case "cancelled":
@@ -182,7 +182,7 @@ export default function Invoices() {
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{invoiceStats.sent}</p>
+              <p className="text-2xl font-bold text-teal-600">{invoiceStats.sent}</p>
               <p className="text-sm text-slate-600">Sent</p>
             </div>
           </CardContent>

@@ -35,8 +35,8 @@ export default function MetricsCards() {
       change: "+12% from last month",
       changeType: "positive" as const,
       icon: Users,
-      bgColor: "bg-blue-100",
-      iconColor: "text-blue-600"
+      bgColor: "bg-teal-100",
+      iconColor: "text-teal-600"
     },
     {
       title: "Active Projects", 

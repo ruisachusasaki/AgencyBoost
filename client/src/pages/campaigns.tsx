@@ -77,7 +77,7 @@ export default function Campaigns() {
       case "active":
         return "bg-green-100 text-green-800";
       case "completed":
-        return "bg-blue-100 text-blue-800";
+        return "bg-teal-100 text-teal-800";
       case "paused":
         return "bg-yellow-100 text-yellow-800";
       case "cancelled":
@@ -96,7 +96,7 @@ export default function Campaigns() {
       case "ppc":
         return "bg-orange-100 text-orange-800";
       case "seo":
-        return "bg-blue-100 text-blue-800";
+        return "bg-teal-100 text-teal-800";
       case "email":
         return "bg-green-100 text-green-800";
       case "content":
