@@ -18,6 +18,7 @@ export default function Campaigns() {
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | SmsTemplate | null>(null);
+  const [smsContent, setSmsContent] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -161,10 +162,15 @@ export default function Campaigns() {
     const formData = new FormData(e.currentTarget);
     createSmsTemplateMutation.mutate({
       name: formData.get("name") as string,
-      content: formData.get("content") as string,
+      content: smsContent,
       folderId: selectedFolder,
       tags: (formData.get("tags") as string)?.split(",").map(tag => tag.trim()) || [],
     });
+  };
+
+  const handleDialogClose = () => {
+    setIsCreateTemplateDialogOpen(false);
+    setSmsContent(""); // Reset SMS content when dialog closes
   };
 
   const currentFolders = activeTab === "email" ? emailFolders : smsFolders;
@@ -212,7 +218,7 @@ export default function Campaigns() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isCreateTemplateDialogOpen} onOpenChange={setIsCreateTemplateDialogOpen}>
+          <Dialog open={isCreateTemplateDialogOpen} onOpenChange={handleDialogClose}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
@@ -267,19 +273,26 @@ export default function Campaigns() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">SMS Content</label>
-                    <textarea 
-                      name="content" 
-                      className="w-full h-32 p-3 border rounded-md" 
-                      placeholder="Enter SMS content (160 characters recommended)"
-                      required
-                    />
+                    <div className="relative">
+                      <textarea 
+                        name="content" 
+                        value={smsContent}
+                        onChange={(e) => setSmsContent(e.target.value)}
+                        className="w-full h-32 p-3 border rounded-md pr-20" 
+                        placeholder="Enter SMS content (160 characters recommended)"
+                        required
+                      />
+                      <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded border">
+                        {smsContent.length}/160
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Tags</label>
                     <Input name="tags" placeholder="Comma-separated tags" />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCreateTemplateDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={handleDialogClose}>
                       Cancel
                     </Button>
                     <Button type="submit" disabled={createSmsTemplateMutation.isPending}>
