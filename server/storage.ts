@@ -19,6 +19,9 @@ import {
   type SocialMediaPost, type InsertSocialMediaPost,
   type SocialMediaTemplate, type InsertSocialMediaTemplate,
   type SocialMediaAnalytics, type InsertSocialMediaAnalytics,
+  type TemplateFolder, type InsertTemplateFolder,
+  type EmailTemplate, type InsertEmailTemplate,
+  type SmsTemplate, type InsertSmsTemplate,
   type Workflow, type InsertWorkflow,
   type WorkflowExecution, type InsertWorkflowExecution,
   type WorkflowTemplate, type InsertWorkflowTemplate,
@@ -180,6 +183,30 @@ export interface IStorage {
   createAutomationAction(action: InsertAutomationAction): Promise<AutomationAction>;
   updateAutomationAction(id: string, action: Partial<InsertAutomationAction>): Promise<AutomationAction | undefined>;
   
+  // Template Folders
+  getTemplateFolders(): Promise<TemplateFolder[]>;
+  getTemplateFolder(id: string): Promise<TemplateFolder | undefined>;
+  getTemplateFoldersByType(type: string): Promise<TemplateFolder[]>;
+  createTemplateFolder(folder: InsertTemplateFolder): Promise<TemplateFolder>;
+  updateTemplateFolder(id: string, folder: Partial<InsertTemplateFolder>): Promise<TemplateFolder | undefined>;
+  deleteTemplateFolder(id: string): Promise<boolean>;
+
+  // Email Templates
+  getEmailTemplates(): Promise<EmailTemplate[]>;
+  getEmailTemplate(id: string): Promise<EmailTemplate | undefined>;
+  getEmailTemplatesByFolder(folderId: string): Promise<EmailTemplate[]>;
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  updateEmailTemplate(id: string, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined>;
+  deleteEmailTemplate(id: string): Promise<boolean>;
+
+  // SMS Templates
+  getSmsTemplates(): Promise<SmsTemplate[]>;
+  getSmsTemplate(id: string): Promise<SmsTemplate | undefined>;
+  getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]>;
+  createSmsTemplate(template: InsertSmsTemplate): Promise<SmsTemplate>;
+  updateSmsTemplate(id: string, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined>;
+  deleteSmsTemplate(id: string): Promise<boolean>;
+
   // Notifications
   getNotifications(userId: string): Promise<Notification[]>;
   getNotification(id: string): Promise<Notification | undefined>;
@@ -201,6 +228,9 @@ export class MemStorage implements IStorage {
   private socialMediaPosts: Map<string, SocialMediaPost> = new Map();
   private socialMediaTemplates: Map<string, SocialMediaTemplate> = new Map();
   private socialMediaAnalytics: Map<string, SocialMediaAnalytics> = new Map();
+  private templateFolders: Map<string, TemplateFolder> = new Map();
+  private emailTemplates: Map<string, EmailTemplate> = new Map();
+  private smsTemplates: Map<string, SmsTemplate> = new Map();
   private workflows: Map<string, Workflow> = new Map();
   private workflowExecutions: Map<string, WorkflowExecution> = new Map();
   private workflowTemplates: Map<string, WorkflowTemplate> = new Map();
@@ -217,6 +247,7 @@ export class MemStorage implements IStorage {
     this.addSampleData();
     this.initializeWorkflowTemplates();
     this.initializeAutomationElements();
+    this.initializeTemplateFoldersAndTemplates();
   }
 
   private addSampleData() {
@@ -380,7 +411,7 @@ export class MemStorage implements IStorage {
         },
         isPublic: true,
         usageCount: 45,
-        rating: 4.8,
+        rating: "4.8",
         tags: ["email_marketing", "lead_qualification", "sales"],
         createdBy: "system",
         createdAt: new Date("2024-01-01"),
@@ -456,7 +487,7 @@ export class MemStorage implements IStorage {
         },
         isPublic: true,
         usageCount: 32,
-        rating: 4.9,
+        rating: "4.9",
         tags: ["onboarding", "customer_success", "retention"],
         createdBy: "system",
         createdAt: new Date("2024-01-01"),
@@ -530,7 +561,7 @@ export class MemStorage implements IStorage {
         },
         isPublic: true,
         usageCount: 78,
-        rating: 4.7,
+        rating: "4.7",
         tags: ["e-commerce", "cart_recovery", "email_automation"],
         createdBy: "system",
         createdAt: new Date("2024-01-01"),
@@ -650,6 +681,183 @@ export class MemStorage implements IStorage {
 
     actions.forEach(action => {
       this.automationActions.set(action.id, action);
+    });
+  }
+
+  private initializeTemplateFoldersAndTemplates() {
+    // Initialize sample template folders
+    const folders: TemplateFolder[] = [
+      {
+        id: "folder-1",
+        name: "Welcome Sequences",
+        description: "Email templates for welcoming new leads and customers",
+        type: "email",
+        parentId: null,
+        order: 1,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: "folder-2", 
+        name: "Follow-up Emails",
+        description: "Templates for following up with prospects and clients",
+        type: "email",
+        parentId: null,
+        order: 2,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: "folder-3",
+        name: "SMS Campaigns",
+        description: "SMS message templates for quick communication",
+        type: "sms",
+        parentId: null,
+        order: 3,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: "folder-4",
+        name: "Onboarding",
+        description: "Customer onboarding email sequences",
+        type: "email",
+        parentId: null,
+        order: 4,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    folders.forEach(folder => {
+      this.templateFolders.set(folder.id, folder);
+    });
+
+    // Initialize sample email templates
+    const emailTemplates: EmailTemplate[] = [
+      {
+        id: "email-1",
+        name: "Welcome Email - New Lead",
+        subject: "Welcome! Here's what happens next...",
+        content: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #46a1a0;">Welcome to Our Community!</h1>
+            <p>Hi {{first_name}},</p>
+            <p>Thank you for your interest in our services. We're excited to help you achieve your business goals.</p>
+            <p>Here's what you can expect next:</p>
+            <ul>
+              <li>A personalized consultation within 24 hours</li>
+              <li>Custom strategy recommendations</li>
+              <li>Access to our exclusive resources</li>
+            </ul>
+            <p>If you have any questions, don't hesitate to reach out!</p>
+            <p>Best regards,<br>The Marketing Team</p>
+          </div>
+        `,
+        plainTextContent: "Welcome! Thank you for your interest in our services...",
+        previewText: "Welcome to our community - here's what happens next",
+        folderId: "folder-1",
+        tags: ["welcome", "new_lead", "onboarding"],
+        isPublic: false,
+        usageCount: 24,
+        lastUsed: new Date("2024-01-15"),
+        createdBy: "user-1",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-15")
+      },
+      {
+        id: "email-2",
+        name: "Follow-up - Check In",
+        subject: "How are things going, {{first_name}}?",
+        content: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #46a1a0;">Quick Check-in</h2>
+            <p>Hi {{first_name}},</p>
+            <p>I wanted to follow up on our recent conversation about {{topic}}.</p>
+            <p>How are things progressing on your end? Do you have any questions or need additional support?</p>
+            <p>I'm here to help make sure you're getting the most value from our partnership.</p>
+            <p>Feel free to reply to this email or schedule a quick call: {{calendar_link}}</p>
+            <p>Best,<br>{{sender_name}}</p>
+          </div>
+        `,
+        plainTextContent: "Quick follow-up to see how things are going...",
+        previewText: "Checking in to see how we can help",
+        folderId: "folder-2",
+        tags: ["follow_up", "check_in", "customer_success"],
+        isPublic: false,
+        usageCount: 18,
+        lastUsed: new Date("2024-01-12"),
+        createdBy: "user-1",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-12")
+      },
+      {
+        id: "email-3",
+        name: "Onboarding - Step 1",
+        subject: "Let's get you set up! Your first steps",
+        content: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #46a1a0;">Welcome Aboard, {{first_name}}!</h1>
+            <p>We're thrilled to have you as a new customer!</p>
+            <p>To ensure you get the most out of our platform, here are your next steps:</p>
+            <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px;">
+              <h3>Step 1: Complete Your Profile</h3>
+              <p>Add your company information and preferences to personalize your experience.</p>
+              <a href="{{profile_link}}" style="background: #46a1a0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Profile</a>
+            </div>
+            <p>Need help? Our support team is standing by: {{support_email}}</p>
+            <p>Cheers,<br>The Onboarding Team</p>
+          </div>
+        `,
+        plainTextContent: "Welcome aboard! Here are your first steps to get started...",
+        previewText: "Let's get you set up with your first steps",
+        folderId: "folder-4",
+        tags: ["onboarding", "new_customer", "setup"],
+        isPublic: false,
+        usageCount: 31,
+        lastUsed: new Date("2024-01-16"),
+        createdBy: "user-1",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-16")
+      }
+    ];
+
+    emailTemplates.forEach(template => {
+      this.emailTemplates.set(template.id, template);
+    });
+
+    // Initialize sample SMS templates
+    const smsTemplates: SmsTemplate[] = [
+      {
+        id: "sms-1",
+        name: "Welcome SMS",
+        content: "Hi {{first_name}}! Welcome to {{company_name}}. We're excited to work with you. Reply STOP to opt out.",
+        folderId: "folder-3",
+        tags: ["welcome", "new_customer"],
+        isPublic: false,
+        usageCount: 12,
+        lastUsed: new Date("2024-01-14"),
+        createdBy: "user-1",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-14")
+      },
+      {
+        id: "sms-2",
+        name: "Appointment Reminder",
+        content: "Hi {{first_name}}, this is a reminder about your appointment tomorrow at {{time}}. See you then! Reply STOP to opt out.",
+        folderId: "folder-3",
+        tags: ["reminder", "appointment"],
+        isPublic: false,
+        usageCount: 8,
+        lastUsed: new Date("2024-01-13"),
+        createdBy: "user-1",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-13")
+      }
+    ];
+
+    smsTemplates.forEach(template => {
+      this.smsTemplates.set(template.id, template);
     });
   }
 
@@ -1642,6 +1850,150 @@ export class MemStorage implements IStorage {
     };
     this.automationActions.set(id, updated);
     return updated;
+  }
+
+  // Template Folders
+  async getTemplateFolders(): Promise<TemplateFolder[]> {
+    return Array.from(this.templateFolders.values());
+  }
+
+  async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> {
+    return this.templateFolders.get(id);
+  }
+
+  async getTemplateFoldersByType(type: string): Promise<TemplateFolder[]> {
+    return Array.from(this.templateFolders.values()).filter(folder => folder.type === type || folder.type === "both");
+  }
+
+  async createTemplateFolder(folderData: InsertTemplateFolder): Promise<TemplateFolder> {
+    const folder: TemplateFolder = {
+      id: randomUUID(),
+      name: folderData.name,
+      description: folderData.description || null,
+      type: folderData.type,
+      parentId: folderData.parentId || null,
+      order: folderData.order || 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.templateFolders.set(folder.id, folder);
+    return folder;
+  }
+
+  async updateTemplateFolder(id: string, folderData: Partial<InsertTemplateFolder>): Promise<TemplateFolder | undefined> {
+    const existing = this.templateFolders.get(id);
+    if (!existing) return undefined;
+    
+    const updated: TemplateFolder = {
+      ...existing,
+      ...folderData,
+      updatedAt: new Date(),
+    };
+    this.templateFolders.set(id, updated);
+    return updated;
+  }
+
+  async deleteTemplateFolder(id: string): Promise<boolean> {
+    return this.templateFolders.delete(id);
+  }
+
+  // Email Templates
+  async getEmailTemplates(): Promise<EmailTemplate[]> {
+    return Array.from(this.emailTemplates.values());
+  }
+
+  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> {
+    return this.emailTemplates.get(id);
+  }
+
+  async getEmailTemplatesByFolder(folderId: string): Promise<EmailTemplate[]> {
+    return Array.from(this.emailTemplates.values()).filter(template => template.folderId === folderId);
+  }
+
+  async createEmailTemplate(templateData: InsertEmailTemplate): Promise<EmailTemplate> {
+    const template: EmailTemplate = {
+      id: randomUUID(),
+      name: templateData.name,
+      subject: templateData.subject,
+      content: templateData.content,
+      plainTextContent: templateData.plainTextContent || null,
+      previewText: templateData.previewText || null,
+      folderId: templateData.folderId || null,
+      tags: templateData.tags || null,
+      isPublic: templateData.isPublic || false,
+      usageCount: 0,
+      lastUsed: null,
+      createdBy: templateData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.emailTemplates.set(template.id, template);
+    return template;
+  }
+
+  async updateEmailTemplate(id: string, templateData: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined> {
+    const existing = this.emailTemplates.get(id);
+    if (!existing) return undefined;
+    
+    const updated: EmailTemplate = {
+      ...existing,
+      ...templateData,
+      updatedAt: new Date(),
+    };
+    this.emailTemplates.set(id, updated);
+    return updated;
+  }
+
+  async deleteEmailTemplate(id: string): Promise<boolean> {
+    return this.emailTemplates.delete(id);
+  }
+
+  // SMS Templates
+  async getSmsTemplates(): Promise<SmsTemplate[]> {
+    return Array.from(this.smsTemplates.values());
+  }
+
+  async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> {
+    return this.smsTemplates.get(id);
+  }
+
+  async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> {
+    return Array.from(this.smsTemplates.values()).filter(template => template.folderId === folderId);
+  }
+
+  async createSmsTemplate(templateData: InsertSmsTemplate): Promise<SmsTemplate> {
+    const template: SmsTemplate = {
+      id: randomUUID(),
+      name: templateData.name,
+      content: templateData.content,
+      folderId: templateData.folderId || null,
+      tags: templateData.tags || null,
+      isPublic: templateData.isPublic || false,
+      usageCount: 0,
+      lastUsed: null,
+      createdBy: templateData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.smsTemplates.set(template.id, template);
+    return template;
+  }
+
+  async updateSmsTemplate(id: string, templateData: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined> {
+    const existing = this.smsTemplates.get(id);
+    if (!existing) return undefined;
+    
+    const updated: SmsTemplate = {
+      ...existing,
+      ...templateData,
+      updatedAt: new Date(),
+    };
+    this.smsTemplates.set(id, updated);
+    return updated;
+  }
+
+  async deleteSmsTemplate(id: string): Promise<boolean> {
+    return this.smsTemplates.delete(id);
   }
 
   // Notifications

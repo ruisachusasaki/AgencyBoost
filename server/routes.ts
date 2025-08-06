@@ -6,7 +6,8 @@ import {
   insertTaskSchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
-  insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema
+  insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
+  insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -571,6 +572,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create social media template" });
+    }
+  });
+
+  // Template Folder routes
+  app.get("/api/template-folders", async (req, res) => {
+    try {
+      const folders = await storage.getTemplateFolders();
+      res.json(folders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch template folders" });
+    }
+  });
+
+  app.post("/api/template-folders", async (req, res) => {
+    try {
+      const validatedData = insertTemplateFolderSchema.parse(req.body);
+      const folder = await storage.createTemplateFolder(validatedData);
+      res.status(201).json(folder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create template folder" });
+    }
+  });
+
+  // Email Template routes
+  app.get("/api/email-templates", async (req, res) => {
+    try {
+      const templates = await storage.getEmailTemplates();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
+  app.post("/api/email-templates", async (req, res) => {
+    try {
+      const validatedData = insertEmailTemplateSchema.parse(req.body);
+      const template = await storage.createEmailTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create email template" });
+    }
+  });
+
+  app.patch("/api/email-templates/:id", async (req, res) => {
+    try {
+      const validatedData = insertEmailTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateEmailTemplate(req.params.id, validatedData);
+      if (!template) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update email template" });
+    }
+  });
+
+  app.delete("/api/email-templates/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteEmailTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete email template" });
+    }
+  });
+
+  // SMS Template routes  
+  app.get("/api/sms-templates", async (req, res) => {
+    try {
+      const templates = await storage.getSmsTemplates();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch SMS templates" });
+    }
+  });
+
+  app.post("/api/sms-templates", async (req, res) => {
+    try {
+      const validatedData = insertSmsTemplateSchema.parse(req.body);
+      const template = await storage.createSmsTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create SMS template" });
+    }
+  });
+
+  app.patch("/api/sms-templates/:id", async (req, res) => {
+    try {
+      const validatedData = insertSmsTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateSmsTemplate(req.params.id, validatedData);
+      if (!template) {
+        return res.status(404).json({ message: "SMS template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update SMS template" });
+    }
+  });
+
+  app.delete("/api/sms-templates/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteSmsTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "SMS template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete SMS template" });
     }
   });
 
