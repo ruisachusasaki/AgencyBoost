@@ -232,9 +232,15 @@ export default function Campaigns() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isCreateTemplateDialogOpen} onOpenChange={handleDialogClose}>
+          <Dialog open={isCreateTemplateDialogOpen} onOpenChange={(open) => {
+            if (!open) {
+              handleDialogClose();
+            } else {
+              setIsCreateTemplateDialogOpen(true);
+            }
+          }}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setIsCreateTemplateDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Template
               </Button>
@@ -271,7 +277,7 @@ export default function Campaigns() {
                     <Input name="tags" placeholder="Comma-separated tags" />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCreateTemplateDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={handleDialogClose}>
                       Cancel
                     </Button>
                     <Button type="submit" disabled={createEmailTemplateMutation.isPending}>
@@ -401,9 +407,9 @@ export default function Campaigns() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-base line-clamp-1">{template.name}</CardTitle>
-                      {"subject" in template && template.subject && (
+                      {(template as any).subject && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
-                          {template.subject}
+                          {(template as any).subject}
                         </p>
                       )}
                     </div>
