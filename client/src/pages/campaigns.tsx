@@ -293,17 +293,17 @@ export default function Campaigns() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">SMS Content</label>
-                    <div className="relative">
-                      <textarea 
-                        name="content" 
-                        value={smsContent}
-                        onChange={(e) => setSmsContent(e.target.value)}
-                        className="w-full h-32 p-3 border rounded-md pr-20" 
-                        placeholder="Enter SMS content (160 characters recommended)"
-                        required
-                      />
-                      <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded border">
-                        {smsContent.length}/160
+                    <textarea 
+                      name="content" 
+                      value={smsContent}
+                      onChange={(e) => setSmsContent(e.target.value)}
+                      className="w-full h-32 p-3 border rounded-md" 
+                      placeholder="Enter SMS content (160 characters recommended)"
+                      required
+                    />
+                    <div className="flex justify-end mt-1">
+                      <div className="text-xs text-gray-500">
+                        {smsContent.length}/160 characters
                       </div>
                     </div>
                   </div>
