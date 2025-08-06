@@ -1,0 +1,27 @@
+                    2. Second Icon/section: Tasks
+                        1. This would pull in ANY tasks for this client
+                        2. They should be able to Add a task
+                        3. Each task should include:
+                            1. Task Title
+                            2. Description
+                            3. Due Date & Time
+                            4. Allow it to be set as a “Recurring Task”
+                                1. Toggle
+                                2. If toggle is set to Recurring do they should be able to select the following:
+                                    1. Repeats every (number input) | Dropdown showing “Hour(s), Day(s), Week(s), Month(s), Year(s)”
+                                    2. Ends On: Options: Never, On (choose specific date), After (choose number of occurrences)
+                                    3. Check box that states THIS and creates the functionality: “Create a new task even if previous tasks is overdue”
+                            5. Assignee (pick list/drop down of CRM users)
+                            6. NOTE: I will want to build a workflows section for this CRM that will allow us to create a workflow that allows us to set rules about tasks and overdue tasks, etc. I will also want this data to be viewable in the REPORTS section
+                    3. Third Icon/section: Appointments
+                        1. I want this section to be a full-fledged calendaring functionality similar to calendly (we will have the guts of this functionality in the admin section, but they should be able to schedule appointments here that syncs with their calendar and sends an invite to the client)
+                        2. There should also be the ability to disposition appointments using a drop down called “status” w/ the following options: Confirmed, Showed, No Show, Cancelled
+                    4. Fourth Icon/section: Documents
+                        1. There should be a search field at the top
+                        2. Allow an “add” and allow them to upload files
+                            1. Restrict uploaded files to pdf, xls, jpg, png, .doc
+                    5. Fifth Icon/section: Payments
+                        1. Have sections that show:
+                            1. Transactions
+                            2. Subscriptions
+                            3. Invoices

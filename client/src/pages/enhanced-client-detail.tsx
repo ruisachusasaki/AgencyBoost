@@ -71,6 +71,24 @@ export default function EnhancedClientDetail() {
   const [searchNotes, setSearchNotes] = useState("");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
+  const [activeRightSection, setActiveRightSection] = useState("notes");
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    dueTime: "",
+    recurring: false,
+    recurringConfig: {
+      interval: 1,
+      unit: "days",
+      endType: "never",
+      endDate: "",
+      endOccurrences: 1,
+      createIfOverdue: false
+    },
+    assignee: ""
+  });
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -78,24 +96,24 @@ export default function EnhancedClientDetail() {
   const clientId = params?.id;
 
   // Queries
-  const { data: client, isLoading: clientLoading } = useQuery({
+  const { data: client, isLoading: clientLoading } = useQuery<Client>({
     queryKey: ["/api/clients", clientId],
     enabled: !!clientId,
   });
 
-  const { data: projects = [] } = useQuery({
+  const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
 
-  const { data: campaigns = [] } = useQuery({
+  const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
   });
 
-  const { data: tasks = [] } = useQuery({
+  const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
 
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [] } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
   });
 
@@ -103,7 +121,11 @@ export default function EnhancedClientDetail() {
   const mockUsers = [
     { id: "user-1", name: "John Doe" },
     { id: "user-2", name: "Jane Smith" },
+    { id: "user-3", name: "Asher Zavala" },
   ];
+
+  // Filter tasks for this client
+  const clientTasks = tasks.filter((task: Task) => task.clientId === clientId);
 
   const mockActivities = [
     {
@@ -557,48 +579,607 @@ export default function EnhancedClientDetail() {
         </div>
       </div>
 
-      {/* Right Sidebar - Notes */}
+      {/* Right Sidebar - Multiple Sections */}
       <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">Notes</h3>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" className="p-1">
-                <Filter className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="p-1">
-                <Edit className="h-4 w-4" />
+        {/* Section Icons Header */}
+        <div className="flex border-b border-gray-200">
+          <button 
+            onClick={() => setActiveRightSection("notes")}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
+              activeRightSection === "notes" 
+                ? "border-blue-500 text-blue-600 bg-blue-50" 
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            Notes
+          </button>
+          <button 
+            onClick={() => setActiveRightSection("tasks")}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
+              activeRightSection === "tasks" 
+                ? "border-blue-500 text-blue-600 bg-blue-50" 
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <CheckCircle className="h-4 w-4" />
+            Tasks
+          </button>
+          <button 
+            onClick={() => setActiveRightSection("appointments")}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
+              activeRightSection === "appointments" 
+                ? "border-blue-500 text-blue-600 bg-blue-50" 
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <CalendarDays className="h-4 w-4" />
+            Appts
+          </button>
+          <button 
+            onClick={() => setActiveRightSection("documents")}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
+              activeRightSection === "documents" 
+                ? "border-blue-500 text-blue-600 bg-blue-50" 
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Upload className="h-4 w-4" />
+            Docs
+          </button>
+          <button 
+            onClick={() => setActiveRightSection("payments")}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
+              activeRightSection === "payments" 
+                ? "border-blue-500 text-blue-600 bg-blue-50" 
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <CreditCard className="h-4 w-4" />
+            Pay
+          </button>
+        </div>
+
+        {/* Notes Section */}
+        {activeRightSection === "notes" && (
+          <>
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Notes</h3>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" className="p-1">
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="p-1">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <Input 
+                placeholder="Search" 
+                value={searchNotes}
+                onChange={(e) => setSearchNotes(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-3">
+                <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
+                  <p className="text-sm text-gray-700">Testing the Notes Functionality</p>
+                  <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                    <span>4 minutes ago with Michael Brown</span>
+                    <Button variant="ghost" size="sm" className="h-auto p-0 text-blue-600">
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                Add Note
               </Button>
             </div>
-          </div>
-          <Input 
-            placeholder="Search" 
-            value={searchNotes}
-            onChange={(e) => setSearchNotes(e.target.value)}
-            className="text-sm"
-          />
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-3">
-            <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
-              <p className="text-sm text-gray-700">Testing the Notes Functionality</p>
-              <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                <span>4 minutes ago with Michael Brown</span>
-                <Button variant="ghost" size="sm" className="h-auto p-0 text-blue-600">
-                  Edit
+          </>
+        )}
+
+        {/* Tasks Section */}
+        {activeRightSection === "tasks" && (
+          <>
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Tasks</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsTaskDialogOpen(true)}
+                  className="p-1"
+                >
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-        
-        <div className="p-4 border-t border-gray-200">
-          <Button className="w-full bg-teal-600 hover:bg-teal-700">
-            Add Note
-          </Button>
-        </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {clientTasks.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No tasks yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {clientTasks.map((task) => (
+                    <div key={task.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm text-gray-900">{task.title}</h4>
+                          {task.description && (
+                            <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                            {task.dueDate && (
+                              <span>Due: {format(new Date(task.dueDate), "MMM d, yyyy")}</span>
+                            )}
+                            {task.assignee && (
+                              <span>• {mockUsers.find(u => u.id === task.assignee)?.name}</span>
+                            )}
+                            {task.recurring && (
+                              <Badge variant="secondary" className="text-xs">Recurring</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Checkbox 
+                          checked={task.status === "completed"}
+                          onCheckedChange={(checked) => {
+                            // Handle task completion
+                            toast({
+                              title: checked ? "Task completed" : "Task marked incomplete",
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <Button 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                onClick={() => setIsTaskDialogOpen(true)}
+              >
+                Add Task
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Appointments Section */}
+        {activeRightSection === "appointments" && (
+          <>
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Appointments</h3>
+                <Button variant="ghost" size="sm" className="p-1">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="text-center text-gray-500 py-8">
+                <CalendarDays className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No appointments scheduled</p>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <Button className="w-full bg-green-600 hover:bg-green-700">
+                Schedule Appointment
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Documents Section */}
+        {activeRightSection === "documents" && (
+          <>
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Documents</h3>
+                <Button variant="ghost" size="sm" className="p-1">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="text-center text-gray-500 py-8">
+                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No documents uploaded</p>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                Upload Document
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Payments Section */}
+        {activeRightSection === "payments" && (
+          <>
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">Payments</h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Transactions */}
+              <div>
+                <h4 className="font-medium text-sm text-gray-900 mb-2">Transactions</h4>
+                <div className="text-center text-gray-500 py-4">
+                  <p className="text-xs">No transactions</p>
+                </div>
+              </div>
+              
+              {/* Subscriptions */}
+              <div>
+                <h4 className="font-medium text-sm text-gray-900 mb-2">Subscriptions</h4>
+                <div className="text-center text-gray-500 py-4">
+                  <p className="text-xs">No subscriptions</p>
+                </div>
+              </div>
+              
+              {/* Invoices */}
+              <div>
+                <h4 className="font-medium text-sm text-gray-900 mb-2">Invoices</h4>
+                <div className="text-center text-gray-500 py-4">
+                  <p className="text-xs">No invoices</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+                Add Payment
+              </Button>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Task Creation Dialog */}
+      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Task Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Task Title *
+              </label>
+              <Input
+                value={newTask.title}
+                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter task title"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <Textarea
+                value={newTask.description}
+                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter task description"
+                rows={3}
+              />
+            </div>
+
+            {/* Due Date & Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Due Date
+                </label>
+                <Input
+                  type="date"
+                  value={newTask.dueDate}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Due Time
+                </label>
+                <Input
+                  type="time"
+                  value={newTask.dueTime}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Assignee */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Assignee
+              </label>
+              <Select 
+                value={newTask.assignee} 
+                onValueChange={(value) => setNewTask(prev => ({ ...prev, assignee: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Recurring Task Toggle */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="recurring"
+                checked={newTask.recurring}
+                onCheckedChange={(checked) => 
+                  setNewTask(prev => ({ ...prev, recurring: checked as boolean }))
+                }
+              />
+              <label htmlFor="recurring" className="text-sm font-medium text-gray-700">
+                Set as Recurring Task
+              </label>
+            </div>
+
+            {/* Recurring Configuration */}
+            {newTask.recurring && (
+              <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                <h4 className="font-medium text-gray-900">Recurring Settings</h4>
+                
+                {/* Repeat Interval */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Repeats every
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newTask.recurringConfig.interval}
+                      onChange={(e) => setNewTask(prev => ({
+                        ...prev,
+                        recurringConfig: {
+                          ...prev.recurringConfig,
+                          interval: parseInt(e.target.value) || 1
+                        }
+                      }))}
+                      className="w-20"
+                    />
+                    <Select
+                      value={newTask.recurringConfig.unit}
+                      onValueChange={(value) => setNewTask(prev => ({
+                        ...prev,
+                        recurringConfig: { ...prev.recurringConfig, unit: value }
+                      }))}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hours">Hour(s)</SelectItem>
+                        <SelectItem value="days">Day(s)</SelectItem>
+                        <SelectItem value="weeks">Week(s)</SelectItem>
+                        <SelectItem value="months">Month(s)</SelectItem>
+                        <SelectItem value="years">Year(s)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* End Condition */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ends On
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="never"
+                        name="endType"
+                        checked={newTask.recurringConfig.endType === "never"}
+                        onChange={() => setNewTask(prev => ({
+                          ...prev,
+                          recurringConfig: { ...prev.recurringConfig, endType: "never" }
+                        }))}
+                      />
+                      <label htmlFor="never" className="text-sm">Never</label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="onDate"
+                        name="endType"
+                        checked={newTask.recurringConfig.endType === "onDate"}
+                        onChange={() => setNewTask(prev => ({
+                          ...prev,
+                          recurringConfig: { ...prev.recurringConfig, endType: "onDate" }
+                        }))}
+                      />
+                      <label htmlFor="onDate" className="text-sm">On</label>
+                      <Input
+                        type="date"
+                        value={newTask.recurringConfig.endDate}
+                        onChange={(e) => setNewTask(prev => ({
+                          ...prev,
+                          recurringConfig: { ...prev.recurringConfig, endDate: e.target.value }
+                        }))}
+                        disabled={newTask.recurringConfig.endType !== "onDate"}
+                        className="w-40"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="afterOccurrences"
+                        name="endType"
+                        checked={newTask.recurringConfig.endType === "afterOccurrences"}
+                        onChange={() => setNewTask(prev => ({
+                          ...prev,
+                          recurringConfig: { ...prev.recurringConfig, endType: "afterOccurrences" }
+                        }))}
+                      />
+                      <label htmlFor="afterOccurrences" className="text-sm">After</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={newTask.recurringConfig.endOccurrences}
+                        onChange={(e) => setNewTask(prev => ({
+                          ...prev,
+                          recurringConfig: { 
+                            ...prev.recurringConfig, 
+                            endOccurrences: parseInt(e.target.value) || 1 
+                          }
+                        }))}
+                        disabled={newTask.recurringConfig.endType !== "afterOccurrences"}
+                        className="w-20"
+                      />
+                      <span className="text-sm">occurrences</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Create if Overdue */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="createIfOverdue"
+                    checked={newTask.recurringConfig.createIfOverdue}
+                    onCheckedChange={(checked) => setNewTask(prev => ({
+                      ...prev,
+                      recurringConfig: {
+                        ...prev.recurringConfig,
+                        createIfOverdue: checked as boolean
+                      }
+                    }))}
+                  />
+                  <label htmlFor="createIfOverdue" className="text-sm">
+                    Create a new task even if previous task is overdue
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Dialog Actions */}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsTaskDialogOpen(false);
+                  setNewTask({
+                    title: "",
+                    description: "",
+                    dueDate: "",
+                    dueTime: "",
+                    recurring: false,
+                    recurringConfig: {
+                      interval: 1,
+                      unit: "days",
+                      endType: "never",
+                      endDate: "",
+                      endOccurrences: 1,
+                      createIfOverdue: false
+                    },
+                    assignee: ""
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!newTask.title.trim()) {
+                    toast({
+                      title: "Error",
+                      description: "Task title is required",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+
+                  try {
+                    const taskData = {
+                      title: newTask.title,
+                      description: newTask.description || null,
+                      clientId: clientId,
+                      projectId: null,
+                      assignee: newTask.assignee || null,
+                      dueDate: newTask.dueDate ? new Date(`${newTask.dueDate}T${newTask.dueTime || '09:00'}`).toISOString() : null,
+                      status: "pending",
+                      priority: "medium",
+                      recurring: newTask.recurring,
+                      recurringConfig: newTask.recurring ? newTask.recurringConfig : null
+                    };
+
+                    await apiRequest("/api/tasks", "POST", taskData);
+
+                    queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+                    
+                    toast({
+                      title: "Task created successfully",
+                      description: `Task "${newTask.title}" has been created.`
+                    });
+
+                    setIsTaskDialogOpen(false);
+                    setNewTask({
+                      title: "",
+                      description: "",
+                      dueDate: "",
+                      dueTime: "",
+                      recurring: false,
+                      recurringConfig: {
+                        interval: 1,
+                        unit: "days",
+                        endType: "never",
+                        endDate: "",
+                        endOccurrences: 1,
+                        createIfOverdue: false
+                      },
+                      assignee: ""
+                    });
+
+                  } catch (error) {
+                    toast({
+                      title: "Error creating task",
+                      description: "Please try again",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                disabled={!newTask.title.trim()}
+              >
+                Create Task
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
