@@ -1,0 +1,396 @@
+import { useState } from "react";
+// import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap } from "lucide-react";
+
+interface WorkflowStep {
+  id: string;
+  type: "trigger" | "action" | "wait" | "condition";
+  name: string;
+  description: string;
+  config: any;
+  icon: any;
+}
+
+interface WorkflowBuilderProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (workflow: any) => void;
+  editingWorkflow?: any;
+}
+
+const AVAILABLE_TRIGGERS = [
+  {
+    id: "contact_created",
+    name: "New Contact Created",
+    description: "Triggers when a new contact is added to the system",
+    icon: Plus,
+    config: {
+      conditions: ["source", "tags", "list"]
+    }
+  },
+  {
+    id: "form_submitted",
+    name: "Form Submitted",
+    description: "Triggers when a specific form is submitted",
+    icon: CheckSquare,
+    config: {
+      conditions: ["form_id", "fields"]
+    }
+  },
+  {
+    id: "tag_added",
+    name: "Tag Added",
+    description: "Triggers when a specific tag is added to a contact",
+    icon: Tag,
+    config: {
+      conditions: ["tag_name"]
+    }
+  },
+  {
+    id: "date_based",
+    name: "Date/Time Based",
+    description: "Triggers at a specific date or time interval",
+    icon: Clock,
+    config: {
+      conditions: ["date", "time", "recurrence"]
+    }
+  }
+];
+
+const AVAILABLE_ACTIONS = [
+  {
+    id: "send_email",
+    name: "Send Email",
+    description: "Send an email using a template",
+    icon: Mail,
+    config: {
+      fields: ["template_id", "subject", "delay"]
+    }
+  },
+  {
+    id: "send_sms",
+    name: "Send SMS",
+    description: "Send an SMS message",
+    icon: MessageSquare,
+    config: {
+      fields: ["message", "delay"]
+    }
+  },
+  {
+    id: "create_task",
+    name: "Create Task",
+    description: "Create a task for team members",
+    icon: CheckSquare,
+    config: {
+      fields: ["title", "description", "assignee", "priority", "due_date"]
+    }
+  },
+  {
+    id: "add_tag",
+    name: "Add Tag",
+    description: "Add a tag to the contact",
+    icon: Tag,
+    config: {
+      fields: ["tag_name"]
+    }
+  },
+  {
+    id: "wait",
+    name: "Wait",
+    description: "Wait for a specified amount of time",
+    icon: Clock,
+    config: {
+      fields: ["duration", "unit"]
+    }
+  },
+  {
+    id: "make_call",
+    name: "Make Phone Call",
+    description: "Schedule or make a phone call",
+    icon: Phone,
+    config: {
+      fields: ["phone_number", "script", "assignee"]
+    }
+  }
+];
+
+export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkflow }: WorkflowBuilderProps) {
+  const [workflowName, setWorkflowName] = useState(editingWorkflow?.name || "");
+  const [workflowDescription, setWorkflowDescription] = useState(editingWorkflow?.description || "");
+  const [workflowCategory, setWorkflowCategory] = useState(editingWorkflow?.category || "");
+  const [selectedTrigger, setSelectedTrigger] = useState<WorkflowStep | null>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
+  const [showTriggerSelect, setShowTriggerSelect] = useState(false);
+  const [showActionSelect, setShowActionSelect] = useState(false);
+
+  const handleTriggerSelect = (trigger: any) => {
+    const triggerStep: WorkflowStep = {
+      id: `trigger-${Date.now()}`,
+      type: "trigger",
+      name: trigger.name,
+      description: trigger.description,
+      config: {},
+      icon: trigger.icon
+    };
+    setSelectedTrigger(triggerStep);
+    setShowTriggerSelect(false);
+  };
+
+  const handleActionSelect = (action: any) => {
+    const actionStep: WorkflowStep = {
+      id: `action-${Date.now()}`,
+      type: "action",
+      name: action.name,
+      description: action.description,
+      config: {},
+      icon: action.icon
+    };
+    setWorkflowSteps([...workflowSteps, actionStep]);
+    setShowActionSelect(false);
+  };
+
+  const removeStep = (stepId: string) => {
+    setWorkflowSteps(workflowSteps.filter(step => step.id !== stepId));
+  };
+
+  const handleSave = () => {
+    if (!workflowName || !selectedTrigger) return;
+
+    const workflow = {
+      name: workflowName,
+      description: workflowDescription,
+      category: workflowCategory,
+      trigger: {
+        type: selectedTrigger.name.toLowerCase().replace(/\s+/g, '_'),
+        config: selectedTrigger.config
+      },
+      actions: workflowSteps.map(step => ({
+        type: step.name.toLowerCase().replace(/\s+/g, '_'),
+        config: step.config
+      })),
+      status: "draft",
+      createdBy: "user-1"
+    };
+
+    onSave(workflow);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Workflow Builder</DialogTitle>
+          <DialogDescription>
+            Create an automated workflow by selecting a trigger and adding actions
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="workflow-name">Workflow Name</Label>
+                <Input
+                  id="workflow-name"
+                  value={workflowName}
+                  onChange={(e) => setWorkflowName(e.target.value)}
+                  placeholder="Enter workflow name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="workflow-category">Category</Label>
+                <Select value={workflowCategory} onValueChange={setWorkflowCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lead_management">Lead Management</SelectItem>
+                    <SelectItem value="email_marketing">Email Marketing</SelectItem>
+                    <SelectItem value="task_automation">Task Automation</SelectItem>
+                    <SelectItem value="customer_onboarding">Customer Onboarding</SelectItem>
+                    <SelectItem value="follow_up">Follow Up</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="workflow-description">Description</Label>
+              <Textarea
+                id="workflow-description"
+                value={workflowDescription}
+                onChange={(e) => setWorkflowDescription(e.target.value)}
+                placeholder="Describe what this workflow does"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Trigger Selection */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">1. Select Trigger</h3>
+            {selectedTrigger ? (
+              <Card className="border-[#46a1a0]">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <selectedTrigger.icon className="h-5 w-5 text-[#46a1a0]" />
+                      <CardTitle className="text-lg">{selectedTrigger.name}</CardTitle>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setSelectedTrigger(null)}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                  <CardDescription>{selectedTrigger.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            ) : (
+              <div>
+                {!showTriggerSelect ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowTriggerSelect(true)}
+                    className="w-full h-20 border-dashed"
+                  >
+                    <Plus className="h-6 w-6 mr-2" />
+                    Choose a Trigger
+                  </Button>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {AVAILABLE_TRIGGERS.map((trigger) => (
+                      <Card 
+                        key={trigger.id} 
+                        className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-[#46a1a0]"
+                        onClick={() => handleTriggerSelect(trigger)}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center gap-2">
+                            <trigger.icon className="h-5 w-5 text-[#46a1a0]" />
+                            <CardTitle className="text-base">{trigger.name}</CardTitle>
+                          </div>
+                          <CardDescription className="text-sm">
+                            {trigger.description}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Actions */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">2. Add Actions</h3>
+            
+            {/* Existing Actions */}
+            {workflowSteps.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {workflowSteps.map((step, index) => (
+                  <Card key={step.id} className="border-l-4 border-l-[#46a1a0]">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{index + 1}</Badge>
+                          <step.icon className="h-4 w-4 text-[#46a1a0]" />
+                          <CardTitle className="text-base">{step.name}</CardTitle>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="ghost">
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => removeStep(step.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CardDescription>{step.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Add Action */}
+            {!showActionSelect ? (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowActionSelect(true)}
+                className="w-full h-16 border-dashed"
+                disabled={!selectedTrigger}
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add Action
+              </Button>
+            ) : (
+              <div>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-3">
+                  {AVAILABLE_ACTIONS.map((action) => (
+                    <Card 
+                      key={action.id} 
+                      className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-[#46a1a0]"
+                      onClick={() => handleActionSelect(action)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                          <action.icon className="h-4 w-4 text-[#46a1a0]" />
+                          <CardTitle className="text-sm">{action.name}</CardTitle>
+                        </div>
+                        <CardDescription className="text-xs">
+                          {action.description}
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowActionSelect(false)}
+                  size="sm"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSave}
+            disabled={!workflowName || !selectedTrigger}
+            className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Create Workflow
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

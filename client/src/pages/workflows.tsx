@@ -12,11 +12,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Play, Pause, Settings, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity } from "lucide-react";
 import type { Workflow, EnhancedTask, WorkflowTemplate } from "@shared/schema";
+import WorkflowBuilder from "@/components/workflow-builder";
+import WorkflowDetail from "@/components/workflow-detail";
 
 export default function WorkflowsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,6 +64,7 @@ export default function WorkflowsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
       toast({ title: "Workflow created successfully" });
       setIsCreateDialogOpen(false);
+      setIsBuilderOpen(false);
     },
     onError: () => {
       toast({ title: "Failed to create workflow", variant: "destructive" });
@@ -103,6 +109,17 @@ export default function WorkflowsPage() {
       case "draft": return <Settings className="h-3 w-3" />;
       default: return <Settings className="h-3 w-3" />;
     }
+  };
+
+  const handleViewDetails = (workflow: Workflow) => {
+    setSelectedWorkflow(workflow);
+    setIsDetailOpen(true);
+  };
+
+  const handleEditWorkflow = (workflow: Workflow) => {
+    setEditingWorkflow(workflow);
+    setIsBuilderOpen(true);
+    setIsDetailOpen(false);
   };
 
   const createSampleWorkflow = () => {
@@ -167,55 +184,13 @@ export default function WorkflowsPage() {
             <Plus className="h-4 w-4 mr-2" />
             Create Sample Workflow
           </Button>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#46a1a0] hover:bg-[#3a8a89]">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Workflow
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Workflow</DialogTitle>
-                <DialogDescription>
-                  Set up an automated workflow to streamline your business processes
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
-                  <Input id="name" className="col-span-3" placeholder="Enter workflow name" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="category" className="text-right">Category</Label>
-                  <Select>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lead_management">Lead Management</SelectItem>
-                      <SelectItem value="email_marketing">Email Marketing</SelectItem>
-                      <SelectItem value="task_automation">Task Automation</SelectItem>
-                      <SelectItem value="deal_management">Deal Management</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">Description</Label>
-                  <Textarea 
-                    id="description" 
-                    className="col-span-3" 
-                    placeholder="Describe what this workflow does"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" className="bg-[#46a1a0] hover:bg-[#3a8a89]">
-                  Create Workflow
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            onClick={() => setIsBuilderOpen(true)}
+            className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Build Workflow
+          </Button>
         </div>
       </div>
 
@@ -341,7 +316,7 @@ export default function WorkflowsPage() {
                       variant="outline" 
                       size="sm" 
                       className="w-full mt-4"
-                      onClick={() => setSelectedWorkflow(workflow)}
+                      onClick={() => handleViewDetails(workflow)}
                     >
                       View Details
                       <ChevronRight className="h-4 w-4 ml-2" />
@@ -517,6 +492,30 @@ export default function WorkflowsPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Workflow Builder */}
+      <WorkflowBuilder 
+        isOpen={isBuilderOpen}
+        onClose={() => {
+          setIsBuilderOpen(false);
+          setEditingWorkflow(null);
+        }}
+        onSave={createWorkflowMutation.mutate}
+        editingWorkflow={editingWorkflow}
+      />
+
+      {/* Workflow Detail */}
+      {selectedWorkflow && (
+        <WorkflowDetail 
+          workflow={selectedWorkflow}
+          isOpen={isDetailOpen}
+          onClose={() => {
+            setIsDetailOpen(false);
+            setSelectedWorkflow(null);
+          }}
+          onEdit={handleEditWorkflow}
+        />
+      )}
     </div>
   );
 }

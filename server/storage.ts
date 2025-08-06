@@ -215,6 +215,8 @@ export class MemStorage implements IStorage {
   constructor() {
     // Add sample data for testing
     this.addSampleData();
+    this.initializeWorkflowTemplates();
+    this.initializeAutomationElements();
   }
 
   private addSampleData() {
@@ -311,6 +313,344 @@ export class MemStorage implements IStorage {
 
     this.clients.set(sampleClient1.id, sampleClient1);
     this.clients.set(sampleClient2.id, sampleClient2);
+  }
+
+  private initializeWorkflowTemplates() {
+    // Sample workflow templates based on best practices
+    const templates: WorkflowTemplate[] = [
+      {
+        id: "template-1",
+        name: "New Lead Welcome Sequence",
+        description: "Automated welcome email sequence for new leads with follow-up tasks",
+        category: "lead_management",
+        industry: "General",
+        useCase: "Lead nurturing and qualification",
+        trigger: {
+          type: "contact_created",
+          conditions: {
+            source: "website_form",
+            tags: ["new_lead"]
+          }
+        },
+        actions: [
+          {
+            type: "send_email",
+            config: {
+              template: "welcome_email",
+              subject: "Welcome! Here's what happens next...",
+              delay: 0
+            }
+          },
+          {
+            type: "wait",
+            config: {
+              duration: 24,
+              unit: "hours"
+            }
+          },
+          {
+            type: "create_task",
+            config: {
+              title: "Follow up with new lead",
+              description: "Personal outreach to qualify lead",
+              priority: "high",
+              assignee: "sales_team"
+            }
+          },
+          {
+            type: "wait",
+            config: {
+              duration: 3,
+              unit: "days"
+            }
+          },
+          {
+            type: "send_email",
+            config: {
+              template: "case_study_email",
+              subject: "See how we helped similar companies",
+              delay: 0
+            }
+          }
+        ],
+        conditions: null,
+        settings: {
+          timezone: "America/New_York",
+          business_hours_only: true
+        },
+        isPublic: true,
+        usageCount: 45,
+        rating: 4.8,
+        tags: ["email_marketing", "lead_qualification", "sales"],
+        createdBy: "system",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-01")
+      },
+      {
+        id: "template-2",
+        name: "Customer Onboarding Sequence",
+        description: "Complete onboarding workflow for new customers",
+        category: "customer_onboarding",
+        industry: "SaaS",
+        useCase: "Customer success and retention",
+        trigger: {
+          type: "tag_added",
+          conditions: {
+            tag_name: "new_customer"
+          }
+        },
+        actions: [
+          {
+            type: "send_email",
+            config: {
+              template: "onboarding_welcome",
+              subject: "Welcome to the team! Let's get started",
+              delay: 0
+            }
+          },
+          {
+            type: "create_task",
+            config: {
+              title: "Schedule onboarding call",
+              description: "Book 30-min onboarding call with new customer",
+              priority: "high",
+              assignee: "customer_success"
+            }
+          },
+          {
+            type: "wait",
+            config: {
+              duration: 7,
+              unit: "days"
+            }
+          },
+          {
+            type: "send_email",
+            config: {
+              template: "tips_and_tricks",
+              subject: "Pro tips to maximize your results",
+              delay: 0
+            }
+          },
+          {
+            type: "wait",
+            config: {
+              duration: 14,
+              unit: "days"
+            }
+          },
+          {
+            type: "create_task",
+            config: {
+              title: "Check-in with customer",
+              description: "Follow up on onboarding progress",
+              priority: "medium",
+              assignee: "customer_success"
+            }
+          }
+        ],
+        conditions: null,
+        settings: {
+          timezone: "America/New_York",
+          business_hours_only: true
+        },
+        isPublic: true,
+        usageCount: 32,
+        rating: 4.9,
+        tags: ["onboarding", "customer_success", "retention"],
+        createdBy: "system",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-01")
+      },
+      {
+        id: "template-3",
+        name: "Abandoned Cart Recovery",
+        description: "Re-engage customers who abandoned their cart",
+        category: "email_marketing",
+        industry: "E-commerce",
+        useCase: "Cart abandonment recovery",
+        trigger: {
+          type: "cart_abandoned",
+          conditions: {
+            time_threshold: 30,
+            unit: "minutes"
+          }
+        },
+        actions: [
+          {
+            type: "wait",
+            config: {
+              duration: 1,
+              unit: "hours"
+            }
+          },
+          {
+            type: "send_email",
+            config: {
+              template: "cart_reminder",
+              subject: "You left something behind...",
+              delay: 0
+            }
+          },
+          {
+            type: "wait",
+            config: {
+              duration: 24,
+              unit: "hours"
+            }
+          },
+          {
+            type: "send_email",
+            config: {
+              template: "cart_incentive",
+              subject: "Complete your order and save 10%",
+              delay: 0
+            }
+          },
+          {
+            type: "wait",
+            config: {
+              duration: 3,
+              unit: "days"
+            }
+          },
+          {
+            type: "send_email",
+            config: {
+              template: "final_reminder",
+              subject: "Last chance - your cart expires soon",
+              delay: 0
+            }
+          }
+        ],
+        conditions: null,
+        settings: {
+          timezone: "America/New_York",
+          business_hours_only: false
+        },
+        isPublic: true,
+        usageCount: 78,
+        rating: 4.7,
+        tags: ["e-commerce", "cart_recovery", "email_automation"],
+        createdBy: "system",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-01")
+      }
+    ];
+
+    templates.forEach(template => {
+      this.workflowTemplates.set(template.id, template);
+    });
+  }
+
+  private initializeAutomationElements() {
+    // Sample automation triggers
+    const triggers: AutomationTrigger[] = [
+      {
+        id: "trigger-1",
+        name: "New Contact Created",
+        type: "contact_created",
+        description: "Triggers when a new contact is added to the system",
+        category: "contact_management",
+        configSchema: {
+          source: { type: "string", options: ["website", "manual", "import", "api"] },
+          tags: { type: "array", items: { type: "string" } }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-2",
+        name: "Form Submitted",
+        type: "form_submitted",
+        description: "Triggers when a specific form is submitted",
+        category: "form_management",
+        configSchema: {
+          form_id: { type: "string", required: true },
+          fields: { type: "object" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-3",
+        name: "Tag Added",
+        type: "tag_added",
+        description: "Triggers when a specific tag is added to a contact",
+        category: "contact_management",
+        configSchema: {
+          tag_name: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+
+    triggers.forEach(trigger => {
+      this.automationTriggers.set(trigger.id, trigger);
+    });
+
+    // Sample automation actions
+    const actions: AutomationAction[] = [
+      {
+        id: "action-1",
+        name: "Send Email",
+        type: "send_email",
+        description: "Send an email using a template",
+        category: "communication",
+        configSchema: {
+          template_id: { type: "string", required: true },
+          subject: { type: "string" },
+          delay: { type: "number", default: 0 }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-2",
+        name: "Create Task",
+        type: "create_task",
+        description: "Create a task for team members",
+        category: "task_management",
+        configSchema: {
+          title: { type: "string", required: true },
+          description: { type: "string" },
+          assignee: { type: "string", required: true },
+          priority: { type: "string", options: ["low", "medium", "high"], default: "medium" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-3",
+        name: "Send SMS",
+        type: "send_sms",
+        description: "Send an SMS message",
+        category: "communication",
+        configSchema: {
+          message: { type: "string", required: true },
+          delay: { type: "number", default: 0 }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-4",
+        name: "Add Tag",
+        type: "add_tag",
+        description: "Add a tag to the contact",
+        category: "contact_management",
+        configSchema: {
+          tag_name: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+
+    actions.forEach(action => {
+      this.automationActions.set(action.id, action);
+    });
   }
 
   // Clients
