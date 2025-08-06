@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, 
   Tag, ChevronDown, ChevronRight, GripVertical, Filter, MessageSquare, 
@@ -582,63 +583,99 @@ export default function EnhancedClientDetail() {
       {/* Right Sidebar - Multiple Sections */}
       <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
         {/* Section Icons Header */}
-        <div className="flex border-b border-gray-200">
-          <button 
-            onClick={() => setActiveRightSection("notes")}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
-              activeRightSection === "notes" 
-                ? "border-blue-500 text-blue-600 bg-blue-50" 
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            Notes
-          </button>
-          <button 
-            onClick={() => setActiveRightSection("tasks")}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
-              activeRightSection === "tasks" 
-                ? "border-blue-500 text-blue-600 bg-blue-50" 
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <CheckCircle className="h-4 w-4" />
-            Tasks
-          </button>
-          <button 
-            onClick={() => setActiveRightSection("appointments")}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
-              activeRightSection === "appointments" 
-                ? "border-blue-500 text-blue-600 bg-blue-50" 
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <CalendarDays className="h-4 w-4" />
-            Appts
-          </button>
-          <button 
-            onClick={() => setActiveRightSection("documents")}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
-              activeRightSection === "documents" 
-                ? "border-blue-500 text-blue-600 bg-blue-50" 
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Upload className="h-4 w-4" />
-            Docs
-          </button>
-          <button 
-            onClick={() => setActiveRightSection("payments")}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium border-b-2 transition-colors ${
-              activeRightSection === "payments" 
-                ? "border-blue-500 text-blue-600 bg-blue-50" 
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <CreditCard className="h-4 w-4" />
-            Pay
-          </button>
-        </div>
+        <TooltipProvider>
+          <div className="flex border-b border-gray-200">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => setActiveRightSection("notes")}
+                  className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
+                    activeRightSection === "notes" 
+                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Notes</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => setActiveRightSection("tasks")}
+                  className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
+                    activeRightSection === "tasks" 
+                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Tasks</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => setActiveRightSection("appointments")}
+                  className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
+                    activeRightSection === "appointments" 
+                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Appointments</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => setActiveRightSection("documents")}
+                  className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
+                    activeRightSection === "documents" 
+                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Upload className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Documents</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => setActiveRightSection("payments")}
+                  className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
+                    activeRightSection === "payments" 
+                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <CreditCard className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Payments</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
 
         {/* Notes Section */}
         {activeRightSection === "notes" && (
