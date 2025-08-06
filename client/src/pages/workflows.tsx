@@ -195,44 +195,34 @@ export default function WorkflowsPage() {
       </div>
 
       <Tabs defaultValue="workflows" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="workflows">Active Workflows</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="automation">Automation Builder</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="workflows">Active Workflows</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="automation">Automation Builder</TabsTrigger>
+          </TabsList>
+          
+          {/* Category Filter - Only show on workflows tab */}
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium">Filter:</Label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="lead_management">Lead Management</SelectItem>
+                <SelectItem value="email_marketing">Email Marketing</SelectItem>
+                <SelectItem value="task_automation">Task Automation</SelectItem>
+                <SelectItem value="customer_onboarding">Customer Onboarding</SelectItem>
+                <SelectItem value="follow_up">Follow Up</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         <TabsContent value="workflows" className="space-y-4">
-          <div className="flex gap-2 mb-4">
-            <Button 
-              variant={selectedCategory === "all" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("all")}
-              size="sm"
-            >
-              All Categories
-            </Button>
-            <Button 
-              variant={selectedCategory === "lead_management" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("lead_management")}
-              size="sm"
-            >
-              Lead Management
-            </Button>
-            <Button 
-              variant={selectedCategory === "email_marketing" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("email_marketing")}
-              size="sm"
-            >
-              Email Marketing
-            </Button>
-            <Button 
-              variant={selectedCategory === "task_automation" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("task_automation")}
-              size="sm"
-            >
-              Task Automation
-            </Button>
-          </div>
 
           {filteredWorkflows.length === 0 ? (
             <Card>
