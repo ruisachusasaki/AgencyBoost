@@ -247,13 +247,13 @@ export default function EnhancedClientDetail() {
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
-          <Button variant="ghost" onClick={() => setLocation("/clients")} className="mb-3 p-0 h-auto font-normal text-sm text-blue-600">
+          <Button variant="ghost" onClick={() => setLocation("/clients")} className="mb-3 p-0 h-auto font-normal text-sm text-[#46a1a0]">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Clients
           </Button>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-6 w-6 text-blue-600" />
+            <div className="w-12 h-12 bg-[#46a1a0]/10 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-[#46a1a0]" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-gray-900">{client.name}</h1>
@@ -291,11 +291,11 @@ export default function EnhancedClientDetail() {
                 </div>
                 <div>
                   <label className="block text-gray-500 mb-1">Email</label>
-                  <p className="text-blue-600">{client.email}</p>
+                  <p className="text-[#46a1a0]">{client.email}</p>
                 </div>
                 <div>
                   <label className="block text-gray-500 mb-1">Phone</label>
-                  <p className="text-blue-600">{client.phone ? formatPhoneNumber(client.phone) : "Not provided"}</p>
+                  <p className="text-[#46a1a0]">{client.phone ? formatPhoneNumber(client.phone) : "Not provided"}</p>
                 </div>
                 {(client.address || client.city || client.state) && (
                   <div>
@@ -414,7 +414,7 @@ export default function EnhancedClientDetail() {
                       href={resource.url!} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-[#46a1a0] hover:text-[#3a8685]"
                     >
                       <ExternalLink className="h-3 w-3" />
                     </a>
@@ -517,10 +517,10 @@ export default function EnhancedClientDetail() {
                   <p className="text-sm text-gray-600">{activity.content}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-blue-600">
+                  <Button variant="ghost" size="sm" className="text-[#46a1a0]">
                     Add comment
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-blue-600">
+                  <Button variant="ghost" size="sm" className="text-[#46a1a0]">
                     1 association
                   </Button>
                 </div>
@@ -535,14 +535,14 @@ export default function EnhancedClientDetail() {
             <Button 
               variant={smsMessage ? "default" : "outline"} 
               size="sm"
-              className="px-4"
+              className={`px-4 ${smsMessage ? 'bg-[#46a1a0] hover:bg-[#3a8685]' : ''}`}
             >
               SMS
             </Button>
             <Button 
               variant={emailMessage ? "default" : "outline"} 
               size="sm"
-              className="px-4"
+              className={`px-4 ${emailMessage ? 'bg-[#46a1a0] hover:bg-[#3a8685]' : ''}`}
             >
               EMAIL
             </Button>
@@ -568,7 +568,7 @@ export default function EnhancedClientDetail() {
                 size="sm" 
                 onClick={sendSMS}
                 disabled={!smsMessage.trim()}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-[#46a1a0] hover:bg-[#3a8685]"
               >
                 Send
               </Button>
@@ -591,7 +591,7 @@ export default function EnhancedClientDetail() {
                   onClick={() => setActiveRightSection("notes")}
                   className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
                     activeRightSection === "notes" 
-                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      ? "border-[#46a1a0] text-[#46a1a0] bg-[#46a1a0]/5" 
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -609,7 +609,7 @@ export default function EnhancedClientDetail() {
                   onClick={() => setActiveRightSection("tasks")}
                   className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
                     activeRightSection === "tasks" 
-                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      ? "border-[#46a1a0] text-[#46a1a0] bg-[#46a1a0]/5" 
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -627,7 +627,7 @@ export default function EnhancedClientDetail() {
                   onClick={() => setActiveRightSection("appointments")}
                   className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
                     activeRightSection === "appointments" 
-                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      ? "border-[#46a1a0] text-[#46a1a0] bg-[#46a1a0]/5" 
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -645,7 +645,7 @@ export default function EnhancedClientDetail() {
                   onClick={() => setActiveRightSection("documents")}
                   className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
                     activeRightSection === "documents" 
-                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      ? "border-[#46a1a0] text-[#46a1a0] bg-[#46a1a0]/5" 
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -663,7 +663,7 @@ export default function EnhancedClientDetail() {
                   onClick={() => setActiveRightSection("payments")}
                   className={`flex-1 flex items-center justify-center p-3 border-b-2 transition-colors ${
                     activeRightSection === "payments" 
-                      ? "border-blue-500 text-blue-600 bg-blue-50" 
+                      ? "border-[#46a1a0] text-[#46a1a0] bg-[#46a1a0]/5" 
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -702,11 +702,11 @@ export default function EnhancedClientDetail() {
             
             <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-3">
-                <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
+                <div className="p-3 border border-[#46a1a0]/20 rounded-lg bg-[#46a1a0]/5">
                   <p className="text-sm text-gray-700">Testing the Notes Functionality</p>
                   <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
                     <span>4 minutes ago with Michael Brown</span>
-                    <Button variant="ghost" size="sm" className="h-auto p-0 text-blue-600">
+                    <Button variant="ghost" size="sm" className="h-auto p-0 text-[#46a1a0]">
                       Edit
                     </Button>
                   </div>
@@ -715,7 +715,7 @@ export default function EnhancedClientDetail() {
             </div>
             
             <div className="p-4 border-t border-gray-200">
-              <Button className="w-full bg-teal-600 hover:bg-teal-700">
+              <Button className="w-full bg-[#46a1a0] hover:bg-[#3a8685]">
                 Add Note
               </Button>
             </div>
@@ -785,7 +785,7 @@ export default function EnhancedClientDetail() {
             
             <div className="p-4 border-t border-gray-200">
               <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-[#46a1a0] hover:bg-[#3a8685]"
                 onClick={() => setIsTaskDialogOpen(true)}
               >
                 Add Task
