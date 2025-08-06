@@ -5,7 +5,8 @@ import {
   insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, 
   insertTaskSchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
-  insertSocialMediaAnalyticsSchema 
+  insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
+  insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -570,6 +571,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create social media template" });
+    }
+  });
+
+  // Workflow routes
+  app.get("/api/workflows", async (req, res) => {
+    try {
+      const { clientId, category } = req.query;
+      let workflows;
+      
+      if (clientId) {
+        workflows = await storage.getWorkflowsByClient(clientId as string);
+      } else if (category) {
+        workflows = await storage.getWorkflowsByCategory(category as string);
+      } else {
+        workflows = await storage.getWorkflows();
+      }
+      
+      res.json(workflows);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workflows" });
+    }
+  });
+
+  app.get("/api/workflows/:id", async (req, res) => {
+    try {
+      const workflow = await storage.getWorkflow(req.params.id);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      res.json(workflow);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workflow" });
+    }
+  });
+
+  app.post("/api/workflows", async (req, res) => {
+    try {
+      const validatedData = insertWorkflowSchema.parse(req.body);
+      const workflow = await storage.createWorkflow(validatedData);
+      res.status(201).json(workflow);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create workflow" });
+    }
+  });
+
+  app.put("/api/workflows/:id", async (req, res) => {
+    try {
+      const validatedData = insertWorkflowSchema.partial().parse(req.body);
+      const workflow = await storage.updateWorkflow(req.params.id, validatedData);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      res.json(workflow);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update workflow" });
+    }
+  });
+
+  app.delete("/api/workflows/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteWorkflow(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete workflow" });
+    }
+  });
+
+  // Enhanced Task routes
+  app.get("/api/enhanced-tasks", async (req, res) => {
+    try {
+      const { clientId, projectId, assignedTo, workflowId } = req.query;
+      let tasks;
+      
+      if (clientId) {
+        tasks = await storage.getEnhancedTasksByClient(clientId as string);
+      } else if (projectId) {
+        tasks = await storage.getEnhancedTasksByProject(projectId as string);
+      } else if (assignedTo) {
+        tasks = await storage.getEnhancedTasksByAssignee(assignedTo as string);
+      } else if (workflowId) {
+        tasks = await storage.getEnhancedTasksByWorkflow(workflowId as string);
+      } else {
+        tasks = await storage.getEnhancedTasks();
+      }
+      
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch enhanced tasks" });
+    }
+  });
+
+  app.get("/api/enhanced-tasks/:id", async (req, res) => {
+    try {
+      const task = await storage.getEnhancedTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Enhanced task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch enhanced task" });
+    }
+  });
+
+  app.post("/api/enhanced-tasks", async (req, res) => {
+    try {
+      const validatedData = insertEnhancedTaskSchema.parse(req.body);
+      const task = await storage.createEnhancedTask(validatedData);
+      res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create enhanced task" });
+    }
+  });
+
+  app.put("/api/enhanced-tasks/:id", async (req, res) => {
+    try {
+      const validatedData = insertEnhancedTaskSchema.partial().parse(req.body);
+      const task = await storage.updateEnhancedTask(req.params.id, validatedData);
+      if (!task) {
+        return res.status(404).json({ message: "Enhanced task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update enhanced task" });
+    }
+  });
+
+  app.delete("/api/enhanced-tasks/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteEnhancedTask(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Enhanced task not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete enhanced task" });
+    }
+  });
+
+  // Task Categories routes
+  app.get("/api/task-categories", async (req, res) => {
+    try {
+      const categories = await storage.getTaskCategories();
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch task categories" });
+    }
+  });
+
+  app.post("/api/task-categories", async (req, res) => {
+    try {
+      const validatedData = insertTaskCategorySchema.parse(req.body);
+      const category = await storage.createTaskCategory(validatedData);
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create task category" });
+    }
+  });
+
+  // Automation Triggers routes
+  app.get("/api/automation-triggers", async (req, res) => {
+    try {
+      const { category } = req.query;
+      let triggers;
+      
+      if (category) {
+        triggers = await storage.getAutomationTriggersByCategory(category as string);
+      } else {
+        triggers = await storage.getAutomationTriggers();
+      }
+      
+      res.json(triggers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch automation triggers" });
+    }
+  });
+
+  app.post("/api/automation-triggers", async (req, res) => {
+    try {
+      const validatedData = insertAutomationTriggerSchema.parse(req.body);
+      const trigger = await storage.createAutomationTrigger(validatedData);
+      res.status(201).json(trigger);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create automation trigger" });
+    }
+  });
+
+  // Automation Actions routes
+  app.get("/api/automation-actions", async (req, res) => {
+    try {
+      const { category } = req.query;
+      let actions;
+      
+      if (category) {
+        actions = await storage.getAutomationActionsByCategory(category as string);
+      } else {
+        actions = await storage.getAutomationActions();
+      }
+      
+      res.json(actions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch automation actions" });
+    }
+  });
+
+  app.post("/api/automation-actions", async (req, res) => {
+    try {
+      const validatedData = insertAutomationActionSchema.parse(req.body);
+      const action = await storage.createAutomationAction(validatedData);
+      res.status(201).json(action);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create automation action" });
     }
   });
 

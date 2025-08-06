@@ -14,6 +14,7 @@ import Tasks from "@/pages/tasks";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import SocialMedia from "@/pages/social-media";
+import Workflows from "@/pages/workflows";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/invoices" component={Invoices} />
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
+      <Route path="/workflows" component={Workflows} />
       <Route component={NotFound} />
     </Switch>
   );

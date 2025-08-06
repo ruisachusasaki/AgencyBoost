@@ -14,7 +14,9 @@ import {
   TrendingUp,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  GitBranch,
+  Share2
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,8 +33,10 @@ const navigation = [
   { name: "Campaigns", href: "/campaigns", icon: Megaphone },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Workflows", href: "/workflows", icon: GitBranch },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Social Media", href: "/social-media", icon: Share2 },
 ];
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {

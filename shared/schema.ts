@@ -549,3 +549,267 @@ export type InsertSocialMediaTemplate = z.infer<typeof insertSocialMediaTemplate
 
 export type SocialMediaAnalytics = typeof socialMediaAnalytics.$inferSelect;
 export type InsertSocialMediaAnalytics = z.infer<typeof insertSocialMediaAnalyticsSchema>;
+
+// Workflow System Tables
+export const workflows = pgTable("workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  clientId: varchar("client_id").references(() => clients.id),
+  category: text("category"), // lead_management, email_marketing, task_automation, deal_management
+  status: text("status").notNull().default("draft"), // draft, active, paused, archived
+  trigger: jsonb("trigger").notNull(), // trigger configuration
+  actions: jsonb("actions").notNull(), // array of actions
+  conditions: jsonb("conditions"), // branching logic
+  settings: jsonb("settings"), // workflow-specific settings
+  isTemplate: boolean("is_template").default(false),
+  templateCategory: text("template_category"),
+  version: integer("version").default(1),
+  lastRun: timestamp("last_run"),
+  totalRuns: integer("total_runs").default(0),
+  successfulRuns: integer("successful_runs").default(0),
+  failedRuns: integer("failed_runs").default(0),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").references(() => workflows.id).notNull(),
+  contactId: varchar("contact_id").references(() => clients.id),
+  triggerData: jsonb("trigger_data"),
+  status: text("status").notNull(), // running, completed, failed, cancelled
+  currentStep: integer("current_step").default(0),
+  totalSteps: integer("total_steps").notNull(),
+  executionLog: jsonb("execution_log"), // detailed log of each step
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  nextRunAt: timestamp("next_run_at"), // for scheduled actions
+});
+
+export const workflowTemplates = pgTable("workflow_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  industry: text("industry"),
+  useCase: text("use_case"),
+  trigger: jsonb("trigger").notNull(),
+  actions: jsonb("actions").notNull(),
+  conditions: jsonb("conditions"),
+  settings: jsonb("settings"),
+  isPublic: boolean("is_public").default(false),
+  usageCount: integer("usage_count").default(0),
+  rating: decimal("rating", { precision: 3, scale: 2 }),
+  tags: text("tags").array(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Enhanced Task Management
+export const taskCategories = pgTable("task_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").notNull(),
+  icon: text("icon"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const taskTemplates = pgTable("task_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  categoryId: varchar("category_id").references(() => taskCategories.id),
+  priority: text("priority").notNull().default("medium"),
+  estimatedDuration: integer("estimated_duration"), // in minutes
+  instructions: text("instructions"),
+  checklist: jsonb("checklist"), // array of checklist items
+  requiredFields: jsonb("required_fields"),
+  assigneeRole: text("assignee_role"),
+  tags: text("tags").array(),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: jsonb("recurrence_pattern"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const enhancedTasks = pgTable("enhanced_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  categoryId: varchar("category_id").references(() => taskCategories.id),
+  templateId: varchar("template_id").references(() => taskTemplates.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  projectId: varchar("project_id").references(() => projects.id),
+  campaignId: varchar("campaign_id").references(() => campaigns.id),
+  workflowId: varchar("workflow_id").references(() => workflows.id),
+  parentTaskId: varchar("parent_task_id"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  status: text("status").notNull().default("todo"), // todo, in_progress, review, blocked, completed, cancelled
+  progress: integer("progress").default(0), // 0-100
+  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 5, scale: 2 }),
+  dueDate: timestamp("due_date"),
+  startDate: timestamp("start_date"),
+  completedAt: timestamp("completed_at"),
+  tags: text("tags").array(),
+  checklist: jsonb("checklist"), // array of subtasks
+  attachments: jsonb("attachments"), // file attachments
+  dependencies: text("dependencies").array(), // task IDs this depends on
+  followers: text("followers").array(), // users following this task
+  customFields: jsonb("custom_fields"),
+  timeEntries: jsonb("time_entries"), // time tracking
+  comments: jsonb("comments"), // task comments/notes
+  reminderSettings: jsonb("reminder_settings"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: jsonb("recurrence_pattern"),
+  recurringGroupId: text("recurring_group_id"),
+  automationData: jsonb("automation_data"), // data from workflow automation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const taskHistory = pgTable("task_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").references(() => enhancedTasks.id).notNull(),
+  action: text("action").notNull(), // created, updated, completed, assigned, commented
+  field: text("field"), // which field was changed
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value"),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  timestamp: timestamp("timestamp").notNull(),
+  notes: text("notes"),
+});
+
+export const automationTriggers = pgTable("automation_triggers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // form_submission, contact_created, deal_stage_change, task_completed, email_opened, etc.
+  description: text("description"),
+  category: text("category").notNull(), // contact, deal, task, email, time_based, webhook
+  configSchema: jsonb("config_schema"), // JSON schema for configuration
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const automationActions = pgTable("automation_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // send_email, create_task, update_contact, assign_deal, wait, etc.
+  description: text("description"),
+  category: text("category").notNull(), // communication, task_management, data_management, flow_control
+  configSchema: jsonb("config_schema"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Notifications and Alerts
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // task_due, workflow_completed, assignment, mention, system
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  entityType: text("entity_type"), // task, workflow, client, deal
+  entityId: text("entity_id"),
+  priority: text("priority").default("normal"), // low, normal, high, urgent
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  actionUrl: text("action_url"),
+  actionText: text("action_text"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for workflow system
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({
+  id: true,
+});
+
+export const insertWorkflowTemplateSchema = createInsertSchema(workflowTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskCategorySchema = createInsertSchema(taskCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEnhancedTaskSchema = createInsertSchema(enhancedTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export const insertTaskHistorySchema = createInsertSchema(taskHistory).omit({
+  id: true,
+});
+
+export const insertAutomationTriggerSchema = createInsertSchema(automationTriggers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAutomationActionSchema = createInsertSchema(automationActions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Export enhanced workflow and task types
+export type Workflow = typeof workflows.$inferSelect;
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
+
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;
+
+export type TaskCategory = typeof taskCategories.$inferSelect;
+export type InsertTaskCategory = z.infer<typeof insertTaskCategorySchema>;
+
+export type TaskTemplate = typeof taskTemplates.$inferSelect;
+export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
+
+export type EnhancedTask = typeof enhancedTasks.$inferSelect;
+export type InsertEnhancedTask = z.infer<typeof insertEnhancedTaskSchema>;
+
+export type TaskHistory = typeof taskHistory.$inferSelect;
+export type InsertTaskHistory = z.infer<typeof insertTaskHistorySchema>;
+
+export type AutomationTrigger = typeof automationTriggers.$inferSelect;
+export type InsertAutomationTrigger = z.infer<typeof insertAutomationTriggerSchema>;
+
+export type AutomationAction = typeof automationActions.$inferSelect;
+export type InsertAutomationAction = z.infer<typeof insertAutomationActionSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

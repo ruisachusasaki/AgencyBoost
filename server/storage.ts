@@ -18,7 +18,17 @@ import {
   type SocialMediaAccount, type InsertSocialMediaAccount,
   type SocialMediaPost, type InsertSocialMediaPost,
   type SocialMediaTemplate, type InsertSocialMediaTemplate,
-  type SocialMediaAnalytics, type InsertSocialMediaAnalytics
+  type SocialMediaAnalytics, type InsertSocialMediaAnalytics,
+  type Workflow, type InsertWorkflow,
+  type WorkflowExecution, type InsertWorkflowExecution,
+  type WorkflowTemplate, type InsertWorkflowTemplate,
+  type TaskCategory, type InsertTaskCategory,
+  type TaskTemplate, type InsertTaskTemplate,
+  type EnhancedTask, type InsertEnhancedTask,
+  type TaskHistory, type InsertTaskHistory,
+  type AutomationTrigger, type InsertAutomationTrigger,
+  type AutomationAction, type InsertAutomationAction,
+  type Notification, type InsertNotification
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -100,6 +110,84 @@ export interface IStorage {
   getSocialMediaAnalytics(): Promise<SocialMediaAnalytics[]>;
   getSocialMediaAnalyticsForAccount(accountId: string): Promise<SocialMediaAnalytics[]>;
   createSocialMediaAnalytics(analytics: InsertSocialMediaAnalytics): Promise<SocialMediaAnalytics>;
+  
+  // Workflows
+  getWorkflows(): Promise<Workflow[]>;
+  getWorkflow(id: string): Promise<Workflow | undefined>;
+  getWorkflowsByClient(clientId: string): Promise<Workflow[]>;
+  getWorkflowsByCategory(category: string): Promise<Workflow[]>;
+  createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
+  updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined>;
+  deleteWorkflow(id: string): Promise<boolean>;
+  
+  // Workflow Executions
+  getWorkflowExecutions(): Promise<WorkflowExecution[]>;
+  getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined>;
+  getWorkflowExecutionsByWorkflow(workflowId: string): Promise<WorkflowExecution[]>;
+  getWorkflowExecutionsByContact(contactId: string): Promise<WorkflowExecution[]>;
+  createWorkflowExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution>;
+  updateWorkflowExecution(id: string, execution: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined>;
+  
+  // Workflow Templates
+  getWorkflowTemplates(): Promise<WorkflowTemplate[]>;
+  getWorkflowTemplate(id: string): Promise<WorkflowTemplate | undefined>;
+  getWorkflowTemplatesByCategory(category: string): Promise<WorkflowTemplate[]>;
+  createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate>;
+  updateWorkflowTemplate(id: string, template: Partial<InsertWorkflowTemplate>): Promise<WorkflowTemplate | undefined>;
+  deleteWorkflowTemplate(id: string): Promise<boolean>;
+  
+  // Task Categories
+  getTaskCategories(): Promise<TaskCategory[]>;
+  getTaskCategory(id: string): Promise<TaskCategory | undefined>;
+  createTaskCategory(category: InsertTaskCategory): Promise<TaskCategory>;
+  updateTaskCategory(id: string, category: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined>;
+  deleteTaskCategory(id: string): Promise<boolean>;
+  
+  // Task Templates
+  getTaskTemplates(): Promise<TaskTemplate[]>;
+  getTaskTemplate(id: string): Promise<TaskTemplate | undefined>;
+  getTaskTemplatesByCategory(categoryId: string): Promise<TaskTemplate[]>;
+  createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate>;
+  updateTaskTemplate(id: string, template: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined>;
+  deleteTaskTemplate(id: string): Promise<boolean>;
+  
+  // Enhanced Tasks
+  getEnhancedTasks(): Promise<EnhancedTask[]>;
+  getEnhancedTask(id: string): Promise<EnhancedTask | undefined>;
+  getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]>;
+  getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]>;
+  getEnhancedTasksByAssignee(assigneeId: string): Promise<EnhancedTask[]>;
+  getEnhancedTasksByWorkflow(workflowId: string): Promise<EnhancedTask[]>;
+  createEnhancedTask(task: InsertEnhancedTask): Promise<EnhancedTask>;
+  updateEnhancedTask(id: string, task: Partial<InsertEnhancedTask>): Promise<EnhancedTask | undefined>;
+  deleteEnhancedTask(id: string): Promise<boolean>;
+  
+  // Task History
+  getTaskHistory(taskId: string): Promise<TaskHistory[]>;
+  createTaskHistory(history: InsertTaskHistory): Promise<TaskHistory>;
+  
+  // Automation Triggers
+  getAutomationTriggers(): Promise<AutomationTrigger[]>;
+  getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined>;
+  getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]>;
+  createAutomationTrigger(trigger: InsertAutomationTrigger): Promise<AutomationTrigger>;
+  updateAutomationTrigger(id: string, trigger: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined>;
+  
+  // Automation Actions
+  getAutomationActions(): Promise<AutomationAction[]>;
+  getAutomationAction(id: string): Promise<AutomationAction | undefined>;
+  getAutomationActionsByCategory(category: string): Promise<AutomationAction[]>;
+  createAutomationAction(action: InsertAutomationAction): Promise<AutomationAction>;
+  updateAutomationAction(id: string, action: Partial<InsertAutomationAction>): Promise<AutomationAction | undefined>;
+  
+  // Notifications
+  getNotifications(userId: string): Promise<Notification[]>;
+  getNotification(id: string): Promise<Notification | undefined>;
+  getUnreadNotifications(userId: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: string): Promise<boolean>;
+  markAllNotificationsAsRead(userId: string): Promise<boolean>;
+  deleteNotification(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -113,6 +201,16 @@ export class MemStorage implements IStorage {
   private socialMediaPosts: Map<string, SocialMediaPost> = new Map();
   private socialMediaTemplates: Map<string, SocialMediaTemplate> = new Map();
   private socialMediaAnalytics: Map<string, SocialMediaAnalytics> = new Map();
+  private workflows: Map<string, Workflow> = new Map();
+  private workflowExecutions: Map<string, WorkflowExecution> = new Map();
+  private workflowTemplates: Map<string, WorkflowTemplate> = new Map();
+  private taskCategories: Map<string, TaskCategory> = new Map();
+  private taskTemplates: Map<string, TaskTemplate> = new Map();
+  private enhancedTasks: Map<string, EnhancedTask> = new Map();
+  private taskHistory: Map<string, TaskHistory[]> = new Map();
+  private automationTriggers: Map<string, AutomationTrigger> = new Map();
+  private automationActions: Map<string, AutomationAction> = new Map();
+  private notifications: Map<string, Notification> = new Map();
 
   constructor() {
     // Add sample data for testing
@@ -760,6 +858,513 @@ export class MemStorage implements IStorage {
     };
     this.socialMediaAnalytics.set(analytics.id, analytics);
     return analytics;
+  }
+
+  // Workflow Management
+  async getWorkflows(): Promise<Workflow[]> {
+    return Array.from(this.workflows.values());
+  }
+
+  async getWorkflow(id: string): Promise<Workflow | undefined> {
+    return this.workflows.get(id);
+  }
+
+  async getWorkflowsByClient(clientId: string): Promise<Workflow[]> {
+    return Array.from(this.workflows.values()).filter(workflow => workflow.clientId === clientId);
+  }
+
+  async getWorkflowsByCategory(category: string): Promise<Workflow[]> {
+    return Array.from(this.workflows.values()).filter(workflow => workflow.category === category);
+  }
+
+  async createWorkflow(workflowData: InsertWorkflow): Promise<Workflow> {
+    const workflow: Workflow = {
+      id: randomUUID(),
+      name: workflowData.name,
+      description: workflowData.description || null,
+      clientId: workflowData.clientId || null,
+      category: workflowData.category || null,
+      status: workflowData.status || "draft",
+      trigger: workflowData.trigger,
+      actions: workflowData.actions,
+      conditions: workflowData.conditions || null,
+      settings: workflowData.settings || null,
+      isTemplate: workflowData.isTemplate || false,
+      templateCategory: workflowData.templateCategory || null,
+      version: workflowData.version || 1,
+      lastRun: workflowData.lastRun || null,
+      totalRuns: workflowData.totalRuns || 0,
+      successfulRuns: workflowData.successfulRuns || 0,
+      failedRuns: workflowData.failedRuns || 0,
+      createdBy: workflowData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.workflows.set(workflow.id, workflow);
+    return workflow;
+  }
+
+  async updateWorkflow(id: string, workflowData: Partial<InsertWorkflow>): Promise<Workflow | undefined> {
+    const existing = this.workflows.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Workflow = {
+      ...existing,
+      ...workflowData,
+      updatedAt: new Date(),
+    };
+    this.workflows.set(id, updated);
+    return updated;
+  }
+
+  async deleteWorkflow(id: string): Promise<boolean> {
+    return this.workflows.delete(id);
+  }
+
+  // Workflow Executions
+  async getWorkflowExecutions(): Promise<WorkflowExecution[]> {
+    return Array.from(this.workflowExecutions.values());
+  }
+
+  async getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined> {
+    return this.workflowExecutions.get(id);
+  }
+
+  async getWorkflowExecutionsByWorkflow(workflowId: string): Promise<WorkflowExecution[]> {
+    return Array.from(this.workflowExecutions.values()).filter(exec => exec.workflowId === workflowId);
+  }
+
+  async getWorkflowExecutionsByContact(contactId: string): Promise<WorkflowExecution[]> {
+    return Array.from(this.workflowExecutions.values()).filter(exec => exec.contactId === contactId);
+  }
+
+  async createWorkflowExecution(executionData: InsertWorkflowExecution): Promise<WorkflowExecution> {
+    const execution: WorkflowExecution = {
+      id: randomUUID(),
+      workflowId: executionData.workflowId,
+      contactId: executionData.contactId || null,
+      triggerData: executionData.triggerData || null,
+      status: executionData.status,
+      currentStep: executionData.currentStep || 0,
+      totalSteps: executionData.totalSteps,
+      executionLog: executionData.executionLog || null,
+      errorMessage: executionData.errorMessage || null,
+      startedAt: executionData.startedAt,
+      completedAt: executionData.completedAt || null,
+      nextRunAt: executionData.nextRunAt || null,
+    };
+    this.workflowExecutions.set(execution.id, execution);
+    return execution;
+  }
+
+  async updateWorkflowExecution(id: string, executionData: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> {
+    const existing = this.workflowExecutions.get(id);
+    if (!existing) return undefined;
+    
+    const updated: WorkflowExecution = {
+      ...existing,
+      ...executionData,
+    };
+    this.workflowExecutions.set(id, updated);
+    return updated;
+  }
+
+  // Workflow Templates
+  async getWorkflowTemplates(): Promise<WorkflowTemplate[]> {
+    return Array.from(this.workflowTemplates.values());
+  }
+
+  async getWorkflowTemplate(id: string): Promise<WorkflowTemplate | undefined> {
+    return this.workflowTemplates.get(id);
+  }
+
+  async getWorkflowTemplatesByCategory(category: string): Promise<WorkflowTemplate[]> {
+    return Array.from(this.workflowTemplates.values()).filter(template => template.category === category);
+  }
+
+  async createWorkflowTemplate(templateData: InsertWorkflowTemplate): Promise<WorkflowTemplate> {
+    const template: WorkflowTemplate = {
+      id: randomUUID(),
+      name: templateData.name,
+      description: templateData.description || null,
+      category: templateData.category,
+      industry: templateData.industry || null,
+      useCase: templateData.useCase || null,
+      trigger: templateData.trigger,
+      actions: templateData.actions,
+      conditions: templateData.conditions || null,
+      settings: templateData.settings || null,
+      isPublic: templateData.isPublic || false,
+      usageCount: templateData.usageCount || 0,
+      rating: templateData.rating || null,
+      tags: templateData.tags || null,
+      createdBy: templateData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.workflowTemplates.set(template.id, template);
+    return template;
+  }
+
+  async updateWorkflowTemplate(id: string, templateData: Partial<InsertWorkflowTemplate>): Promise<WorkflowTemplate | undefined> {
+    const existing = this.workflowTemplates.get(id);
+    if (!existing) return undefined;
+    
+    const updated: WorkflowTemplate = {
+      ...existing,
+      ...templateData,
+      updatedAt: new Date(),
+    };
+    this.workflowTemplates.set(id, updated);
+    return updated;
+  }
+
+  async deleteWorkflowTemplate(id: string): Promise<boolean> {
+    return this.workflowTemplates.delete(id);
+  }
+
+  // Task Categories
+  async getTaskCategories(): Promise<TaskCategory[]> {
+    return Array.from(this.taskCategories.values());
+  }
+
+  async getTaskCategory(id: string): Promise<TaskCategory | undefined> {
+    return this.taskCategories.get(id);
+  }
+
+  async createTaskCategory(categoryData: InsertTaskCategory): Promise<TaskCategory> {
+    const category: TaskCategory = {
+      id: randomUUID(),
+      name: categoryData.name,
+      description: categoryData.description || null,
+      color: categoryData.color,
+      icon: categoryData.icon || null,
+      isDefault: categoryData.isDefault || false,
+      createdAt: new Date(),
+    };
+    this.taskCategories.set(category.id, category);
+    return category;
+  }
+
+  async updateTaskCategory(id: string, categoryData: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined> {
+    const existing = this.taskCategories.get(id);
+    if (!existing) return undefined;
+    
+    const updated: TaskCategory = {
+      ...existing,
+      ...categoryData,
+    };
+    this.taskCategories.set(id, updated);
+    return updated;
+  }
+
+  async deleteTaskCategory(id: string): Promise<boolean> {
+    return this.taskCategories.delete(id);
+  }
+
+  // Task Templates
+  async getTaskTemplates(): Promise<TaskTemplate[]> {
+    return Array.from(this.taskTemplates.values());
+  }
+
+  async getTaskTemplate(id: string): Promise<TaskTemplate | undefined> {
+    return this.taskTemplates.get(id);
+  }
+
+  async getTaskTemplatesByCategory(categoryId: string): Promise<TaskTemplate[]> {
+    return Array.from(this.taskTemplates.values()).filter(template => template.categoryId === categoryId);
+  }
+
+  async createTaskTemplate(templateData: InsertTaskTemplate): Promise<TaskTemplate> {
+    const template: TaskTemplate = {
+      id: randomUUID(),
+      name: templateData.name,
+      description: templateData.description || null,
+      categoryId: templateData.categoryId || null,
+      priority: templateData.priority || "medium",
+      estimatedDuration: templateData.estimatedDuration || null,
+      instructions: templateData.instructions || null,
+      checklist: templateData.checklist || null,
+      requiredFields: templateData.requiredFields || null,
+      assigneeRole: templateData.assigneeRole || null,
+      tags: templateData.tags || null,
+      isRecurring: templateData.isRecurring || false,
+      recurrencePattern: templateData.recurrencePattern || null,
+      createdBy: templateData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.taskTemplates.set(template.id, template);
+    return template;
+  }
+
+  async updateTaskTemplate(id: string, templateData: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined> {
+    const existing = this.taskTemplates.get(id);
+    if (!existing) return undefined;
+    
+    const updated: TaskTemplate = {
+      ...existing,
+      ...templateData,
+      updatedAt: new Date(),
+    };
+    this.taskTemplates.set(id, updated);
+    return updated;
+  }
+
+  async deleteTaskTemplate(id: string): Promise<boolean> {
+    return this.taskTemplates.delete(id);
+  }
+
+  // Enhanced Tasks
+  async getEnhancedTasks(): Promise<EnhancedTask[]> {
+    return Array.from(this.enhancedTasks.values());
+  }
+
+  async getEnhancedTask(id: string): Promise<EnhancedTask | undefined> {
+    return this.enhancedTasks.get(id);
+  }
+
+  async getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]> {
+    return Array.from(this.enhancedTasks.values()).filter(task => task.clientId === clientId);
+  }
+
+  async getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]> {
+    return Array.from(this.enhancedTasks.values()).filter(task => task.projectId === projectId);
+  }
+
+  async getEnhancedTasksByAssignee(assigneeId: string): Promise<EnhancedTask[]> {
+    return Array.from(this.enhancedTasks.values()).filter(task => task.assignedTo === assigneeId);
+  }
+
+  async getEnhancedTasksByWorkflow(workflowId: string): Promise<EnhancedTask[]> {
+    return Array.from(this.enhancedTasks.values()).filter(task => task.workflowId === workflowId);
+  }
+
+  async createEnhancedTask(taskData: InsertEnhancedTask): Promise<EnhancedTask> {
+    const task: EnhancedTask = {
+      id: randomUUID(),
+      title: taskData.title,
+      description: taskData.description || null,
+      categoryId: taskData.categoryId || null,
+      templateId: taskData.templateId || null,
+      clientId: taskData.clientId || null,
+      projectId: taskData.projectId || null,
+      campaignId: taskData.campaignId || null,
+      workflowId: taskData.workflowId || null,
+      parentTaskId: taskData.parentTaskId || null,
+      assignedTo: taskData.assignedTo || null,
+      createdBy: taskData.createdBy,
+      priority: taskData.priority || "medium",
+      status: taskData.status || "todo",
+      progress: taskData.progress || 0,
+      estimatedHours: taskData.estimatedHours || null,
+      actualHours: taskData.actualHours || null,
+      dueDate: taskData.dueDate || null,
+      startDate: taskData.startDate || null,
+      completedAt: null,
+      tags: taskData.tags || null,
+      checklist: taskData.checklist || null,
+      attachments: taskData.attachments || null,
+      dependencies: taskData.dependencies || null,
+      followers: taskData.followers || null,
+      customFields: taskData.customFields || null,
+      timeEntries: taskData.timeEntries || null,
+      comments: taskData.comments || null,
+      reminderSettings: taskData.reminderSettings || null,
+      isRecurring: taskData.isRecurring || false,
+      recurrencePattern: taskData.recurrencePattern || null,
+      recurringGroupId: taskData.recurringGroupId || null,
+      automationData: taskData.automationData || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.enhancedTasks.set(task.id, task);
+    return task;
+  }
+
+  async updateEnhancedTask(id: string, taskData: Partial<InsertEnhancedTask>): Promise<EnhancedTask | undefined> {
+    const existing = this.enhancedTasks.get(id);
+    if (!existing) return undefined;
+    
+    const updated: EnhancedTask = {
+      ...existing,
+      ...taskData,
+      updatedAt: new Date(),
+      completedAt: taskData.status === "completed" && !existing.completedAt ? new Date() : existing.completedAt,
+    };
+    this.enhancedTasks.set(id, updated);
+    return updated;
+  }
+
+  async deleteEnhancedTask(id: string): Promise<boolean> {
+    return this.enhancedTasks.delete(id);
+  }
+
+  // Task History
+  async getTaskHistory(taskId: string): Promise<TaskHistory[]> {
+    return this.taskHistory.get(taskId) || [];
+  }
+
+  async createTaskHistory(historyData: InsertTaskHistory): Promise<TaskHistory> {
+    const history: TaskHistory = {
+      id: randomUUID(),
+      taskId: historyData.taskId,
+      action: historyData.action,
+      field: historyData.field || null,
+      oldValue: historyData.oldValue || null,
+      newValue: historyData.newValue || null,
+      userId: historyData.userId,
+      timestamp: historyData.timestamp,
+      notes: historyData.notes || null,
+    };
+    
+    const existingHistory = this.taskHistory.get(historyData.taskId) || [];
+    existingHistory.push(history);
+    this.taskHistory.set(historyData.taskId, existingHistory);
+    return history;
+  }
+
+  // Automation Triggers
+  async getAutomationTriggers(): Promise<AutomationTrigger[]> {
+    return Array.from(this.automationTriggers.values());
+  }
+
+  async getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined> {
+    return this.automationTriggers.get(id);
+  }
+
+  async getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]> {
+    return Array.from(this.automationTriggers.values()).filter(trigger => trigger.category === category);
+  }
+
+  async createAutomationTrigger(triggerData: InsertAutomationTrigger): Promise<AutomationTrigger> {
+    const trigger: AutomationTrigger = {
+      id: randomUUID(),
+      name: triggerData.name,
+      type: triggerData.type,
+      description: triggerData.description || null,
+      category: triggerData.category,
+      configSchema: triggerData.configSchema || null,
+      isActive: triggerData.isActive || true,
+      createdAt: new Date(),
+    };
+    this.automationTriggers.set(trigger.id, trigger);
+    return trigger;
+  }
+
+  async updateAutomationTrigger(id: string, triggerData: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined> {
+    const existing = this.automationTriggers.get(id);
+    if (!existing) return undefined;
+    
+    const updated: AutomationTrigger = {
+      ...existing,
+      ...triggerData,
+    };
+    this.automationTriggers.set(id, updated);
+    return updated;
+  }
+
+  // Automation Actions
+  async getAutomationActions(): Promise<AutomationAction[]> {
+    return Array.from(this.automationActions.values());
+  }
+
+  async getAutomationAction(id: string): Promise<AutomationAction | undefined> {
+    return this.automationActions.get(id);
+  }
+
+  async getAutomationActionsByCategory(category: string): Promise<AutomationAction[]> {
+    return Array.from(this.automationActions.values()).filter(action => action.category === category);
+  }
+
+  async createAutomationAction(actionData: InsertAutomationAction): Promise<AutomationAction> {
+    const action: AutomationAction = {
+      id: randomUUID(),
+      name: actionData.name,
+      type: actionData.type,
+      description: actionData.description || null,
+      category: actionData.category,
+      configSchema: actionData.configSchema || null,
+      isActive: actionData.isActive || true,
+      createdAt: new Date(),
+    };
+    this.automationActions.set(action.id, action);
+    return action;
+  }
+
+  async updateAutomationAction(id: string, actionData: Partial<InsertAutomationAction>): Promise<AutomationAction | undefined> {
+    const existing = this.automationActions.get(id);
+    if (!existing) return undefined;
+    
+    const updated: AutomationAction = {
+      ...existing,
+      ...actionData,
+    };
+    this.automationActions.set(id, updated);
+    return updated;
+  }
+
+  // Notifications
+  async getNotifications(userId: string): Promise<Notification[]> {
+    return Array.from(this.notifications.values()).filter(notification => notification.userId === userId);
+  }
+
+  async getNotification(id: string): Promise<Notification | undefined> {
+    return this.notifications.get(id);
+  }
+
+  async getUnreadNotifications(userId: string): Promise<Notification[]> {
+    return Array.from(this.notifications.values()).filter(notification => 
+      notification.userId === userId && !notification.isRead
+    );
+  }
+
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const notification: Notification = {
+      id: randomUUID(),
+      userId: notificationData.userId,
+      type: notificationData.type,
+      title: notificationData.title,
+      message: notificationData.message,
+      entityType: notificationData.entityType || null,
+      entityId: notificationData.entityId || null,
+      priority: notificationData.priority || "normal",
+      isRead: notificationData.isRead || false,
+      readAt: notificationData.readAt || null,
+      actionUrl: notificationData.actionUrl || null,
+      actionText: notificationData.actionText || null,
+      metadata: notificationData.metadata || null,
+      createdAt: new Date(),
+    };
+    this.notifications.set(notification.id, notification);
+    return notification;
+  }
+
+  async markNotificationAsRead(id: string): Promise<boolean> {
+    const notification = this.notifications.get(id);
+    if (!notification) return false;
+    
+    notification.isRead = true;
+    notification.readAt = new Date();
+    this.notifications.set(id, notification);
+    return true;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<boolean> {
+    const userNotifications = Array.from(this.notifications.values()).filter(n => n.userId === userId);
+    const now = new Date();
+    
+    userNotifications.forEach(notification => {
+      notification.isRead = true;
+      notification.readAt = now;
+      this.notifications.set(notification.id, notification);
+    });
+    
+    return true;
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    return this.notifications.delete(id);
   }
 }
 
