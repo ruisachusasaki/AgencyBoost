@@ -85,10 +85,17 @@ export default function Campaigns() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
-      setIsCreateTemplateDialogOpen(false);
+      handleDialogClose();
       toast({
         title: "Email template created",
         description: "Email template has been created successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create email template. Please try again.",
+        variant: "destructive",
       });
     },
   });
@@ -99,10 +106,17 @@ export default function Campaigns() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
-      setIsCreateTemplateDialogOpen(false);
+      handleDialogClose();
       toast({
         title: "SMS template created",
         description: "SMS template has been created successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create SMS template. Please try again.",
+        variant: "destructive",
       });
     },
   });
@@ -387,7 +401,7 @@ export default function Campaigns() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-base line-clamp-1">{template.name}</CardTitle>
-                      {"subject" in template && (
+                      {"subject" in template && template.subject && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
                           {template.subject}
                         </p>
