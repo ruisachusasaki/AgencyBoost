@@ -263,6 +263,126 @@ export const invoices = pgTable("invoices", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Social Media Accounts
+export const socialMediaAccounts = pgTable("social_media_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  platform: text("platform").notNull(), // facebook, instagram, twitter, linkedin, youtube, tiktok, pinterest
+  accountName: text("account_name").notNull(),
+  username: text("username").notNull(),
+  accountId: text("account_id"), // Platform-specific account ID
+  accessToken: text("access_token"), // Encrypted access token
+  refreshToken: text("refresh_token"), // Encrypted refresh token
+  tokenExpiresAt: timestamp("token_expires_at"),
+  isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync"),
+  followers: integer("followers").default(0),
+  following: integer("following").default(0),
+  posts: integer("posts").default(0),
+  profileImage: text("profile_image"),
+  bio: text("bio"),
+  website: text("website"),
+  settings: jsonb("settings"), // Platform-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Social Media Posts
+export const socialMediaPosts = pgTable("social_media_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  campaignId: varchar("campaign_id").references(() => campaigns.id),
+  accountId: varchar("account_id").notNull().references(() => socialMediaAccounts.id),
+  
+  // Post content
+  content: text("content").notNull(),
+  hashtags: text("hashtags").array(),
+  mentions: text("mentions").array(),
+  mediaUrls: text("media_urls").array(),
+  mediaType: text("media_type"), // image, video, carousel, story
+  linkUrl: text("link_url"),
+  linkPreview: jsonb("link_preview"),
+  
+  // Scheduling
+  status: text("status").notNull().default("draft"), // draft, scheduled, published, failed
+  scheduledAt: timestamp("scheduled_at"),
+  publishedAt: timestamp("published_at"),
+  
+  // Platform-specific data
+  platformPostId: text("platform_post_id"), // ID from the social platform
+  platformData: jsonb("platform_data"), // Platform-specific metadata
+  
+  // Engagement metrics
+  likes: integer("likes").default(0),
+  comments: integer("comments").default(0),
+  shares: integer("shares").default(0),
+  impressions: integer("impressions").default(0),
+  reach: integer("reach").default(0),
+  clicks: integer("clicks").default(0),
+  saves: integer("saves").default(0),
+  
+  // Approval workflow
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  authorId: varchar("author_id").notNull().references(() => users.id),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Social Media Content Templates
+export const socialMediaTemplates = pgTable("social_media_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"), // promotional, educational, engagement, announcement
+  platforms: text("platforms").array(), // which platforms this template works for
+  contentTemplate: text("content_template").notNull(),
+  hashtagSuggestions: text("hashtag_suggestions").array(),
+  mediaRequirements: jsonb("media_requirements"), // image dimensions, video length, etc.
+  isPublic: boolean("is_public").default(false), // shared across all clients
+  clientId: varchar("client_id").references(() => clients.id), // null for public templates
+  authorId: varchar("author_id").notNull().references(() => users.id),
+  usageCount: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Social Media Analytics Snapshots
+export const socialMediaAnalytics = pgTable("social_media_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").notNull().references(() => socialMediaAccounts.id),
+  date: timestamp("date").notNull(),
+  
+  // Account metrics
+  followers: integer("followers").default(0),
+  following: integer("following").default(0),
+  posts: integer("posts").default(0),
+  
+  // Engagement metrics (daily totals)
+  totalLikes: integer("total_likes").default(0),
+  totalComments: integer("total_comments").default(0),
+  totalShares: integer("total_shares").default(0),
+  totalImpressions: integer("total_impressions").default(0),
+  totalReach: integer("total_reach").default(0),
+  totalClicks: integer("total_clicks").default(0),
+  totalSaves: integer("total_saves").default(0),
+  
+  // Calculated metrics
+  engagementRate: decimal("engagement_rate", { precision: 5, scale: 2 }).default("0"),
+  impressionReachRatio: decimal("impression_reach_ratio", { precision: 5, scale: 2 }).default("0"),
+  
+  // Platform-specific metrics
+  platformData: jsonb("platform_data"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -346,6 +466,29 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   createdAt: true,
 });
 
+export const insertSocialMediaAccountSchema = createInsertSchema(socialMediaAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSocialMediaPostSchema = createInsertSchema(socialMediaPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSocialMediaTemplateSchema = createInsertSchema(socialMediaTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSocialMediaAnalyticsSchema = createInsertSchema(socialMediaAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -394,3 +537,15 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+export type SocialMediaAccount = typeof socialMediaAccounts.$inferSelect;
+export type InsertSocialMediaAccount = z.infer<typeof insertSocialMediaAccountSchema>;
+
+export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;
+export type InsertSocialMediaPost = z.infer<typeof insertSocialMediaPostSchema>;
+
+export type SocialMediaTemplate = typeof socialMediaTemplates.$inferSelect;
+export type InsertSocialMediaTemplate = z.infer<typeof insertSocialMediaTemplateSchema>;
+
+export type SocialMediaAnalytics = typeof socialMediaAnalytics.$inferSelect;
+export type InsertSocialMediaAnalytics = z.infer<typeof insertSocialMediaAnalyticsSchema>;

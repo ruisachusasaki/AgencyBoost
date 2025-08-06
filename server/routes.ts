@@ -1,7 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, insertTaskSchema, insertInvoiceSchema } from "@shared/schema";
+import { 
+  insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, 
+  insertTaskSchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
+  insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
+  insertSocialMediaAnalyticsSchema 
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -389,6 +394,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
+  // Social Media Account routes
+  app.get("/api/social-media-accounts", async (req, res) => {
+    try {
+      const accounts = await storage.getSocialMediaAccounts();
+      res.json(accounts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch social media accounts" });
+    }
+  });
+
+  app.get("/api/social-media-accounts/:id", async (req, res) => {
+    try {
+      const account = await storage.getSocialMediaAccount(req.params.id);
+      if (!account) {
+        return res.status(404).json({ message: "Social media account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch social media account" });
+    }
+  });
+
+  app.get("/api/clients/:clientId/social-media-accounts", async (req, res) => {
+    try {
+      const accounts = await storage.getSocialMediaAccountsByClient(req.params.clientId);
+      res.json(accounts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch client social media accounts" });
+    }
+  });
+
+  app.post("/api/social-media-accounts", async (req, res) => {
+    try {
+      const validatedData = insertSocialMediaAccountSchema.parse(req.body);
+      const account = await storage.createSocialMediaAccount(validatedData);
+      res.status(201).json(account);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create social media account" });
+    }
+  });
+
+  app.put("/api/social-media-accounts/:id", async (req, res) => {
+    try {
+      const validatedData = insertSocialMediaAccountSchema.partial().parse(req.body);
+      const account = await storage.updateSocialMediaAccount(req.params.id, validatedData);
+      if (!account) {
+        return res.status(404).json({ message: "Social media account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update social media account" });
+    }
+  });
+
+  app.delete("/api/social-media-accounts/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteSocialMediaAccount(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Social media account not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete social media account" });
+    }
+  });
+
+  // Social Media Post routes
+  app.get("/api/social-media-posts", async (req, res) => {
+    try {
+      const posts = await storage.getSocialMediaPosts();
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch social media posts" });
+    }
+  });
+
+  app.get("/api/social-media-posts/:id", async (req, res) => {
+    try {
+      const post = await storage.getSocialMediaPost(req.params.id);
+      if (!post) {
+        return res.status(404).json({ message: "Social media post not found" });
+      }
+      res.json(post);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch social media post" });
+    }
+  });
+
+  app.get("/api/clients/:clientId/social-media-posts", async (req, res) => {
+    try {
+      const posts = await storage.getSocialMediaPostsByClient(req.params.clientId);
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch client social media posts" });
+    }
+  });
+
+  app.post("/api/social-media-posts", async (req, res) => {
+    try {
+      const validatedData = insertSocialMediaPostSchema.parse(req.body);
+      const post = await storage.createSocialMediaPost(validatedData);
+      res.status(201).json(post);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create social media post" });
+    }
+  });
+
+  app.put("/api/social-media-posts/:id", async (req, res) => {
+    try {
+      const validatedData = insertSocialMediaPostSchema.partial().parse(req.body);
+      const post = await storage.updateSocialMediaPost(req.params.id, validatedData);
+      if (!post) {
+        return res.status(404).json({ message: "Social media post not found" });
+      }
+      res.json(post);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update social media post" });
+    }
+  });
+
+  app.delete("/api/social-media-posts/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteSocialMediaPost(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Social media post not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete social media post" });
+    }
+  });
+
+  // Social Media Template routes
+  app.get("/api/social-media-templates", async (req, res) => {
+    try {
+      const templates = await storage.getSocialMediaTemplates();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch social media templates" });
+    }
+  });
+
+  app.get("/api/clients/:clientId/social-media-templates", async (req, res) => {
+    try {
+      const templates = await storage.getSocialMediaTemplatesByClient(req.params.clientId);
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch client social media templates" });
+    }
+  });
+
+  app.post("/api/social-media-templates", async (req, res) => {
+    try {
+      const validatedData = insertSocialMediaTemplateSchema.parse(req.body);
+      const template = await storage.createSocialMediaTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create social media template" });
     }
   });
 
