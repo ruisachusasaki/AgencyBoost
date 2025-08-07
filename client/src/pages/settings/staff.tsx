@@ -65,10 +65,7 @@ export default function Staff() {
   // Create staff mutation
   const createStaffMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
-      return apiRequest("/api/staff", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("/api/staff", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -363,7 +360,7 @@ export default function Staff() {
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span>{formatPhoneNumber(staff.phone)}</span>
+                          <span>{formatPhoneNumber(staff.phone || "")}</span>
                         </div>
                       </TableCell>
 

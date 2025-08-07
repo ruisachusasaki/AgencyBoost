@@ -90,28 +90,6 @@ export default function StaffDetail() {
     }
   });
 
-  // Set form values when data loads
-  useEffect(() => {
-    if (staffMember) {
-      form.reset({
-        firstName: staffMember.firstName,
-        lastName: staffMember.lastName,
-        email: staffMember.email,
-        phone: staffMember.phone || "",
-        userType: staffMember.userType,
-        address: staffMember.address || "",
-        city: staffMember.city || "",
-        state: staffMember.state || "",
-        zip: staffMember.zip || "",
-        country: staffMember.country || "",
-        hireDate: staffMember.hireDate || "",
-        department: staffMember.department || "",
-        managerId: staffMember.managerId || "",
-        birthdate: staffMember.birthdate || "",
-      });
-    }
-  }, [staffMember, form]);
-
   // Update form values when staff member changes
   useEffect(() => {
     if (staffMember) {
@@ -126,10 +104,10 @@ export default function StaffDetail() {
         state: staffMember.state || "",
         zip: staffMember.zip || "",
         country: staffMember.country || "",
-        hireDate: staffMember.hireDate || "",
+        hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "",
         managerId: staffMember.managerId || "",
-        birthdate: staffMember.birthdate || "",
+        birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
     }
   }, [staffMember, form]);

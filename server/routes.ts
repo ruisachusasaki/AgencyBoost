@@ -13,8 +13,8 @@ import {
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
-import { users, businessProfile, customFields, customFieldFolders, staff } from "@shared/schema";
-import { eq, like, or, asc, desc, sql } from "drizzle-orm";
+import { users, businessProfile, customFields, customFieldFolders, staff, insertStaffSchema } from "@shared/schema";
+import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Client routes
@@ -1037,47 +1037,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/staff", async (req, res) => {
     try {
       const { search } = req.query;
-      let query = db.select().from(users).orderBy(asc(users.createdAt));
+      let query = db.select().from(staff).where(eq(staff.isActive, true));
       
       if (search && typeof search === 'string') {
-        query = db.select().from(users)
+        query = db.select().from(staff)
           .where(
-            or(
-              like(sql`${users.firstName} || ' ' || ${users.lastName}`, `%${search}%`),
-              like(users.email, `%${search}%`),
-              like(users.role, `%${search}%`)
+            and(
+              eq(staff.isActive, true),
+              or(
+                like(sql`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
+                like(staff.email, `%${search}%`),
+                like(staff.userType, `%${search}%`)
+              )
             )
-          )
-          .orderBy(asc(users.createdAt));
+          );
       }
       
-      const staff = await query;
-      res.json(staff);
+      const staffMembers = await query.orderBy(asc(staff.firstName));
+      res.json(staffMembers);
     } catch (error) {
       console.error('Error fetching staff:', error);
       res.status(500).json({ message: "Failed to fetch staff" });
     }
   });
 
-  app.post("/api/staff", async (req, res) => {
+  app.get("/api/staff/:id", async (req, res) => {
     try {
-      const { firstName, lastName, email, phone, extension, role } = req.body;
+      const [staffMember] = await db.select().from(staff).where(eq(staff.id, req.params.id));
       
-      if (!firstName || !lastName || !email) {
-        return res.status(400).json({ message: "First name, last name, and email are required" });
+      if (!staffMember) {
+        return res.status(404).json({ message: "Staff member not found" });
       }
       
-      const newStaff = await db.insert(users).values({
-        firstName,
-        lastName,
-        email,
-        phone: phone || null,
-        extension: extension || null,
-        role: role || 'User',
-        status: 'active'
-      }).returning();
-      
-      res.status(201).json(newStaff[0]);
+      res.json(staffMember);
+    } catch (error) {
+      console.error('Error fetching staff member:', error);
+      res.status(500).json({ message: "Failed to fetch staff member" });
+    }
+  });
+
+  app.post("/api/staff", async (req, res) => {
+    try {
+      const insertData = insertStaffSchema.parse(req.body);
+      const [newStaff] = await db.insert(staff).values(insertData).returning();
+      res.status(201).json(newStaff);
     } catch (error) {
       console.error('Error creating staff:', error);
       if (error.code === '23505') {
@@ -1089,31 +1092,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/staff/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const { firstName, lastName, email, phone, extension, role, status, profileImage, signature, signatureEnabled } = req.body;
-      
-      const updatedStaff = await db.update(users)
+      const [updatedStaff] = await db
+        .update(staff)
         .set({
-          firstName,
-          lastName,
-          email,
-          phone,
-          extension,
-          role,
-          status,
-          profileImage,
-          signature,
-          signatureEnabled,
+          ...req.body,
           updatedAt: new Date()
         })
-        .where(eq(users.id, id))
+        .where(eq(staff.id, req.params.id))
         .returning();
       
-      if (updatedStaff.length === 0) {
+      if (!updatedStaff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
       
-      res.json(updatedStaff[0]);
+      res.json(updatedStaff);
     } catch (error) {
       console.error('Error updating staff:', error);
       res.status(500).json({ message: "Failed to update staff member" });
@@ -1122,17 +1114,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/staff/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      
-      const deletedStaff = await db.delete(users)
-        .where(eq(users.id, id))
+      const [deletedStaff] = await db
+        .update(staff)
+        .set({ isActive: false })
+        .where(eq(staff.id, req.params.id))
         .returning();
       
-      if (deletedStaff.length === 0) {
+      if (!deletedStaff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
       
-      res.status(204).send();
+      res.json({ success: true });
     } catch (error) {
       console.error('Error deleting staff:', error);
       res.status(500).json({ message: "Failed to delete staff member" });
