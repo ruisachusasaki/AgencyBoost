@@ -269,21 +269,23 @@ export default function Campaigns() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Email Content</label>
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+                    <div className="border rounded-md overflow-hidden">
                       <ReactQuill
                         theme="snow"
                         value={emailContent}
                         onChange={setEmailContent}
                         modules={{
-                          toolbar: [
-                            [{ 'header': [1, 2, 3, false] }],
-                            ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            [{ 'color': [] }, { 'background': [] }],
-                            [{ 'align': [] }],
-                            ['link'],
-                            ['clean']
-                          ],
+                          toolbar: {
+                            container: [
+                              [{ 'header': [1, 2, 3, false] }],
+                              ['bold', 'italic', 'underline', 'strike'],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              [{ 'color': [] }, { 'background': [] }],
+                              [{ 'align': [] }],
+                              ['link'],
+                              ['clean']
+                            ]
+                          },
                         }}
                         formats={[
                           'header', 'bold', 'italic', 'underline', 'strike',
