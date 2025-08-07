@@ -7,12 +7,13 @@ import {
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
-  insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema
+  insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
+  insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
-import { users, businessProfile, customFields, customFieldFolders } from "@shared/schema";
+import { users, businessProfile, customFields, customFieldFolders, staff } from "@shared/schema";
 import { eq, like, or, asc, desc, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -915,3 +915,40 @@ export type InsertAutomationAction = z.infer<typeof insertAutomationActionSchema
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Staff Management
+export const staff = pgTable("staff", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  phone: varchar("phone", { length: 20 }),
+  userType: varchar("user_type", { length: 50 }).notNull().default("User"),
+  profileImagePath: text("profile_image_path"),
+  
+  // Address fields
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  zip: varchar("zip", { length: 20 }),
+  country: varchar("country", { length: 100 }),
+  
+  // Additional profile fields
+  hireDate: date("hire_date"),
+  department: varchar("department", { length: 100 }),
+  managerId: uuid("manager_id"),
+  birthdate: date("birthdate"),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStaffSchema = createInsertSchema(staff).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Staff = typeof staff.$inferSelect;
+export type InsertStaff = z.infer<typeof insertStaffSchema>;
