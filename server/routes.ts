@@ -744,6 +744,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/custom-fields/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertCustomFieldSchema.partial().parse(req.body);
+      const customField = await storage.updateCustomField(id, validatedData);
+      if (!customField) {
+        return res.status(404).json({ message: "Custom field not found" });
+      }
+      res.json(customField);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating custom field:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.delete("/api/custom-fields/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -1266,6 +1284,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating custom field folder:', error);
       res.status(500).json({ message: "Failed to create custom field folder" });
+    }
+  });
+
+  app.put("/api/custom-field-folders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertCustomFieldFolderSchema.partial().parse(req.body);
+      
+      const [updatedFolder] = await db
+        .update(customFieldFolders)
+        .set(validatedData)
+        .where(eq(customFieldFolders.id, id))
+        .returning();
+
+      if (!updatedFolder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      res.json(updatedFolder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating custom field folder:', error);
+      res.status(500).json({ message: "Failed to update custom field folder" });
+    }
+  });
+
+  app.delete("/api/custom-field-folders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // First, update any custom fields that belong to this folder to have no folder
+      await db
+        .update(customFields)
+        .set({ folderId: null })
+        .where(eq(customFields.folderId, id));
+      
+      // Then delete the folder
+      const [deletedFolder] = await db
+        .delete(customFieldFolders)
+        .where(eq(customFieldFolders.id, id))
+        .returning();
+
+      if (!deletedFolder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      res.json({ message: "Folder deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting custom field folder:', error);
+      res.status(500).json({ message: "Failed to delete custom field folder" });
     }
   });
 
