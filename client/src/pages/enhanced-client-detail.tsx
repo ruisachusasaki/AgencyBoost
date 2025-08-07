@@ -309,7 +309,8 @@ export default function EnhancedClientDetail() {
                 placeholder={type === 'currency' ? '0.00' : 'Enter value'}
                 value={fieldEditValue}
                 onChange={(e) => setFieldEditValue(e.target.value)}
-                className="h-8"
+                className={type === 'url' ? "h-8 text-sm" : "h-8"}
+                style={type === 'url' ? { maxWidth: '100%' } : undefined}
               />
             )}
             <Button
@@ -342,7 +343,7 @@ export default function EnhancedClientDetail() {
               </p>
             ) : type === 'url' && value ? (
               <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
-                {value}
+                {value.length > 60 ? `${value.substring(0, 60)}...` : value}
               </a>
             ) : type === 'currency' && value ? (
               <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
@@ -687,7 +688,8 @@ export default function EnhancedClientDetail() {
                                         placeholder="Enter URL"
                                         value={fieldEditValue}
                                         onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8"
+                                        className="h-8 text-sm"
+                                        style={{ maxWidth: '100%' }}
                                       />
                                     ) : (
                                       <Input
@@ -727,7 +729,7 @@ export default function EnhancedClientDetail() {
                                     ) : field.type === 'url' ? (
                                       fieldValue ? (
                                         <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block">
-                                          {fieldValue}
+                                          {fieldValue.length > 60 ? `${fieldValue.substring(0, 60)}...` : fieldValue}
                                         </a>
                                       ) : (
                                         <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">Not specified</p>
