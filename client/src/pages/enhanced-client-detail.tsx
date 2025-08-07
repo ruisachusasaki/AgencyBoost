@@ -99,7 +99,7 @@ export default function EnhancedClientDetail() {
     recurring: false
   });
 
-  // Custom field editing state
+  // Field editing state (works for both custom and standard fields)
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
 
@@ -178,23 +178,29 @@ export default function EnhancedClientDetail() {
     setEmailMessage("");
   };
 
-  // Custom field update mutation
-  const updateCustomFieldMutation = useMutation({
-    mutationFn: async ({ fieldId, value }: { fieldId: string; value: any }) => {
-      const updatedCustomFieldValues = {
-        ...client?.customFieldValues,
-        [fieldId]: value
-      };
-      
-      return await apiRequest(`/api/clients/${clientId}`, 'PUT', {
-        customFieldValues: updatedCustomFieldValues
-      });
+  // Field update mutation (handles both custom and standard fields)
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ fieldId, value, isCustomField }: { fieldId: string; value: any; isCustomField: boolean }) => {
+      if (isCustomField) {
+        const updatedCustomFieldValues = {
+          ...(client?.customFieldValues || {}),
+          [fieldId]: value
+        };
+        
+        return await apiRequest(`/api/clients/${clientId}`, 'PUT', {
+          customFieldValues: updatedCustomFieldValues
+        });
+      } else {
+        return await apiRequest(`/api/clients/${clientId}`, 'PUT', {
+          [fieldId]: value
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
       toast({
         title: "Field Updated",
-        description: "Custom field value has been saved successfully.",
+        description: "Field value has been saved successfully.",
       });
       setEditingField(null);
       setFieldEditValue("");
@@ -202,7 +208,7 @@ export default function EnhancedClientDetail() {
     onError: (error: any) => {
       toast({
         title: "Update Failed",
-        description: error.message || "Failed to update custom field value.",
+        description: error.message || "Failed to update field value.",
         variant: "destructive"
       });
     }
@@ -218,8 +224,8 @@ export default function EnhancedClientDetail() {
     setFieldEditValue("");
   };
 
-  const saveFieldValue = (fieldId: string, fieldType: string) => {
-    let processedValue = fieldEditValue;
+  const saveFieldValue = (fieldId: string, fieldType: string, isCustomField: boolean = true) => {
+    let processedValue: any = fieldEditValue;
     
     // Process value based on field type
     if (fieldType === 'checkbox') {
@@ -230,7 +236,127 @@ export default function EnhancedClientDetail() {
       processedValue = fieldEditValue ? parseFloat(fieldEditValue.replace(/[^\d.-]/g, '')) : null;
     }
     
-    updateCustomFieldMutation.mutate({ fieldId, value: processedValue });
+    updateFieldMutation.mutate({ fieldId, value: processedValue, isCustomField });
+  };
+
+  // Helper component for editable field
+  const EditableField = ({ 
+    fieldId, 
+    label, 
+    value, 
+    type = 'text', 
+    isCustomField = false,
+    className = "text-gray-900",
+    required = false,
+    options = undefined as string[] | undefined
+  }: {
+    fieldId: string;
+    label: string;
+    value: any;
+    type?: string;
+    isCustomField?: boolean;
+    className?: string;
+    required?: boolean;
+    options?: string[];
+  }) => {
+    const isEditing = editingField === fieldId;
+    
+    return (
+      <div>
+        <label className="flex items-center justify-between text-gray-500 mb-1">
+          <span>
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </span>
+          {!isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+              onClick={() => startEditing(fieldId, value)}
+            >
+              <Edit2 className="h-3 w-3" />
+            </Button>
+          )}
+        </label>
+        
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            {type === 'dropdown' && options ? (
+              <Select value={fieldEditValue} onValueChange={setFieldEditValue}>
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : type === 'textarea' ? (
+              <Textarea
+                placeholder="Enter value"
+                value={fieldEditValue}
+                onChange={(e) => setFieldEditValue(e.target.value)}
+                className="min-h-[60px]"
+              />
+            ) : (
+              <Input
+                type={type === 'currency' ? 'number' : type}
+                step={type === 'currency' ? '0.01' : undefined}
+                placeholder={type === 'currency' ? '0.00' : 'Enter value'}
+                value={fieldEditValue}
+                onChange={(e) => setFieldEditValue(e.target.value)}
+                className="h-8"
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+              onClick={() => saveFieldValue(fieldId, type, isCustomField)}
+              disabled={updateFieldMutation.isPending}
+            >
+              <Save className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+              onClick={cancelEditing}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <div className="group cursor-pointer" onClick={() => startEditing(fieldId, value)}>
+            {type === 'email' && value ? (
+              <a href={`mailto:${value}`} className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
+                {value}
+              </a>
+            ) : type === 'phone' && value ? (
+              <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+                {formatPhoneNumber(value)}
+              </p>
+            ) : type === 'url' && value ? (
+              <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
+                {value}
+              </a>
+            ) : type === 'currency' && value ? (
+              <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+                ${Number(value).toFixed(2)}
+              </p>
+            ) : (
+              <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+                {value || "Not specified"}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Loading state
@@ -323,46 +449,127 @@ export default function EnhancedClientDetail() {
                 <div className="px-4 pb-4">
                   {section.id === "contact-details" ? (
                     <div className="space-y-4 text-sm">
-                      <div>
-                        <label className="block text-gray-500 mb-1">Position</label>
-                        <p className="text-gray-900">{client.position || "Not specified"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-gray-500 mb-1">Email</label>
-                        <p className="text-[#46a1a0]">{client.email}</p>
-                      </div>
-                      <div>
-                        <label className="block text-gray-500 mb-1">Phone</label>
-                        <p className="text-[#46a1a0]">{client.phone ? formatPhoneNumber(client.phone) : "Not provided"}</p>
-                      </div>
-                      {(client.address || client.city || client.state) && (
-                        <div>
-                          <label className="block text-gray-500 mb-1">Address</label>
-                          <div className="text-gray-900">
-                            {client.address && <p>{client.address}</p>}
-                            {client.address2 && <p>{client.address2}</p>}
-                            {(client.city || client.state || client.zipCode) && (
-                              <p>{[client.city, client.state, client.zipCode].filter(Boolean).join(", ")}</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-gray-500 mb-1">Client Vertical</label>
-                        <p className="text-gray-900">{client.clientVertical || "Not specified"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-gray-500 mb-1">Contact Status</label>
-                        <p className="text-gray-900">{client.status}</p>
-                      </div>
-                      <div>
-                        <label className="block text-gray-500 mb-1">Contact Source</label>
-                        <p className="text-gray-900">{client.contactSource || "Not specified"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-gray-500 mb-1">Contact Type</label>
-                        <p className="text-gray-900">{client.contactType || "Client"}</p>
-                      </div>
+                      <EditableField
+                        fieldId="name"
+                        label="Name"
+                        value={client.name}
+                        type="text"
+                        isCustomField={false}
+                        required={true}
+                      />
+                      <EditableField
+                        fieldId="company"
+                        label="Company"
+                        value={client.company}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="position"
+                        label="Position"
+                        value={client.position}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="email"
+                        label="Email"
+                        value={client.email}
+                        type="email"
+                        isCustomField={false}
+                        className="text-[#46a1a0]"
+                        required={true}
+                      />
+                      <EditableField
+                        fieldId="phone"
+                        label="Phone"
+                        value={client.phone}
+                        type="phone"
+                        isCustomField={false}
+                        className="text-[#46a1a0]"
+                      />
+                      <EditableField
+                        fieldId="address"
+                        label="Address"
+                        value={client.address}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="address2"
+                        label="Address 2 (Apt/Suite)"
+                        value={client.address2}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="city"
+                        label="City"
+                        value={client.city}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="state"
+                        label="State"
+                        value={client.state}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="zipCode"
+                        label="Zip Code"
+                        value={client.zipCode}
+                        type="text"
+                        isCustomField={false}
+                      />
+                      <EditableField
+                        fieldId="website"
+                        label="Website"
+                        value={client.website}
+                        type="url"
+                        isCustomField={false}
+                        className="text-[#46a1a0]"
+                      />
+                      <EditableField
+                        fieldId="clientVertical"
+                        label="Client Vertical"
+                        value={client.clientVertical}
+                        type="dropdown"
+                        isCustomField={false}
+                        options={["Live Events", "Financial Lead Gen", "E-commerce", "SaaS", "Healthcare", "Real Estate", "Other"]}
+                      />
+                      <EditableField
+                        fieldId="status"
+                        label="Contact Status"
+                        value={client.status}
+                        type="dropdown"
+                        isCustomField={false}
+                        options={["active", "inactive", "pending"]}
+                      />
+                      <EditableField
+                        fieldId="contactSource"
+                        label="Contact Source"
+                        value={client.contactSource}
+                        type="dropdown"
+                        isCustomField={false}
+                        options={["Website", "Referral", "Social Media", "Advertising", "Cold Outreach", "Event", "Other"]}
+                      />
+                      <EditableField
+                        fieldId="contactType"
+                        label="Contact Type"
+                        value={client.contactType}
+                        type="dropdown"
+                        isCustomField={false}
+                        options={["lead", "client", "prospect"]}
+                      />
+                      <EditableField
+                        fieldId="notes"
+                        label="Notes"
+                        value={client.notes}
+                        type="textarea"
+                        isCustomField={false}
+                      />
                     </div>
                   ) : (
                     // Custom Field Folder Content
@@ -495,8 +702,8 @@ export default function EnhancedClientDetail() {
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
-                                      onClick={() => saveFieldValue(field.id, field.type)}
-                                      disabled={updateCustomFieldMutation.isPending}
+                                      onClick={() => saveFieldValue(field.id, field.type, true)}
+                                      disabled={updateFieldMutation.isPending}
                                     >
                                       <Save className="h-3 w-3" />
                                     </Button>
