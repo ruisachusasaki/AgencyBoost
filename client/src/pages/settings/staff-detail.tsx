@@ -106,7 +106,7 @@ export default function StaffDetail() {
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "",
-        managerId: staffMember.managerId || "none",
+        managerId: staffMember.managerId ? staffMember.managerId : "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
     }
@@ -138,22 +138,48 @@ export default function StaffDetail() {
   });
 
   const handleProfileImageUpload = async () => {
-    // Simplified profile image upload for now
-    return {
-      method: "PUT" as const,
-      url: "https://example.com/upload", // Placeholder URL
-    };
+    try {
+      const response = await apiRequest("POST", "/api/objects/upload");
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+      };
+    } catch (error) {
+      console.error("Upload URL error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get upload URL",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const handleUploadComplete = async (result: any) => {
     if (result.successful && result.successful.length > 0) {
       const uploadURL = result.successful[0].uploadURL;
-      // For now, just update the form with the upload URL
-      // Profile image functionality can be enhanced later
-      toast({
-        title: "Success",
-        description: "Profile image uploaded successfully",
-      });
+      try {
+        const response = await apiRequest("PUT", "/api/profile-images", { profileImageURL: uploadURL });
+        const data = await response.json();
+        
+        // Update the form with the new profile image path
+        const formData = form.getValues();
+        const updateData = { ...formData, profileImagePath: data.objectPath };
+        updateMutation.mutate(updateData);
+        
+        toast({
+          title: "Success", 
+          description: "Profile image updated successfully",
+        });
+      } catch (error) {
+        console.error("Profile image update error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update profile image",
+          variant: "destructive",
+        });
+      }
     }
   };
 

@@ -1131,6 +1131,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Object storage routes for profile images
+  app.post("/api/objects/upload", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  app.put("/api/profile-images", async (req, res) => {
+    if (!req.body.profileImageURL) {
+      return res.status(400).json({ error: "profileImageURL is required" });
+    }
+
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(
+        req.body.profileImageURL,
+      );
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting profile image:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Business Profile API
   app.get("/api/business-profile", async (req, res) => {
     try {
