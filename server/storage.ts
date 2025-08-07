@@ -6,6 +6,7 @@ import {
   type Task, type InsertTask,
   type Invoice, type InsertInvoice,
   type User, type InsertUser,
+  type BusinessProfile, type InsertBusinessProfile,
   type CustomField, type InsertCustomField,
   type CustomFieldFolder, type InsertCustomFieldFolder,
   type ClientGroup, type InsertClientGroup,

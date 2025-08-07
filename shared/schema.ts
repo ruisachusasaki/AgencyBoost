@@ -6,11 +6,37 @@ import { z } from "zod";
 // Users table for CRM users/admins
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  role: text("role").notNull().default("user"), // admin, user
+  phone: text("phone"),
+  extension: text("extension"),
+  role: text("role").notNull().default("User"), // Admin, Manager, User, Accounting
+  status: text("status").notNull().default("active"), // active, inactive
   profileImage: text("profile_image"),
+  signature: text("signature"),
+  signatureEnabled: boolean("signature_enabled").default(false),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Business Profile Settings
+export const businessProfile = pgTable("business_profile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyName: text("company_name").notNull(),
+  businessType: text("business_type"),
+  website: text("website"),
+  phone: text("phone"),
+  email: text("email"),
+  timezone: text("timezone").default("America/New_York"),
+  logo: text("logo"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country").default("United States"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Custom field folders/sections

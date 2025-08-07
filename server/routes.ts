@@ -11,6 +11,9 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { db } from "./db";
+import { users, businessProfile, customFields, customFieldFolders } from "@shared/schema";
+import { eq, like, or, asc, desc, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Client routes
@@ -986,6 +989,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error setting profile image:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Staff/Users Management API
+  app.get("/api/staff", async (req, res) => {
+    try {
+      const { search } = req.query;
+      let query = db.select().from(users).orderBy(asc(users.createdAt));
+      
+      if (search && typeof search === 'string') {
+        query = db.select().from(users)
+          .where(
+            or(
+              like(sql`${users.firstName} || ' ' || ${users.lastName}`, `%${search}%`),
+              like(users.email, `%${search}%`),
+              like(users.role, `%${search}%`)
+            )
+          )
+          .orderBy(asc(users.createdAt));
+      }
+      
+      const staff = await query;
+      res.json(staff);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
+  app.post("/api/staff", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phone, extension, role } = req.body;
+      
+      if (!firstName || !lastName || !email) {
+        return res.status(400).json({ message: "First name, last name, and email are required" });
+      }
+      
+      const newStaff = await db.insert(users).values({
+        firstName,
+        lastName,
+        email,
+        phone: phone || null,
+        extension: extension || null,
+        role: role || 'User',
+        status: 'active'
+      }).returning();
+      
+      res.status(201).json(newStaff[0]);
+    } catch (error) {
+      console.error('Error creating staff:', error);
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      res.status(500).json({ message: "Failed to create staff member" });
+    }
+  });
+
+  app.put("/api/staff/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { firstName, lastName, email, phone, extension, role, status, profileImage, signature, signatureEnabled } = req.body;
+      
+      const updatedStaff = await db.update(users)
+        .set({
+          firstName,
+          lastName,
+          email,
+          phone,
+          extension,
+          role,
+          status,
+          profileImage,
+          signature,
+          signatureEnabled,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, id))
+        .returning();
+      
+      if (updatedStaff.length === 0) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      
+      res.json(updatedStaff[0]);
+    } catch (error) {
+      console.error('Error updating staff:', error);
+      res.status(500).json({ message: "Failed to update staff member" });
+    }
+  });
+
+  app.delete("/api/staff/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const deletedStaff = await db.delete(users)
+        .where(eq(users.id, id))
+        .returning();
+      
+      if (deletedStaff.length === 0) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting staff:', error);
+      res.status(500).json({ message: "Failed to delete staff member" });
+    }
+  });
+
+  // Business Profile API
+  app.get("/api/business-profile", async (req, res) => {
+    try {
+      const profile = await db.select().from(businessProfile).limit(1);
+      
+      if (profile.length === 0) {
+        const defaultProfile = await db.insert(businessProfile).values({
+          companyName: "Your Company Name",
+          businessType: "",
+          website: "",
+          phone: "",
+          email: "",
+          timezone: "America/New_York",
+          address: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          country: "United States"
+        }).returning();
+        
+        return res.json(defaultProfile[0]);
+      }
+      
+      res.json(profile[0]);
+    } catch (error) {
+      console.error('Error fetching business profile:', error);
+      res.status(500).json({ message: "Failed to fetch business profile" });
+    }
+  });
+
+  app.put("/api/business-profile", async (req, res) => {
+    try {
+      const profileData = req.body;
+      const existingProfile = await db.select().from(businessProfile).limit(1);
+      
+      if (existingProfile.length === 0) {
+        const newProfile = await db.insert(businessProfile).values({
+          ...profileData,
+          updatedAt: new Date()
+        }).returning();
+        
+        return res.json(newProfile[0]);
+      } else {
+        const updatedProfile = await db.update(businessProfile)
+          .set({
+            ...profileData,
+            updatedAt: new Date()
+          })
+          .where(eq(businessProfile.id, existingProfile[0].id))
+          .returning();
+        
+        return res.json(updatedProfile[0]);
+      }
+    } catch (error) {
+      console.error('Error updating business profile:', error);
+      res.status(500).json({ message: "Failed to update business profile" });
+    }
+  });
+
+  // Custom Field Folders API with search
+  app.get("/api/custom-field-folders", async (req, res) => {
+    try {
+      const { search } = req.query;
+      let query = db.select({
+        id: customFieldFolders.id,
+        name: customFieldFolders.name,
+        order: customFieldFolders.order,
+        isDefault: customFieldFolders.isDefault,
+        canReorder: customFieldFolders.canReorder,
+        createdAt: customFieldFolders.createdAt,
+        fieldCount: sql<number>`(SELECT COUNT(*) FROM ${customFields} WHERE ${customFields.folderId} = ${customFieldFolders.id})`
+      })
+      .from(customFieldFolders)
+      .orderBy(asc(customFieldFolders.order));
+      
+      if (search && typeof search === 'string') {
+        query = db.select({
+          id: customFieldFolders.id,
+          name: customFieldFolders.name,
+          order: customFieldFolders.order,
+          isDefault: customFieldFolders.isDefault,
+          canReorder: customFieldFolders.canReorder,
+          createdAt: customFieldFolders.createdAt,
+          fieldCount: sql<number>`(SELECT COUNT(*) FROM ${customFields} WHERE ${customFields.folderId} = ${customFieldFolders.id})`
+        })
+        .from(customFieldFolders)
+        .where(like(customFieldFolders.name, `%${search}%`))
+        .orderBy(asc(customFieldFolders.order));
+      }
+      
+      const folders = await query;
+      res.json(folders);
+    } catch (error) {
+      console.error('Error fetching custom field folders:', error);
+      res.status(500).json({ message: "Failed to fetch custom field folders" });
+    }
+  });
+
+  app.post("/api/custom-field-folders", async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name || name.trim() === '') {
+        return res.status(400).json({ message: "Folder name is required" });
+      }
+      
+      const maxOrderResult = await db.select({ maxOrder: sql<number>`COALESCE(MAX(${customFieldFolders.order}), 0)` })
+        .from(customFieldFolders);
+      const nextOrder = (maxOrderResult[0]?.maxOrder || 0) + 1;
+      
+      const newFolder = await db.insert(customFieldFolders).values({
+        name: name.trim(),
+        order: nextOrder,
+        isDefault: false,
+        canReorder: true
+      }).returning();
+      
+      res.status(201).json(newFolder[0]);
+    } catch (error) {
+      console.error('Error creating custom field folder:', error);
+      res.status(500).json({ message: "Failed to create custom field folder" });
     }
   });
 

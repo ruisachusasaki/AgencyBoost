@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,69 +6,120 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Plus, Edit, Trash2, Shield, Mail, Phone, Search } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Shield, Mail, Phone, Search, Upload } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 interface StaffMember {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
-  extension: string;
+  phone?: string;
+  extension?: string;
   role: string;
   status: "active" | "inactive";
-  lastLogin: string;
+  profileImage?: string;
+  signature?: string;
+  signatureEnabled?: boolean;
+  lastLogin?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export default function Staff() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Mock staff data - replace with actual API call
-  const [staffMembers] = useState<StaffMember[]>([
-    {
-      id: "1",
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@agencyflow.com",
-      phone: "(555) 123-4567",
-      extension: "101",
-      role: "Admin",
-      status: "active",
-      lastLogin: "2024-08-07 14:30",
-      createdAt: "2024-01-15"
+  // Fetch staff with real-time search
+  const { data: staffMembers = [], isLoading } = useQuery({
+    queryKey: ["/api/staff", searchTerm],
+    queryFn: async () => {
+      const url = `/api/staff${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ""}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch staff');
+      return response.json();
     },
-    {
-      id: "2",
-      firstName: "Jane",
-      lastName: "Smith",
-      email: "jane@agencyflow.com",
-      phone: "(555) 123-4568",
-      extension: "102",
-      role: "Manager",
-      status: "active",
-      lastLogin: "2024-08-07 09:15",
-      createdAt: "2024-02-01"
+  });
+
+  // Create staff mutation
+  const createStaffMutation = useMutation({
+    mutationFn: async (data: Partial<StaffMember>) => {
+      const response = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create staff member');
+      return response.json();
     },
-    {
-      id: "3",
-      firstName: "Mike",
-      lastName: "Johnson",
-      email: "mike@agencyflow.com",
-      phone: "(555) 123-4569",
-      extension: "103",
-      role: "User",
-      status: "inactive",
-      lastLogin: "2024-08-05 16:45",
-      createdAt: "2024-03-10"
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      setIsAddDialogOpen(false);
+      setNewStaff({ firstName: "", lastName: "", email: "", phone: "", extension: "", role: "User" });
+      toast({ title: "Success", description: "Staff member created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to create staff member" 
+      });
     }
-  ]);
+  });
+
+  // Update staff mutation
+  const updateStaffMutation = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<StaffMember> & { id: string }) => {
+      const response = await fetch(`/api/staff/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to update staff member');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      setIsEditDialogOpen(false);
+      setSelectedStaff(null);
+      toast({ title: "Success", description: "Staff member updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to update staff member" 
+      });
+    }
+  });
+
+  // Delete staff mutation
+  const deleteStaffMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/staff/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error('Failed to delete staff member');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      toast({ title: "Success", description: "Staff member deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to delete staff member" 
+      });
+    }
+  });
 
   const [newStaff, setNewStaff] = useState({
     firstName: "",
@@ -76,42 +127,12 @@ export default function Staff() {
     email: "",
     phone: "",
     extension: "",
-    password: "",
     role: "User"
   });
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement API call to add staff
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Success",
-        description: "Staff member added successfully.",
-      });
-      
-      setIsAddDialogOpen(false);
-      setNewStaff({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        extension: "",
-        password: "",
-        role: "User"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add staff member. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    createStaffMutation.mutate(newStaff);
   };
 
   const openEditDialog = (staff: StaffMember) => {
@@ -121,54 +142,12 @@ export default function Staff() {
 
   const handleEditStaff = async () => {
     if (!selectedStaff) return;
-    
-    setIsLoading(true);
-    try {
-      // TODO: Implement API call to update staff member
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Success",
-        description: "Staff member updated successfully.",
-      });
-      
-      setIsEditDialogOpen(false);
-      setSelectedStaff(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update staff member. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    updateStaffMutation.mutate(selectedStaff);
   };
-
-  const filteredStaff = staffMembers.filter(staff => 
-    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    staff.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleDeleteStaff = async (staffId: string) => {
     if (!confirm("Are you sure you want to delete this staff member?")) return;
-    
-    try {
-      // TODO: Implement API call to delete staff
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      toast({
-        title: "Success",
-        description: "Staff member deleted successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete staff member. Please try again.",
-        variant: "destructive",
-      });
-    }
+    deleteStaffMutation.mutate(staffId);
   };
 
   return (
@@ -256,16 +235,7 @@ export default function Staff() {
                   </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newStaff.password}
-                    onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
-                    required
-                  />
-                </div>
+
                 
                 <div>
                   <Label htmlFor="role">Role & Permissions</Label>
@@ -401,14 +371,22 @@ export default function Staff() {
 
         {/* Staff List */}
         <div className="grid gap-4">
-          {filteredStaff.map((staff) => (
-            <Card key={staff.id}>
+          {isLoading ? (
+            <div className="text-center py-8">Loading staff members...</div>
+          ) : staffMembers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No staff members found</div>
+          ) : (
+            staffMembers.map((staff: StaffMember) => (
+              <Card key={staff.id}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Users className="h-6 w-6 text-primary" />
-                    </div>
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={staff.profileImage} alt={`${staff.firstName} ${staff.lastName}`} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {staff.firstName.charAt(0)}{staff.lastName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <h3 className="text-lg font-semibold">
                         {staff.firstName} {staff.lastName}
@@ -458,11 +436,14 @@ export default function Staff() {
                 </div>
                 
                 <div className="mt-3 text-sm text-gray-500">
-                  Last login: {staff.lastLogin} • Member since: {staff.createdAt}
+                  {staff.lastLogin && `Last login: ${new Date(staff.lastLogin).toLocaleDateString()}`}
+                  {staff.lastLogin && staff.createdAt && " • "}
+                  Member since: {new Date(staff.createdAt).toLocaleDateString()}
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Note for Admin Only */}
