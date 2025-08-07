@@ -275,21 +275,14 @@ export default function Campaigns() {
                         value={emailContent}
                         onChange={setEmailContent}
                         modules={{
-                          toolbar: {
-                            container: [
-                              [{ 'header': [1, 2, 3, false] }],
-                              ['bold', 'italic', 'underline', 'strike'],
-                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                              [{ 'color': [] }, { 'background': [] }],
-                              [{ 'align': [] }],
-                              ['link'],
-                              ['clean']
-                            ]
-                          },
+                          toolbar: [
+                            [{ 'header': '1' }, { 'header': '2' }, 'bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                            ['link', 'clean']
+                          ],
                         }}
                         formats={[
-                          'header', 'bold', 'italic', 'underline', 'strike',
-                          'list', 'bullet', 'color', 'background', 'align', 'link'
+                          'header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'
                         ]}
                         placeholder="Enter your email content with rich formatting..."
                         style={{ 

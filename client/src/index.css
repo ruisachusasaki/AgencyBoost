@@ -76,163 +76,72 @@
   background: hsl(215, 25%, 27%);
 }
 
-/* ReactQuill Editor Styling */
+/* ReactQuill Editor Styling - Simplified */
+.quill {
+  background: white;
+}
+
 .ql-toolbar {
   border: none !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
-  border-radius: 0 !important;
-  background: hsl(var(--muted)) !important;
-  padding: 8px 12px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background: #f8f9fa !important;
+  padding: 8px !important;
 }
 
 .ql-container {
   border: none !important;
-  border-radius: 0 !important;
+  background: white !important;
   font-family: inherit !important;
-  background: hsl(var(--background)) !important;
 }
 
 .ql-editor {
-  color: hsl(var(--foreground)) !important;
   min-height: 200px !important;
-  padding: 12px 15px !important;
-}
-
-.ql-editor.ql-blank::before {
-  color: hsl(var(--muted-foreground)) !important;
-  font-style: normal !important;
-  left: 15px !important;
-}
-
-/* Fix toolbar button visibility and styling */
-.ql-toolbar .ql-formats {
-  margin-right: 15px !important;
-}
-
-.ql-toolbar .ql-picker-label,
-.ql-toolbar .ql-picker-options {
-  color: hsl(var(--foreground)) !important;
-}
-
-.ql-toolbar .ql-picker-label:before,
-.ql-toolbar .ql-picker-options .ql-picker-item:before {
-  color: hsl(var(--foreground)) !important;
+  padding: 12px !important;
+  color: #1f2937 !important;
 }
 
 .ql-toolbar button {
-  width: 28px !important;
-  height: 28px !important;
-  padding: 3px 5px !important;
-  margin: 0 1px !important;
-  border-radius: 3px !important;
-  border: none !important;
-  outline: none !important;
+  color: #374151 !important;
+  border: 1px solid transparent !important;
+  border-radius: 4px !important;
+  margin: 0 2px !important;
+  padding: 4px !important;
 }
 
 .ql-toolbar button:hover {
-  background-color: hsl(var(--accent)) !important;
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
 }
 
 .ql-toolbar button.ql-active {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
+  background: #3b82f6 !important;
+  color: white !important;
 }
 
-.ql-toolbar button svg {
-  width: 18px !important;
-  height: 18px !important;
+/* Dark mode styles */
+.dark .quill {
+  background: hsl(var(--background)) !important;
 }
 
-.ql-toolbar .ql-stroke {
-  stroke: hsl(var(--foreground)) !important;
-  stroke-width: 2 !important;
+.dark .ql-toolbar {
+  background: hsl(var(--muted)) !important;
+  border-bottom-color: hsl(var(--border)) !important;
 }
 
-.ql-toolbar .ql-fill {
-  fill: hsl(var(--foreground)) !important;
+.dark .ql-container {
+  background: hsl(var(--background)) !important;
 }
 
-.ql-toolbar button .ql-stroke {
-  stroke: hsl(var(--foreground)) !important;
-  stroke-width: 2 !important;
-}
-
-.ql-toolbar button .ql-fill {
-  fill: hsl(var(--foreground)) !important;
-}
-
-/* Force visibility of all toolbar elements */
-.ql-toolbar .ql-formats {
-  margin-right: 15px !important;
-  display: inline-block !important;
-}
-
-.ql-toolbar .ql-formats:last-child {
-  margin-right: 0 !important;
-}
-
-/* Ensure all buttons and icons are visible */
-.ql-toolbar button,
-.ql-toolbar .ql-picker {
-  opacity: 1 !important;
-  visibility: visible !important;
-  display: inline-block !important;
-}
-
-.ql-toolbar button svg,
-.ql-toolbar .ql-picker svg {
-  opacity: 1 !important;
-  visibility: visible !important;
-  display: inline-block !important;
-}
-
-/* Make sure text in picker labels is visible */
-.ql-toolbar .ql-picker-label {
-  color: hsl(var(--foreground)) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* Override any default Quill theme colors that might be hiding icons */
-.ql-snow .ql-toolbar button:hover,
-.ql-snow .ql-toolbar button:focus,
-.ql-snow .ql-toolbar button.ql-active,
-.ql-snow .ql-toolbar .ql-picker-label:hover,
-.ql-snow .ql-toolbar .ql-picker-label.ql-active,
-.ql-snow .ql-toolbar .ql-picker-item:hover,
-.ql-snow .ql-toolbar .ql-picker-item.ql-selected {
+.dark .ql-editor {
   color: hsl(var(--foreground)) !important;
 }
 
-.ql-snow .ql-toolbar button:hover .ql-fill,
-.ql-snow .ql-toolbar button:focus .ql-fill,
-.ql-snow .ql-toolbar button.ql-active .ql-fill,
-.ql-snow .ql-toolbar .ql-picker-label:hover .ql-fill,
-.ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-fill,
-.ql-snow .ql-toolbar .ql-picker-item:hover .ql-fill,
-.ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-fill {
-  fill: hsl(var(--foreground)) !important;
+.dark .ql-toolbar button {
+  color: hsl(var(--foreground)) !important;
 }
 
-.ql-snow .ql-toolbar button:hover .ql-stroke,
-.ql-snow .ql-toolbar button:focus .ql-stroke,
-.ql-snow .ql-toolbar button.ql-active .ql-stroke,
-.ql-snow .ql-toolbar .ql-picker-label:hover .ql-stroke,
-.ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke,
-.ql-snow .ql-toolbar .ql-picker-item:hover .ql-stroke,
-.ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-stroke {
-  stroke: hsl(var(--foreground)) !important;
-}
-
-/* Ensure the default toolbar icons are visible */
-.ql-snow .ql-toolbar button .ql-fill,
-.ql-snow .ql-toolbar .ql-picker .ql-fill {
-  fill: hsl(var(--foreground)) !important;
-}
-
-.ql-snow .ql-toolbar button .ql-stroke,
-.ql-snow .ql-toolbar .ql-picker .ql-stroke {
-  stroke: hsl(var(--foreground)) !important;
+.dark .ql-toolbar button:hover {
+  background: hsl(var(--accent)) !important;
 }
 
 .ql-toolbar .ql-picker {
