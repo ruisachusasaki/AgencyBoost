@@ -41,20 +41,18 @@ export default function Settings() {
           {settingsNavigation.map((item) => {
             const Icon = item.icon;
             return (
-              <Link key={item.name} href={item.href}>
-                <a className="block p-6 bg-white rounded-lg border border-gray-200 hover:border-primary hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      <Icon className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {getSettingDescription(item.name)}
-                      </p>
-                    </div>
+              <Link key={item.name} href={item.href} className="block p-6 bg-white rounded-lg border border-gray-200 hover:border-primary hover:shadow-md transition-all duration-200">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <Icon className="h-8 w-8 text-primary" />
                   </div>
-                </a>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {getSettingDescription(item.name)}
+                    </p>
+                  </div>
+                </div>
               </Link>
             );
           })}
