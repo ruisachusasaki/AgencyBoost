@@ -104,19 +104,19 @@ export default function EnhancedClientDetail() {
   });
 
   // Fetch custom field folders
-  const { data: customFieldFolders } = useQuery<Array<{ id: number; name: string }>>({
+  const { data: customFieldFoldersData } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ['/api/custom-field-folders'],
   });
 
   // Update sections when custom field folders are loaded
   useEffect(() => {
-    if (customFieldFolders) {
+    if (customFieldFoldersData) {
       const newSections: Section[] = [
         { id: "contact-details", name: "Contact Details", isOpen: true }
       ];
       
       // Add custom field folders as sections
-      customFieldFolders.forEach(folder => {
+      customFieldFoldersData.forEach(folder => {
         newSections.push({
           id: folder.name.toLowerCase().replace(/\s+/g, '-'),
           name: folder.name,
@@ -126,7 +126,7 @@ export default function EnhancedClientDetail() {
       
       setSections(newSections);
     }
-  }, [customFieldFolders]);
+  }, [customFieldFoldersData]);
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {

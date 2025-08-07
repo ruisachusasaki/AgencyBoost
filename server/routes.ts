@@ -8,12 +8,12 @@ import {
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
-  insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema
+  insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  users, businessProfile, customFields, customFieldFolders, staff
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
-import { users, businessProfile, customFields, customFieldFolders, staff, insertStaffSchema } from "@shared/schema";
 import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -709,10 +709,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/custom-fields", async (req, res) => {
     try {
       const { search } = req.query;
-      let query = db.select().from(customFields).orderBy(asc(customFields.order));
       
+      let fields;
       if (search && typeof search === 'string') {
-        query = db.select()
+        fields = await db.select()
           .from(customFields)
           .where(
             or(
@@ -721,9 +721,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           )
           .orderBy(asc(customFields.order));
+      } else {
+        fields = await db.select()
+          .from(customFields)
+          .orderBy(asc(customFields.order));
       }
       
-      const fields = await query;
       res.json(fields);
     } catch (error) {
       console.error("Error fetching custom fields:", error);
@@ -1107,7 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const insertData = insertStaffSchema.parse(req.body);
       const [newStaff] = await db.insert(staff).values(insertData).returning();
       res.status(201).json(newStaff);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating staff:', error);
       if (error.code === '23505') {
         return res.status(400).json({ message: "Email already exists" });
@@ -1256,20 +1259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/custom-field-folders", async (req, res) => {
     try {
       const { search } = req.query;
-      let query = db.select({
-        id: customFieldFolders.id,
-        name: customFieldFolders.name,
-        order: customFieldFolders.order,
-        isDefault: customFieldFolders.isDefault,
-        canReorder: customFieldFolders.canReorder,
-        createdAt: customFieldFolders.createdAt,
-        fieldCount: sql<number>`(SELECT COUNT(*) FROM ${customFields} WHERE ${customFields.folderId} = ${customFieldFolders.id})`
-      })
-      .from(customFieldFolders)
-      .orderBy(asc(customFieldFolders.order));
       
+      let folders;
       if (search && typeof search === 'string') {
-        query = db.select({
+        folders = await db.select({
           id: customFieldFolders.id,
           name: customFieldFolders.name,
           order: customFieldFolders.order,
@@ -1281,9 +1274,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(customFieldFolders)
         .where(like(customFieldFolders.name, `%${search}%`))
         .orderBy(asc(customFieldFolders.order));
+      } else {
+        folders = await db.select({
+          id: customFieldFolders.id,
+          name: customFieldFolders.name,
+          order: customFieldFolders.order,
+          isDefault: customFieldFolders.isDefault,
+          canReorder: customFieldFolders.canReorder,
+          createdAt: customFieldFolders.createdAt,
+          fieldCount: sql<number>`(SELECT COUNT(*) FROM ${customFields} WHERE ${customFields.folderId} = ${customFieldFolders.id})`
+        })
+        .from(customFieldFolders)
+        .orderBy(asc(customFieldFolders.order));
       }
       
-      const folders = await query;
       res.json(folders);
     } catch (error) {
       console.error('Error fetching custom field folders:', error);
