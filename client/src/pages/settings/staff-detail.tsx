@@ -85,7 +85,7 @@ export default function StaffDetail() {
       country: "",
       hireDate: "",
       department: "",
-      managerId: "",
+      managerId: "none",
       birthdate: "",
     }
   });
@@ -106,7 +106,7 @@ export default function StaffDetail() {
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "",
-        managerId: staffMember.managerId || "",
+        managerId: staffMember.managerId || "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
     }
@@ -155,7 +155,12 @@ export default function StaffDetail() {
   };
 
   const onSubmit = (data: StaffFormData) => {
-    updateMutation.mutate(data);
+    // Convert "none" back to null for managerId
+    const submitData = {
+      ...data,
+      managerId: data.managerId === "none" ? null : data.managerId
+    };
+    updateMutation.mutate(submitData);
   };
 
   if (isLoading) {
@@ -425,7 +430,7 @@ export default function StaffDetail() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No Manager</SelectItem>
+                            <SelectItem value="none">No Manager</SelectItem>
                             {managerOptions.map((manager) => (
                               <SelectItem key={manager.id} value={manager.id}>
                                 {manager.firstName} {manager.lastName}
