@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, Calendar, Eye, Copy, BarChart3 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, Calendar, Eye, Copy, BarChart3, Tag } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ReactQuill from "react-quill";
@@ -25,6 +26,48 @@ export default function Campaigns() {
   const [emailContent, setEmailContent] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Define available merge tags based on client schema
+  const mergeTagGroups = [
+    {
+      label: "Contact Information",
+      tags: [
+        { label: "Name", value: "{{name}}" },
+        { label: "Email", value: "{{email}}" },
+        { label: "Phone", value: "{{phone}}" },
+        { label: "Company", value: "{{company}}" },
+        { label: "Position", value: "{{position}}" },
+        { label: "Website", value: "{{website}}" },
+      ]
+    },
+    {
+      label: "Address",
+      tags: [
+        { label: "Street Address", value: "{{address}}" },
+        { label: "Address Line 2", value: "{{address2}}" },
+        { label: "City", value: "{{city}}" },
+        { label: "State", value: "{{state}}" },
+        { label: "Zip Code", value: "{{zipCode}}" },
+      ]
+    },
+    {
+      label: "Business Information",
+      tags: [
+        { label: "Client Vertical", value: "{{clientVertical}}" },
+        { label: "Monthly Revenue", value: "{{mrr}}" },
+        { label: "Payment Terms", value: "{{paymentTerms}}" },
+        { label: "Invoicing Contact", value: "{{invoicingContact}}" },
+        { label: "Invoicing Email", value: "{{invoicingEmail}}" },
+      ]
+    },
+    {
+      label: "Other",
+      tags: [
+        { label: "Notes", value: "{{notes}}" },
+        { label: "Contact Source", value: "{{contactSource}}" },
+      ]
+    }
+  ];
 
   // Fetch data
   const { data: templateFolders = [], isLoading: loadingFolders } = useQuery<TemplateFolder[]>({
@@ -275,6 +318,49 @@ export default function Campaigns() {
     });
   };
 
+  // Helper functions for inserting merge tags
+  const insertMergeTagIntoEmail = (mergeTag: string) => {
+    setEmailContent(prev => prev + " " + mergeTag);
+  };
+
+  const insertMergeTagIntoSms = (mergeTag: string) => {
+    setSmsContent(prev => prev + " " + mergeTag);
+  };
+
+  // Merge tags dropdown component
+  const MergeTagsDropdown = ({ onInsert, buttonText = "Insert Merge Tag" }: { onInsert: (tag: string) => void, buttonText?: string }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <Tag className="h-3 w-3" />
+          {buttonText}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-64" align="start">
+        {mergeTagGroups.map((group, groupIndex) => (
+          <div key={group.label}>
+            <DropdownMenuLabel className="text-xs font-semibold text-gray-500 uppercase">
+              {group.label}
+            </DropdownMenuLabel>
+            {group.tags.map((tag) => (
+              <DropdownMenuItem 
+                key={tag.value} 
+                onClick={() => onInsert(tag.value)}
+                className="cursor-pointer"
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">{tag.label}</span>
+                  <span className="text-xs text-gray-500">{tag.value}</span>
+                </div>
+              </DropdownMenuItem>
+            ))}
+            {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   const currentFolders = activeTab === "email" ? emailFolders : smsFolders;
   const currentTemplates = activeTab === "email" ? filteredEmailTemplates : filteredSmsTemplates;
 
@@ -352,7 +438,10 @@ export default function Campaigns() {
                     <Input name="previewText" placeholder="Preview text (optional)" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Email Content</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">Email Content</label>
+                      <MergeTagsDropdown onInsert={insertMergeTagIntoEmail} />
+                    </div>
                     <div className="border rounded-md overflow-hidden">
                       <ReactQuill
                         theme="snow"
@@ -396,7 +485,10 @@ export default function Campaigns() {
                     <Input name="name" placeholder="Enter template name" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">SMS Content</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">SMS Content</label>
+                      <MergeTagsDropdown onInsert={insertMergeTagIntoSms} />
+                    </div>
                     <textarea 
                       name="content" 
                       value={smsContent}
@@ -450,7 +542,10 @@ export default function Campaigns() {
                     <Input name="previewText" placeholder="Preview text (optional)" defaultValue={(editingTemplate as any).previewText || ""} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Email Content</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">Email Content</label>
+                      <MergeTagsDropdown onInsert={insertMergeTagIntoEmail} />
+                    </div>
                     <div className="border rounded-md overflow-hidden">
                       <ReactQuill
                         theme="snow"
@@ -495,7 +590,10 @@ export default function Campaigns() {
                     <Input name="name" placeholder="Enter template name" defaultValue={editingTemplate?.name} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">SMS Content</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">SMS Content</label>
+                      <MergeTagsDropdown onInsert={insertMergeTagIntoSms} />
+                    </div>
                     <textarea 
                       name="content" 
                       value={smsContent}
