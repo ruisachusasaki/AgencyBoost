@@ -147,12 +147,12 @@ export default function ClientDetail() {
                 </div>
               )}
               
-              {client?.industry && (
+              {client?.clientVertical && (
                 <div className="flex items-center gap-3">
                   <Building2 className="h-4 w-4 text-slate-400" />
                   <div>
                     <p className="text-sm font-medium text-slate-900">Industry</p>
-                    <p className="text-sm text-slate-600">{client.industry}</p>
+                    <p className="text-sm text-slate-600">{client.clientVertical}</p>
                   </div>
                 </div>
               )}
@@ -371,9 +371,7 @@ export default function ClientDetail() {
             <Folder className="h-5 w-5 text-[#46a1a0]" />
             {folder.name}
           </CardTitle>
-          {folder.description && (
-            <p className="text-sm text-slate-600">{folder.description}</p>
-          )}
+
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
@@ -544,12 +542,12 @@ export default function ClientDetail() {
                         <Icon className="h-4 w-4" />
                         <span>{item.label}</span>
                       </div>
-                      {item.count !== undefined && (
+                      {('count' in item) && item.count !== undefined && (
                         <Badge 
                           variant="secondary" 
                           className={`${isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"} text-xs px-2 py-0`}
                         >
-                          {item.count}
+                          {('count' in item) ? item.count : ''}
                         </Badge>
                       )}
                     </button>
