@@ -104,8 +104,13 @@ export default function EnhancedClientDetail() {
   });
 
   // Fetch custom field folders
-  const { data: customFieldFoldersData } = useQuery<Array<{ id: number; name: string }>>({
+  const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['/api/custom-field-folders'],
+  });
+
+  // Fetch custom fields
+  const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
+    queryKey: ['/api/custom-fields'],
   });
 
   // Update sections when custom field folders are loaded
@@ -300,16 +305,68 @@ export default function EnhancedClientDetail() {
                     </div>
                   ) : (
                     // Custom Field Folder Content
-                    <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
-                      <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">Custom Fields Coming Soon</h3>
-                      <p className="text-slate-600 mb-4">
-                        Custom fields for "{section.name}" will appear here once they're created.
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        Admins can add custom fields to this folder in Settings → Custom Fields.
-                      </p>
-                    </div>
+                    (() => {
+                      const folder = customFieldFoldersData?.find(f => f.name.toLowerCase().replace(/\s+/g, '-') === section.id);
+                      const folderFields = customFieldsData?.filter(field => field.folderId === folder?.id) || [];
+                      
+                      if (folderFields.length === 0) {
+                        return (
+                          <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
+                            <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                            <h3 className="text-lg font-medium text-slate-900 mb-2">No Custom Fields</h3>
+                            <p className="text-slate-600 mb-4">
+                              No custom fields have been added to "{section.name}" yet.
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              Admins can add custom fields to this folder in Settings → Custom Fields.
+                            </p>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="space-y-4 text-sm">
+                          {folderFields.map((field) => {
+                            const fieldValue = client?.customFieldValues?.[field.id];
+                            return (
+                              <div key={field.id}>
+                                <label className="block text-gray-500 mb-1">
+                                  {field.name}
+                                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                                </label>
+                                {field.type === 'dropdown' && field.options ? (
+                                  <p className="text-gray-900">{fieldValue || "Not selected"}</p>
+                                ) : field.type === 'checkbox' ? (
+                                  <p className="text-gray-900">{fieldValue ? "Yes" : "No"}</p>
+                                ) : field.type === 'currency' ? (
+                                  <p className="text-gray-900">{fieldValue ? `$${fieldValue}` : "Not specified"}</p>
+                                ) : field.type === 'url' ? (
+                                  fieldValue ? (
+                                    <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline">
+                                      {fieldValue}
+                                    </a>
+                                  ) : (
+                                    <p className="text-gray-900">Not specified</p>
+                                  )
+                                ) : field.type === 'email' ? (
+                                  fieldValue ? (
+                                    <a href={`mailto:${fieldValue}`} className="text-[#46a1a0] hover:underline">
+                                      {fieldValue}
+                                    </a>
+                                  ) : (
+                                    <p className="text-gray-900">Not specified</p>
+                                  )
+                                ) : field.type === 'phone' ? (
+                                  <p className="text-[#46a1a0]">{fieldValue ? formatPhoneNumber(fieldValue) : "Not specified"}</p>
+                                ) : (
+                                  <p className="text-gray-900">{fieldValue || "Not specified"}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}
