@@ -309,8 +309,8 @@ export default function EnhancedClientDetail() {
                 placeholder={type === 'currency' ? '0.00' : 'Enter value'}
                 value={fieldEditValue}
                 onChange={(e) => setFieldEditValue(e.target.value)}
-                className={type === 'url' ? "h-8 text-sm" : "h-8"}
-                style={type === 'url' ? { maxWidth: '100%' } : undefined}
+                className={type === 'url' ? "h-8 text-sm overflow-hidden" : "h-8"}
+                style={type === 'url' ? { maxWidth: '100%', wordWrap: 'break-word' } : undefined}
               />
             )}
             <Button
@@ -342,7 +342,7 @@ export default function EnhancedClientDetail() {
                 {formatPhoneNumber(value)}
               </p>
             ) : type === 'url' && value ? (
-              <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
+              <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block break-all`} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
                 {value.length > 60 ? `${value.substring(0, 60)}...` : value}
               </a>
             ) : type === 'currency' && value ? (
@@ -447,7 +447,7 @@ export default function EnhancedClientDetail() {
               </button>
               
               {isSectionOpen(section.id) && (
-                <div className="px-4 pb-4">
+                <div className="px-4 pb-4 overflow-x-hidden" style={{ wordWrap: 'break-word' }}>
                   {section.id === "contact-details" ? (
                     <div className="space-y-4 text-sm">
                       <EditableField
@@ -688,8 +688,8 @@ export default function EnhancedClientDetail() {
                                         placeholder="Enter URL"
                                         value={fieldEditValue}
                                         onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8 text-sm"
-                                        style={{ maxWidth: '100%' }}
+                                        className="h-8 text-sm overflow-hidden"
+                                        style={{ maxWidth: '100%', wordWrap: 'break-word' }}
                                       />
                                     ) : (
                                       <Input
@@ -728,7 +728,7 @@ export default function EnhancedClientDetail() {
                                       <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue ? `$${Number(fieldValue).toFixed(2)}` : "Not specified"}</p>
                                     ) : field.type === 'url' ? (
                                       fieldValue ? (
-                                        <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block">
+                                        <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block break-all" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }}>
                                           {fieldValue.length > 60 ? `${fieldValue.substring(0, 60)}...` : fieldValue}
                                         </a>
                                       ) : (
