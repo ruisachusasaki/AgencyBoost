@@ -114,7 +114,9 @@ export default function StaffDetail() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
-      return apiRequest(`/api/staff/${id}`, "PUT", data);
+      console.log("Submitting data:", data);
+      const response = await apiRequest("PUT", `/api/staff/${id}`, data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -125,7 +127,8 @@ export default function StaffDetail() {
         description: "Staff member updated successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Update error:", error);
       toast({
         title: "Error",
         description: "Failed to update staff member",
@@ -155,11 +158,13 @@ export default function StaffDetail() {
   };
 
   const onSubmit = (data: StaffFormData) => {
+    console.log("Form data before processing:", data);
     // Convert "none" back to null for managerId
     const submitData = {
       ...data,
-      managerId: data.managerId === "none" ? null : data.managerId || null
+      managerId: data.managerId === "none" ? null : (data.managerId || null)
     };
+    console.log("Submit data after processing:", submitData);
     updateMutation.mutate(submitData as any);
   };
 
