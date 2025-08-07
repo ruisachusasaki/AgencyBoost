@@ -27,7 +27,12 @@ export default function Campaigns() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Define available merge tags based on client schema
+  // Fetch custom fields for dynamic merge tags
+  const { data: customFields = [] } = useQuery({
+    queryKey: ["/api/custom-fields"],
+  });
+
+  // Define available merge tags based on client schema - dynamic with custom fields
   const mergeTagGroups = [
     {
       label: "Contact Information",
@@ -66,7 +71,15 @@ export default function Campaigns() {
         { label: "Notes", value: "{{notes}}" },
         { label: "Contact Source", value: "{{contactSource}}" },
       ]
-    }
+    },
+    // Dynamically add custom fields if they exist
+    ...(Array.isArray(customFields) && customFields.length > 0 ? [{
+      label: "Custom Fields",
+      tags: customFields.map((field: any) => ({
+        label: field.name,
+        value: `{{custom.${field.name.toLowerCase().replace(/\s+/g, '_')}}}`
+      }))
+    }] : [])
   ];
 
   // Fetch data

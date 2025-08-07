@@ -207,6 +207,13 @@ export interface IStorage {
   updateSmsTemplate(id: string, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined>;
   deleteSmsTemplate(id: string): Promise<boolean>;
 
+  // Custom Fields
+  getCustomFields(): Promise<CustomField[]>;
+  getCustomField(id: string): Promise<CustomField | undefined>;
+  createCustomField(field: InsertCustomField): Promise<CustomField>;
+  updateCustomField(id: string, field: Partial<InsertCustomField>): Promise<CustomField | undefined>;
+  deleteCustomField(id: string): Promise<boolean>;
+
   // Notifications
   getNotifications(userId: string): Promise<Notification[]>;
   getNotification(id: string): Promise<Notification | undefined>;
@@ -231,6 +238,7 @@ export class MemStorage implements IStorage {
   private templateFolders: Map<string, TemplateFolder> = new Map();
   private emailTemplates: Map<string, EmailTemplate> = new Map();
   private smsTemplates: Map<string, SmsTemplate> = new Map();
+  private customFields: Map<string, CustomField> = new Map();
   private workflows: Map<string, Workflow> = new Map();
   private workflowExecutions: Map<string, WorkflowExecution> = new Map();
   private workflowTemplates: Map<string, WorkflowTemplate> = new Map();
@@ -248,6 +256,7 @@ export class MemStorage implements IStorage {
     this.initializeWorkflowTemplates();
     this.initializeAutomationElements();
     this.initializeTemplateFoldersAndTemplates();
+    this.initializeCustomFields();
   }
 
   private addSampleData() {
@@ -1996,6 +2005,51 @@ export class MemStorage implements IStorage {
     return this.smsTemplates.delete(id);
   }
 
+  // Custom Fields
+  async getCustomFields(): Promise<CustomField[]> {
+    return Array.from(this.customFields.values());
+  }
+
+  async getCustomField(id: string): Promise<CustomField | undefined> {
+    return this.customFields.get(id);
+  }
+
+  async createCustomField(fieldData: InsertCustomField): Promise<CustomField> {
+    const field: CustomField = {
+      id: randomUUID(),
+      name: fieldData.name,
+      label: fieldData.label,
+      type: fieldData.type,
+      options: fieldData.options || null,
+      defaultValue: fieldData.defaultValue || null,
+      isRequired: fieldData.isRequired || false,
+      isSearchable: fieldData.isSearchable || false,
+      order: fieldData.order || 0,
+      folderId: fieldData.folderId || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.customFields.set(field.id, field);
+    return field;
+  }
+
+  async updateCustomField(id: string, fieldData: Partial<InsertCustomField>): Promise<CustomField | undefined> {
+    const existing = this.customFields.get(id);
+    if (!existing) return undefined;
+    
+    const updated: CustomField = {
+      ...existing,
+      ...fieldData,
+      updatedAt: new Date(),
+    };
+    this.customFields.set(id, updated);
+    return updated;
+  }
+
+  async deleteCustomField(id: string): Promise<boolean> {
+    return this.customFields.delete(id);
+  }
+
   // Notifications
   async getNotifications(userId: string): Promise<Notification[]> {
     return Array.from(this.notifications.values()).filter(notification => notification.userId === userId);
@@ -2057,6 +2111,58 @@ export class MemStorage implements IStorage {
 
   async deleteNotification(id: string): Promise<boolean> {
     return this.notifications.delete(id);
+  }
+
+  private initializeCustomFields() {
+    // Sample custom fields that would be created by users
+    const fields: CustomField[] = [
+      {
+        id: "cf-1",
+        name: "Lead Score",
+        label: "Lead Score",
+        type: "number",
+        options: null,
+        defaultValue: "0",
+        isRequired: false,
+        isSearchable: true,
+        order: 1,
+        folderId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "cf-2",
+        name: "Marketing Preferences",
+        label: "Marketing Preferences",
+        type: "select",
+        options: ["Email", "Phone", "Text", "Direct Mail"],
+        defaultValue: "Email",
+        isRequired: false,
+        isSearchable: true,
+        order: 2,
+        folderId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "cf-3",
+        name: "Acquisition Channel",
+        label: "Acquisition Channel",
+        type: "text",
+        options: null,
+        defaultValue: null,
+        isRequired: false,
+        isSearchable: true,
+        order: 3,
+        folderId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    ];
+
+    fields.forEach(field => {
+      this.customFields.set(field.id, field);
+    });
   }
 }
 

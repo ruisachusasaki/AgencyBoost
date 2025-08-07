@@ -700,6 +700,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Custom Fields
+  app.get("/api/custom-fields", async (req, res) => {
+    try {
+      const customFields = await storage.getCustomFields();
+      res.json(customFields);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch custom fields" });
+    }
+  });
+
   // Workflow routes
   app.get("/api/workflows", async (req, res) => {
     try {
