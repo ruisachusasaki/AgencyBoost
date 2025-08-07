@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users } from "lucide-react";
+import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown } from "lucide-react";
 import type { CustomField, CustomFieldFolder } from "@shared/schema";
 
 const fieldTypeIcons = {
@@ -27,14 +27,20 @@ const fieldTypeIcons = {
   checkbox: CheckSquare
 };
 
+type SortField = 'name' | 'type' | 'folder' | 'required';
+type SortOrder = 'asc' | 'desc';
+
 export default function CustomFields() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddFieldDialogOpen, setIsAddFieldDialogOpen] = useState(false);
   const [isAddFolderDialogOpen, setIsAddFolderDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
+  const [editingFolder, setEditingFolder] = useState<CustomFieldFolder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all-fields");
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const [newField, setNewField] = useState({
     name: "",
@@ -156,6 +162,134 @@ export default function CustomFields() {
     addFolderMutation.mutate(newFolder);
   };
 
+  // Update field mutation
+  const updateFieldMutation = useMutation({
+    mutationFn: async (fieldData: CustomField) => {
+      const response = await fetch(`/api/custom-fields/${fieldData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fieldData),
+      });
+      if (!response.ok) throw new Error('Failed to update field');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-fields"] });
+      toast({ title: "Success", description: "Custom field updated successfully" });
+      setEditingField(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to update custom field" 
+      });
+    }
+  });
+
+  // Update folder mutation
+  const updateFolderMutation = useMutation({
+    mutationFn: async (folderData: CustomFieldFolder) => {
+      const response = await fetch(`/api/custom-field-folders/${folderData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(folderData),
+      });
+      if (!response.ok) throw new Error('Failed to update folder');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-field-folders"] });
+      toast({ title: "Success", description: "Folder updated successfully" });
+      setEditingFolder(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to update folder" 
+      });
+    }
+  });
+
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (folderId: string) => {
+      const response = await fetch(`/api/custom-field-folders/${folderId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error('Failed to delete folder');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-field-folders"] });
+      toast({ title: "Success", description: "Folder deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to delete folder" 
+      });
+    }
+  });
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedCustomFields = [...customFields].sort((a, b) => {
+    let aValue = '';
+    let bValue = '';
+
+    switch (sortField) {
+      case 'name':
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        break;
+      case 'type':
+        aValue = a.type.toLowerCase();
+        bValue = b.type.toLowerCase();
+        break;
+      case 'folder':
+        aValue = getFolderName(a.folderId).toLowerCase();
+        bValue = getFolderName(b.folderId).toLowerCase();
+        break;
+      case 'required':
+        aValue = a.required ? '1' : '0';
+        bValue = b.required ? '1' : '0';
+        break;
+    }
+
+    if (sortOrder === 'asc') {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
+  });
+
+  const handleUpdateField = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingField) {
+      updateFieldMutation.mutate(editingField);
+    }
+  };
+
+  const handleUpdateFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingFolder) {
+      updateFolderMutation.mutate(editingFolder);
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    if (!confirm("Are you sure you want to delete this folder? Fields in this folder will be moved to 'No Folder'.")) return;
+    deleteFolderMutation.mutate(folderId);
+  };
+
   const getFieldTypeIcon = (type: string) => {
     const Icon = fieldTypeIcons[type as keyof typeof fieldTypeIcons] || Type;
     return <Icon className="h-4 w-4" />;
@@ -178,6 +312,33 @@ export default function CustomFields() {
     return customFields.filter(field => field.folderId === folderId).length;
   };
 
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortOrder === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortOrder === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto p-6">
@@ -191,7 +352,7 @@ export default function CustomFields() {
           <div className="flex space-x-3">
             <Dialog open={isAddFieldDialogOpen} onOpenChange={setIsAddFieldDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
+                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Custom Field
                 </Button>
@@ -269,7 +430,7 @@ export default function CustomFields() {
 
             <Dialog open={isAddFolderDialogOpen} onOpenChange={setIsAddFolderDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="h-10">
                   <Folder className="h-4 w-4 mr-2" />
                   New Folder
                 </Button>
@@ -355,16 +516,16 @@ export default function CustomFields() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Field Name</TableHead>
-                        <TableHead>Folder Location</TableHead>
+                        <SortableHeader field="name">Field Name</SortableHeader>
+                        <SortableHeader field="folder">Folder Location</SortableHeader>
                         <TableHead>Unique Key (Merge Tag)</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Created On</TableHead>
+                        <SortableHeader field="type">Type</SortableHeader>
+                        <SortableHeader field="required">Required</SortableHeader>
                         <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {customFields.map((field) => (
+                      {sortedCustomFields.map((field) => (
                         <TableRow key={field.id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
@@ -389,8 +550,12 @@ export default function CustomFields() {
                           <TableCell>
                             <Badge variant="outline">{field.type}</Badge>
                           </TableCell>
-                          <TableCell className="text-sm text-gray-500">
-                            {field.createdAt ? new Date(field.createdAt).toLocaleDateString() : "Unknown"}
+                          <TableCell>
+                            {field.required ? (
+                              <Badge variant="default" className="text-xs">Yes</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">No</Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
@@ -471,20 +636,14 @@ export default function CustomFields() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  toast({ title: "Info", description: "Folder editing coming soon" });
-                                }}
+                                onClick={() => setEditingFolder(folder)}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  if (confirm(`Delete folder "${folder.name}"? Fields will be moved to "No Folder".`)) {
-                                    toast({ title: "Info", description: "Folder deletion coming soon" });
-                                  }
-                                }}
+                                onClick={() => handleDeleteFolder(folder.id)}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -512,6 +671,121 @@ export default function CustomFields() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Edit Field Dialog */}
+        {editingField && (
+          <Dialog open={!!editingField} onOpenChange={() => setEditingField(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Custom Field</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleUpdateField} className="space-y-4">
+                <div>
+                  <Label htmlFor="editFieldName">Field Name *</Label>
+                  <Input
+                    id="editFieldName"
+                    value={editingField.name}
+                    onChange={(e) => setEditingField({...editingField, name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editFieldType">Field Type</Label>
+                  <Select value={editingField.type} onValueChange={(value) => setEditingField({...editingField, type: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="phone">Phone</SelectItem>
+                      <SelectItem value="number">Number</SelectItem>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="url">URL</SelectItem>
+                      <SelectItem value="currency">Currency</SelectItem>
+                      <SelectItem value="dropdown">Dropdown</SelectItem>
+                      <SelectItem value="checkbox">Checkbox</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="editFieldFolder">Folder</Label>
+                  <Select value={editingField.folderId || ""} onValueChange={(value) => setEditingField({...editingField, folderId: value || null})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a folder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Folder</SelectItem>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="editRequired"
+                    checked={editingField.required}
+                    onCheckedChange={(checked) => setEditingField({...editingField, required: checked})}
+                  />
+                  <Label htmlFor="editRequired">Required Field</Label>
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setEditingField(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateFieldMutation.isPending}>
+                    {updateFieldMutation.isPending ? "Updating..." : "Update Field"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Edit Folder Dialog */}
+        {editingFolder && (
+          <Dialog open={!!editingFolder} onOpenChange={() => setEditingFolder(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Folder</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleUpdateFolder} className="space-y-4">
+                <div>
+                  <Label htmlFor="editFolderName">Folder Name *</Label>
+                  <Input
+                    id="editFolderName"
+                    value={editingFolder.name}
+                    onChange={(e) => setEditingFolder({...editingFolder, name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editFolderDescription">Description</Label>
+                  <Textarea
+                    id="editFolderDescription"
+                    value={editingFolder.description || ""}
+                    onChange={(e) => setEditingFolder({...editingFolder, description: e.target.value})}
+                    placeholder="Optional folder description"
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setEditingFolder(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateFolderMutation.isPending}>
+                    {updateFolderMutation.isPending ? "Updating..." : "Update Folder"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );
