@@ -213,7 +213,12 @@ export interface IStorage {
   getCustomField(id: string): Promise<CustomField | undefined>;
   createCustomField(field: InsertCustomField): Promise<CustomField>;
   updateCustomField(id: string, field: Partial<InsertCustomField>): Promise<CustomField | undefined>;
-  deleteCustomField(id: string): Promise<boolean>;
+  deleteCustomField(id: string): Promise<void>;
+  
+  // Custom Field Folders
+  getCustomFieldFolders(): Promise<CustomFieldFolder[]>;
+  getCustomFieldFolder(id: string): Promise<CustomFieldFolder | undefined>;
+  createCustomFieldFolder(folder: InsertCustomFieldFolder): Promise<CustomFieldFolder>;
 
   // Notifications
   getNotifications(userId: string): Promise<Notification[]>;
@@ -240,6 +245,7 @@ export class MemStorage implements IStorage {
   private emailTemplates: Map<string, EmailTemplate> = new Map();
   private smsTemplates: Map<string, SmsTemplate> = new Map();
   private customFields: Map<string, CustomField> = new Map();
+  private customFieldFolders: Map<string, CustomFieldFolder> = new Map();
   private workflows: Map<string, Workflow> = new Map();
   private workflowExecutions: Map<string, WorkflowExecution> = new Map();
   private workflowTemplates: Map<string, WorkflowTemplate> = new Map();
@@ -2042,8 +2048,31 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async deleteCustomField(id: string): Promise<boolean> {
-    return this.customFields.delete(id);
+  async deleteCustomField(id: string): Promise<void> {
+    this.customFields.delete(id);
+  }
+
+  // Custom Field Folders
+  async getCustomFieldFolders(): Promise<CustomFieldFolder[]> {
+    return Array.from(this.customFieldFolders.values());
+  }
+
+  async getCustomFieldFolder(id: string): Promise<CustomFieldFolder | undefined> {
+    return this.customFieldFolders.get(id);
+  }
+
+  async createCustomFieldFolder(folderData: InsertCustomFieldFolder): Promise<CustomFieldFolder> {
+    const folder: CustomFieldFolder = {
+      id: randomUUID(),
+      name: folderData.name,
+      description: folderData.description || null,
+      order: folderData.order || 0,
+      isDefault: folderData.isDefault || false,
+      canReorder: folderData.canReorder || true,
+      createdAt: new Date(),
+    };
+    this.customFieldFolders.set(folder.id, folder);
+    return folder;
   }
 
   // Notifications

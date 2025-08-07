@@ -707,10 +707,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Custom Fields
   app.get("/api/custom-fields", async (req, res) => {
     try {
+      const search = req.query.search as string;
       const customFields = await storage.getCustomFields();
+      
+      if (search) {
+        const filtered = customFields.filter(field => 
+          field.name.toLowerCase().includes(search.toLowerCase()) ||
+          field.type.toLowerCase().includes(search.toLowerCase())
+        );
+        return res.json(filtered);
+      }
+      
       res.json(customFields);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch custom fields" });
+      console.error("Error fetching custom fields:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/custom-fields", async (req, res) => {
+    try {
+      const result = insertCustomFieldSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Invalid custom field data",
+          details: result.error.issues
+        });
+      }
+
+      const customField = await storage.createCustomField(result.data);
+      res.status(201).json(customField);
+    } catch (error) {
+      console.error("Error creating custom field:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/custom-fields/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCustomField(id);
+      res.json({ message: "Custom field deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting custom field:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
