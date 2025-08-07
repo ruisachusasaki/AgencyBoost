@@ -20,6 +20,7 @@ export default function Campaigns() {
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | SmsTemplate | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [smsContent, setSmsContent] = useState("");
   const [emailContent, setEmailContent] = useState("");
   const queryClient = useQueryClient();
@@ -151,6 +152,37 @@ export default function Campaigns() {
     },
   });
 
+  // Update template mutations
+  const updateEmailTemplateMutation = useMutation({
+    mutationFn: async (data: { id: string; [key: string]: any }) => {
+      const { id, ...updateData } = data;
+      return await apiRequest("PATCH", `/api/email-templates/${id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      handleEditDialogClose();
+      toast({
+        title: "Email template updated",
+        description: "Email template has been updated successfully.",
+      });
+    },
+  });
+
+  const updateSmsTemplateMutation = useMutation({
+    mutationFn: async (data: { id: string; [key: string]: any }) => {
+      const { id, ...updateData } = data;
+      return await apiRequest("PATCH", `/api/sms-templates/${id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
+      handleEditDialogClose();
+      toast({
+        title: "SMS template updated",
+        description: "SMS template has been updated successfully.",
+      });
+    },
+  });
+
   const handleCreateFolder = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -189,6 +221,58 @@ export default function Campaigns() {
     setIsCreateTemplateDialogOpen(false);
     setSmsContent(""); // Reset SMS content when dialog closes
     setEmailContent(""); // Reset email content when dialog closes
+  };
+
+  const handleEditDialogClose = () => {
+    setIsEditDialogOpen(false);
+    setEditingTemplate(null);
+    setSmsContent("");
+    setEmailContent("");
+  };
+
+  const handleEditTemplate = (template: EmailTemplate | SmsTemplate) => {
+    setEditingTemplate(template);
+    setEmailContent(template.content);
+    setSmsContent(template.content);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDuplicateTemplate = async (template: EmailTemplate | SmsTemplate) => {
+    const duplicatedTemplate = {
+      ...template,
+      name: `${template.name} (Copy)`,
+      id: undefined // Remove ID so a new one is generated
+    };
+
+    if (activeTab === "email") {
+      createEmailTemplateMutation.mutate(duplicatedTemplate);
+    } else {
+      createSmsTemplateMutation.mutate(duplicatedTemplate);
+    }
+  };
+
+  const handleUpdateEmailTemplate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    updateEmailTemplateMutation.mutate({
+      id: editingTemplate!.id,
+      name: formData.get("name") as string,
+      subject: formData.get("subject") as string,
+      content: emailContent,
+      previewText: formData.get("previewText") as string || undefined,
+      tags: (formData.get("tags") as string)?.split(",").map(tag => tag.trim()) || [],
+    });
+  };
+
+  const handleUpdateSmsTemplate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    updateSmsTemplateMutation.mutate({
+      id: editingTemplate!.id,
+      name: formData.get("name") as string,
+      content: smsContent,
+      tags: (formData.get("tags") as string)?.split(",").map(tag => tag.trim()) || [],
+    });
   };
 
   const currentFolders = activeTab === "email" ? emailFolders : smsFolders;
@@ -343,6 +427,105 @@ export default function Campaigns() {
               )}
             </DialogContent>
           </Dialog>
+
+          {/* Edit Template Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogClose}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit {editingTemplate && (editingTemplate as any).subject ? "Email" : "SMS"} Template</DialogTitle>
+              </DialogHeader>
+              {editingTemplate && (editingTemplate as any).subject ? (
+                // Email template edit form
+                <form onSubmit={handleUpdateEmailTemplate} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Template Name</label>
+                    <Input name="name" placeholder="Enter template name" defaultValue={editingTemplate.name} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Subject Line</label>
+                    <Input name="subject" placeholder="Email subject" defaultValue={(editingTemplate as any).subject} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Preview Text</label>
+                    <Input name="previewText" placeholder="Preview text (optional)" defaultValue={(editingTemplate as any).previewText || ""} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email Content</label>
+                    <div className="border rounded-md overflow-hidden">
+                      <ReactQuill
+                        theme="snow"
+                        value={emailContent}
+                        onChange={setEmailContent}
+                        modules={{
+                          toolbar: [
+                            [{ 'header': '1' }, { 'header': '2' }, 'bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                            ['link', 'clean']
+                          ],
+                        }}
+                        formats={[
+                          'header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'
+                        ]}
+                        placeholder="Enter your email content with rich formatting..."
+                        style={{ 
+                          minHeight: '250px',
+                          border: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Tags</label>
+                    <Input name="tags" placeholder="Comma-separated tags" defaultValue={editingTemplate.tags?.join(", ") || ""} />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={handleEditDialogClose}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updateEmailTemplateMutation.isPending}>
+                      Update Template
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                // SMS template edit form
+                <form onSubmit={handleUpdateSmsTemplate} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Template Name</label>
+                    <Input name="name" placeholder="Enter template name" defaultValue={editingTemplate?.name} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">SMS Content</label>
+                    <textarea 
+                      name="content" 
+                      value={smsContent}
+                      onChange={(e) => setSmsContent(e.target.value)}
+                      className="w-full h-32 p-3 border rounded-md" 
+                      placeholder="Enter SMS content (160 characters recommended)"
+                      required
+                    />
+                    <div className="flex justify-end mt-1">
+                      <div className="text-xs text-gray-500">
+                        {smsContent.length}/160 characters
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Tags</label>
+                    <Input name="tags" placeholder="Comma-separated tags" defaultValue={editingTemplate?.tags?.join(", ") || ""} />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={handleEditDialogClose}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updateSmsTemplateMutation.isPending}>
+                      Update Template
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -475,10 +658,10 @@ export default function Campaigns() {
                         <Button variant="ghost" size="sm" onClick={() => setEditingTemplate(template)}>
                           <Eye className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(template)}>
                           <Copy className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditTemplate(template)}>
                           <Edit className="h-3 w-3" />
                         </Button>
                         <Button 
