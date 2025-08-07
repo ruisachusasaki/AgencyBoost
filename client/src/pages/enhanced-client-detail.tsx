@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X } from "lucide-react";
 import type { Client } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 // Types
 interface Section {
@@ -73,6 +74,7 @@ const mockUsers = [
 export default function EnhancedClientDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Extract client ID from URL
   const clientId = window.location.pathname.split('/').pop();
@@ -96,6 +98,10 @@ export default function EnhancedClientDetail() {
     assignee: "",
     recurring: false
   });
+
+  // Custom field editing state
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [fieldEditValue, setFieldEditValue] = useState<string>("");
 
   // Fetch client data
   const { data: client, isLoading, error } = useQuery<Client>({
@@ -170,6 +176,61 @@ export default function EnhancedClientDetail() {
       description: `Email sent to ${client?.name}`,
     });
     setEmailMessage("");
+  };
+
+  // Custom field update mutation
+  const updateCustomFieldMutation = useMutation({
+    mutationFn: async ({ fieldId, value }: { fieldId: string; value: any }) => {
+      const updatedCustomFieldValues = {
+        ...client?.customFieldValues,
+        [fieldId]: value
+      };
+      
+      return await apiRequest(`/api/clients/${clientId}`, 'PUT', {
+        customFieldValues: updatedCustomFieldValues
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      toast({
+        title: "Field Updated",
+        description: "Custom field value has been saved successfully.",
+      });
+      setEditingField(null);
+      setFieldEditValue("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update custom field value.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const startEditing = (fieldId: string, currentValue: any) => {
+    setEditingField(fieldId);
+    setFieldEditValue(currentValue || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingField(null);
+    setFieldEditValue("");
+  };
+
+  const saveFieldValue = (fieldId: string, fieldType: string) => {
+    let processedValue = fieldEditValue;
+    
+    // Process value based on field type
+    if (fieldType === 'checkbox') {
+      processedValue = fieldEditValue === 'true';
+    } else if (fieldType === 'number') {
+      processedValue = fieldEditValue ? parseFloat(fieldEditValue) : null;
+    } else if (fieldType === 'currency') {
+      processedValue = fieldEditValue ? parseFloat(fieldEditValue.replace(/[^\d.-]/g, '')) : null;
+    }
+    
+    updateCustomFieldMutation.mutate({ fieldId, value: processedValue });
   };
 
   // Loading state
@@ -327,39 +388,157 @@ export default function EnhancedClientDetail() {
                       return (
                         <div className="space-y-4 text-sm">
                           {folderFields.map((field) => {
-                            const fieldValue = client?.customFieldValues?.[field.id];
+                            const fieldValue = (client?.customFieldValues as any)?.[field.id];
+                            const isEditing = editingField === field.id;
+                            
                             return (
                               <div key={field.id}>
-                                <label className="block text-gray-500 mb-1">
-                                  {field.name}
-                                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                                <label className="flex items-center justify-between text-gray-500 mb-1">
+                                  <span>
+                                    {field.name}
+                                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                                  </span>
+                                  {!isEditing && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                                      onClick={() => startEditing(field.id, fieldValue)}
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </label>
-                                {field.type === 'dropdown' && field.options ? (
-                                  <p className="text-gray-900">{fieldValue || "Not selected"}</p>
-                                ) : field.type === 'checkbox' ? (
-                                  <p className="text-gray-900">{fieldValue ? "Yes" : "No"}</p>
-                                ) : field.type === 'currency' ? (
-                                  <p className="text-gray-900">{fieldValue ? `$${fieldValue}` : "Not specified"}</p>
-                                ) : field.type === 'url' ? (
-                                  fieldValue ? (
-                                    <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline">
-                                      {fieldValue}
-                                    </a>
-                                  ) : (
-                                    <p className="text-gray-900">Not specified</p>
-                                  )
-                                ) : field.type === 'email' ? (
-                                  fieldValue ? (
-                                    <a href={`mailto:${fieldValue}`} className="text-[#46a1a0] hover:underline">
-                                      {fieldValue}
-                                    </a>
-                                  ) : (
-                                    <p className="text-gray-900">Not specified</p>
-                                  )
-                                ) : field.type === 'phone' ? (
-                                  <p className="text-[#46a1a0]">{fieldValue ? formatPhoneNumber(fieldValue) : "Not specified"}</p>
+                                
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2">
+                                    {field.type === 'dropdown' && field.options ? (
+                                      <Select
+                                        value={fieldEditValue}
+                                        onValueChange={setFieldEditValue}
+                                      >
+                                        <SelectTrigger className="h-8">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {field.options.map((option) => (
+                                            <SelectItem key={option} value={option}>
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : field.type === 'checkbox' ? (
+                                      <Select
+                                        value={fieldEditValue}
+                                        onValueChange={setFieldEditValue}
+                                      >
+                                        <SelectTrigger className="h-8">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="true">Yes</SelectItem>
+                                          <SelectItem value="false">No</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    ) : field.type === 'currency' ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        value={fieldEditValue}
+                                        onChange={(e) => setFieldEditValue(e.target.value)}
+                                        className="h-8"
+                                      />
+                                    ) : field.type === 'number' ? (
+                                      <Input
+                                        type="number"
+                                        placeholder="Enter number"
+                                        value={fieldEditValue}
+                                        onChange={(e) => setFieldEditValue(e.target.value)}
+                                        className="h-8"
+                                      />
+                                    ) : field.type === 'email' ? (
+                                      <Input
+                                        type="email"
+                                        placeholder="Enter email"
+                                        value={fieldEditValue}
+                                        onChange={(e) => setFieldEditValue(e.target.value)}
+                                        className="h-8"
+                                      />
+                                    ) : field.type === 'phone' ? (
+                                      <Input
+                                        type="tel"
+                                        placeholder="Enter phone number"
+                                        value={fieldEditValue}
+                                        onChange={(e) => setFieldEditValue(e.target.value)}
+                                        className="h-8"
+                                      />
+                                    ) : field.type === 'url' ? (
+                                      <Input
+                                        type="url"
+                                        placeholder="Enter URL"
+                                        value={fieldEditValue}
+                                        onChange={(e) => setFieldEditValue(e.target.value)}
+                                        className="h-8"
+                                      />
+                                    ) : (
+                                      <Input
+                                        type="text"
+                                        placeholder="Enter value"
+                                        value={fieldEditValue}
+                                        onChange={(e) => setFieldEditValue(e.target.value)}
+                                        className="h-8"
+                                      />
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                      onClick={() => saveFieldValue(field.id, field.type)}
+                                      disabled={updateCustomFieldMutation.isPending}
+                                    >
+                                      <Save className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                      onClick={cancelEditing}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 ) : (
-                                  <p className="text-gray-900">{fieldValue || "Not specified"}</p>
+                                  <div className="group cursor-pointer" onClick={() => startEditing(field.id, fieldValue)}>
+                                    {field.type === 'dropdown' && field.options ? (
+                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue || "Not selected"}</p>
+                                    ) : field.type === 'checkbox' ? (
+                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue ? "Yes" : "No"}</p>
+                                    ) : field.type === 'currency' ? (
+                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue ? `$${Number(fieldValue).toFixed(2)}` : "Not specified"}</p>
+                                    ) : field.type === 'url' ? (
+                                      fieldValue ? (
+                                        <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block">
+                                          {fieldValue}
+                                        </a>
+                                      ) : (
+                                        <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">Not specified</p>
+                                      )
+                                    ) : field.type === 'email' ? (
+                                      fieldValue ? (
+                                        <a href={`mailto:${fieldValue}`} className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block">
+                                          {fieldValue}
+                                        </a>
+                                      ) : (
+                                        <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">Not specified</p>
+                                      )
+                                    ) : field.type === 'phone' ? (
+                                      <p className="text-[#46a1a0] group-hover:bg-gray-50 p-1 rounded">{fieldValue ? formatPhoneNumber(fieldValue) : "Not specified"}</p>
+                                    ) : (
+                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue || "Not specified"}</p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             );
