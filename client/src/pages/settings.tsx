@@ -1,0 +1,81 @@
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+import {
+  Building,
+  User,
+  Users,
+  HeadphonesIcon,
+  Shield,
+  Plug,
+  Database,
+  Tag,
+  Package,
+  ScrollText
+} from "lucide-react";
+
+const settingsNavigation = [
+  { name: "Business Profile", href: "/settings/business-profile", icon: Building },
+  { name: "My Profile", href: "/settings/my-profile", icon: User },
+  { name: "Staff", href: "/settings/staff", icon: Users },
+  { name: "Support", href: "/settings/support", icon: HeadphonesIcon },
+  { name: "Roles & Permissions", href: "/settings/roles-permissions", icon: Shield },
+  { name: "Integrations", href: "/settings/integrations", icon: Plug },
+  { name: "Custom Fields", href: "/settings/custom-fields", icon: Database },
+  { name: "Tags", href: "/settings/tags", icon: Tag },
+  { name: "Products", href: "/settings/products", icon: Package },
+  { name: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText },
+];
+
+export default function Settings() {
+  const [location] = useLocation();
+
+  return (
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-2">Manage your AgencyFlow CRM configuration</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {settingsNavigation.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.name} href={item.href}>
+                <a className="block p-6 bg-white rounded-lg border border-gray-200 hover:border-primary hover:shadow-md transition-all duration-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <Icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {getSettingDescription(item.name)}
+                      </p>
+                    </div>
+                  </div>
+                </a>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getSettingDescription(name: string): string {
+  const descriptions: Record<string, string> = {
+    "Business Profile": "Manage company information and branding",
+    "My Profile": "Update your personal profile and preferences",
+    "Staff": "Manage team members and user accounts",
+    "Support": "Configure support departments and ticketing",
+    "Roles & Permissions": "Create custom roles and set permissions",
+    "Integrations": "Connect external services and tools",
+    "Custom Fields": "Create and manage custom contact fields",
+    "Tags": "Organize and manage system tags",
+    "Products": "Manage your products and services catalog",
+    "Audit Logs": "View system activity and audit trail",
+  };
+  return descriptions[name] || "";
+}

@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   GitBranch,
-  Share2
+  Share2,
+  Settings
 } from "lucide-react";
 
 interface SidebarProps {
@@ -48,17 +49,15 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     const isActive = location === item.href;
     
     const linkContent = (
-      <Link href={item.href}>
-        <a className={cn(
-          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-          isActive
-            ? "text-white bg-primary"
-            : "text-slate-700 hover:bg-slate-100",
-          isCollapsed && !isMobile && "justify-center"
-        )}>
-          <Icon className="h-4 w-4" />
-          {(!isCollapsed || isMobile) && item.name}
-        </a>
+      <Link href={item.href} className={cn(
+        "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+        isActive
+          ? "text-white bg-primary"
+          : "text-slate-700 hover:bg-slate-100",
+        isCollapsed && !isMobile && "justify-center"
+      )}>
+        <Icon className="h-4 w-4" />
+        {(!isCollapsed || isMobile) && item.name}
       </Link>
     );
 
@@ -114,15 +113,22 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           )}
         </button>
         
-        <nav className={cn("px-4 pb-4", isCollapsed && "px-2")}>
-          <ul className="space-y-2">
-            {navigation.map((item) => (
-              <li key={item.name}>
-                <NavItem item={item} showTooltip={isCollapsed} />
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <div className="flex flex-col h-full">
+          <nav className={cn("px-4 pb-4 flex-1", isCollapsed && "px-2")}>
+            <ul className="space-y-2">
+              {navigation.map((item) => (
+                <li key={item.name}>
+                  <NavItem item={item} showTooltip={isCollapsed} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+          
+          {/* Settings - sticky at bottom */}
+          <div className={cn("px-4 pb-4 border-t border-slate-200 pt-4", isCollapsed && "px-2")}>
+            <NavItem item={{ name: "Settings", href: "/settings", icon: Settings }} showTooltip={isCollapsed} />
+          </div>
+        </div>
       </aside>
 
       {/* Mobile sidebar */}
@@ -148,16 +154,16 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             </div>
           </div>
           
-          <nav className="p-4">
-            <ul className="space-y-2">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location === item.href;
-                
-                return (
-                  <li key={item.name}>
-                    <Link href={item.href}>
-                      <a 
+          <div className="flex flex-col h-full">
+            <nav className="p-4 flex-1">
+              <ul className="space-y-2">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location === item.href;
+                  
+                  return (
+                    <li key={item.name}>
+                      <Link href={item.href}
                         onClick={onClose}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
@@ -168,13 +174,29 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                       >
                         <Icon className="h-4 w-4" />
                         {item.name}
-                      </a>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+            
+            {/* Settings - sticky at bottom for mobile */}
+            <div className="p-4 border-t border-slate-200 pt-4">
+              <Link href="/settings" 
+                onClick={onClose}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                  location === "/settings" || location?.startsWith("/settings/")
+                    ? "text-white bg-primary"
+                    : "text-slate-700 hover:bg-slate-100"
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
+            </div>
+          </div>
         </aside>
       )}
     </TooltipProvider>

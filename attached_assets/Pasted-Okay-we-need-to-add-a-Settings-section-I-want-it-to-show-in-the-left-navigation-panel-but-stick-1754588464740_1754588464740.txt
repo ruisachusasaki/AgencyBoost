@@ -1,0 +1,29 @@
+Okay, we need to add a "Settings" section.
+
+I want it to show in the left navigation panel but sticky at the bottom of that panel. I want it to have the SAME look and feel as the other navigation items.
+
+Use a cog as the icon.
+
+When clicked it will go to a page that will have sub-sections/pages. (Similar to how when you click on clients tab, it has a list of clients and when clicked on, they go to their own page).
+
+This will have sub-items that will have a page specific for each sub-item/sub-page.
+
+Here are the sub-pages I want under the Settings page:
+
+1. Business Profile - this will allow me to add our companies logo, Name, Business Email, Business Phone, Business Website, Time Zone and address information.
+
+2. My Profile - This will be the PROFILE page of the particular user that is logged into the system. The user should be able to add an image to their profile (500x500 px). First Name, Last Name, Email, Phone, Extension, They should be able to assign or associate them with an INTERNAL system calendar (which we haven't created yet, but there should be a drop down that allows them to choose their respective calendar). It should allow them to create a signature that gets sent out in all system emails (they should be able to toggle this on or off). They should be able to change their password. I want the ability/functionality to do 2-way email sync and be able to integrate their Google email. Lastly they should be able to integrate their calendar with their google calendar.
+
+3. Staff - This would be a list of ALL the users that have an account in the AgencyFlow CRM. This would ONLY be visible to CRM Admins. From this page you should be able to add users. When adding users here’s what you should be able to do/add: First Name, Last Name, Email, Phone, Extension, set password, Assign Roles & Permissions.
+
+4. Support - This would be the section that allows you to create the settings for the ticketing system (haven’t scoped yet but I want a ticketing system in this CRM). You should be able to create, edit and delete departments (add users/staff to a department), create the “ticket Priorities”, create, edit and delete Ticket Statuses,   5. Roles & Permissions - This would be available ONLY to ADMINS. This is where you can create CUSTOM roles and set permissions.
+
+6. Integrations - this is where you will be able to manage integrations. The integrations we want to allow access to are access to the Google Calendar, 2-way sync with gmail. I would like to have an integration with Quickbooks and allow you to sync your quickbooks account in this tab. I would like to have an integration with Slack too.
+
+7. Custom Fields - this is where ADMINS would be able to create CUSTOM Fields that would show up either in the contact record or the opportunity card (we will build in the future). When clicked, this should show a list of ALL current CRM fields, it should allow an ADMIN to edit that field, we should be able to CREATE NEW fields as well as NEW Folders. The folders, when created, show up in the client’s contact record in the left navigation of the specific client’s record. This is a UNIVERSAL feature that would show up on ALL client records. By default, the “Folders” that are in a customer/contact record are “Contact Details”, “Services”, “Billing”, “Important Resources”. From this screen and list of custom fields when you edit a custom field you should be able to ADD that field to ONE of the folders for organization.
+
+8. Tags - this should be the list of ALL tags being used in the system. It should have a list of tags, date it was created and the ability to edit and/or delete. You should also be able to add tags here.
+
+9. Products - this is where you will be able to add new products and services. This should be visible for ADMINS and the ACCOUNTING Role for the CRM. On the Products page you should be able to see a list of all the products/services that have been created, you should be able to edit current products/services and delete them. Once you’ve added a product that specific page (not modal) here’s what you should be able to add: (1) Title (product/service name), Description (should have WYSWIG editor), Price (Under Price you should be able to create ONE time products as well as recurring products [type], put in the amount of[price] and then product/service category [the categories should be a drop down and allow the ADMIN and ACCOUNTING role to add new categories. The Default categories should be, SEO, CRO, Media Buying, Call Center, Creative, Data & Analytics)
+
+10. Audit Logs - This should be ONLY visible for Admins and it should be a log of ALL actions that have happened in the CRM. This will allow the ADMINS to audit what is happening inside the CRM. Here’s what should be tracked: Contact Records created, contact records updated, contact records deleted. We should be able to see WHAT contact record was changed, WHAT the action was, WHO did the action and DATE and TIME 
