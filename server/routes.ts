@@ -1145,6 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.put("/api/profile-images", async (req, res) => {
+    console.log("Profile image request body:", req.body);
     if (!req.body.profileImageURL) {
       return res.status(400).json({ error: "profileImageURL is required" });
     }
@@ -1155,6 +1156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectPath = objectStorageService.normalizeObjectEntityPath(
         req.body.profileImageURL,
       );
+      console.log("Normalized object path:", objectPath);
 
       res.status(200).json({
         objectPath: objectPath,

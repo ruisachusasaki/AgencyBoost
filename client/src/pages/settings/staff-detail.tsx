@@ -106,7 +106,7 @@ export default function StaffDetail() {
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "",
-        managerId: staffMember.managerId ? staffMember.managerId : "none",
+        managerId: staffMember.managerId ?? "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
     }
@@ -160,13 +160,19 @@ export default function StaffDetail() {
     if (result.successful && result.successful.length > 0) {
       const uploadURL = result.successful[0].uploadURL;
       try {
+        console.log("Sending profile image URL:", uploadURL);
         const response = await apiRequest("PUT", "/api/profile-images", { profileImageURL: uploadURL });
         const data = await response.json();
+        console.log("Profile image response:", data);
         
-        // Update the form with the new profile image path
-        const formData = form.getValues();
-        const updateData = { ...formData, profileImagePath: data.objectPath };
-        updateMutation.mutate(updateData);
+        // Update the staff member directly with the new profile image path
+        const staffUpdateData = {
+          ...form.getValues(),
+          profileImagePath: data.objectPath,
+          managerId: form.getValues().managerId === "none" ? null : (form.getValues().managerId || null)
+        };
+        console.log("Updating staff with:", staffUpdateData);
+        updateMutation.mutate(staffUpdateData);
         
         toast({
           title: "Success", 
