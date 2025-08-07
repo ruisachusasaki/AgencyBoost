@@ -187,11 +187,11 @@ export default function EnhancedClientDetail() {
           [fieldId]: value
         };
         
-        return await apiRequest(`/api/clients/${clientId}`, 'PUT', {
+        return await apiRequest('PUT', `/api/clients/${clientId}`, {
           customFieldValues: updatedCustomFieldValues
         });
       } else {
-        return await apiRequest(`/api/clients/${clientId}`, 'PUT', {
+        return await apiRequest('PUT', `/api/clients/${clientId}`, {
           [fieldId]: value
         });
       }
