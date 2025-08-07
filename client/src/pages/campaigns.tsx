@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, Calendar, Eye, Copy, BarChart3 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import type { TemplateFolder, EmailTemplate, SmsTemplate } from "@shared/schema";
 
 export default function Campaigns() {
@@ -19,6 +21,7 @@ export default function Campaigns() {
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | SmsTemplate | null>(null);
   const [smsContent, setSmsContent] = useState("");
+  const [emailContent, setEmailContent] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -164,7 +167,7 @@ export default function Campaigns() {
     createEmailTemplateMutation.mutate({
       name: formData.get("name") as string,
       subject: formData.get("subject") as string,
-      content: formData.get("content") as string,
+      content: emailContent, // Use WYSIWYG editor content
       previewText: formData.get("previewText") as string || undefined,
       folderId: selectedFolder,
       tags: (formData.get("tags") as string)?.split(",").map(tag => tag.trim()) || [],
@@ -185,6 +188,7 @@ export default function Campaigns() {
   const handleDialogClose = () => {
     setIsCreateTemplateDialogOpen(false);
     setSmsContent(""); // Reset SMS content when dialog closes
+    setEmailContent(""); // Reset email content when dialog closes
   };
 
   const currentFolders = activeTab === "email" ? emailFolders : smsFolders;
@@ -265,11 +269,27 @@ export default function Campaigns() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Email Content</label>
-                    <textarea 
-                      name="content" 
-                      className="w-full h-40 p-3 border rounded-md" 
-                      placeholder="Enter email content (HTML supported)"
-                      required
+                    <ReactQuill
+                      theme="snow"
+                      value={emailContent}
+                      onChange={setEmailContent}
+                      modules={{
+                        toolbar: [
+                          [{ 'header': [1, 2, 3, false] }],
+                          ['bold', 'italic', 'underline', 'strike'],
+                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                          [{ 'color': [] }, { 'background': [] }],
+                          [{ 'align': [] }],
+                          ['link'],
+                          ['clean']
+                        ],
+                      }}
+                      formats={[
+                        'header', 'bold', 'italic', 'underline', 'strike',
+                        'list', 'bullet', 'color', 'background', 'align', 'link'
+                      ]}
+                      placeholder="Enter your email content with rich formatting..."
+                      style={{ height: '200px', marginBottom: '50px' }}
                     />
                   </div>
                   <div>
