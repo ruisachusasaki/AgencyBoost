@@ -11,7 +11,7 @@ import ClientForm from "@/components/forms/client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Client, Project, Campaign, Task, Invoice } from "@shared/schema";
+import type { Client, Project, Campaign, Task, Invoice, CustomFieldFolder } from "@shared/schema";
 
 export default function ClientDetail() {
   const [match, params] = useRoute("/clients/:id");
@@ -48,6 +48,11 @@ export default function ClientDetail() {
   const { data: invoices = [] } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
     select: (data) => data.filter(i => i.clientId === clientId),
+    enabled: !!clientId,
+  });
+
+  const { data: customFieldFolders = [] } = useQuery<CustomFieldFolder[]>({
+    queryKey: ["/api/custom-field-folders"],
     enabled: !!clientId,
   });
 
@@ -331,13 +336,14 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      {/* Tabs for Projects, Campaigns, Tasks, Invoices */}
+      {/* Tabs for Projects, Campaigns, Tasks, Invoices, and Custom Field Folders */}
       <Tabs defaultValue="projects" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="projects">Projects ({projects.length})</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
+          <TabsTrigger value="custom-fields">Custom Fields ({customFieldFolders.length})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="projects">
@@ -448,6 +454,41 @@ export default function ClientDetail() {
                         <span>Status: {invoice.status}</span>
                         <span>Amount: {invoice.amount}</span>
                         {invoice.dueDate && <span>Due: {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="custom-fields">
+          <Card>
+            <CardHeader>
+              <CardTitle>Custom Fields</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {customFieldFolders.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-600">No custom field folders created yet.</p>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Custom field folders created by admins will appear here for data entry.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {customFieldFolders.map((folder) => (
+                    <div key={folder.id} className="border rounded-lg p-4">
+                      <h4 className="font-medium text-slate-900 mb-3">{folder.name}</h4>
+                      {folder.description && (
+                        <p className="text-sm text-slate-600 mb-3">{folder.description}</p>
+                      )}
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-500">
+                          Custom fields for this folder will appear here for data entry.
+                        </p>
+                        {/* TODO: Add actual custom field inputs for this folder */}
                       </div>
                     </div>
                   ))}

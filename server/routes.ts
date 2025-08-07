@@ -708,18 +708,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Custom Fields
   app.get("/api/custom-fields", async (req, res) => {
     try {
-      const search = req.query.search as string;
-      const customFields = await storage.getCustomFields();
+      const { search } = req.query;
+      let query = db.select().from(customFields).orderBy(asc(customFields.order));
       
-      if (search) {
-        const filtered = customFields.filter(field => 
-          field.name.toLowerCase().includes(search.toLowerCase()) ||
-          field.type.toLowerCase().includes(search.toLowerCase())
-        );
-        return res.json(filtered);
+      if (search && typeof search === 'string') {
+        query = db.select()
+          .from(customFields)
+          .where(
+            or(
+              like(customFields.name, `%${search}%`),
+              like(customFields.type, `%${search}%`)
+            )
+          )
+          .orderBy(asc(customFields.order));
       }
       
-      res.json(customFields);
+      const fields = await query;
+      res.json(fields);
     } catch (error) {
       console.error("Error fetching custom fields:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -736,8 +741,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const customField = await storage.createCustomField(result.data);
-      res.status(201).json(customField);
+      // Get the maximum order value and increment it
+      const maxOrderResult = await db.select({ maxOrder: sql<number>`COALESCE(MAX(${customFields.order}), 0)` })
+        .from(customFields);
+      const nextOrder = (maxOrderResult[0]?.maxOrder || 0) + 1;
+
+      const [newField] = await db.insert(customFields).values({
+        ...result.data,
+        order: nextOrder
+      }).returning();
+
+      res.status(201).json(newField);
     } catch (error) {
       console.error("Error creating custom field:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -748,11 +762,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const validatedData = insertCustomFieldSchema.partial().parse(req.body);
-      const customField = await storage.updateCustomField(id, validatedData);
-      if (!customField) {
+      
+      const [updatedField] = await db
+        .update(customFields)
+        .set(validatedData)
+        .where(eq(customFields.id, id))
+        .returning();
+
+      if (!updatedField) {
         return res.status(404).json({ message: "Custom field not found" });
       }
-      res.json(customField);
+
+      res.json(updatedField);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
@@ -765,7 +786,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/custom-fields/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteCustomField(id);
+      
+      const [deletedField] = await db
+        .delete(customFields)
+        .where(eq(customFields.id, id))
+        .returning();
+
+      if (!deletedField) {
+        return res.status(404).json({ message: "Custom field not found" });
+      }
+
       res.json({ message: "Custom field deleted successfully" });
     } catch (error) {
       console.error("Error deleting custom field:", error);
