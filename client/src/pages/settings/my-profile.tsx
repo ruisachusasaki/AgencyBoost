@@ -6,11 +6,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff } from "lucide-react";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useMutation } from "@tanstack/react-query";
+import type { UploadResult } from "@uppy/core";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 export default function MyProfile() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [signatureEnabled, setSignatureEnabled] = useState(true);
   
   const [formData, setFormData] = useState({
     firstName: "John",
@@ -19,11 +30,22 @@ export default function MyProfile() {
     phone: "(555) 123-4567",
     extension: "101",
     calendar: "",
-    signature: `Best regards,
-John Doe
-AgencyFlow Marketing
-john@agencyflow.com
-(555) 123-4567`
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+    signature: `<p><strong>Best regards,</strong></p><p>John Doe<br>AgencyFlow Marketing<br><a href="mailto:john@agencyflow.com">john@agencyflow.com</a><br>(555) 123-4567</p>`
+  });
+
+  const profileImageMutation = useMutation({
+    mutationFn: async (imageURL: string) => {
+      const response = await fetch("/api/profile-images", {
+        method: "PUT",
+        body: JSON.stringify({ imageURL }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to save image");
+      return response.json();
+    },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,17 +93,57 @@ john@agencyflow.com
               <CardTitle>Profile Photo</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-4">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden">
-                  <User className="h-8 w-8 text-gray-400" />
+              <div className="flex items-center space-x-6">
+                <div className="relative">
+                  {profileImageUrl ? (
+                    <img 
+                      src={profileImageUrl} 
+                      alt="Profile photo" 
+                      className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300">
+                      <User className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <Button variant="outline" className="mb-2">
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={5242880} // 5MB
+                    onGetUploadParameters={async () => {
+                      const response = await fetch("/api/objects/upload", { method: "POST" });
+                      const data = await response.json();
+                      return { method: "PUT" as const, url: data.uploadURL };
+                    }}
+                    onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                      const uploadedFile = result.successful[0];
+                      if (uploadedFile?.uploadURL) {
+                        profileImageMutation.mutate(uploadedFile.uploadURL as string, {
+                          onSuccess: (data) => {
+                            setProfileImageUrl(data.objectPath);
+                            toast({
+                              title: "Success",
+                              description: "Profile photo uploaded successfully.",
+                            });
+                          },
+                          onError: () => {
+                            toast({
+                              title: "Error",
+                              description: "Failed to save photo. Please try again.",
+                              variant: "destructive",
+                            });
+                          }
+                        });
+                      }
+                    }}
+                    buttonClassName="mb-2"
+                  >
                     <Camera className="h-4 w-4 mr-2" />
                     Upload Photo
-                  </Button>
+                  </ObjectUploader>
                   <p className="text-sm text-gray-500">
-                    Recommended: 500x500px, PNG or JPG
+                    Recommended: 500x500px, PNG or JPG, max 5MB
                   </p>
                 </div>
               </div>
@@ -172,24 +234,132 @@ john@agencyflow.com
             </CardContent>
           </Card>
 
+          {/* Password Update */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Password Update</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.currentPassword}
+                    onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                    placeholder="Enter current password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.newPassword}
+                      onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      placeholder="Confirm new password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">
+                Password must be at least 8 characters long and include uppercase, lowercase, and numbers.
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Email Signature */}
           <Card>
             <CardHeader>
               <CardTitle>Email Signature</CardTitle>
             </CardHeader>
             <CardContent>
-              <div>
-                <Label htmlFor="signature">Signature Text</Label>
-                <Textarea
-                  id="signature"
-                  value={formData.signature}
-                  onChange={(e) => handleInputChange('signature', e.target.value)}
-                  rows={6}
-                  className="mt-1"
-                  placeholder="Enter your email signature..."
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  This signature will be automatically added to emails sent from the CRM
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="signatureEnabled" className="text-sm font-medium">
+                    Enable signature on all outgoing messages
+                  </Label>
+                  <Switch
+                    id="signatureEnabled"
+                    checked={signatureEnabled}
+                    onCheckedChange={setSignatureEnabled}
+                  />
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <Label>Signature Content</Label>
+                  <ReactQuill
+                    value={formData.signature}
+                    onChange={(value) => handleInputChange('signature', value)}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [1, 2, false] }],
+                        ['bold', 'italic', 'underline'],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link'],
+                        ['clean']
+                      ],
+                    }}
+                    formats={[
+                      'header', 'bold', 'italic', 'underline',
+                      'color', 'background', 'list', 'bullet', 'link'
+                    ]}
+                    style={{ 
+                      height: '200px',
+                      marginBottom: '50px'
+                    }}
+                    className={!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}
+                  />
+                </div>
+                
+                <p className="text-sm text-gray-500">
+                  This signature will be automatically added to all outgoing emails when enabled.
                 </p>
               </div>
             </CardContent>

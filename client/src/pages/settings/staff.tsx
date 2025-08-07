@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Plus, Edit, Trash2, Shield, Mail, Phone } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Shield, Mail, Phone, Search } from "lucide-react";
 
 interface StaffMember {
   id: string;
@@ -28,6 +28,7 @@ export default function Staff() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Mock staff data - replace with actual API call
   const [staffMembers] = useState<StaffMember[]>([
@@ -113,10 +114,42 @@ export default function Staff() {
     }
   };
 
-  const handleEditStaff = (staff: StaffMember) => {
+  const openEditDialog = (staff: StaffMember) => {
     setSelectedStaff(staff);
     setIsEditDialogOpen(true);
   };
+
+  const handleEditStaff = async () => {
+    if (!selectedStaff) return;
+    
+    setIsLoading(true);
+    try {
+      // TODO: Implement API call to update staff member
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      toast({
+        title: "Success",
+        description: "Staff member updated successfully.",
+      });
+      
+      setIsEditDialogOpen(false);
+      setSelectedStaff(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update staff member. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredStaff = staffMembers.filter(staff => 
+    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleDeleteStaff = async (staffId: string) => {
     if (!confirm("Are you sure you want to delete this staff member?")) return;
@@ -150,14 +183,24 @@ export default function Staff() {
             <p className="text-gray-600 mt-2">Manage team members and user accounts</p>
           </div>
           
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Staff Member
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search staff members..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Staff Member
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Staff Member</DialogTitle>
               </DialogHeader>
@@ -250,11 +293,115 @@ export default function Staff() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
+
+        {/* Edit Staff Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Staff Member</DialogTitle>
+            </DialogHeader>
+            {selectedStaff && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                handleEditStaff();
+              }} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="editFirstName">First Name *</Label>
+                    <Input
+                      id="editFirstName"
+                      value={selectedStaff.firstName}
+                      onChange={(e) => setSelectedStaff({...selectedStaff, firstName: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editLastName">Last Name *</Label>
+                    <Input
+                      id="editLastName"
+                      value={selectedStaff.lastName}
+                      onChange={(e) => setSelectedStaff({...selectedStaff, lastName: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="editEmail">Email Address *</Label>
+                  <Input
+                    id="editEmail"
+                    type="email"
+                    value={selectedStaff.email}
+                    onChange={(e) => setSelectedStaff({...selectedStaff, email: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="editPhone">Phone Number</Label>
+                    <Input
+                      id="editPhone"
+                      value={selectedStaff.phone}
+                      onChange={(e) => setSelectedStaff({...selectedStaff, phone: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editExtension">Extension</Label>
+                    <Input
+                      id="editExtension"
+                      value={selectedStaff.extension}
+                      onChange={(e) => setSelectedStaff({...selectedStaff, extension: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="editRole">Role & Permissions</Label>
+                  <Select value={selectedStaff.role} onValueChange={(value) => setSelectedStaff({...selectedStaff, role: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="Manager">Manager</SelectItem>
+                      <SelectItem value="User">User</SelectItem>
+                      <SelectItem value="Accounting">Accounting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="editStatus">Status</Label>
+                  <Select value={selectedStaff.status} onValueChange={(value) => setSelectedStaff({...selectedStaff, status: value as "active" | "inactive"})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Updating..." : "Update Staff Member"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Staff List */}
         <div className="grid gap-4">
-          {staffMembers.map((staff) => (
+          {filteredStaff.map((staff) => (
             <Card key={staff.id}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -294,7 +441,7 @@ export default function Staff() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleEditStaff(staff)}
+                        onClick={() => openEditDialog(staff)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>

@@ -7,10 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Building, Upload } from "lucide-react";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { UploadResult } from "@uppy/core";
 
 export default function BusinessProfile() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>("");
   
   const [formData, setFormData] = useState({
     companyName: "AgencyFlow Marketing",
@@ -24,6 +29,18 @@ export default function BusinessProfile() {
     state: "NY",
     zipCode: "10001",
     country: "United States"
+  });
+
+  const profileImageMutation = useMutation({
+    mutationFn: async (imageURL: string) => {
+      const response = await fetch("/api/profile-images", {
+        method: "PUT",
+        body: JSON.stringify({ imageURL }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to save image");
+      return response.json();
+    },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,17 +88,57 @@ export default function BusinessProfile() {
               <CardTitle>Company Logo</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-4">
-                <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <Building className="h-8 w-8 text-gray-400" />
+              <div className="flex items-center space-x-6">
+                <div className="relative">
+                  {logoUrl ? (
+                    <img 
+                      src={logoUrl} 
+                      alt="Company logo" 
+                      className="w-32 h-32 rounded-lg object-cover border-2 border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                      <Building className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <Button variant="outline" className="mb-2">
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={5242880} // 5MB
+                    onGetUploadParameters={async () => {
+                      const response = await fetch("/api/objects/upload", { method: "POST" });
+                      const data = await response.json();
+                      return { method: "PUT" as const, url: data.uploadURL };
+                    }}
+                    onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                      const uploadedFile = result.successful[0];
+                      if (uploadedFile?.uploadURL) {
+                        profileImageMutation.mutate(uploadedFile.uploadURL as string, {
+                          onSuccess: (data) => {
+                            setLogoUrl(data.objectPath);
+                            toast({
+                              title: "Success",
+                              description: "Company logo uploaded successfully.",
+                            });
+                          },
+                          onError: () => {
+                            toast({
+                              title: "Error",
+                              description: "Failed to save logo. Please try again.",
+                              variant: "destructive",
+                            });
+                          }
+                        });
+                      }
+                    }}
+                    buttonClassName="mb-2"
+                  >
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Logo
-                  </Button>
+                  </ObjectUploader>
                   <p className="text-sm text-gray-500">
-                    Recommended: 200x200px, PNG or JPG
+                    Recommended: 500x500px, PNG or JPG, max 5MB
                   </p>
                 </div>
               </div>
