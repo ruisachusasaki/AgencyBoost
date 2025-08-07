@@ -995,11 +995,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
+      const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
       objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving object:", error);
+      const { ObjectNotFoundError } = await import("./objectStorage");
       if (error instanceof ObjectNotFoundError) {
         return res.sendStatus(404);
       }
