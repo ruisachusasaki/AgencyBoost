@@ -50,7 +50,7 @@ const staffFormSchema = z.object({
   country: z.string().optional(),
   hireDate: z.string().optional(),
   department: z.string().optional(),
-  managerId: z.string().optional(),
+  managerId: z.string().nullable().optional(),
   birthdate: z.string().optional(),
 });
 
@@ -158,9 +158,9 @@ export default function StaffDetail() {
     // Convert "none" back to null for managerId
     const submitData = {
       ...data,
-      managerId: data.managerId === "none" ? null : data.managerId
+      managerId: data.managerId === "none" ? null : data.managerId || null
     };
-    updateMutation.mutate(submitData);
+    updateMutation.mutate(submitData as any);
   };
 
   if (isLoading) {
