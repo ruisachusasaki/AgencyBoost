@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,10 +35,15 @@ const staffFormSchema = z.object({
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
 
+type SortField = 'name' | 'email' | 'phone' | 'userType';
+type SortOrder = 'asc' | 'desc';
+
 export default function Staff() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
@@ -114,6 +119,45 @@ export default function Staff() {
     deleteStaffMutation.mutate(staffId);
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedStaffMembers = [...staffMembers].sort((a, b) => {
+    let aValue = '';
+    let bValue = '';
+
+    switch (sortField) {
+      case 'name':
+        aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+        bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+        break;
+      case 'email':
+        aValue = a.email.toLowerCase();
+        bValue = b.email.toLowerCase();
+        break;
+      case 'phone':
+        aValue = a.phone || '';
+        bValue = b.phone || '';
+        break;
+      case 'userType':
+        aValue = a.userType.toLowerCase();
+        bValue = b.userType.toLowerCase();
+        break;
+    }
+
+    if (sortOrder === 'asc') {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
+  });
+
   const formatPhoneNumber = (phone?: string) => {
     if (!phone) return "—";
     
@@ -128,6 +172,33 @@ export default function Staff() {
     // Return original if not 10 digits
     return phone;
   };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortOrder === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortOrder === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
 
   if (isLoading) {
     return (
@@ -292,10 +363,10 @@ export default function Staff() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Staff Member</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>User Type</TableHead>
+                  <SortableHeader field="name">Staff Member</SortableHeader>
+                  <SortableHeader field="email">Email</SortableHeader>
+                  <SortableHeader field="phone">Phone</SortableHeader>
+                  <SortableHeader field="userType">User Type</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -322,7 +393,7 @@ export default function Staff() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  staffMembers.map((staff) => (
+                  sortedStaffMembers.map((staff) => (
                     <TableRow key={staff.id}>
                       {/* Profile Image + Name */}
                       <TableCell>
