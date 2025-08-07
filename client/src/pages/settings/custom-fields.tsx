@@ -392,12 +392,12 @@ export default function CustomFields() {
                   </div>
                   <div>
                     <Label htmlFor="fieldFolder">Folder (Optional)</Label>
-                    <Select value={newField.folderId} onValueChange={(value) => setNewField({...newField, folderId: value})}>
+                    <Select value={newField.folderId || "no-folder"} onValueChange={(value) => setNewField({...newField, folderId: value === "no-folder" ? "" : value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a folder" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Folder</SelectItem>
+                        <SelectItem value="no-folder">No Folder</SelectItem>
                         {folders.map((folder) => (
                           <SelectItem key={folder.id} value={folder.id}>
                             {folder.name}
@@ -710,12 +710,12 @@ export default function CustomFields() {
                 </div>
                 <div>
                   <Label htmlFor="editFieldFolder">Folder</Label>
-                  <Select value={editingField.folderId || ""} onValueChange={(value) => setEditingField({...editingField, folderId: value || null})}>
+                  <Select value={editingField.folderId || "no-folder"} onValueChange={(value) => setEditingField({...editingField, folderId: value === "no-folder" ? null : value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a folder" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Folder</SelectItem>
+                      <SelectItem value="no-folder">No Folder</SelectItem>
                       {folders.map((folder) => (
                         <SelectItem key={folder.id} value={folder.id}>
                           {folder.name}
