@@ -82,6 +82,7 @@
   border-bottom: none !important;
   border-radius: 6px 6px 0 0 !important;
   background: hsl(var(--background)) !important;
+  padding: 8px !important;
 }
 
 .ql-container {
@@ -95,30 +96,104 @@
 .ql-editor {
   color: hsl(var(--foreground)) !important;
   min-height: 200px !important;
+  padding: 12px 15px !important;
 }
 
 .ql-editor.ql-blank::before {
   color: hsl(var(--muted-foreground)) !important;
   font-style: normal !important;
+  left: 15px !important;
 }
 
+/* Fix toolbar button visibility and styling */
+.ql-toolbar .ql-formats {
+  margin-right: 15px !important;
+}
+
+.ql-toolbar .ql-picker-label,
+.ql-toolbar .ql-picker-options {
+  color: hsl(var(--foreground)) !important;
+}
+
+.ql-toolbar .ql-picker-label:before,
+.ql-toolbar .ql-picker-options .ql-picker-item:before {
+  color: hsl(var(--foreground)) !important;
+}
+
+.ql-toolbar button {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 3px 5px !important;
+  margin: 0 1px !important;
+  border-radius: 3px !important;
+}
+
+.ql-toolbar button:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.ql-toolbar button.ql-active {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.ql-toolbar .ql-stroke {
+  stroke: hsl(var(--foreground)) !important;
+}
+
+.ql-toolbar .ql-fill {
+  fill: hsl(var(--foreground)) !important;
+}
+
+.ql-toolbar .ql-picker {
+  color: hsl(var(--foreground)) !important;
+}
+
+.ql-toolbar .ql-picker .ql-picker-label {
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 3px !important;
+  padding: 2px 8px !important;
+}
+
+.ql-toolbar .ql-picker .ql-picker-label:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.ql-toolbar .ql-picker-options {
+  background-color: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ql-toolbar .ql-picker-item {
+  color: hsl(var(--foreground)) !important;
+  padding: 4px 8px !important;
+}
+
+.ql-toolbar .ql-picker-item:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+/* Dark mode adjustments */
 .dark .ql-toolbar {
   background: hsl(var(--background)) !important;
+  border-color: hsl(var(--border)) !important;
 }
 
 .dark .ql-container {
   background: hsl(var(--background)) !important;
+  border-color: hsl(var(--border)) !important;
 }
 
 .dark .ql-editor {
   color: hsl(var(--foreground)) !important;
 }
 
-/* ReactQuill toolbar buttons */
-.ql-toolbar .ql-stroke {
+.dark .ql-toolbar .ql-stroke {
   stroke: hsl(var(--foreground)) !important;
 }
 
-.ql-toolbar .ql-fill {
+.dark .ql-toolbar .ql-fill {
   fill: hsl(var(--foreground)) !important;
 }

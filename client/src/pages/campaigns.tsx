@@ -269,28 +269,33 @@ export default function Campaigns() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Email Content</label>
-                    <ReactQuill
-                      theme="snow"
-                      value={emailContent}
-                      onChange={setEmailContent}
-                      modules={{
-                        toolbar: [
-                          [{ 'header': [1, 2, 3, false] }],
-                          ['bold', 'italic', 'underline', 'strike'],
-                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                          [{ 'color': [] }, { 'background': [] }],
-                          [{ 'align': [] }],
-                          ['link'],
-                          ['clean']
-                        ],
-                      }}
-                      formats={[
-                        'header', 'bold', 'italic', 'underline', 'strike',
-                        'list', 'bullet', 'color', 'background', 'align', 'link'
-                      ]}
-                      placeholder="Enter your email content with rich formatting..."
-                      style={{ height: '200px', marginBottom: '50px' }}
-                    />
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+                      <ReactQuill
+                        theme="snow"
+                        value={emailContent}
+                        onChange={setEmailContent}
+                        modules={{
+                          toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'align': [] }],
+                            ['link'],
+                            ['clean']
+                          ],
+                        }}
+                        formats={[
+                          'header', 'bold', 'italic', 'underline', 'strike',
+                          'list', 'bullet', 'color', 'background', 'align', 'link'
+                        ]}
+                        placeholder="Enter your email content with rich formatting..."
+                        style={{ 
+                          minHeight: '250px',
+                          border: 'none'
+                        }}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Tags</label>
