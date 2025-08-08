@@ -362,12 +362,12 @@ export default function CustomFields() {
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Search custom fields..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-80"
+                    className="pl-9 w-80"
                   />
                 </div>
               </div>
@@ -457,15 +457,6 @@ export default function CustomFields() {
                 <CardTitle>Custom Fields Directory</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-2 mb-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search custom fields..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
 
                 {isLoading ? (
                   <div className="text-center py-8">Loading custom fields...</div>
