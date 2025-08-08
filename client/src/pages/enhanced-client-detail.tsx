@@ -574,187 +574,16 @@ export default function EnhancedClientDetail() {
                     </div>
                   ) : (
                     // Custom Field Folder Content
-                    (() => {
-                      const folder = customFieldFoldersData?.find(f => f.name.toLowerCase().replace(/\s+/g, '-') === section.id);
-                      const folderFields = customFieldsData?.filter(field => field.folderId === folder?.id) || [];
-                      
-                      if (folderFields.length === 0) {
-                        return (
-                          <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
-                            <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                            <h3 className="text-lg font-medium text-slate-900 mb-2">No Custom Fields</h3>
-                            <p className="text-slate-600 mb-4">
-                              No custom fields have been added to "{section.name}" yet.
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              Admins can add custom fields to this folder in Settings → Custom Fields.
-                            </p>
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <div className="space-y-4 text-sm">
-                          {folderFields.map((field) => {
-                            const fieldValue = (client?.customFieldValues as any)?.[field.id];
-                            const isEditing = editingField === field.id;
-                            
-                            return (
-                              <div key={field.id}>
-                                <label className="flex items-center justify-between text-gray-500 mb-1">
-                                  <span>
-                                    {field.name}
-                                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                                  </span>
-                                  {!isEditing && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                      onClick={() => startEditing(field.id, fieldValue)}
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </label>
-                                
-                                {isEditing ? (
-                                  <div className="flex items-center gap-2">
-                                    {field.type === 'dropdown' && field.options ? (
-                                      <Select
-                                        value={fieldEditValue}
-                                        onValueChange={setFieldEditValue}
-                                      >
-                                        <SelectTrigger className="h-8">
-                                          <SelectValue placeholder="Select..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {field.options.map((option) => (
-                                            <SelectItem key={option} value={option}>
-                                              {option}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    ) : field.type === 'checkbox' ? (
-                                      <Select
-                                        value={fieldEditValue}
-                                        onValueChange={setFieldEditValue}
-                                      >
-                                        <SelectTrigger className="h-8">
-                                          <SelectValue placeholder="Select..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="true">Yes</SelectItem>
-                                          <SelectItem value="false">No</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : field.type === 'currency' ? (
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        value={fieldEditValue}
-                                        onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8"
-                                      />
-                                    ) : field.type === 'number' ? (
-                                      <Input
-                                        type="number"
-                                        placeholder="Enter number"
-                                        value={fieldEditValue}
-                                        onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8"
-                                      />
-                                    ) : field.type === 'email' ? (
-                                      <Input
-                                        type="email"
-                                        placeholder="Enter email"
-                                        value={fieldEditValue}
-                                        onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8"
-                                      />
-                                    ) : field.type === 'phone' ? (
-                                      <Input
-                                        type="tel"
-                                        placeholder="Enter phone number"
-                                        value={fieldEditValue}
-                                        onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8"
-                                      />
-                                    ) : field.type === 'url' ? (
-                                      <Input
-                                        type="url"
-                                        placeholder="Enter URL"
-                                        value={fieldEditValue}
-                                        onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8 text-sm overflow-hidden"
-                                        style={{ maxWidth: '100%', wordWrap: 'break-word' }}
-                                      />
-                                    ) : (
-                                      <Input
-                                        type="text"
-                                        placeholder="Enter value"
-                                        value={fieldEditValue}
-                                        onChange={(e) => setFieldEditValue(e.target.value)}
-                                        className="h-8"
-                                      />
-                                    )}
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
-                                      onClick={() => saveFieldValue(field.id, field.type, true)}
-                                      disabled={updateFieldMutation.isPending}
-                                    >
-                                      <Save className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                      onClick={cancelEditing}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="group cursor-pointer" onClick={() => startEditing(field.id, fieldValue)}>
-                                    {field.type === 'dropdown' && field.options ? (
-                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue || "Not selected"}</p>
-                                    ) : field.type === 'checkbox' ? (
-                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue ? "Yes" : "No"}</p>
-                                    ) : field.type === 'currency' ? (
-                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue ? `$${Number(fieldValue).toFixed(2)}` : "Not specified"}</p>
-                                    ) : field.type === 'url' ? (
-                                      fieldValue ? (
-                                        <a href={fieldValue} target="_blank" rel="noopener noreferrer" className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block break-all" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }}>
-                                          {fieldValue.length > 60 ? `${fieldValue.substring(0, 60)}...` : fieldValue}
-                                        </a>
-                                      ) : (
-                                        <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">Not specified</p>
-                                      )
-                                    ) : field.type === 'email' ? (
-                                      fieldValue ? (
-                                        <a href={`mailto:${fieldValue}`} className="text-[#46a1a0] hover:underline group-hover:bg-gray-50 p-1 rounded block">
-                                          {fieldValue}
-                                        </a>
-                                      ) : (
-                                        <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">Not specified</p>
-                                      )
-                                    ) : field.type === 'phone' ? (
-                                      <p className="text-[#46a1a0] group-hover:bg-gray-50 p-1 rounded">{fieldValue ? formatPhoneNumber(fieldValue) : "Not specified"}</p>
-                                    ) : (
-                                      <p className="text-gray-900 group-hover:bg-gray-50 p-1 rounded">{fieldValue || "Not specified"}</p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()
+                    <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
+                      <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">Custom Fields</h3>
+                      <p className="text-slate-600 mb-4">
+                        Custom fields for this folder will appear here.
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        Admins can add custom fields to this folder in Settings → Custom Fields.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -763,262 +592,318 @@ export default function EnhancedClientDetail() {
         </div>
       </div>
 
-      {/* Main Content - Recent Activities */}
-      <div className="flex-1 flex flex-col">
-        <div className="p-6 border-b border-gray-200 bg-white">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>
-          <div className="flex items-center gap-2 mt-2">
-            <Input 
-              placeholder="Search activities..." 
-              className="max-w-sm"
-            />
-            <Button variant="outline" size="sm">
-              Collapse all
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {mockActivities.map((activity) => (
-            <div key={activity.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-gray-600">{activity.description}</span>
-                    <span className="text-xs text-gray-400">{activity.user}</span>
-                  </div>
-                  <p className="text-sm font-medium mb-1">Action • {activity.timestamp}</p>
-                  <p className="text-sm text-gray-600">{activity.content}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-[#46a1a0]">
-                    Add comment
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-[#46a1a0]">
-                    1 association
-                  </Button>
-                </div>
-              </div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col bg-white">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[#46a1a0] border-[#46a1a0]">
+                {client.status}
+              </Badge>
+              <Badge variant="outline">
+                {client.contactType}
+              </Badge>
             </div>
-          ))}
-        </div>
-
-        {/* SMS/Email Composer */}
-        <div className="p-4 bg-white border-t border-gray-200">
-          <div className="flex gap-2 mb-3">
-            <Button 
-              variant={smsMessage ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setSmsMessage(smsMessage ? "" : " ")}
-              className={`px-4 ${smsMessage ? 'bg-[#46a1a0] hover:bg-[#3a8685]' : ''}`}
-            >
-              SMS
-            </Button>
-            <Button 
-              variant={emailMessage ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setEmailMessage(emailMessage ? "" : " ")}
-              className={`px-4 ${emailMessage ? 'bg-[#46a1a0] hover:bg-[#3a8685]' : ''}`}
-            >
-              Email
-            </Button>
           </div>
           
-          {smsMessage && (
-            <div className="space-y-2">
-              <Textarea 
-                placeholder="Type your SMS message..."
+          {/* Quick Actions */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                placeholder="Send an SMS..."
                 value={smsMessage}
                 onChange={(e) => setSmsMessage(e.target.value)}
-                className="min-h-[80px]"
+                className="max-w-xs"
+                onKeyPress={(e) => e.key === 'Enter' && sendSMS()}
               />
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">{smsMessage.length}/160 characters</span>
-                <Button onClick={sendSMS} size="sm" className="bg-[#46a1a0] hover:bg-[#3a8685]">
-                  Send SMS
-                </Button>
-              </div>
+              <Button 
+                onClick={sendSMS}
+                disabled={!smsMessage.trim()}
+                className="bg-[#46a1a0] hover:bg-[#3a8684] text-white"
+              >
+                Send SMS
+              </Button>
             </div>
-          )}
-          
-          {emailMessage && (
-            <div className="space-y-2">
-              <Input 
-                placeholder="Subject"
-                className="mb-2"
-              />
-              <Textarea 
-                placeholder="Type your email message..."
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                placeholder="Send an email..."
                 value={emailMessage}
                 onChange={(e) => setEmailMessage(e.target.value)}
-                className="min-h-[100px]"
+                className="max-w-xs"
+                onKeyPress={(e) => e.key === 'Enter' && sendEmail()}
               />
-              <div className="flex justify-end">
-                <Button onClick={sendEmail} size="sm" className="bg-[#46a1a0] hover:bg-[#3a8685]">
-                  Send Email
-                </Button>
-              </div>
+              <Button 
+                onClick={sendEmail}
+                disabled={!emailMessage.trim()}
+                variant="outline"
+              >
+                Send Email
+              </Button>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Activity Feed */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+            {mockActivities.map((activity) => (
+              <Card key={activity.id} className="p-4">
+                <CardContent className="p-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-[#46a1a0]/10 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-[#46a1a0]" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{activity.description}</p>
+                        <p className="text-sm text-gray-500">by {activity.user}</p>
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-500">{activity.timestamp}</span>
+                  </div>
+                  <p className="text-gray-700 text-sm ml-10">{activity.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Right Sidebar - Notes and Tasks */}
+      {/* Right Sidebar */}
       <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex gap-2 mb-4">
-            <Button 
-              variant={activeRightSection === "notes" ? "default" : "ghost"} 
-              size="sm"
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <div className="flex">
+            <button
               onClick={() => setActiveRightSection("notes")}
-              className={activeRightSection === "notes" ? "bg-[#46a1a0] hover:bg-[#3a8685]" : ""}
+              className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeRightSection === "notes"
+                  ? "border-[#46a1a0] text-[#46a1a0]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
             >
               Notes
-            </Button>
-            <Button 
-              variant={activeRightSection === "tasks" ? "default" : "ghost"} 
-              size="sm"
+            </button>
+            <button
               onClick={() => setActiveRightSection("tasks")}
-              className={activeRightSection === "tasks" ? "bg-[#46a1a0] hover:bg-[#3a8685]" : ""}
+              className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeRightSection === "tasks"
+                  ? "border-[#46a1a0] text-[#46a1a0]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
             >
               Tasks
-            </Button>
+            </button>
           </div>
         </div>
-        
+
+        {/* Tab Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {activeRightSection === "notes" && (
+          {activeRightSection === "notes" ? (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Textarea 
-                  placeholder="Add a note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <Button size="sm" className="w-full bg-[#46a1a0] hover:bg-[#3a8685]">
-                  Add Note
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900">Notes</h3>
+                <Button size="sm" variant="outline">
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
               
               <div className="space-y-2">
-                <Input 
+                <Input
                   placeholder="Search notes..."
                   value={searchNotes}
                   onChange={(e) => setSearchNotes(e.target.value)}
+                  className="text-sm"
                 />
+                <Textarea
+                  placeholder="Add a note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="min-h-[80px] text-sm"
+                />
+                <Button 
+                  size="sm" 
+                  className="w-full bg-[#46a1a0] hover:bg-[#3a8684] text-white"
+                  disabled={!newNote.trim()}
+                >
+                  Add Note
+                </Button>
               </div>
-              
-              <div className="text-center text-gray-500 text-sm py-8">
-                No notes yet. Add your first note above.
+
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-sm font-medium text-gray-900">Meeting scheduled</span>
+                    <span className="text-xs text-gray-500">2h ago</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Discussed project requirements and timeline. Client is interested in our premium package.</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-sm font-medium text-gray-900">Follow-up required</span>
+                    <span className="text-xs text-gray-500">1d ago</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Need to send proposal by Friday. Client mentioned budget constraints.</p>
+                </div>
               </div>
             </div>
-          )}
-          
-          {activeRightSection === "tasks" && (
+          ) : (
             <div className="space-y-4">
-              <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="w-full bg-[#46a1a0] hover:bg-[#3a8685]">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Task
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Task</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Task Title</label>
-                      <Input 
-                        placeholder="Enter task title..."
-                        value={newTask.title}
-                        onChange={(e) => setNewTask(prev => ({...prev, title: e.target.value}))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Description</label>
-                      <Textarea 
-                        placeholder="Enter task description..."
-                        value={newTask.description}
-                        onChange={(e) => setNewTask(prev => ({...prev, description: e.target.value}))}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <label className="text-sm font-medium mb-2 block">Due Date</label>
-                        <Input 
-                          type="date"
-                          value={newTask.dueDate}
-                          onChange={(e) => setNewTask(prev => ({...prev, dueDate: e.target.value}))}
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900">Tasks</h3>
+                <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Task</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Title *</label>
+                        <Input
+                          value={newTask.title}
+                          onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                          placeholder="Enter task title"
                         />
                       </div>
-                      <div className="flex-1">
-                        <label className="text-sm font-medium mb-2 block">Due Time</label>
-                        <Input 
-                          type="time"
-                          value={newTask.dueTime}
-                          onChange={(e) => setNewTask(prev => ({...prev, dueTime: e.target.value}))}
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
+                        <Textarea
+                          value={newTask.description}
+                          onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Enter task description"
                         />
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
+                          <Input
+                            type="date"
+                            value={newTask.dueDate}
+                            onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</label>
+                          <Input
+                            type="time"
+                            value={newTask.dueTime}
+                            onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</label>
+                        <Select
+                          value={newTask.assignee}
+                          onValueChange={(value) => setNewTask(prev => ({ ...prev, assignee: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select assignee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mockUsers.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="recurring"
+                          checked={newTask.recurring}
+                          onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, recurring: !!checked }))}
+                        />
+                        <label htmlFor="recurring" className="text-sm font-medium text-gray-700">
+                          Recurring task
+                        </label>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (newTask.title.trim()) {
+                              const task: Task = {
+                                id: Date.now().toString(),
+                                title: newTask.title,
+                                description: newTask.description,
+                                dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
+                                status: "pending"
+                              };
+                              setClientTasks(prev => [...prev, task]);
+                              setNewTask({
+                                title: "",
+                                description: "",
+                                dueDate: "",
+                                dueTime: "",
+                                assignee: "",
+                                recurring: false
+                              });
+                              setIsTaskDialogOpen(false);
+                              toast({
+                                title: "Task Created",
+                                description: "New task has been created successfully.",
+                              });
+                            }
+                          }}
+                          disabled={!newTask.title.trim()}
+                          className="bg-[#46a1a0] hover:bg-[#3a8684] text-white"
+                        >
+                          Create Task
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Assignee</label>
-                      <Select value={newTask.assignee} onValueChange={(value) => setNewTask(prev => ({...prev, assignee: value}))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assignee" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mockUsers.map(user => (
-                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="recurring" 
-                        checked={newTask.recurring}
-                        onCheckedChange={(checked) => setNewTask(prev => ({...prev, recurring: !!checked}))}
-                      />
-                      <label htmlFor="recurring" className="text-sm">Make this a recurring task</label>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button className="bg-[#46a1a0] hover:bg-[#3a8685]">
-                        Create Task
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              
-              <div className="space-y-2">
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="space-y-3">
                 {clientTasks.length === 0 ? (
-                  <div className="text-center text-gray-500 text-sm py-8">
-                    No tasks yet. Create your first task above.
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm">No tasks yet</p>
+                    <p className="text-xs text-gray-400">Create a task to get started</p>
                   </div>
                 ) : (
-                  clientTasks.map((task: Task) => (
-                    <div key={task.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm">{task.title}</h4>
-                        <Badge variant={task.status === "completed" ? "default" : "secondary"}>
-                          {task.status}
-                        </Badge>
+                  clientTasks.map((task) => (
+                    <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-2 flex-1">
+                          <Checkbox
+                            checked={task.status === "completed"}
+                            onCheckedChange={(checked) => {
+                              setClientTasks(prev => prev.map(t => 
+                                t.id === task.id 
+                                  ? { ...t, status: checked ? "completed" : "pending" }
+                                  : t
+                              ));
+                            }}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}>
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                            )}
+                            {task.dueDate && (
+                              <p className="text-xs text-gray-500 mt-1">Due: {task.dueDate}</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      {task.description && (
-                        <p className="text-xs text-gray-600">{task.description}</p>
-                      )}
-                      {task.dueDate && (
-                        <p className="text-xs text-gray-500">
-                          Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
-                        </p>
-                      )}
                     </div>
                   ))
                 )}
