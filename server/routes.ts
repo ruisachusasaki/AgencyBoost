@@ -1452,11 +1452,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update the order for each folder
-      const updatePromises = folderIds.map((folderId: string, index: number) => 
-        db.update(customFieldFolders)
+      const updatePromises = folderIds.map(async (folderId: string, index: number) => {
+        await db.update(customFieldFolders)
           .set({ order: index + 1 })
-          .where(eq(customFieldFolders.id, folderId))
-      );
+          .where(eq(customFieldFolders.id, folderId));
+      });
       
       await Promise.all(updatePromises);
       
