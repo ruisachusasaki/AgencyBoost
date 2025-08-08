@@ -11,8 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown } from "lucide-react";
+import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import type { CustomField, CustomFieldFolder } from "@shared/schema";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 const fieldTypeIcons = {
   text: Type,
@@ -197,6 +198,26 @@ export default function CustomFields() {
     }
   });
 
+  // Reorder folders mutation
+  const reorderFoldersMutation = useMutation({
+    mutationFn: async (folderIds: string[]) => {
+      const response = await fetch('/api/custom-field-folders/reorder', {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderIds })
+      });
+      if (!response.ok) throw new Error('Failed to reorder folders');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-field-folders"] });
+      toast({ title: "Success", description: "Folder order updated successfully." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to reorder folders" });
+    }
+  });
+
   const handleAddField = (e: React.FormEvent) => {
     e.preventDefault();
     addFieldMutation.mutate(newField);
@@ -215,6 +236,19 @@ export default function CustomFields() {
   const handleDeleteFolder = (folderId: string) => {
     if (!confirm("Are you sure you want to delete this folder? Fields in this folder will be moved to 'No Folder'.")) return;
     deleteFolderMutation.mutate(folderId);
+  };
+
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const items = Array.from(folders || []);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const folderIds = items.map(folder => folder.id);
+    reorderFoldersMutation.mutate(folderIds);
   };
 
   const handleSort = (field: SortField) => {
@@ -610,59 +644,78 @@ export default function CustomFields() {
                 ) : folders.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">No folders created yet</div>
                 ) : (
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Folder Name</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Fields Count</TableHead>
-                          <TableHead>Created On</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {folders.map((folder) => (
-                          <TableRow key={folder.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <FolderOpen className="h-4 w-4 text-[#46a1a0]" />
-                                {folder.name}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-gray-600">{folder.name === "Billing" || folder.name === "Important Links" ? "System folder" : "No description"}</span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{getFolderFieldCount(folder.id)} fields</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-gray-500 text-sm">--</span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingFolder(folder)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteFolder(folder.id)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-8"></TableHead>
+                            <TableHead>Folder Name</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Fields Count</TableHead>
+                            <TableHead>Created On</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <Droppable droppableId="folders">
+                          {(provided) => (
+                            <TableBody ref={provided.innerRef} {...provided.droppableProps}>
+                              {folders.map((folder, index) => (
+                                <Draggable key={folder.id} draggableId={folder.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <TableRow 
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className={snapshot.isDragging ? "bg-gray-50" : ""}
+                                    >
+                                      <TableCell {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                        <GripVertical className="h-4 w-4 text-gray-400" />
+                                      </TableCell>
+                                      <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                          <FolderOpen className="h-4 w-4 text-[#46a1a0]" />
+                                          {folder.name}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className="text-gray-600">{folder.name === "Billing" || folder.name === "Important Links" ? "System folder" : "No description"}</span>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline">{getFolderFieldCount(folder.id)} fields</Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className="text-gray-500 text-sm">--</span>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setEditingFolder(folder)}
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeleteFolder(folder.id)}
+                                            className="text-red-600 hover:text-red-700"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </TableBody>
+                          )}
+                        </Droppable>
+                      </Table>
+                    </div>
+                  </DragDropContext>
                 )}
               </CardContent>
             </Card>

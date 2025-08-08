@@ -1442,6 +1442,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder custom field folders
+  app.put("/api/custom-field-folders/reorder", async (req, res) => {
+    try {
+      const { folderIds } = req.body;
+      
+      if (!Array.isArray(folderIds)) {
+        return res.status(400).json({ message: "folderIds must be an array" });
+      }
+      
+      // Update the order for each folder
+      const updatePromises = folderIds.map((folderId: string, index: number) => 
+        db.update(customFieldFolders)
+          .set({ order: index + 1 })
+          .where(eq(customFieldFolders.id, folderId))
+      );
+      
+      await Promise.all(updatePromises);
+      
+      res.json({ message: "Folder order updated successfully" });
+    } catch (error) {
+      console.error('Error reordering custom field folders:', error);
+      res.status(500).json({ message: "Failed to reorder folders" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -269,7 +269,7 @@ export default function EnhancedClientDetail() {
   });
 
   // Fetch custom field folders
-  const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string }>>({
+  const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
     queryKey: ['/api/custom-field-folders'],
   });
 
@@ -285,8 +285,9 @@ export default function EnhancedClientDetail() {
         { id: "contact-details", name: "Contact Details", isOpen: true }
       ];
       
-      // Add custom field folders as sections
-      customFieldFoldersData.forEach(folder => {
+      // Sort folders by order and add as sections
+      const sortedFolders = [...customFieldFoldersData].sort((a, b) => (a.order || 0) - (b.order || 0));
+      sortedFolders.forEach(folder => {
         newSections.push({
           id: folder.name.toLowerCase().replace(/\s+/g, '-'),
           name: folder.name,
