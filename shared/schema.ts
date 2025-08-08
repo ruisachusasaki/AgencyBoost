@@ -61,6 +61,16 @@ export const customFields = pgTable("custom_fields", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Tags for organizing clients
+export const tags = pgTable("tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  color: text("color").default("#46a1a0"), // Color for visual distinction
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Client groups/folders
 export const clientGroups = pgTable("client_groups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -952,3 +962,13 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
 
 export type Staff = typeof staff.$inferSelect;
 export type InsertStaff = z.infer<typeof insertStaffSchema>;
+
+// Tags schema exports
+export const insertTagSchema = createInsertSchema(tags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Tag = typeof tags.$inferSelect;
+export type InsertTag = z.infer<typeof insertTagSchema>;

@@ -32,7 +32,8 @@ import {
   type TaskHistory, type InsertTaskHistory,
   type AutomationTrigger, type InsertAutomationTrigger,
   type AutomationAction, type InsertAutomationAction,
-  type Notification, type InsertNotification
+  type Notification, type InsertNotification,
+  type Tag, type InsertTag
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -219,6 +220,13 @@ export interface IStorage {
   getCustomFieldFolders(): Promise<CustomFieldFolder[]>;
   getCustomFieldFolder(id: string): Promise<CustomFieldFolder | undefined>;
   createCustomFieldFolder(folder: InsertCustomFieldFolder): Promise<CustomFieldFolder>;
+
+  // Tags
+  getTags(): Promise<Tag[]>;
+  getTag(id: string): Promise<Tag | undefined>;
+  createTag(tag: InsertTag): Promise<Tag>;
+  updateTag(id: string, tag: Partial<InsertTag>): Promise<Tag | undefined>;
+  deleteTag(id: string): Promise<boolean>;
 
   // Notifications
   getNotifications(userId: string): Promise<Notification[]>;
@@ -2050,6 +2058,47 @@ export class MemStorage implements IStorage {
 
   async deleteCustomField(id: string): Promise<void> {
     this.customFields.delete(id);
+  }
+
+  // Tags
+  private tags = new Map<string, Tag>();
+
+  async getTags(): Promise<Tag[]> {
+    return Array.from(this.tags.values());
+  }
+
+  async getTag(id: string): Promise<Tag | undefined> {
+    return this.tags.get(id);
+  }
+
+  async createTag(tagData: InsertTag): Promise<Tag> {
+    const tag: Tag = {
+      id: randomUUID(),
+      name: tagData.name,
+      color: tagData.color || "#46a1a0",
+      description: tagData.description || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.tags.set(tag.id, tag);
+    return tag;
+  }
+
+  async updateTag(id: string, tagData: Partial<InsertTag>): Promise<Tag | undefined> {
+    const existing = this.tags.get(id);
+    if (!existing) return undefined;
+
+    const updated: Tag = {
+      ...existing,
+      ...tagData,
+      updatedAt: new Date(),
+    };
+    this.tags.set(id, updated);
+    return updated;
+  }
+
+  async deleteTag(id: string): Promise<boolean> {
+    return this.tags.delete(id);
   }
 
   // Custom Field Folders

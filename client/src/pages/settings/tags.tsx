@@ -1,246 +1,527 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertTagSchema, type Tag, type InsertTag } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Tag, Plus, Edit, Trash2, Calendar } from "lucide-react";
+import { TagIcon, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { format } from "date-fns";
 
-interface TagItem {
-  id: string;
-  name: string;
-  color: string;
-  usageCount: number;
-  createdAt: string;
-}
-
-export default function Tags() {
-  const { toast } = useToast();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export default function TagsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [deletingTag, setDeletingTag] = useState<Tag | null>(null);
   
-  // Mock tags data
-  const [tags] = useState<TagItem[]>([
-    { id: "1", name: "high-priority", color: "red", usageCount: 12, createdAt: "2024-01-15" },
-    { id: "2", name: "tech", color: "blue", usageCount: 8, createdAt: "2024-02-01" },
-    { id: "3", name: "new-client", color: "green", usageCount: 15, createdAt: "2024-03-10" },
-    { id: "4", name: "follow-up", color: "yellow", usageCount: 6, createdAt: "2024-04-05" },
-    { id: "5", name: "lead-nurture", color: "purple", usageCount: 3, createdAt: "2024-05-12" }
-  ]);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [newTag, setNewTag] = useState({
-    name: "",
-    color: "blue"
+  // Fetch tags
+  const { data: tags = [], isLoading } = useQuery({
+    queryKey: ['/api/tags'],
+    queryFn: async () => {
+      const response = await fetch('/api/tags');
+      if (!response.ok) throw new Error('Failed to fetch tags');
+      return response.json();
+    },
   });
 
-  const colors = [
-    { name: "Red", value: "red", bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
-    { name: "Blue", value: "blue", bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-200" },
-    { name: "Green", value: "green", bg: "bg-green-100", text: "text-green-800", border: "border-green-200" },
-    { name: "Yellow", value: "yellow", bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-200" },
-    { name: "Purple", value: "purple", bg: "bg-purple-100", text: "text-purple-800", border: "border-purple-200" },
-    { name: "Gray", value: "gray", bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200" }
-  ];
-
-  const handleAddTag = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement API call to add tag
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
+  // Create tag mutation
+  const createTagMutation = useMutation({
+    mutationFn: async (data: InsertTag) => {
+      const response = await fetch('/api/tags', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to create tag');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+      setShowAddDialog(false);
       toast({
         title: "Success",
         description: "Tag created successfully.",
       });
-      
-      setIsAddDialogOpen(false);
-      setNewTag({ name: "", color: "blue" });
-    } catch (error) {
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to create tag. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
-  const handleDeleteTag = async (tagId: string) => {
-    if (!confirm("Are you sure you want to delete this tag? This will remove it from all associated records.")) return;
-    
-    try {
-      // TODO: Implement API call to delete tag
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+  // Update tag mutation
+  const updateTagMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertTag> }) => {
+      const response = await fetch(`/api/tags/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to update tag');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+      setEditingTag(null);
+      toast({
+        title: "Success",
+        description: "Tag updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update tag. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete tag mutation
+  const deleteTagMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/tags/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete tag');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+      setDeletingTag(null);
       toast({
         title: "Success",
         description: "Tag deleted successfully.",
       });
-    } catch (error) {
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to delete tag. Please try again.",
         variant: "destructive",
       });
     }
+  });
+
+  // Add tag form
+  const addForm = useForm<InsertTag>({
+    resolver: zodResolver(insertTagSchema),
+    defaultValues: {
+      name: "",
+      color: "#46a1a0",
+      description: "",
+    },
+  });
+
+  // Edit tag form  
+  const editForm = useForm<InsertTag>({
+    resolver: zodResolver(insertTagSchema),
+    defaultValues: {
+      name: "",
+      color: "#46a1a0",
+      description: "",
+    },
+  });
+
+  // Update edit form when editing tag changes
+  useEffect(() => {
+    if (editingTag) {
+      editForm.reset({
+        name: editingTag.name,
+        color: editingTag.color || "#46a1a0",
+        description: editingTag.description || "",
+      });
+    }
+  }, [editingTag, editForm]);
+
+  // Handle form submissions
+  const handleAddSubmit = (data: InsertTag) => {
+    createTagMutation.mutate(data);
   };
 
-  const getTagColorClasses = (color: string) => {
-    const colorMap = colors.find(c => c.value === color);
-    return colorMap ? `${colorMap.bg} ${colorMap.text} ${colorMap.border}` : "bg-gray-100 text-gray-800 border-gray-200";
+  const handleEditSubmit = (data: InsertTag) => {
+    if (editingTag) {
+      updateTagMutation.mutate({ id: editingTag.id, data });
+    }
   };
+
+  // Handle add dialog close
+  const handleAddDialogClose = (open: boolean) => {
+    setShowAddDialog(open);
+    if (!open) {
+      addForm.reset();
+    }
+  };
+
+  // Handle edit dialog close
+  const handleEditDialogClose = (open: boolean) => {
+    if (!open) {
+      setEditingTag(null);
+      editForm.reset();
+    }
+  };
+
+  // Filter tags based on search
+  const filteredTags = tags.filter((tag: Tag) =>
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tag.description && tag.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading tags...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Tag className="h-8 w-8 text-primary" />
-              Tag Management
-            </h1>
-            <p className="text-gray-600 mt-2">Organize and manage system tags</p>
-          </div>
-          
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Tag
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Tag</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddTag} className="space-y-4">
-                <div>
-                  <Label htmlFor="tagName">Tag Name *</Label>
-                  <Input
-                    id="tagName"
-                    value={newTag.name}
-                    onChange={(e) => setNewTag({...newTag, name: e.target.value})}
-                    placeholder="e.g., high-priority"
-                    required
-                  />
-                </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <TagIcon className="h-6 w-6 text-[#46a1a0]" />
+          <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
+        </div>
+        <p className="text-muted-foreground">
+          Organize and categorize your clients with custom tags
+        </p>
+      </div>
+
+      {/* Search and Add Button Row */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center space-x-2 flex-1 max-w-sm">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tags..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+        </div>
+        
+        <Dialog open={showAddDialog} onOpenChange={handleAddDialogClose}>
+          <DialogTrigger asChild>
+            <Button className="bg-[#46a1a0] hover:bg-[#46a1a0]/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Tag
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Tag</DialogTitle>
+              <DialogDescription>
+                Create a new tag to organize your clients.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...addForm}>
+              <form onSubmit={addForm.handleSubmit(handleAddSubmit)} className="space-y-4">
+                <FormField
+                  control={addForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tag Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter tag name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
-                <div>
-                  <Label>Tag Color</Label>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {colors.map((color) => (
-                      <button
-                        key={color.value}
-                        type="button"
-                        onClick={() => setNewTag({...newTag, color: color.value})}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          newTag.color === color.value 
-                            ? `${color.bg} ${color.border} ring-2 ring-primary` 
-                            : `${color.bg} ${color.border} hover:ring-1 hover:ring-gray-300`
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-full mx-auto mb-1 ${color.bg.replace('bg-', 'bg-').replace('100', '500')}`}></div>
-                        <span className={`text-xs font-medium ${color.text}`}>{color.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <FormField
+                  control={addForm.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="color"
+                            {...field}
+                            value={field.value || "#46a1a0"}
+                            className="w-12 h-10 p-1 border rounded cursor-pointer"
+                          />
+                          <Input
+                            {...field}
+                            value={field.value || "#46a1a0"}
+                            placeholder="#46a1a0"
+                            className="flex-1"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={addForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field}
+                          value={field.value || ""}
+                          placeholder="Optional description for this tag"
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => handleAddDialogClose(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Creating..." : "Create Tag"}
+                  <Button 
+                    type="submit" 
+                    disabled={createTagMutation.isPending}
+                    className="bg-[#46a1a0] hover:bg-[#46a1a0]/90"
+                  >
+                    {createTagMutation.isPending ? "Creating..." : "Create Tag"}
                   </Button>
-                </div>
+                </DialogFooter>
               </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Tags Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tags.map((tag) => (
-            <Card key={tag.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`px-3 py-1 rounded-full border ${getTagColorClasses(tag.color)}`}>
-                      <span className="text-sm font-medium">{tag.name}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingTag(tag)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTag(tag.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex items-center justify-between">
-                    <span>Usage Count:</span>
-                    <Badge variant="secondary">{tag.usageCount}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Created:</span>
-                    <div className="flex items-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {tag.createdAt}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Summary Stats */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Tag Statistics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{tags.length}</div>
-                <div className="text-sm text-gray-600">Total Tags</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">
-                  {tags.reduce((sum, tag) => sum + tag.usageCount, 0)}
-                </div>
-                <div className="text-sm text-gray-600">Total Usage</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">
-                  {Math.round(tags.reduce((sum, tag) => sum + tag.usageCount, 0) / tags.length)}
-                </div>
-                <div className="text-sm text-gray-600">Avg Usage per Tag</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {/* Tags Table */}
+      <div className="border rounded-lg overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tag</TableHead>
+              <TableHead>Created On</TableHead>
+              <TableHead>Updated On</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredTags.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                  {searchQuery ? "No tags found matching your search." : "No tags created yet. Click 'Add Tag' to get started."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredTags.map((tag: Tag) => (
+                <TableRow key={tag.id}>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="w-4 h-4 rounded-full border" 
+                        style={{ backgroundColor: tag.color || "#46a1a0" }}
+                      />
+                      <div>
+                        <div className="font-medium">{tag.name}</div>
+                        {tag.description && (
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {tag.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {tag.createdAt ? format(new Date(tag.createdAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {tag.updatedAt ? format(new Date(tag.updatedAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingTag(tag)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingTag(tag)}
+                        className="text-muted-foreground hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Edit Tag Dialog */}
+      <Dialog open={!!editingTag} onOpenChange={handleEditDialogClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Tag</DialogTitle>
+            <DialogDescription>
+              Update the tag information.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tag Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enter tag name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editForm.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="color"
+                          {...field}
+                          value={field.value || "#46a1a0"}
+                          className="w-12 h-10 p-1 border rounded cursor-pointer"
+                        />
+                        <Input
+                          {...field}
+                          value={field.value || "#46a1a0"}
+                          placeholder="#46a1a0"
+                          className="flex-1"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field}
+                        value={field.value || ""}
+                        placeholder="Optional description for this tag"
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => handleEditDialogClose(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateTagMutation.isPending}
+                  className="bg-[#46a1a0] hover:bg-[#46a1a0]/90"
+                >
+                  {updateTagMutation.isPending ? "Updating..." : "Update Tag"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingTag} onOpenChange={() => setDeletingTag(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the tag "{deletingTag?.name}"? 
+              This action cannot be undone and will remove this tag from all clients.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingTag) {
+                  deleteTagMutation.mutate(deletingTag.id);
+                }
+              }}
+              disabled={deleteTagMutation.isPending}
+              className="bg-red-600 hover:bg-red-600/90"
+            >
+              {deleteTagMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

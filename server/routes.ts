@@ -9,7 +9,8 @@ import {
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
-  users, businessProfile, customFields, customFieldFolders, staff
+  insertTagSchema,
+  users, businessProfile, customFields, customFieldFolders, staff, tags
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -803,6 +804,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting custom field:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Tags routes
+  app.get("/api/tags", async (req, res) => {
+    try {
+      const tags = await storage.getTags();
+      res.json(tags);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ message: "Failed to fetch tags" });
+    }
+  });
+
+  app.get("/api/tags/:id", async (req, res) => {
+    try {
+      const tag = await storage.getTag(req.params.id);
+      if (!tag) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+      res.json(tag);
+    } catch (error) {
+      console.error("Error fetching tag:", error);
+      res.status(500).json({ message: "Failed to fetch tag" });
+    }
+  });
+
+  app.post("/api/tags", async (req, res) => {
+    try {
+      const validatedData = insertTagSchema.parse(req.body);
+      const tag = await storage.createTag(validatedData);
+      res.status(201).json(tag);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating tag:", error);
+      res.status(500).json({ message: "Failed to create tag" });
+    }
+  });
+
+  app.put("/api/tags/:id", async (req, res) => {
+    try {
+      const validatedData = insertTagSchema.partial().parse(req.body);
+      const tag = await storage.updateTag(req.params.id, validatedData);
+      if (!tag) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+      res.json(tag);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating tag:", error);
+      res.status(500).json({ message: "Failed to update tag" });
+    }
+  });
+
+  app.delete("/api/tags/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteTag(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting tag:", error);
+      res.status(500).json({ message: "Failed to delete tag" });
     }
   });
 
