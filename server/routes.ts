@@ -1390,6 +1390,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder custom field folders (MUST be before /:id route)
+  app.put("/api/custom-field-folders/reorder", async (req, res) => {
+    try {
+      const { folderIds } = req.body;
+      
+      if (!Array.isArray(folderIds)) {
+        return res.status(400).json({ message: "folderIds must be an array" });
+      }
+      
+      // Update the order for each folder sequentially
+      for (let i = 0; i < folderIds.length; i++) {
+        const folderId = folderIds[i];
+        const newOrder = i + 1;
+        
+        await db.update(customFieldFolders)
+          .set({ order: newOrder })
+          .where(eq(customFieldFolders.id, folderId));
+      }
+      
+      res.json({ message: "Folder order updated successfully" });
+    } catch (error) {
+      console.error('Error reordering custom field folders:', error);
+      res.status(500).json({ message: "Failed to reorder folders" });
+    }
+  });
+
   app.put("/api/custom-field-folders/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -1439,32 +1465,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting custom field folder:', error);
       res.status(500).json({ message: "Failed to delete custom field folder" });
-    }
-  });
-
-  // Reorder custom field folders
-  app.put("/api/custom-field-folders/reorder", async (req, res) => {
-    try {
-      const { folderIds } = req.body;
-      
-      if (!Array.isArray(folderIds)) {
-        return res.status(400).json({ message: "folderIds must be an array" });
-      }
-      
-      // Update the order for each folder sequentially
-      for (let i = 0; i < folderIds.length; i++) {
-        const folderId = folderIds[i];
-        const newOrder = i + 1;
-        
-        await db.update(customFieldFolders)
-          .set({ order: newOrder })
-          .where(eq(customFieldFolders.id, folderId));
-      }
-      
-      res.json({ message: "Folder order updated successfully" });
-    } catch (error) {
-      console.error('Error reordering custom field folders:', error);
-      res.status(500).json({ message: "Failed to reorder folders" });
     }
   });
 
