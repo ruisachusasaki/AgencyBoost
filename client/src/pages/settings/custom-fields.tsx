@@ -226,6 +226,33 @@ export default function CustomFields() {
     }
   };
 
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortOrder === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortOrder === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
   const sortedCustomFields = [...customFields].sort((a, b) => {
     let aValue = '';
     let bValue = '';
@@ -291,33 +318,6 @@ export default function CustomFields() {
   const getFolderFieldCount = (folderId: string) => {
     return customFields.filter(field => field.folderId === folderId).length;
   };
-
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead 
-      className="cursor-pointer hover:bg-muted/50 transition-colors"
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center justify-between">
-        {children}
-        <div className="flex flex-col ml-2">
-          <ChevronUp 
-            className={`h-3 w-3 ${
-              sortField === field && sortOrder === 'asc' 
-                ? 'text-primary' 
-                : 'text-muted-foreground/40'
-            }`} 
-          />
-          <ChevronDown 
-            className={`h-3 w-3 -mt-1 ${
-              sortField === field && sortOrder === 'desc' 
-                ? 'text-primary' 
-                : 'text-muted-foreground/40'
-            }`} 
-          />
-        </div>
-      </div>
-    </TableHead>
-  );
 
   return (
     <div className="p-6">
@@ -452,81 +452,98 @@ export default function CustomFields() {
               </div>
             </div>
 
-            {isLoading ? (
-              <div className="text-center py-8">Loading custom fields...</div>
-            ) : customFields.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No custom fields found</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHeader field="name">Field Name</SortableHeader>
-                      <SortableHeader field="folder">Folder Location</SortableHeader>
-                      <TableHead>Unique Key (Merge Tag)</TableHead>
-                      <SortableHeader field="type">Type</SortableHeader>
-                      <SortableHeader field="required">Required</SortableHeader>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedCustomFields.map((field) => (
-                      <TableRow key={field.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {getFieldTypeIcon(field.type)}
-                            {field.name}
-                            {field.required && (
-                              <Badge variant="secondary" className="text-xs">Required</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Folder className="h-3 w-3 text-gray-400" />
-                            {getFolderName(field.folderId)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                            {generateUniqueKey(field.name)}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{field.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {field.required ? (
-                            <Badge variant="default" className="text-xs">Yes</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">No</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingField(field)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteField(field.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Custom Fields Directory</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-2 mb-4">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search custom fields..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+
+                {isLoading ? (
+                  <div className="text-center py-8">Loading custom fields...</div>
+                ) : customFields.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No custom fields found</div>
+                ) : (
+                  <div className="border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <SortableHeader field="name">Field Name</SortableHeader>
+                          <SortableHeader field="folder">Folder Location</SortableHeader>
+                          <TableHead>Unique Key (Merge Tag)</TableHead>
+                          <SortableHeader field="type">Type</SortableHeader>
+                          <SortableHeader field="required">Required</SortableHeader>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedCustomFields.map((field) => (
+                          <TableRow key={field.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {getFieldTypeIcon(field.type)}
+                                {field.name}
+                                {field.required && (
+                                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Folder className="h-3 w-3 text-gray-400" />
+                                {getFolderName(field.folderId)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                                {generateUniqueKey(field.name)}
+                              </code>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{field.type}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {field.required ? (
+                                <Badge variant="default" className="text-xs">Yes</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">No</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingField(field)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteField(field.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 

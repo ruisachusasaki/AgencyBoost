@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Dialog, 
   DialogContent, 
@@ -43,17 +44,32 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTagSchema, type Tag, type InsertTag } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { TagIcon, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { TagIcon, Plus, Pencil, Trash2, Search, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
+
+type SortField = 'name' | 'createdAt' | 'updatedAt';
+type SortOrder = 'asc' | 'desc';
 
 export default function TagsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [deletingTag, setDeletingTag] = useState<Tag | null>(null);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
   // Fetch tags
   const { data: tags = [], isLoading } = useQuery({
@@ -205,10 +221,63 @@ export default function TagsPage() {
     }
   };
 
-  // Filter tags based on search
+  // Filter and sort tags
   const filteredTags = tags.filter((tag: Tag) =>
     tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (tag.description && tag.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const sortedTags = [...filteredTags].sort((a, b) => {
+    let aValue = '';
+    let bValue = '';
+
+    switch (sortField) {
+      case 'name':
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        break;
+      case 'createdAt':
+        aValue = a.createdAt ? new Date(a.createdAt).toISOString() : '';
+        bValue = b.createdAt ? new Date(b.createdAt).toISOString() : '';
+        break;
+      case 'updatedAt':
+        aValue = a.updatedAt ? new Date(a.updatedAt).toISOString() : '';
+        bValue = b.updatedAt ? new Date(b.updatedAt).toISOString() : '';
+        break;
+    }
+
+    if (sortOrder === 'asc') {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
+  });
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortOrder === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortOrder === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
   );
 
   if (isLoading) {
@@ -232,18 +301,8 @@ export default function TagsPage() {
         </p>
       </div>
 
-      {/* Search and Add Button Row */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center space-x-2 flex-1 max-w-sm">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tags..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-        
+      {/* Add Tag Button */}
+      <div className="flex justify-end">
         <Dialog open={showAddDialog} onOpenChange={handleAddDialogClose}>
           <DialogTrigger asChild>
             <Button className="bg-[#46a1a0] hover:bg-[#46a1a0]/90">
@@ -339,74 +398,109 @@ export default function TagsPage() {
       </div>
 
       {/* Tags Table */}
-      <div className="border rounded-lg overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tag</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Updated On</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTags.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                  {searchQuery ? "No tags found matching your search." : "No tags created yet. Click 'Add Tag' to get started."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTags.map((tag: Tag) => (
-                <TableRow key={tag.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-4 h-4 rounded-full border" 
-                        style={{ backgroundColor: tag.color || "#46a1a0" }}
-                      />
-                      <div>
-                        <div className="font-medium">{tag.name}</div>
-                        {tag.description && (
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {tag.description}
-                          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Tag Directory</CardTitle>
+          <CardDescription>
+            Search and manage all tags for client organization
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2 mb-4">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <SortableHeader field="name">Tag</SortableHeader>
+                  <SortableHeader field="createdAt">Created On</SortableHeader>
+                  <SortableHeader field="updatedAt">Updated On</SortableHeader>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedTags.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6">
+                      <div className="flex flex-col items-center space-y-2">
+                        <TagIcon className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {searchQuery ? "No tags found matching your search." : "No tags created yet"}
+                        </p>
+                        {!searchQuery && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddDialog(true)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add First Tag
+                          </Button>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {tag.createdAt ? format(new Date(tag.createdAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {tag.updatedAt ? format(new Date(tag.updatedAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingTag(tag)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeletingTag(tag)}
-                        className="text-muted-foreground hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sortedTags.map((tag: Tag) => (
+                    <TableRow key={tag.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <div 
+                            className="w-4 h-4 rounded-full border" 
+                            style={{ backgroundColor: tag.color || "#46a1a0" }}
+                          />
+                          <div>
+                            <div className="font-medium">{tag.name}</div>
+                            {tag.description && (
+                              <div className="text-sm text-muted-foreground mt-1">
+                                {tag.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {tag.createdAt ? format(new Date(tag.createdAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {tag.updatedAt ? format(new Date(tag.updatedAt), "MMM d, yyyy 'at' h:mm a") : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingTag(tag)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingTag(tag)}
+                            className="text-muted-foreground hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Edit Tag Dialog */}
       <Dialog open={!!editingTag} onOpenChange={handleEditDialogClose}>
