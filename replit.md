@@ -86,7 +86,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Development Progress
 
-### Complete Staff Management System with Profile Images (Latest - August 2025)
+### Drag-and-Drop Folder Reordering System (Latest - August 2025)
+Successfully implemented a comprehensive drag-and-drop reordering system for custom field folders:
+- **API Route Optimization**: Fixed routing conflicts by positioning specific endpoints before parameterized routes
+- **Database Updates**: Sequential folder order updates with proper error handling and validation
+- **Real-time Synchronization**: Folder ordering syncs between Settings > Custom Fields and client detail sidebar
+- **User Interface**: Smooth drag-and-drop experience using react-beautiful-dnd with visual grip handles
+- **Error Resolution**: Fixed "No values to set" database errors through proper route ordering and server restart
+- **Technical Implementation**: Used PUT /api/custom-field-folders/reorder endpoint with array-based folder ID ordering
+
+### Complete Staff Management System with Profile Images (August 2025)
 Successfully completed a fully functional Staff Management system with advanced profile functionality:
 - **CRUD Operations**: Create, read, update, and delete staff members with comprehensive validation
 - **Profile Image Upload**: Secure cloud storage integration with object storage service for staff photos
