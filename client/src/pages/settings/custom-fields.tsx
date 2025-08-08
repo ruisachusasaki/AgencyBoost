@@ -541,8 +541,17 @@ export default function CustomFields() {
         {/* Folders Tab */}
         {activeTab === "folders" && (
           <div className="space-y-6">
-            {/* Add Folder Button */}
-            <div className="flex justify-end">
+            {/* Search and Add Folder Controls */}
+            <div className="flex justify-between items-center">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search folders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
               <Dialog open={isAddFolderDialogOpen} onOpenChange={setIsAddFolderDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-[#46a1a0] hover:bg-[#46a1a0]/90">
@@ -595,17 +604,6 @@ export default function CustomFields() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4">
-                  <div className="relative max-w-sm">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Search folders..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
 
                 {foldersLoading ? (
                   <div className="text-center py-8">Loading folders...</div>
