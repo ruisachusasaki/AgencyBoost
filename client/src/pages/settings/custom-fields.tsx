@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,10 +34,10 @@ type SortOrder = 'asc' | 'desc';
 export default function CustomFields() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [isAddFieldDialogOpen, setIsAddFieldDialogOpen] = useState(false);
   const [isAddFolderDialogOpen, setIsAddFolderDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
-  const [editingFolder, setEditingFolder] = useState<CustomFieldFolder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all-fields");
   const [sortField, setSortField] = useState<SortField>('name');
@@ -147,26 +148,7 @@ export default function CustomFields() {
     }
   });
 
-  // Update folder mutation
-  const updateFolderMutation = useMutation({
-    mutationFn: async (folder: CustomFieldFolder) => {
-      const response = await fetch(`/api/custom-field-folders/${folder.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(folder)
-      });
-      if (!response.ok) throw new Error('Failed to update folder');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-field-folders"] });
-      toast({ title: "Success", description: "Folder updated successfully." });
-      setEditingFolder(null);
-    },
-    onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update folder" });
-    }
-  });
+
 
   // Delete field mutation
   const deleteFieldMutation = useMutation({
@@ -285,19 +267,7 @@ export default function CustomFields() {
     reorderFoldersMutation.mutate(folderIds);
   };
 
-  const handleFieldDragEnd = (result: any, folderId: string) => {
-    if (!result.destination) {
-      return;
-    }
 
-    const fields = getFieldsForFolder(folderId);
-    const items = Array.from(fields);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    const fieldIds = items.map(field => field.id);
-    reorderFieldsMutation.mutate(fieldIds);
-  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -372,12 +342,7 @@ export default function CustomFields() {
     }
   };
 
-  const handleUpdateFolder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingFolder) {
-      updateFolderMutation.mutate(editingFolder);
-    }
-  };
+
 
   const getFieldTypeIcon = (type: string) => {
     const Icon = fieldTypeIcons[type as keyof typeof fieldTypeIcons] || Type;
@@ -739,7 +704,7 @@ export default function CustomFields() {
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setEditingFolder(folder)}
+                                            onClick={() => setLocation(`/settings/custom-fields/${folder.id}/edit`)}
                                           >
                                             <Edit className="h-4 w-4" />
                                           </Button>
@@ -845,104 +810,7 @@ export default function CustomFields() {
           </Dialog>
         )}
 
-        {/* Edit Folder Dialog */}
-        {editingFolder && (
-          <Dialog open={!!editingFolder} onOpenChange={() => setEditingFolder(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Edit Folder: {editingFolder.name}</DialogTitle>
-              </DialogHeader>
-              <div className="flex-1 overflow-hidden grid grid-cols-2 gap-6">
-                {/* Left side - Folder settings */}
-                <div>
-                  <form onSubmit={handleUpdateFolder} className="space-y-4">
-                    <div>
-                      <Label htmlFor="editFolderName">Folder Name *</Label>
-                      <Input
-                        id="editFolderName"
-                        value={editingFolder.name}
-                        onChange={(e) => setEditingFolder({...editingFolder, name: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setEditingFolder(null)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={updateFolderMutation.isPending}>
-                        {updateFolderMutation.isPending ? "Saving..." : "Save Changes"}
-                      </Button>
-                    </div>
-                  </form>
-                </div>
 
-                {/* Right side - Fields in folder */}
-                <div className="border-l pl-6">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold mb-2">Fields in this folder</h3>
-                    <p className="text-sm text-gray-600">Drag to reorder how fields appear in client profiles</p>
-                  </div>
-                  
-                  <div className="overflow-y-auto max-h-[400px]">
-                    {(() => {
-                      const folderFields = getFieldsForFolder(editingFolder.id);
-                      
-                      if (folderFields.length === 0) {
-                        return (
-                          <div className="text-center py-8 text-gray-500">
-                            <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>No fields in this folder yet</p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <DragDropContext onDragEnd={(result) => handleFieldDragEnd(result, editingFolder.id)}>
-                          <Droppable droppableId="folder-fields">
-                            {(provided) => (
-                              <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
-                                {folderFields.map((field, index) => (
-                                  <Draggable key={field.id} draggableId={field.id} index={index}>
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        className={`p-3 border rounded-lg bg-white ${
-                                          snapshot.isDragging ? "shadow-lg" : "shadow-sm"
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                            <GripVertical className="h-4 w-4 text-gray-400" />
-                                          </div>
-                                          <div className="flex items-center gap-2 flex-1">
-                                            {getFieldTypeIcon(field.type)}
-                                            <div>
-                                              <div className="font-medium text-sm">{field.name}</div>
-                                              <div className="text-xs text-gray-500 capitalize">{field.type}</div>
-                                            </div>
-                                          </div>
-                                          {field.required && (
-                                            <Badge variant="secondary" className="text-xs">Required</Badge>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ))}
-                                {provided.placeholder}
-                              </div>
-                            )}
-                          </Droppable>
-                        </DragDropContext>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
       </div>
     </div>
   );

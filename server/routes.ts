@@ -1350,6 +1350,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual custom field folder by ID
+  app.get("/api/custom-field-folders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [folder] = await db.select().from(customFieldFolders).where(eq(customFieldFolders.id, id));
+      
+      if (!folder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+      
+      res.json(folder);
+    } catch (error) {
+      console.error('Error fetching custom field folder:', error);
+      res.status(500).json({ message: "Failed to fetch custom field folder" });
+    }
+  });
+
   // Custom Field Folders API with search
   app.get("/api/custom-field-folders", async (req, res) => {
     try {

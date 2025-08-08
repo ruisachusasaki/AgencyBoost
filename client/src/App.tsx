@@ -24,6 +24,7 @@ import Support from "@/pages/settings/support";
 import RolesPermissions from "@/pages/settings/roles-permissions";
 import Integrations from "@/pages/settings/integrations";
 import CustomFields from "@/pages/settings/custom-fields";
+import EditFolder from "@/pages/settings/edit-folder";
 import Tags from "@/pages/settings/tags";
 import Products from "@/pages/settings/products";
 import AuditLogs from "@/pages/settings/audit-logs";
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/settings/roles-permissions" component={RolesPermissions} />
       <Route path="/settings/integrations" component={Integrations} />
       <Route path="/settings/custom-fields" component={CustomFields} />
+      <Route path="/settings/custom-fields/:id/edit" component={EditFolder} />
       <Route path="/settings/tags" component={Tags} />
       <Route path="/settings/products" component={Products} />
       <Route path="/settings/audit-logs" component={AuditLogs} />
