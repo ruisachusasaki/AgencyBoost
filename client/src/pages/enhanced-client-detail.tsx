@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,6 +70,165 @@ const mockUsers = [
   { id: "2", name: "Sarah Johnson" },
   { id: "3", name: "David Wilson" }
 ];
+
+// Editable Field Component (moved outside main component to prevent recreation)
+const EditableField = ({ 
+  fieldId, 
+  label, 
+  value, 
+  type = 'text', 
+  isCustomField = false,
+  className = "text-gray-900",
+  required = false,
+  options = undefined as string[] | undefined,
+  editingField,
+  fieldEditValue,
+  setFieldEditValue,
+  startEditing,
+  cancelEditing,
+  saveFieldValue,
+  updateFieldMutation,
+  formatPhoneNumber
+}: {
+  fieldId: string;
+  label: string;
+  value: any;
+  type?: string;
+  isCustomField?: boolean;
+  className?: string;
+  required?: boolean;
+  options?: string[];
+  editingField: string | null;
+  fieldEditValue: string;
+  setFieldEditValue: (value: string) => void;
+  startEditing: (fieldId: string, value: any) => void;
+  cancelEditing: () => void;
+  saveFieldValue: (fieldId: string, type: string, isCustomField: boolean) => void;
+  updateFieldMutation: any;
+  formatPhoneNumber: (phone: string) => string;
+}) => {
+  const isEditing = editingField === fieldId;
+  
+  return (
+    <div>
+      <label className="flex items-center justify-between text-gray-500 mb-1">
+        <span>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </span>
+        {!isEditing && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+            onClick={() => startEditing(fieldId, value)}
+          >
+            <Edit2 className="h-3 w-3" />
+          </Button>
+        )}
+      </label>
+      
+      {isEditing ? (
+        <div className="flex items-center gap-2">
+          {type === 'dropdown' && options ? (
+            <Select value={fieldEditValue} onValueChange={setFieldEditValue}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : type === 'textarea' ? (
+            <Textarea
+              placeholder="Enter value"
+              value={fieldEditValue}
+              onChange={(e) => setFieldEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                  e.preventDefault();
+                  saveFieldValue(fieldId, type, isCustomField);
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelEditing();
+                }
+              }}
+              className="min-h-[60px]"
+              autoFocus
+            />
+          ) : (
+            <Input
+              type={type === 'currency' ? 'number' : type}
+              step={type === 'currency' ? '0.01' : undefined}
+              placeholder={type === 'currency' ? '0.00' : 'Enter value'}
+              value={fieldEditValue}
+              onChange={(e) => setFieldEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  saveFieldValue(fieldId, type, isCustomField);
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelEditing();
+                }
+              }}
+              className={type === 'url' ? "h-8 text-sm overflow-hidden" : "h-8"}
+              style={type === 'url' ? { maxWidth: '100%', wordWrap: 'break-word' } : undefined}
+              autoFocus
+            />
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+            onClick={() => saveFieldValue(fieldId, type, isCustomField)}
+            disabled={updateFieldMutation.isPending}
+          >
+            <Save className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+            onClick={cancelEditing}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      ) : (
+        <div className="group cursor-pointer" onClick={() => startEditing(fieldId, value)}>
+          {type === 'email' && value ? (
+            <a href={`mailto:${value}`} className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
+              {value}
+            </a>
+          ) : type === 'phone' && value ? (
+            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+              {formatPhoneNumber(value)}
+            </p>
+          ) : type === 'url' && value ? (
+            <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block break-all`} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
+              {value.length > 60 ? `${value.substring(0, 60)}...` : value}
+            </a>
+          ) : type === 'currency' && value ? (
+            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+              ${Number(value).toFixed(2)}
+            </p>
+          ) : (
+            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+              {value || "Not specified"}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function EnhancedClientDetail() {
   const [, setLocation] = useLocation();
@@ -214,17 +373,17 @@ export default function EnhancedClientDetail() {
     }
   });
 
-  const startEditing = (fieldId: string, currentValue: any) => {
+  const startEditing = useCallback((fieldId: string, currentValue: any) => {
     setEditingField(fieldId);
     setFieldEditValue(currentValue || "");
-  };
+  }, []);
 
-  const cancelEditing = () => {
+  const cancelEditing = useCallback(() => {
     setEditingField(null);
     setFieldEditValue("");
-  };
+  }, []);
 
-  const saveFieldValue = (fieldId: string, fieldType: string, isCustomField: boolean = true) => {
+  const saveFieldValue = useCallback((fieldId: string, fieldType: string, isCustomField: boolean = true) => {
     let processedValue: any = fieldEditValue;
     
     // Process value based on field type
@@ -237,128 +396,21 @@ export default function EnhancedClientDetail() {
     }
     
     updateFieldMutation.mutate({ fieldId, value: processedValue, isCustomField });
+  }, [fieldEditValue, updateFieldMutation]);
+
+  // Common props for EditableField components
+  const editableFieldProps = {
+    editingField,
+    fieldEditValue,
+    setFieldEditValue,
+    startEditing,
+    cancelEditing,
+    saveFieldValue,
+    updateFieldMutation,
+    formatPhoneNumber
   };
 
-  // Helper component for editable field
-  const EditableField = ({ 
-    fieldId, 
-    label, 
-    value, 
-    type = 'text', 
-    isCustomField = false,
-    className = "text-gray-900",
-    required = false,
-    options = undefined as string[] | undefined
-  }: {
-    fieldId: string;
-    label: string;
-    value: any;
-    type?: string;
-    isCustomField?: boolean;
-    className?: string;
-    required?: boolean;
-    options?: string[];
-  }) => {
-    const isEditing = editingField === fieldId;
-    
-    return (
-      <div>
-        <label className="flex items-center justify-between text-gray-500 mb-1">
-          <span>
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
-          </span>
-          {!isEditing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-              onClick={() => startEditing(fieldId, value)}
-            >
-              <Edit2 className="h-3 w-3" />
-            </Button>
-          )}
-        </label>
-        
-        {isEditing ? (
-          <div className="flex items-center gap-2">
-            {type === 'dropdown' && options ? (
-              <Select value={fieldEditValue} onValueChange={setFieldEditValue}>
-                <SelectTrigger className="h-8">
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {options.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : type === 'textarea' ? (
-              <Textarea
-                placeholder="Enter value"
-                value={fieldEditValue}
-                onChange={(e) => setFieldEditValue(e.target.value)}
-                className="min-h-[60px]"
-              />
-            ) : (
-              <Input
-                type={type === 'currency' ? 'number' : type}
-                step={type === 'currency' ? '0.01' : undefined}
-                placeholder={type === 'currency' ? '0.00' : 'Enter value'}
-                value={fieldEditValue}
-                onChange={(e) => setFieldEditValue(e.target.value)}
-                className={type === 'url' ? "h-8 text-sm overflow-hidden" : "h-8"}
-                style={type === 'url' ? { maxWidth: '100%', wordWrap: 'break-word' } : undefined}
-              />
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
-              onClick={() => saveFieldValue(fieldId, type, isCustomField)}
-              disabled={updateFieldMutation.isPending}
-            >
-              <Save className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-              onClick={cancelEditing}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <div className="group cursor-pointer" onClick={() => startEditing(fieldId, value)}>
-            {type === 'email' && value ? (
-              <a href={`mailto:${value}`} className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
-                {value}
-              </a>
-            ) : type === 'phone' && value ? (
-              <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
-                {formatPhoneNumber(value)}
-              </p>
-            ) : type === 'url' && value ? (
-              <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block break-all`} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
-                {value.length > 60 ? `${value.substring(0, 60)}...` : value}
-              </a>
-            ) : type === 'currency' && value ? (
-              <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
-                ${Number(value).toFixed(2)}
-              </p>
-            ) : (
-              <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
-                {value || "Not specified"}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
+
 
   // Loading state
   if (isLoading || !clientId) {
@@ -457,6 +509,7 @@ export default function EnhancedClientDetail() {
                         type="text"
                         isCustomField={false}
                         required={true}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="company"
@@ -464,6 +517,7 @@ export default function EnhancedClientDetail() {
                         value={client.company}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="position"
@@ -471,6 +525,7 @@ export default function EnhancedClientDetail() {
                         value={client.position}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="email"
@@ -480,6 +535,7 @@ export default function EnhancedClientDetail() {
                         isCustomField={false}
                         className="text-[#46a1a0]"
                         required={true}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="phone"
@@ -488,6 +544,7 @@ export default function EnhancedClientDetail() {
                         type="phone"
                         isCustomField={false}
                         className="text-[#46a1a0]"
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="address"
@@ -495,6 +552,7 @@ export default function EnhancedClientDetail() {
                         value={client.address}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="address2"
@@ -502,6 +560,7 @@ export default function EnhancedClientDetail() {
                         value={client.address2}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="city"
@@ -509,6 +568,7 @@ export default function EnhancedClientDetail() {
                         value={client.city}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="state"
@@ -516,6 +576,7 @@ export default function EnhancedClientDetail() {
                         value={client.state}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="zipCode"
@@ -523,6 +584,7 @@ export default function EnhancedClientDetail() {
                         value={client.zipCode}
                         type="text"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="website"
@@ -531,6 +593,7 @@ export default function EnhancedClientDetail() {
                         type="url"
                         isCustomField={false}
                         className="text-[#46a1a0]"
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="clientVertical"
@@ -539,6 +602,7 @@ export default function EnhancedClientDetail() {
                         type="dropdown"
                         isCustomField={false}
                         options={["Live Events", "Financial Lead Gen", "E-commerce", "SaaS", "Healthcare", "Real Estate", "Other"]}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="status"
@@ -547,6 +611,7 @@ export default function EnhancedClientDetail() {
                         type="dropdown"
                         isCustomField={false}
                         options={["active", "inactive", "pending"]}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="contactSource"
@@ -555,6 +620,7 @@ export default function EnhancedClientDetail() {
                         type="dropdown"
                         isCustomField={false}
                         options={["Website", "Referral", "Social Media", "Advertising", "Cold Outreach", "Event", "Other"]}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="contactType"
@@ -563,6 +629,7 @@ export default function EnhancedClientDetail() {
                         type="dropdown"
                         isCustomField={false}
                         options={["lead", "client", "prospect"]}
+                        {...editableFieldProps}
                       />
                       <EditableField
                         fieldId="notes"
@@ -570,6 +637,7 @@ export default function EnhancedClientDetail() {
                         value={client.notes}
                         type="textarea"
                         isCustomField={false}
+                        {...editableFieldProps}
                       />
                     </div>
                   ) : (
@@ -617,6 +685,7 @@ export default function EnhancedClientDetail() {
                                 required={field.required}
                                 options={field.options}
                                 className={field.type === 'email' || field.type === 'url' ? "text-[#46a1a0]" : undefined}
+                                {...editableFieldProps}
                               />
                             );
                           })}
