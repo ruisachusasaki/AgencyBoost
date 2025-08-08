@@ -1451,14 +1451,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "folderIds must be an array" });
       }
       
-      // Update the order for each folder
-      const updatePromises = folderIds.map(async (folderId: string, index: number) => {
+      // Update the order for each folder sequentially
+      for (let i = 0; i < folderIds.length; i++) {
+        const folderId = folderIds[i];
+        const newOrder = i + 1;
+        
         await db.update(customFieldFolders)
-          .set({ order: index + 1 })
+          .set({ order: newOrder })
           .where(eq(customFieldFolders.id, folderId));
-      });
-      
-      await Promise.all(updatePromises);
+      }
       
       res.json({ message: "Folder order updated successfully" });
     } catch (error) {
