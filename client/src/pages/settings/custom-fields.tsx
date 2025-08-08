@@ -540,123 +540,134 @@ export default function CustomFields() {
 
         {/* Folders Tab */}
         {activeTab === "folders" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search folders..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-80"
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-3">
-                <Dialog open={isAddFolderDialogOpen} onOpenChange={setIsAddFolderDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="h-10">
-                      <Folder className="h-4 w-4 mr-2" />
-                      New Folder
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create New Folder</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleAddFolder} className="space-y-4">
-                      <div>
-                        <Label htmlFor="folderName">Folder Name *</Label>
-                        <Input
-                          id="folderName"
-                          value={newFolder.name}
-                          onChange={(e) => setNewFolder({...newFolder, name: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="folderDescription">Description</Label>
-                        <Textarea
-                          id="folderDescription"
-                          value={newFolder.description}
-                          onChange={(e) => setNewFolder({...newFolder, description: e.target.value})}
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button type="button" variant="outline" onClick={() => setIsAddFolderDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={addFolderMutation.isPending}>
-                          {addFolderMutation.isPending ? "Creating..." : "Create Folder"}
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+          <div className="space-y-6">
+            {/* Add Folder Button */}
+            <div className="flex justify-end">
+              <Dialog open={isAddFolderDialogOpen} onOpenChange={setIsAddFolderDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-[#46a1a0] hover:bg-[#46a1a0]/90">
+                    <Folder className="h-4 w-4 mr-2" />
+                    New Folder
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Folder</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddFolder} className="space-y-4">
+                    <div>
+                      <Label htmlFor="folderName">Folder Name *</Label>
+                      <Input
+                        id="folderName"
+                        value={newFolder.name}
+                        onChange={(e) => setNewFolder({...newFolder, name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="folderDescription">Description</Label>
+                      <Textarea
+                        id="folderDescription"
+                        value={newFolder.description}
+                        onChange={(e) => setNewFolder({...newFolder, description: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setIsAddFolderDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={addFolderMutation.isPending}>
+                        {addFolderMutation.isPending ? "Creating..." : "Create Folder"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
 
-            {foldersLoading ? (
-              <div className="text-center py-8">Loading folders...</div>
-            ) : folders.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No folders created yet</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Folder Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Fields Count</TableHead>
-                      <TableHead>Created On</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {folders.map((folder) => (
-                      <TableRow key={folder.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <FolderOpen className="h-4 w-4 text-[#46a1a0]" />
-                            {folder.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-gray-600">{folder.name === "Billing" || folder.name === "Important Links" ? "System folder" : "No description"}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{getFolderFieldCount(folder.id)} fields</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-gray-500 text-sm">--</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingFolder(folder)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteFolder(folder.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            {/* Folders Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Folder Directory</CardTitle>
+                <CardDescription>
+                  Search and manage custom field folders
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <div className="relative max-w-sm">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search folders..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+
+                {foldersLoading ? (
+                  <div className="text-center py-8">Loading folders...</div>
+                ) : folders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No folders created yet</div>
+                ) : (
+                  <div className="border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Folder Name</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Fields Count</TableHead>
+                          <TableHead>Created On</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {folders.map((folder) => (
+                          <TableRow key={folder.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <FolderOpen className="h-4 w-4 text-[#46a1a0]" />
+                                {folder.name}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-gray-600">{folder.name === "Billing" || folder.name === "Important Links" ? "System folder" : "No description"}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{getFolderFieldCount(folder.id)} fields</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-gray-500 text-sm">--</span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingFolder(folder)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteFolder(folder.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 
