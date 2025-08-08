@@ -1442,7 +1442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/custom-field-folders/:id", async (req, res) => {
+  app.patch("/api/custom-field-folders/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertCustomFieldFolderSchema.partial().parse(req.body);
