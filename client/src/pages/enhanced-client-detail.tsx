@@ -574,16 +574,55 @@ export default function EnhancedClientDetail() {
                     </div>
                   ) : (
                     // Custom Field Folder Content
-                    <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
-                      <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">Custom Fields</h3>
-                      <p className="text-slate-600 mb-4">
-                        Custom fields for this folder will appear here.
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        Admins can add custom fields to this folder in Settings → Custom Fields.
-                      </p>
-                    </div>
+                    (() => {
+                      // Find the current folder data
+                      const currentFolder = customFieldFoldersData?.find(
+                        folder => folder.name.toLowerCase().replace(/\s+/g, '-') === section.id
+                      );
+                      
+                      // Get custom fields for this folder
+                      const folderFields = customFieldsData?.filter(
+                        field => field.folderId === currentFolder?.id
+                      ) || [];
+
+                      if (folderFields.length === 0) {
+                        return (
+                          <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
+                            <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                            <h3 className="text-lg font-medium text-slate-900 mb-2">No Custom Fields</h3>
+                            <p className="text-slate-600 mb-4">
+                              No custom fields have been added to this folder yet.
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              Admins can add custom fields to this folder in Settings → Custom Fields.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-4 text-sm">
+                          {folderFields.map((field) => {
+                            // Get the field value from client custom field values (if exists)
+                            const fieldValue = (client?.customFieldValues as Record<string, any>)?.[field.id] || "";
+                            
+                            return (
+                              <EditableField
+                                key={field.id}
+                                fieldId={field.id}
+                                label={field.name}
+                                value={fieldValue}
+                                type={field.type}
+                                isCustomField={true}
+                                required={field.required}
+                                options={field.options}
+                                className={field.type === 'email' || field.type === 'url' ? "text-[#46a1a0]" : undefined}
+                              />
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}
