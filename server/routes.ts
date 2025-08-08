@@ -706,6 +706,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder custom fields within a folder
+  app.put("/api/custom-fields/reorder", async (req, res) => {
+    try {
+      const { fieldIds } = req.body;
+      
+      if (!Array.isArray(fieldIds)) {
+        return res.status(400).json({ message: "fieldIds must be an array" });
+      }
+      
+      // Update the order for each field sequentially
+      for (let i = 0; i < fieldIds.length; i++) {
+        const fieldId = fieldIds[i];
+        const newOrder = i + 1;
+        
+        await db.update(customFields)
+          .set({ order: newOrder })
+          .where(eq(customFields.id, fieldId));
+      }
+      
+      res.json({ message: "Field order updated successfully" });
+    } catch (error) {
+      console.error('Error reordering custom fields:', error);
+      res.status(500).json({ message: "Failed to reorder fields" });
+    }
+  });
+
   // Custom Fields
   app.get("/api/custom-fields", async (req, res) => {
     try {

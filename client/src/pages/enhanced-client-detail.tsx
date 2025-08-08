@@ -649,10 +649,10 @@ export default function EnhancedClientDetail() {
                         folder => folder.name.toLowerCase().replace(/\s+/g, '-') === section.id
                       );
                       
-                      // Get custom fields for this folder
-                      const folderFields = customFieldsData?.filter(
+                      // Get custom fields for this folder, sorted by order
+                      const folderFields = (customFieldsData?.filter(
                         field => field.folderId === currentFolder?.id
-                      ) || [];
+                      ) || []).sort((a, b) => (a.order || 0) - (b.order || 0));
 
                       if (folderFields.length === 0) {
                         return (

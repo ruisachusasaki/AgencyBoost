@@ -75,6 +75,13 @@ export default function CustomFields() {
     },
   });
 
+  // Get fields for a specific folder, sorted by order
+  const getFieldsForFolder = (folderId: string) => {
+    return customFields
+      .filter(field => field.folderId === folderId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  };
+
   // Add field mutation
   const addFieldMutation = useMutation({
     mutationFn: async (data: typeof newField) => {
@@ -218,6 +225,33 @@ export default function CustomFields() {
     }
   });
 
+  // Reorder fields mutation
+  const reorderFieldsMutation = useMutation({
+    mutationFn: async (fieldIds: string[]) => {
+      const response = await fetch("/api/custom-fields/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fieldIds }),
+      });
+      if (!response.ok) throw new Error('Failed to reorder fields');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-fields"] });
+      toast({
+        title: "Success",
+        description: "Field order updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reorder fields",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddField = (e: React.FormEvent) => {
     e.preventDefault();
     addFieldMutation.mutate(newField);
@@ -249,6 +283,20 @@ export default function CustomFields() {
 
     const folderIds = items.map(folder => folder.id);
     reorderFoldersMutation.mutate(folderIds);
+  };
+
+  const handleFieldDragEnd = (result: any, folderId: string) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const fields = getFieldsForFolder(folderId);
+    const items = Array.from(fields);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const fieldIds = items.map(field => field.id);
+    reorderFieldsMutation.mutate(fieldIds);
   };
 
   const handleSort = (field: SortField) => {
@@ -800,29 +848,98 @@ export default function CustomFields() {
         {/* Edit Folder Dialog */}
         {editingFolder && (
           <Dialog open={!!editingFolder} onOpenChange={() => setEditingFolder(null)}>
-            <DialogContent>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
-                <DialogTitle>Edit Folder</DialogTitle>
+                <DialogTitle>Edit Folder: {editingFolder.name}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleUpdateFolder} className="space-y-4">
+              <div className="flex-1 overflow-hidden grid grid-cols-2 gap-6">
+                {/* Left side - Folder settings */}
                 <div>
-                  <Label htmlFor="editFolderName">Folder Name *</Label>
-                  <Input
-                    id="editFolderName"
-                    value={editingFolder.name}
-                    onChange={(e) => setEditingFolder({...editingFolder, name: e.target.value})}
-                    required
-                  />
+                  <form onSubmit={handleUpdateFolder} className="space-y-4">
+                    <div>
+                      <Label htmlFor="editFolderName">Folder Name *</Label>
+                      <Input
+                        id="editFolderName"
+                        value={editingFolder.name}
+                        onChange={(e) => setEditingFolder({...editingFolder, name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setEditingFolder(null)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={updateFolderMutation.isPending}>
+                        {updateFolderMutation.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setEditingFolder(null)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={updateFolderMutation.isPending}>
-                    {updateFolderMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
+
+                {/* Right side - Fields in folder */}
+                <div className="border-l pl-6">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold mb-2">Fields in this folder</h3>
+                    <p className="text-sm text-gray-600">Drag to reorder how fields appear in client profiles</p>
+                  </div>
+                  
+                  <div className="overflow-y-auto max-h-[400px]">
+                    {(() => {
+                      const folderFields = getFieldsForFolder(editingFolder.id);
+                      
+                      if (folderFields.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-gray-500">
+                            <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No fields in this folder yet</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <DragDropContext onDragEnd={(result) => handleFieldDragEnd(result, editingFolder.id)}>
+                          <Droppable droppableId="folder-fields">
+                            {(provided) => (
+                              <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
+                                {folderFields.map((field, index) => (
+                                  <Draggable key={field.id} draggableId={field.id} index={index}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        className={`p-3 border rounded-lg bg-white ${
+                                          snapshot.isDragging ? "shadow-lg" : "shadow-sm"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                            <GripVertical className="h-4 w-4 text-gray-400" />
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-1">
+                                            {getFieldTypeIcon(field.type)}
+                                            <div>
+                                              <div className="font-medium text-sm">{field.name}</div>
+                                              <div className="text-xs text-gray-500 capitalize">{field.type}</div>
+                                            </div>
+                                          </div>
+                                          {field.required && (
+                                            <Badge variant="secondary" className="text-xs">Required</Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </DragDropContext>
+                      );
+                    })()}
+                  </div>
                 </div>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
         )}
