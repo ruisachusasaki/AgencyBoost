@@ -88,14 +88,23 @@ export default function Products() {
   // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: async (data: typeof newProduct) => {
-      return apiRequest("/api/products", {
+      const response = await fetch("/api/products", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           ...data,
           price: parseFloat(data.price),
           cost: data.cost ? parseFloat(data.cost) : null
         })
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create product: ${response.statusText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -119,8 +128,11 @@ export default function Products() {
   // Update product mutation
   const updateProductMutation = useMutation({
     mutationFn: async (product: EnhancedProduct) => {
-      return apiRequest(`/api/products/${product.id}`, {
+      const response = await fetch(`/api/products/${product.id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           name: product.name,
           description: product.description,
@@ -131,6 +143,12 @@ export default function Products() {
           status: product.status
         })
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update product: ${response.statusText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -145,7 +163,15 @@ export default function Products() {
   // Delete product mutation
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      return apiRequest(`/api/products/${productId}`, { method: "DELETE" });
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "DELETE"
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete product: ${response.statusText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
