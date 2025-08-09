@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import csv from "csv-parser";
+import { Readable } from "stream";
 import { storage } from "./storage";
 import { 
   insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, 
@@ -18,6 +21,18 @@ import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure multer for file uploads
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype === 'text/csv') {
+        cb(null, true);
+      } else {
+        cb(new Error('Only CSV files are allowed'));
+      }
+    }
+  });
   // Client routes
   app.get("/api/clients", async (req, res) => {
     try {
@@ -1600,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search, category, status } = req.query;
       
-      let query = db.select({
+      let queryBuilder = db.select({
         id: products.id,
         name: products.name,
         description: products.description,
@@ -1637,10 +1652,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        queryBuilder = queryBuilder.where(and(...conditions));
       }
       
-      const result = await query.orderBy(asc(products.name));
+      const result = await queryBuilder.orderBy(asc(products.name));
       res.json(result);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -1691,6 +1706,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error('Error creating product:', error);
       res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  // CSV Import endpoint for products
+  app.post("/api/products/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData: any[] = [];
+      const errors: string[] = [];
+      let imported = 0;
+
+      return new Promise((resolve, reject) => {
+        const stream = Readable.from(req.file!.buffer);
+        
+        stream
+          .pipe(csv())
+          .on('data', (row) => {
+            csvData.push(row);
+          })
+          .on('end', async () => {
+            try {
+              // Process each row
+              for (let i = 0; i < csvData.length; i++) {
+                const row = csvData[i];
+                const rowNum = i + 2; // +2 because CSV starts from row 1 and we skip header
+                
+                try {
+                  // Validate and clean the data
+                  const productData = {
+                    name: row.name?.trim(),
+                    description: row.description?.trim() || null,
+                    price: row.price ? parseFloat(row.price.toString()) : 0,
+                    cost: row.cost ? parseFloat(row.cost.toString()) || null : null,
+                    type: row.type?.trim() || 'one_time',
+                    categoryId: row.categoryId?.trim() || null,
+                    status: row.status?.trim() || 'active'
+                  };
+
+                  // Validate required fields
+                  if (!productData.name) {
+                    errors.push(`Row ${rowNum}: Product name is required`);
+                    continue;
+                  }
+
+                  if (!productData.price || productData.price <= 0) {
+                    errors.push(`Row ${rowNum}: Valid price is required`);
+                    continue;
+                  }
+
+                  // Validate type
+                  if (!['one_time', 'recurring'].includes(productData.type)) {
+                    errors.push(`Row ${rowNum}: Type must be 'one_time' or 'recurring'`);
+                    continue;
+                  }
+
+                  // Validate status
+                  if (!['active', 'inactive'].includes(productData.status)) {
+                    errors.push(`Row ${rowNum}: Status must be 'active' or 'inactive'`);
+                    continue;
+                  }
+
+                  // Validate categoryId if provided
+                  if (productData.categoryId) {
+                    const categoryExists = await db.select().from(productCategories).where(eq(productCategories.id, productData.categoryId)).limit(1);
+                    if (categoryExists.length === 0) {
+                      errors.push(`Row ${rowNum}: Category ID '${productData.categoryId}' does not exist`);
+                      continue;
+                    }
+                  }
+
+                  // Validate the data with Zod schema
+                  const validatedData = insertProductSchema.parse(productData);
+                  
+                  // Insert the product
+                  await db.insert(products).values(validatedData);
+                  imported++;
+                  
+                } catch (error) {
+                  if (error instanceof z.ZodError) {
+                    errors.push(`Row ${rowNum}: ${error.errors.map(e => e.message).join(', ')}`);
+                  } else {
+                    errors.push(`Row ${rowNum}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  }
+                }
+              }
+
+              res.json({
+                imported,
+                total: csvData.length,
+                errors: errors.length,
+                errorDetails: errors.slice(0, 10), // Limit error details to first 10
+                message: `Successfully imported ${imported} out of ${csvData.length} products${errors.length > 0 ? ` with ${errors.length} errors` : ''}`
+              });
+              resolve(undefined);
+            } catch (error) {
+              console.error('Error processing CSV:', error);
+              reject(error);
+            }
+          })
+          .on('error', (error) => {
+            console.error('Error reading CSV:', error);
+            reject(error);
+          });
+      });
+
+    } catch (error) {
+      console.error('Error importing products:', error);
+      res.status(500).json({ message: "Failed to import products", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 

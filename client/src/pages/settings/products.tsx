@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent } from "lucide-react";
+import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent, Download, Upload } from "lucide-react";
 import type { Product, ProductCategory } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -26,11 +26,14 @@ export default function Products() {
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EnhancedProduct | null>(null);
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Fetch products with enhanced data
   const { data: products = [], isLoading: productsLoading } = useQuery<EnhancedProduct[]>({
@@ -312,6 +315,92 @@ export default function Products() {
     return `${value.toFixed(1)}%`;
   };
 
+  // Export products to CSV
+  const handleExportProducts = () => {
+    if (products.length === 0) {
+      toast({ variant: "destructive", title: "No Data", description: "No products available to export." });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'name',
+      'description', 
+      'price',
+      'cost',
+      'type',
+      'categoryId',
+      'status'
+    ];
+
+    // Convert products to CSV format
+    const csvContent = [
+      headers.join(','),
+      ...products.map(product => [
+        `"${product.name?.replace(/"/g, '""') || ''}"`,
+        `"${product.description?.replace(/"/g, '""') || ''}"`,
+        product.price || '',
+        product.cost || '',
+        product.type || 'one_time',
+        product.categoryId || '',
+        product.status || 'active'
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `products-export-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Success", description: `Exported ${products.length} products to CSV file.` });
+  };
+
+  // Import products from CSV
+  const importProductsMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/products/import', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to import products');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setIsImportDialogOpen(false);
+      setImportFile(null);
+      toast({ 
+        title: "Success", 
+        description: `Successfully imported ${data.imported} products. ${data.errors ? `${data.errors} errors encountered.` : ''}` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Import Failed", description: error.message });
+    }
+  });
+
+  const handleImportProducts = () => {
+    if (!importFile) {
+      toast({ variant: "destructive", title: "No File", description: "Please select a CSV file to import." });
+      return;
+    }
+    importProductsMutation.mutate(importFile);
+  };
+
   // Filter and calculate stats
   const activeProducts = products.filter(p => p.status === 'active');
   const inactiveProducts = products.filter(p => p.status === 'inactive');
@@ -332,6 +421,17 @@ export default function Products() {
                 Products & Services
               </h1>
               <p className="text-gray-600 mt-2">Manage your products and services catalog with cost analysis</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button onClick={handleExportProducts} variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Import CSV
+              </Button>
             </div>
           </div>
 
@@ -933,6 +1033,61 @@ export default function Products() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Import Dialog */}
+        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import Products from CSV</DialogTitle>
+              <DialogDescription>
+                Upload a CSV file to import products. Use the Export CSV button first to see the expected format.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="csvFile">CSV File</Label>
+                <Input
+                  id="csvFile"
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="mt-1"
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  Expected columns: name, description, price, cost, type, categoryId, status
+                </p>
+              </div>
+              
+              {importFile && (
+                <div className="p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm font-medium">Selected file:</p>
+                  <p className="text-sm text-gray-600">{importFile.name}</p>
+                  <p className="text-sm text-gray-600">{(importFile.size / 1024).toFixed(1)} KB</p>
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsImportDialogOpen(false);
+                    setImportFile(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleImportProducts}
+                  disabled={!importFile || importProductsMutation.isPending}
+                  className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                >
+                  {importProductsMutation.isPending ? "Importing..." : "Import Products"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
