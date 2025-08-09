@@ -853,13 +853,13 @@ export default function Products() {
                 <TableHeader>
                   <TableRow>
                     <SortableHeader field="name" className="w-48">Product/Service</SortableHeader>
-                    <SortableHeader field="categoryName" className="w-28">Category</SortableHeader>
+                    <SortableHeader field="categoryName" className="w-24 min-w-24">Category</SortableHeader>
                     <SortableHeader field="type" className="w-20">Type</SortableHeader>
                     <SortableHeader field="price" className="text-right w-20">Price</SortableHeader>
                     <SortableHeader field="cost" className="text-right w-20">Cost</SortableHeader>
                     <SortableHeader field="profit" className="text-right w-20">Profit</SortableHeader>
-                    <SortableHeader field="marginPercent" className="text-right w-20 whitespace-nowrap">Margin %</SortableHeader>
-                    <SortableHeader field="status" className="w-18">Status</SortableHeader>
+                    <SortableHeader field="marginPercent" className="text-right w-20">Margin %</SortableHeader>
+                    <SortableHeader field="status" className="w-16">Status</SortableHeader>
                     <TableHead className="text-right w-20">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -874,12 +874,16 @@ export default function Products() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {product.categoryName ? (
-                          <Badge variant="outline">{product.categoryName}</Badge>
-                        ) : (
-                          <span className="text-gray-400">No category</span>
-                        )}
+                      <TableCell className="w-24 max-w-24">
+                        <div className="truncate">
+                          {product.categoryName ? (
+                            <Badge variant="outline" className="truncate max-w-full">
+                              <span className="truncate">{product.categoryName}</span>
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400">No category</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={product.type === 'recurring' ? 'default' : 'secondary'}>
