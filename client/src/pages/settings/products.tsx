@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent, Download, Upload } from "lucide-react";
+import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent, Download, Upload, ChevronUp, ChevronDown } from "lucide-react";
 import type { Product, ProductCategory } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -34,6 +34,8 @@ export default function Products() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Fetch products with enhanced data
   const { data: products = [], isLoading: productsLoading } = useQuery<EnhancedProduct[]>({
@@ -73,6 +75,64 @@ export default function Products() {
       return response.json();
     },
   });
+
+  // Sorting function
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Sort products
+  const sortedProducts = [...products].sort((a, b) => {
+    let aValue: any = a[sortField as keyof EnhancedProduct];
+    let bValue: any = b[sortField as keyof EnhancedProduct];
+
+    // Handle special cases
+    if (sortField === "categoryName") {
+      aValue = a.categoryName || "";
+      bValue = b.categoryName || "";
+    } else if (sortField === "price" || sortField === "cost" || sortField === "profit") {
+      aValue = parseFloat(aValue?.toString() || "0");
+      bValue = parseFloat(bValue?.toString() || "0");
+    } else if (sortField === "marginPercent") {
+      aValue = a.marginPercent || 0;
+      bValue = b.marginPercent || 0;
+    }
+
+    // Convert to strings for comparison if not numbers
+    if (typeof aValue !== "number") {
+      aValue = String(aValue || "").toLowerCase();
+      bValue = String(bValue || "").toLowerCase();
+    }
+
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Sortable header component
+  const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+    <TableHead 
+      className={`cursor-pointer hover:bg-gray-50 ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${sortField === field && sortDirection === "asc" ? "text-[#46a1a0]" : "text-gray-300"}`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${sortField === field && sortDirection === "desc" ? "text-[#46a1a0]" : "text-gray-300"}`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -792,19 +852,19 @@ export default function Products() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product/Service</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                    <TableHead className="text-right">Margin %</TableHead>
-                    <TableHead>Status</TableHead>
+                    <SortableHeader field="name">Product/Service</SortableHeader>
+                    <SortableHeader field="categoryName">Category</SortableHeader>
+                    <SortableHeader field="type">Type</SortableHeader>
+                    <SortableHeader field="price" className="text-right">Price</SortableHeader>
+                    <SortableHeader field="cost" className="text-right">Cost</SortableHeader>
+                    <SortableHeader field="profit" className="text-right">Profit</SortableHeader>
+                    <SortableHeader field="marginPercent" className="text-right">Margin %</SortableHeader>
+                    <SortableHeader field="status">Status</SortableHeader>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
+                  {sortedProducts.map((product) => (
                     <TableRow key={product.id}>
                       <TableCell>
                         <div>
