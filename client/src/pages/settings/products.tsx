@@ -120,9 +120,9 @@ export default function Products() {
       className={`cursor-pointer hover:bg-gray-50 ${className}`}
       onClick={() => handleSort(field)}
     >
-      <div className="flex items-center justify-between">
-        {children}
-        <div className="flex flex-col ml-1">
+      <div className="flex items-center justify-between whitespace-nowrap">
+        <span className="truncate">{children}</span>
+        <div className="flex flex-col ml-1 flex-shrink-0">
           <ChevronUp 
             className={`h-3 w-3 ${sortField === field && sortDirection === "asc" ? "text-[#46a1a0]" : "text-gray-300"}`} 
           />
@@ -852,22 +852,22 @@ export default function Products() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader field="name" className="w-64">Product/Service</SortableHeader>
-                    <SortableHeader field="categoryName" className="w-32">Category</SortableHeader>
-                    <SortableHeader field="type" className="w-24">Type</SortableHeader>
-                    <SortableHeader field="price" className="text-right w-24">Price</SortableHeader>
-                    <SortableHeader field="cost" className="text-right w-24">Cost</SortableHeader>
-                    <SortableHeader field="profit" className="text-right w-24">Profit</SortableHeader>
-                    <SortableHeader field="marginPercent" className="text-right w-24">Margin %</SortableHeader>
-                    <SortableHeader field="status" className="w-20">Status</SortableHeader>
-                    <TableHead className="text-right w-24">Actions</TableHead>
+                    <SortableHeader field="name" className="w-48">Product/Service</SortableHeader>
+                    <SortableHeader field="categoryName" className="w-28">Category</SortableHeader>
+                    <SortableHeader field="type" className="w-20">Type</SortableHeader>
+                    <SortableHeader field="price" className="text-right w-20">Price</SortableHeader>
+                    <SortableHeader field="cost" className="text-right w-20">Cost</SortableHeader>
+                    <SortableHeader field="profit" className="text-right w-20">Profit</SortableHeader>
+                    <SortableHeader field="marginPercent" className="text-right w-20 whitespace-nowrap">Margin %</SortableHeader>
+                    <SortableHeader field="status" className="w-18">Status</SortableHeader>
+                    <TableHead className="text-right w-20">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedProducts.map((product) => (
                     <TableRow key={product.id}>
-                      <TableCell className="w-64">
-                        <div className="max-w-64">
+                      <TableCell className="w-48">
+                        <div className="max-w-48">
                           <div className="font-medium truncate">{product.name}</div>
                           {product.description && (
                             <div className="text-sm text-gray-500 mt-1 truncate">{product.description}</div>
