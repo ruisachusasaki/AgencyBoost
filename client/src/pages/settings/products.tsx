@@ -333,59 +333,7 @@ export default function Products() {
               </h1>
               <p className="text-gray-600 mt-2">Manage your products and services catalog with cost analysis</p>
             </div>
-            
-            <div className="flex gap-3">
-              <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Category
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Category</DialogTitle>
-                    <DialogDescription>Add a new product category for better organization</DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleAddCategory} className="space-y-4">
-                    <div>
-                      <Label htmlFor="categoryName">Category Name *</Label>
-                      <Input
-                        id="categoryName"
-                        value={newCategory.name}
-                        onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="categoryDescription">Description</Label>
-                      <Textarea
-                        id="categoryDescription"
-                        value={newCategory.description}
-                        onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-                        rows={2}
-                        placeholder="Optional description for this category..."
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setIsAddCategoryDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createCategoryMutation.isPending}>
-                        {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
+          </div>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Create New Product/Service</DialogTitle>
@@ -616,8 +564,16 @@ export default function Products() {
         {/* Categories Management Section */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Product Categories ({categories.length})</CardTitle>
-            <CardDescription>Organize your products with categories for better management</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Product Categories ({categories.length})</CardTitle>
+                <CardDescription>Organize your products with categories for better management</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddCategoryDialogOpen(true)} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {categories.length === 0 ? (
@@ -669,8 +625,16 @@ export default function Products() {
         {/* Products Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Products & Services ({products.length})</CardTitle>
-            <CardDescription>Manage your product catalog with cost analysis and profit margins</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Products & Services ({products.length})</CardTitle>
+                <CardDescription>Manage your product catalog with cost analysis and profit margins</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {productsLoading ? (
