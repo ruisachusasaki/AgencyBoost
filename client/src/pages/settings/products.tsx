@@ -852,25 +852,25 @@ export default function Products() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader field="name">Product/Service</SortableHeader>
-                    <SortableHeader field="categoryName">Category</SortableHeader>
-                    <SortableHeader field="type">Type</SortableHeader>
-                    <SortableHeader field="price" className="text-right">Price</SortableHeader>
-                    <SortableHeader field="cost" className="text-right">Cost</SortableHeader>
-                    <SortableHeader field="profit" className="text-right">Profit</SortableHeader>
-                    <SortableHeader field="marginPercent" className="text-right">Margin %</SortableHeader>
-                    <SortableHeader field="status">Status</SortableHeader>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <SortableHeader field="name" className="w-64">Product/Service</SortableHeader>
+                    <SortableHeader field="categoryName" className="w-32">Category</SortableHeader>
+                    <SortableHeader field="type" className="w-24">Type</SortableHeader>
+                    <SortableHeader field="price" className="text-right w-24">Price</SortableHeader>
+                    <SortableHeader field="cost" className="text-right w-24">Cost</SortableHeader>
+                    <SortableHeader field="profit" className="text-right w-24">Profit</SortableHeader>
+                    <SortableHeader field="marginPercent" className="text-right w-24">Margin %</SortableHeader>
+                    <SortableHeader field="status" className="w-20">Status</SortableHeader>
+                    <TableHead className="text-right w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedProducts.map((product) => (
                     <TableRow key={product.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{product.name}</div>
+                      <TableCell className="w-64">
+                        <div className="max-w-64">
+                          <div className="font-medium truncate">{product.name}</div>
                           {product.description && (
-                            <div className="text-sm text-gray-500 mt-1">{product.description}</div>
+                            <div className="text-sm text-gray-500 mt-1 truncate">{product.description}</div>
                           )}
                         </div>
                       </TableCell>
