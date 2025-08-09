@@ -1,0 +1,2 @@
+name,description,price,cost,type,categoryId,status
+Test Product,Test Description,10.00,5.00,one_time,5eaa098b-9079-4631-b742-7a8e9c123456,active

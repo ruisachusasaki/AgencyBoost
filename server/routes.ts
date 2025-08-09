@@ -24,14 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file uploads
   const upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (req, file, cb) => {
-      if (file.mimetype === 'text/csv') {
-        cb(null, true);
-      } else {
-        cb(new Error('Only CSV files are allowed'));
-      }
-    }
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
   });
   // Client routes
   app.get("/api/clients", async (req, res) => {
@@ -1768,14 +1761,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     }
                   }
                   
+                  // Convert all values to proper types for the schema
                   const productData = {
-                    name: row.name?.trim(),
-                    description: row.description?.trim() || null,
-                    price: row.price ? parseFloat(row.price.toString()) : 0,
-                    cost: row.cost ? parseFloat(row.cost.toString()) || null : null,
-                    type: row.type?.trim() || 'one_time',
+                    name: String(row.name || '').trim(),
+                    description: row.description ? String(row.description).trim() : null,
+                    price: String(row.price || '0'),
+                    cost: row.cost ? String(row.cost) : null,
+                    type: String(row.type || 'one_time').trim(),
                     categoryId: categoryId,
-                    status: row.status?.trim() || 'active'
+                    status: String(row.status || 'active').trim()
                   };
 
                   // Validate required fields
