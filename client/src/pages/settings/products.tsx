@@ -333,7 +333,15 @@ export default function Products() {
               </h1>
               <p className="text-gray-600 mt-2">Manage your products and services catalog with cost analysis</p>
             </div>
-          </div>
+            
+            <div className="flex gap-3">
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Create New Product/Service</DialogTitle>
@@ -793,7 +801,7 @@ export default function Products() {
                         type="number"
                         step="0.01"
                         value={editingProduct.price?.toString() || ""}
-                        onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})}
+                        onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
                         className="pl-10"
                         placeholder="0.00"
                         required
@@ -810,7 +818,7 @@ export default function Products() {
                         type="number"
                         step="0.01"
                         value={editingProduct.cost?.toString() || ""}
-                        onChange={(e) => setEditingProduct({...editingProduct, cost: e.target.value ? parseFloat(e.target.value) : null})}
+                        onChange={(e) => setEditingProduct({...editingProduct, cost: e.target.value || null})}
                         className="pl-10"
                         placeholder="0.00"
                       />
