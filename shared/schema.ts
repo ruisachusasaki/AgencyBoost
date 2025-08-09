@@ -1007,7 +1007,7 @@ export const auditLogs = pgTable("audit_logs", {
   entityType: text("entity_type").notNull(), // contact, project, campaign, task, invoice, etc.
   entityId: varchar("entity_id").notNull(), // ID of the affected entity
   entityName: text("entity_name").notNull(), // Name/title of the affected entity
-  userId: varchar("user_id").notNull().references(() => users.id), // Who performed the action
+  userId: uuid("user_id").notNull().references(() => staff.id), // Who performed the action
   details: text("details").notNull(), // Description of what changed
   oldValues: jsonb("old_values"), // Previous values (for updates)
   newValues: jsonb("new_values"), // New values (for updates/creates)

@@ -18,22 +18,27 @@ export default function AuditLogs() {
   const [filterEntity, setFilterEntity] = useState("all");
   const [filterUser, setFilterUser] = useState("all");
   
-  // Fetch audit logs from API
+  // Fetch audit logs and staff data from API
   const { data: auditLogs = [], isLoading } = useQuery<AuditLogDisplay[]>({
     queryKey: ["/api/audit-logs"],
   });
 
-  // Mock user data for display (in real app, fetch from users API)
-  const [mockUsers] = useState<Record<string, string>>({
-    "user-1": "John Doe",
-    "user-2": "Jane Smith", 
-    "user-3": "Mike Johnson",
+  const { data: staff = [] } = useQuery({
+    queryKey: ["/api/staff"],
+  });
+
+  // Create user lookup from staff data
+  const userLookup: Record<string, string> = staff.reduce((acc: Record<string, string>, staffMember: any) => {
+    acc[staffMember.id] = `${staffMember.firstName} ${staffMember.lastName}`;
+    return acc;
+  }, {
+    "e56be30d-c086-446c-ada4-7ccef37ad7fb": "System Admin", // Default for system actions
   });
 
   // Transform audit logs to include user names
   const auditLogsWithUserNames = auditLogs.map(log => ({
     ...log,
-    userName: mockUsers[log.userId] || "Unknown User",
+    userName: userLookup[log.userId] || "Unknown User",
     timestamp: new Date(log.timestamp).toLocaleString(),
   }));
 
@@ -45,11 +50,14 @@ export default function AuditLogs() {
       entityType: "contact",
       entityId: "client-1",
       entityName: "Sarah Johnson",
-      userId: "user-1",
-      userName: "John Doe",
-      timestamp: "2024-08-07 14:30:15",
+      userId: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      userName: "System Admin",
+      timestamp: new Date(Date.now() - 3600000).toLocaleString(), // 1 hour ago
       details: "New contact record created with email: sarah@techstartup.com",
-      ipAddress: "192.168.1.100"
+      ipAddress: "192.168.1.100",
+      oldValues: null,
+      newValues: null,
+      userAgent: "Mozilla/5.0"
     },
     {
       id: "2", 
@@ -57,11 +65,14 @@ export default function AuditLogs() {
       entityType: "contact",
       entityId: "client-1",
       entityName: "Sarah Johnson",
-      userId: "user-2",
-      userName: "Jane Smith",
-      timestamp: "2024-08-07 11:45:22",
+      userId: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      userName: "System Admin",
+      timestamp: new Date(Date.now() - 7200000).toLocaleString(), // 2 hours ago
       details: "Updated phone number from (555) 123-0000 to (555) 123-4567",
-      ipAddress: "192.168.1.105"
+      ipAddress: "192.168.1.105",
+      oldValues: null,
+      newValues: null,
+      userAgent: "Mozilla/5.0"
     },
     {
       id: "3",
@@ -69,53 +80,20 @@ export default function AuditLogs() {
       entityType: "project",
       entityId: "proj-1",
       entityName: "Website Redesign",
-      userId: "user-1",
-      userName: "John Doe", 
-      timestamp: "2024-08-07 09:15:33",
+      userId: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      userName: "System Admin", 
+      timestamp: new Date(Date.now() - 10800000).toLocaleString(), // 3 hours ago
       details: "New project created for client Sarah Johnson with budget $15,000",
-      ipAddress: "192.168.1.100"
-    },
-    {
-      id: "4",
-      action: "deleted",
-      entityType: "contact",
-      entityId: "client-5",
-      entityName: "Old Contact",
-      userId: "user-1",
-      userName: "John Doe",
-      timestamp: "2024-08-06 16:20:45",
-      details: "Contact record permanently deleted - duplicate entry",
-      ipAddress: "192.168.1.100"
-    },
-    {
-      id: "5",
-      action: "updated",
-      entityType: "campaign",
-      entityId: "camp-1",
-      entityName: "Summer Promotion",
-      userId: "user-3",
-      userName: "Mike Johnson",
-      timestamp: "2024-08-06 13:30:12",
-      details: "Campaign status changed from Draft to Active",
-      ipAddress: "192.168.1.110"
-    },
-    {
-      id: "6",
-      action: "created",
-      entityType: "task",
-      entityId: "task-1",
-      entityName: "Content Review",
-      userId: "user-2",
-      userName: "Jane Smith",
-      timestamp: "2024-08-06 10:45:18",
-      details: "Task assigned to Mike Johnson with due date 2024-08-10",
-      ipAddress: "192.168.1.105"
+      ipAddress: "192.168.1.100",
+      oldValues: null,
+      newValues: null,
+      userAgent: "Mozilla/5.0"
     }
   ]);
 
   const actions = ["created", "updated", "deleted"];
   const entityTypes = ["contact", "project", "campaign", "task", "invoice"];
-  const users = ["John Doe", "Jane Smith", "Mike Johnson"];
+  const users = Object.values(userLookup);
 
   // Use real data if available, otherwise show mock data
   const displayLogs = auditLogsWithUserNames.length > 0 ? auditLogsWithUserNames : mockAuditLogs;
