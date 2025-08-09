@@ -1536,6 +1536,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/product-categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertProductCategorySchema.partial().parse(req.body);
+      
+      const [updatedCategory] = await db
+        .update(productCategories)
+        .set(validatedData)
+        .where(eq(productCategories.id, id))
+        .returning();
+
+      if (!updatedCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+
+      res.json(updatedCategory);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating product category:', error);
+      res.status(500).json({ message: "Failed to update product category" });
+    }
+  });
+
+  app.delete("/api/product-categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if any products are using this category
+      const productsUsingCategory = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(eq(products.categoryId, id));
+      
+      const count = productsUsingCategory[0]?.count || 0;
+      
+      if (count > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete category. ${count} product(s) are currently using this category. Please reassign those products to a different category first.` 
+        });
+      }
+      
+      const [deletedCategory] = await db
+        .delete(productCategories)
+        .where(eq(productCategories.id, id))
+        .returning();
+
+      if (!deletedCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+
+      res.json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting product category:', error);
+      res.status(500).json({ message: "Failed to delete product category" });
+    }
+  });
+
   // Products API with search and filtering
   app.get("/api/products", async (req, res) => {
     try {

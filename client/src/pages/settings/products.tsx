@@ -27,6 +27,7 @@ export default function Products() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<EnhancedProduct | null>(null);
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -210,6 +211,59 @@ export default function Products() {
     }
   });
 
+  // Update category mutation
+  const updateCategoryMutation = useMutation({
+    mutationFn: async (category: ProductCategory) => {
+      const response = await fetch(`/api/product-categories/${category.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: category.name,
+          description: category.description
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update category: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      toast({ title: "Success", description: "Category updated successfully." });
+      setEditingCategory(null);
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update category" });
+    }
+  });
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const response = await fetch(`/api/product-categories/${categoryId}`, {
+        method: "DELETE"
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to delete category: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      toast({ title: "Success", description: "Category deleted successfully." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete category" });
+    }
+  });
+
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     createProductMutation.mutate(newProduct);
@@ -231,6 +285,19 @@ export default function Products() {
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     createCategoryMutation.mutate(newCategory);
+  };
+
+  const handleEditCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingCategory) {
+      updateCategoryMutation.mutate(editingCategory);
+    }
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    if (confirm("Are you sure you want to delete this category? This action cannot be undone.")) {
+      deleteCategoryMutation.mutate(categoryId);
+    }
   };
 
   const formatCurrency = (amount: number | string | null | undefined) => {
@@ -546,6 +613,59 @@ export default function Products() {
           </Card>
         </div>
 
+        {/* Categories Management Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Product Categories ({categories.length})</CardTitle>
+            <CardDescription>Organize your products with categories for better management</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {categories.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-gray-500 mb-4">No categories created yet</p>
+                <Button onClick={() => setIsAddCategoryDialogOpen(true)} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Category
+                </Button>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map((category) => (
+                  <Card key={category.id} className="border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900">{category.name}</h3>
+                          {category.description && (
+                            <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-1 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingCategory(category)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Products Table */}
         <Card>
           <CardHeader>
@@ -802,6 +922,47 @@ export default function Products() {
                   </Button>
                   <Button type="submit" disabled={updateProductMutation.isPending} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
                     {updateProductMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Edit Category Dialog */}
+        {editingCategory && (
+          <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Category: {editingCategory.name}</DialogTitle>
+                <DialogDescription>Update category information</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleEditCategory} className="space-y-4">
+                <div>
+                  <Label htmlFor="editCategoryName">Category Name *</Label>
+                  <Input
+                    id="editCategoryName"
+                    value={editingCategory.name}
+                    onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editCategoryDescription">Description</Label>
+                  <Textarea
+                    id="editCategoryDescription"
+                    value={editingCategory.description || ""}
+                    onChange={(e) => setEditingCategory({...editingCategory, description: e.target.value})}
+                    rows={2}
+                    placeholder="Optional description for this category..."
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateCategoryMutation.isPending} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
+                    {updateCategoryMutation.isPending ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </form>
