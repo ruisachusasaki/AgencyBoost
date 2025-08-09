@@ -1,32 +1,44 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollText, Search, Filter, User, Calendar, Activity } from "lucide-react";
+import type { AuditLog } from "@shared/schema";
 
-interface AuditLog {
-  id: string;
-  action: string;
-  entityType: "contact" | "project" | "campaign" | "task" | "invoice";
-  entityId: string;
-  entityName: string;
-  userId: string;
+interface AuditLogDisplay extends AuditLog {
   userName: string;
-  timestamp: string;
-  details: string;
-  ipAddress: string;
 }
 
 export default function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterAction, setFilterAction] = useState("");
-  const [filterEntity, setFilterEntity] = useState("");
-  const [filterUser, setFilterUser] = useState("");
+  const [filterAction, setFilterAction] = useState("all");
+  const [filterEntity, setFilterEntity] = useState("all");
+  const [filterUser, setFilterUser] = useState("all");
   
-  // Mock audit logs data
-  const [auditLogs] = useState<AuditLog[]>([
+  // Fetch audit logs from API
+  const { data: auditLogs = [], isLoading } = useQuery<AuditLogDisplay[]>({
+    queryKey: ["/api/audit-logs"],
+  });
+
+  // Mock user data for display (in real app, fetch from users API)
+  const [mockUsers] = useState<Record<string, string>>({
+    "user-1": "John Doe",
+    "user-2": "Jane Smith", 
+    "user-3": "Mike Johnson",
+  });
+
+  // Transform audit logs to include user names
+  const auditLogsWithUserNames = auditLogs.map(log => ({
+    ...log,
+    userName: mockUsers[log.userId] || "Unknown User",
+    timestamp: new Date(log.timestamp).toLocaleString(),
+  }));
+
+  // For the mock data while we build out the system
+  const [mockAuditLogs] = useState<AuditLogDisplay[]>([
     {
       id: "1",
       action: "created",
@@ -105,15 +117,18 @@ export default function AuditLogs() {
   const entityTypes = ["contact", "project", "campaign", "task", "invoice"];
   const users = ["John Doe", "Jane Smith", "Mike Johnson"];
 
-  const filteredLogs = auditLogs.filter(log => {
+  // Use real data if available, otherwise show mock data
+  const displayLogs = auditLogsWithUserNames.length > 0 ? auditLogsWithUserNames : mockAuditLogs;
+  
+  const filteredLogs = displayLogs.filter(log => {
     const matchesSearch = 
       log.entityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.details.toLowerCase().includes(searchTerm.toLowerCase());
       
-    const matchesAction = !filterAction || log.action === filterAction;
-    const matchesEntity = !filterEntity || log.entityType === filterEntity; 
-    const matchesUser = !filterUser || log.userName === filterUser;
+    const matchesAction = filterAction === "all" || log.action === filterAction;
+    const matchesEntity = filterEntity === "all" || log.entityType === filterEntity; 
+    const matchesUser = filterUser === "all" || log.userName === filterUser;
     
     return matchesSearch && matchesAction && matchesEntity && matchesUser;
   });
@@ -180,7 +195,7 @@ export default function AuditLogs() {
                     <SelectValue placeholder="All Actions" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Actions</SelectItem>
+                    <SelectItem value="all">All Actions</SelectItem>
                     {actions.map((action) => (
                       <SelectItem key={action} value={action}>
                         {action.charAt(0).toUpperCase() + action.slice(1)}
@@ -197,7 +212,7 @@ export default function AuditLogs() {
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     {entityTypes.map((entity) => (
                       <SelectItem key={entity} value={entity}>
                         {entity.charAt(0).toUpperCase() + entity.slice(1)}
@@ -214,7 +229,7 @@ export default function AuditLogs() {
                     <SelectValue placeholder="All Users" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Users</SelectItem>
+                    <SelectItem value="all">All Users</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user} value={user}>
                         {user}
@@ -228,61 +243,75 @@ export default function AuditLogs() {
         </Card>
 
         {/* Summary Stats */}
-        <div className="grid md:grid-cols-4 gap-6 mb-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Activity className="h-8 w-8 text-primary mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{auditLogs.length}</div>
-                  <div className="text-sm text-gray-600">Total Activities</div>
-                </div>
-              </div>
+        {/* Loading State */}
+        {isLoading ? (
+          <Card className="mb-6">
+            <CardContent className="p-12 text-center">
+              <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4 animate-spin" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading audit logs...</h3>
+              <p className="text-gray-500">Please wait while we fetch the audit trail.</p>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-green-600 font-bold">+</span>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{auditLogs.filter(l => l.action === 'created').length}</div>
-                  <div className="text-sm text-gray-600">Created</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-blue-600 font-bold">~</span>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{auditLogs.filter(l => l.action === 'updated').length}</div>
-                  <div className="text-sm text-gray-600">Updated</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-red-600 font-bold">-</span>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{auditLogs.filter(l => l.action === 'deleted').length}</div>
-                  <div className="text-sm text-gray-600">Deleted</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        ) : (
+          <>
+            {/* Summary Stats */}
+            <div className="grid md:grid-cols-4 gap-6 mb-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Activity className="h-8 w-8 text-primary mr-3" />
+                    <div>
+                      <div className="text-2xl font-bold">{displayLogs.length}</div>
+                      <div className="text-sm text-gray-600">Total Activities</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-green-600 font-bold">+</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">{displayLogs.filter(l => l.action === 'created').length}</div>
+                      <div className="text-sm text-gray-600">Created</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-blue-600 font-bold">~</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">{displayLogs.filter(l => l.action === 'updated').length}</div>
+                      <div className="text-sm text-gray-600">Updated</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-red-600 font-bold">-</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">{displayLogs.filter(l => l.action === 'deleted').length}</div>
+                      <div className="text-sm text-gray-600">Deleted</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
 
         {/* Audit Log Entries */}
         <div className="space-y-3">

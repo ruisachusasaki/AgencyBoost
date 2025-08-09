@@ -6,7 +6,7 @@ import {
   type Task, type InsertTask,
   type Invoice, type InsertInvoice,
   type User, type InsertUser,
-  type BusinessProfile, type InsertBusinessProfile,
+  type AuditLog, type InsertAuditLog,
   type CustomField, type InsertCustomField,
   type CustomFieldFolder, type InsertCustomFieldFolder,
   type ClientGroup, type InsertClientGroup,
@@ -236,6 +236,13 @@ export interface IStorage {
   markNotificationAsRead(id: string): Promise<boolean>;
   markAllNotificationsAsRead(userId: string): Promise<boolean>;
   deleteNotification(id: string): Promise<boolean>;
+
+  // Audit Logs
+  getAuditLogs(): Promise<AuditLog[]>;
+  getAuditLog(id: string): Promise<AuditLog | undefined>;
+  getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]>;
+  getAuditLogsByUser(userId: string): Promise<AuditLog[]>;
+  createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
 }
 
 export class MemStorage implements IStorage {
@@ -264,6 +271,7 @@ export class MemStorage implements IStorage {
   private automationTriggers: Map<string, AutomationTrigger> = new Map();
   private automationActions: Map<string, AutomationAction> = new Map();
   private notifications: Map<string, Notification> = new Map();
+  private auditLogs: Map<string, AuditLog> = new Map();
 
   constructor() {
     // Add sample data for testing
@@ -2245,6 +2253,39 @@ export class MemStorage implements IStorage {
     fields.forEach(field => {
       this.customFields.set(field.id, field);
     });
+  }
+
+  // Audit Logs Implementation
+  async getAuditLogs(): Promise<AuditLog[]> {
+    return Array.from(this.auditLogs.values())
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  async getAuditLog(id: string): Promise<AuditLog | undefined> {
+    return this.auditLogs.get(id);
+  }
+
+  async getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
+    return Array.from(this.auditLogs.values())
+      .filter(log => log.entityType === entityType && log.entityId === entityId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  async getAuditLogsByUser(userId: string): Promise<AuditLog[]> {
+    return Array.from(this.auditLogs.values())
+      .filter(log => log.userId === userId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> {
+    const id = randomUUID();
+    const newAuditLog: AuditLog = {
+      ...auditLog,
+      id,
+      timestamp: new Date(),
+    };
+    this.auditLogs.set(id, newAuditLog);
+    return newAuditLog;
   }
 }
 

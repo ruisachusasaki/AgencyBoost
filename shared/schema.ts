@@ -999,3 +999,27 @@ export const insertProductSchema = createInsertSchema(products).omit({
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
+
+// Audit Logs Table - Track all system actions for admin oversight
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  action: text("action").notNull(), // created, updated, deleted
+  entityType: text("entity_type").notNull(), // contact, project, campaign, task, invoice, etc.
+  entityId: varchar("entity_id").notNull(), // ID of the affected entity
+  entityName: text("entity_name").notNull(), // Name/title of the affected entity
+  userId: varchar("user_id").notNull().references(() => users.id), // Who performed the action
+  details: text("details").notNull(), // Description of what changed
+  oldValues: jsonb("old_values"), // Previous values (for updates)
+  newValues: jsonb("new_values"), // New values (for updates/creates)
+  ipAddress: text("ip_address"), // IP address of the user
+  userAgent: text("user_agent"), // Browser/client information
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;

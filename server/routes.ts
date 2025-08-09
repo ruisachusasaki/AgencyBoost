@@ -12,13 +12,44 @@ import {
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
-  insertTagSchema, insertProductSchema, insertProductCategorySchema,
-  users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories
+  insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
+  users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
+
+// Helper function to create audit logs
+async function createAuditLog(
+  action: "created" | "updated" | "deleted",
+  entityType: string,
+  entityId: string,
+  entityName: string,
+  userId: string = "admin-user", // Default for now, in real app get from session
+  details: string,
+  oldValues?: any,
+  newValues?: any,
+  req?: any
+) {
+  try {
+    await db.insert(auditLogs).values({
+      action,
+      entityType,
+      entityId,
+      entityName,
+      userId,
+      details,
+      oldValues: oldValues ? oldValues : null,
+      newValues: newValues ? newValues : null,
+      ipAddress: req?.ip || req?.connection?.remoteAddress || "127.0.0.1",
+      userAgent: req?.get("User-Agent") || "Unknown",
+    });
+  } catch (error) {
+    console.error("Failed to create audit log:", error);
+    // Don't fail the main operation if audit logging fails
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file uploads
@@ -52,6 +83,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertClientSchema.parse(req.body);
       const client = await storage.createClient(validatedData);
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "contact",
+        client.id,
+        client.name || client.email,
+        "admin-user",
+        `New contact record created with email: ${client.email}`,
+        null,
+        { name: client.name, email: client.email, company: client.company },
+        req
+      );
+      
       res.status(201).json(client);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -63,11 +108,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/clients/:id", async (req, res) => {
     try {
+      // Get the old client data first for audit logging
+      const oldClient = await storage.getClient(req.params.id);
+      if (!oldClient) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
       const validatedData = insertClientSchema.partial().parse(req.body);
       const client = await storage.updateClient(req.params.id, validatedData);
+      
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
+      
+      // Determine what changed for audit logging
+      const changes = [];
+      if (validatedData.name && validatedData.name !== oldClient.name) {
+        changes.push(`name from "${oldClient.name}" to "${validatedData.name}"`);
+      }
+      if (validatedData.email && validatedData.email !== oldClient.email) {
+        changes.push(`email from "${oldClient.email}" to "${validatedData.email}"`);
+      }
+      if (validatedData.phone && validatedData.phone !== oldClient.phone) {
+        changes.push(`phone from "${oldClient.phone}" to "${validatedData.phone}"`);
+      }
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "contact",
+        client.id,
+        client.name || client.email,
+        "admin-user",
+        changes.length > 0 ? `Updated ${changes.join(", ")}` : "Contact record updated",
+        { name: oldClient.name, email: oldClient.email, phone: oldClient.phone },
+        { name: client.name, email: client.email, phone: client.phone },
+        req
+      );
+      
       res.json(client);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -79,10 +157,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/clients/:id", async (req, res) => {
     try {
+      // Get client data before deletion for audit logging
+      const client = await storage.getClient(req.params.id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
       const deleted = await storage.deleteClient(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Client not found" });
       }
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "contact",
+        req.params.id,
+        client.name || client.email,
+        "admin-user",
+        `Contact record permanently deleted - ${client.name} (${client.email})`,
+        { name: client.name, email: client.email, company: client.company },
+        null,
+        req
+      );
+      
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete client" });
@@ -1887,6 +1985,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting product:', error);
       res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Audit Logs routes (Admin only)
+  app.get("/api/audit-logs", async (req, res) => {
+    try {
+      // In a real app, check if user is admin
+      // For now, return all logs from the database
+      const logs = await db.select().from(auditLogs).orderBy(desc(auditLogs.timestamp));
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get("/api/audit-logs/:id", async (req, res) => {
+    try {
+      const log = await db.select().from(auditLogs).where(eq(auditLogs.id, req.params.id)).limit(1);
+      if (!log.length) {
+        return res.status(404).json({ message: "Audit log not found" });
+      }
+      res.json(log[0]);
+    } catch (error) {
+      console.error('Error fetching audit log:', error);
+      res.status(500).json({ message: "Failed to fetch audit log" });
+    }
+  });
+
+  app.get("/api/audit-logs/entity/:entityType/:entityId", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const logs = await db.select().from(auditLogs)
+        .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
+        .orderBy(desc(auditLogs.timestamp));
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching entity audit logs:', error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get("/api/audit-logs/user/:userId", async (req, res) => {
+    try {
+      const logs = await db.select().from(auditLogs)
+        .where(eq(auditLogs.userId, req.params.userId))
+        .orderBy(desc(auditLogs.timestamp));
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching user audit logs:', error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.post("/api/audit-logs", async (req, res) => {
+    try {
+      const validatedData = insertAuditLogSchema.parse(req.body);
+      const [newLog] = await db.insert(auditLogs).values(validatedData).returning();
+      res.status(201).json(newLog);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating audit log:', error);
+      res.status(500).json({ message: "Failed to create audit log" });
     }
   });
 
