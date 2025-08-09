@@ -112,22 +112,22 @@ export default function Support() {
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back to Settings */}
+        <div className="mb-4">
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Settings</span>
+            </Button>
+          </Link>
+        </div>
+
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <HeadphonesIcon className="h-8 w-8 text-primary" />
-                Support Settings
-              </h1>
-              <p className="text-gray-600 mt-2">Configure support departments and ticketing system</p>
-            </div>
-            <Link href="/settings">
-              <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back to Settings</span>
-              </Button>
-            </Link>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <HeadphonesIcon className="h-8 w-8 text-primary" />
+            Support Settings
+          </h1>
+          <p className="text-gray-600 mt-2">Configure support departments and ticketing system</p>
         </div>
 
         {/* Tabs */}

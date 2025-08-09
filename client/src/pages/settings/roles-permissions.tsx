@@ -167,8 +167,8 @@ export default function RolesPermissions() {
     switch (action) {
       case "view": return <Eye className="h-3 w-3" />;
       case "create": return <Plus className="h-3 w-3" />;
-      case "edit": return <Edit3 className="h-3 w-3" />;
-      case "delete": return <Trash className="h-3 w-3" />;
+      case "edit": return <Edit className="h-3 w-3" />;
+      case "delete": return <Trash2 className="h-3 w-3" />;
       case "manage": return <Settings className="h-3 w-3" />;
       default: return null;
     }
@@ -190,6 +190,16 @@ export default function RolesPermissions() {
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back to Settings */}
+        <div className="mb-4">
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Settings</span>
+            </Button>
+          </Link>
+        </div>
+
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -199,21 +209,14 @@ export default function RolesPermissions() {
             <p className="text-gray-600 mt-2">Create custom roles and manage permissions</p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Link href="/settings">
-              <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back to Settings</span>
+          <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Role
               </Button>
-            </Link>
-            <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Role
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl">
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Create Custom Role</DialogTitle>
             </DialogHeader>
@@ -286,8 +289,7 @@ export default function RolesPermissions() {
                 </div>
               </form>
             </DialogContent>
-            </Dialog>
-          </div>
+          </Dialog>
         </div>
 
         {/* Summary Cards */}

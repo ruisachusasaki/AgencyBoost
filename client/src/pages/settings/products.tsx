@@ -508,6 +508,16 @@ export default function Products() {
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back to Settings */}
+        <div className="mb-4">
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Settings</span>
+            </Button>
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -520,12 +530,6 @@ export default function Products() {
             </div>
             
             <div className="flex items-center gap-3">
-              <Link href="/settings">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>Back to Settings</span>
-                </Button>
-              </Link>
               <Button onClick={handleExportProducts} variant="outline" className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 Export CSV

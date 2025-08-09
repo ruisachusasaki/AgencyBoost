@@ -291,19 +291,21 @@ export default function TagsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Back to Settings */}
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <TagIcon className="h-6 w-6 text-[#46a1a0]" />
-            <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
-          </div>
-          <Link href="/settings">
-            <Button variant="outline" size="sm" className="flex items-center space-x-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Settings</span>
-            </Button>
-          </Link>
+        <div className="flex items-center gap-3">
+          <TagIcon className="h-6 w-6 text-[#46a1a0]" />
+          <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
         </div>
         <p className="text-muted-foreground">
           Organize and categorize your clients with custom tags

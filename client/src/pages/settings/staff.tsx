@@ -213,23 +213,25 @@ export default function Staff() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Users className="h-8 w-8 text-primary" />
-            Staff Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your team members and their access levels
-          </p>
-        </div>
+      {/* Back to Settings */}
+      <div className="mb-4">
         <Link href="/settings">
           <Button variant="outline" size="sm" className="flex items-center space-x-2">
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Settings</span>
           </Button>
         </Link>
+      </div>
+
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <Users className="h-8 w-8 text-primary" />
+          Staff Management
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Manage your team members and their access levels
+        </p>
       </div>
       
       <div className="flex justify-end">
