@@ -96,8 +96,8 @@ export default function Products() {
         },
         body: JSON.stringify({
           ...data,
-          price: parseFloat(data.price),
-          cost: data.cost ? parseFloat(data.cost) : null
+          price: data.price,
+          cost: data.cost || null
         })
       });
       
@@ -137,8 +137,8 @@ export default function Products() {
         body: JSON.stringify({
           name: product.name,
           description: product.description,
-          price: parseFloat(product.price?.toString() || "0"),
-          cost: product.cost ? parseFloat(product.cost.toString()) : null,
+          price: product.price?.toString() || "0",
+          cost: product.cost ? product.cost.toString() : null,
           type: product.type,
           categoryId: product.categoryId,
           status: product.status
