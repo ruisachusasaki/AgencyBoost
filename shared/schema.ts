@@ -79,14 +79,27 @@ export const clientGroups = pgTable("client_groups", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Product Categories
+export const productCategories = pgTable("product_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Products/Services
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }),
-  type: text("type").notNull(), // one_time, recurring
   description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  type: text("type").notNull(), // one_time, recurring
+  categoryId: varchar("category_id").references(() => productCategories.id),
+  status: text("status").notNull().default("active"), // active, inactive
+  usageCount: integer("usage_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Client products/services assignments
@@ -485,10 +498,7 @@ export const insertClientGroupSchema = createInsertSchema(clientGroups).omit({
   createdAt: true,
 });
 
-export const insertProductSchema = createInsertSchema(products).omit({
-  id: true,
-  createdAt: true,
-});
+
 
 export const insertClientProductSchema = createInsertSchema(clientProducts).omit({
   id: true,
@@ -604,9 +614,6 @@ export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
 
 export type ClientGroup = typeof clientGroups.$inferSelect;
 export type InsertClientGroup = z.infer<typeof insertClientGroupSchema>;
-
-export type Product = typeof products.$inferSelect;
-export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export type ClientProduct = typeof clientProducts.$inferSelect;
 export type InsertClientProduct = z.infer<typeof insertClientProductSchema>;
@@ -972,3 +979,23 @@ export const insertTagSchema = createInsertSchema(tags).omit({
 
 export type Tag = typeof tags.$inferSelect;
 export type InsertTag = z.infer<typeof insertTagSchema>;
+
+// Product Categories schema exports
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
+
+// Products schema exports
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+});
+
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;

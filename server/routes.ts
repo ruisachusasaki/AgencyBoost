@@ -9,8 +9,8 @@ import {
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
-  insertTagSchema,
-  users, businessProfile, customFields, customFieldFolders, staff, tags
+  insertTagSchema, insertProductSchema, insertProductCategorySchema,
+  users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -1508,6 +1508,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting custom field folder:', error);
       res.status(500).json({ message: "Failed to delete custom field folder" });
+    }
+  });
+
+  // Product Categories API
+  app.get("/api/product-categories", async (req, res) => {
+    try {
+      const categories = await db.select().from(productCategories).orderBy(asc(productCategories.name));
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching product categories:', error);
+      res.status(500).json({ message: "Failed to fetch product categories" });
+    }
+  });
+
+  app.post("/api/product-categories", async (req, res) => {
+    try {
+      const validatedData = insertProductCategorySchema.parse(req.body);
+      const [category] = await db.insert(productCategories).values(validatedData).returning();
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating product category:', error);
+      res.status(500).json({ message: "Failed to create product category" });
+    }
+  });
+
+  // Products API with search and filtering
+  app.get("/api/products", async (req, res) => {
+    try {
+      const { search, category, status } = req.query;
+      
+      let query = db.select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        cost: products.cost,
+        type: products.type,
+        categoryId: products.categoryId,
+        status: products.status,
+        usageCount: products.usageCount,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
+        categoryName: productCategories.name
+      })
+      .from(products)
+      .leftJoin(productCategories, eq(products.categoryId, productCategories.id));
+
+      const conditions = [];
+      
+      if (search && typeof search === 'string') {
+        conditions.push(
+          or(
+            like(products.name, `%${search}%`),
+            like(products.description, `%${search}%`)
+          )
+        );
+      }
+      
+      if (category && typeof category === 'string') {
+        conditions.push(eq(products.categoryId, category));
+      }
+      
+      if (status && typeof status === 'string') {
+        conditions.push(eq(products.status, status));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      const result = await query.orderBy(asc(products.name));
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [product] = await db.select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        cost: products.cost,
+        type: products.type,
+        categoryId: products.categoryId,
+        status: products.status,
+        usageCount: products.usageCount,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
+        categoryName: productCategories.name
+      })
+      .from(products)
+      .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
+      .where(eq(products.id, id));
+      
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  app.post("/api/products", async (req, res) => {
+    try {
+      const validatedData = insertProductSchema.parse(req.body);
+      const [product] = await db.insert(products).values(validatedData).returning();
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating product:', error);
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  app.put("/api/products/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertProductSchema.partial().parse(req.body);
+      
+      const [updatedProduct] = await db
+        .update(products)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(products.id, id))
+        .returning();
+
+      if (!updatedProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json(updatedProduct);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating product:', error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/products/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [deletedProduct] = await db
+        .delete(products)
+        .where(eq(products.id, id))
+        .returning();
+
+      if (!deletedProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json({ message: "Product deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(500).json({ message: "Failed to delete product" });
     }
   });
 
