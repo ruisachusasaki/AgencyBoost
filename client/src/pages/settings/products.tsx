@@ -333,20 +333,14 @@ export default function Products() {
               </h1>
               <p className="text-gray-600 mt-2">Manage your products and services catalog with cost analysis</p>
             </div>
-            
-            <div className="flex gap-3">
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Create New Product/Service</DialogTitle>
-                    <DialogDescription>Add a new product or service to your catalog</DialogDescription>
-                  </DialogHeader>
+          </div>
+
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Product/Service</DialogTitle>
+                <DialogDescription>Add a new product or service to your catalog</DialogDescription>
+              </DialogHeader>
                   <form onSubmit={handleAddProduct} className="space-y-4">
                     <div>
                       <Label htmlFor="productName">Product/Service Name *</Label>
@@ -457,10 +451,8 @@ export default function Products() {
                       </Button>
                     </div>
                   </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Search and Filters */}
           <div className="flex flex-wrap gap-4 mb-6">
@@ -577,7 +569,7 @@ export default function Products() {
                 <CardTitle>Product Categories ({categories.length})</CardTitle>
                 <CardDescription>Organize your products with categories for better management</CardDescription>
               </div>
-              <Button onClick={() => setIsAddCategoryDialogOpen(true)} variant="outline">
+              <Button onClick={() => setIsAddCategoryDialogOpen(true)} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
