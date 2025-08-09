@@ -330,6 +330,7 @@ export default function Products() {
       'cost',
       'type',
       'categoryId',
+      'categoryName',
       'status'
     ];
 
@@ -343,6 +344,7 @@ export default function Products() {
         product.cost || '',
         product.type || 'one_time',
         product.categoryId || '',
+        `"${product.categoryName?.replace(/"/g, '""') || ''}"`,
         product.status || 'active'
       ].join(','))
     ].join('\n');
@@ -401,6 +403,39 @@ export default function Products() {
     importProductsMutation.mutate(importFile);
   };
 
+  // Export category reference to CSV
+  const handleExportCategoryReference = () => {
+    if (categories.length === 0) {
+      toast({ variant: "destructive", title: "No Categories", description: "No categories available. Create some categories first." });
+      return;
+    }
+
+    // Define CSV headers for category reference
+    const headers = ['categoryId', 'categoryName'];
+
+    // Convert categories to CSV format
+    const csvContent = [
+      headers.join(','),
+      ...categories.map(category => [
+        category.id,
+        `"${category.name?.replace(/"/g, '""') || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `category-reference-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Success", description: `Downloaded category reference with ${categories.length} categories.` });
+  };
+
   // Filter and calculate stats
   const activeProducts = products.filter(p => p.status === 'active');
   const inactiveProducts = products.filter(p => p.status === 'inactive');
@@ -427,6 +462,10 @@ export default function Products() {
               <Button onClick={handleExportProducts} variant="outline" className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 Export CSV
+              </Button>
+              <Button onClick={handleExportCategoryReference} variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Category Reference
               </Button>
               <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
@@ -1040,10 +1079,21 @@ export default function Products() {
             <DialogHeader>
               <DialogTitle>Import Products from CSV</DialogTitle>
               <DialogDescription>
-                Upload a CSV file to import products. Use the Export CSV button first to see the expected format.
+                Upload a CSV file to import products. Use "Export CSV" to see the format, and "Category Reference" to get category IDs.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <h4 className="font-medium text-blue-900 mb-2">CSV Format Tips:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Required columns: name, price</li>
+                  <li>• For categories: use either "categoryId" (recommended) or "categoryName"</li>
+                  <li>• Download "Category Reference" to get the exact category IDs</li>
+                  <li>• Type options: "one_time" or "recurring"</li>
+                  <li>• Status options: "active" or "inactive"</li>
+                </ul>
+              </div>
+              
               <div>
                 <Label htmlFor="csvFile">CSV File</Label>
                 <Input
@@ -1054,7 +1104,7 @@ export default function Products() {
                   className="mt-1"
                 />
                 <p className="text-sm text-gray-500 mt-2">
-                  Expected columns: name, description, price, cost, type, categoryId, status
+                  Accepts CSV files up to 5MB
                 </p>
               </div>
               

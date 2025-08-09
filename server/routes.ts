@@ -1610,6 +1610,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get category reference for CSV import/export
+  app.get("/api/categories-reference", async (req, res) => {
+    try {
+      const categories = await db.select({
+        id: productCategories.id,
+        name: productCategories.name
+      }).from(productCategories).orderBy(asc(productCategories.name));
+      
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching categories reference:', error);
+      res.status(500).json({ message: "Failed to fetch categories reference" });
+    }
+  });
+
   // Products API with search and filtering
   app.get("/api/products", async (req, res) => {
     try {
@@ -1737,13 +1752,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 try {
                   // Validate and clean the data
+                  let categoryId = null;
+                  
+                  // Handle category: prefer categoryId, but also support categoryName
+                  if (row.categoryId?.trim()) {
+                    categoryId = row.categoryId.trim();
+                  } else if (row.categoryName?.trim()) {
+                    // Look up category by name
+                    const categoryByName = await db.select().from(productCategories).where(eq(productCategories.name, row.categoryName.trim())).limit(1);
+                    if (categoryByName.length > 0) {
+                      categoryId = categoryByName[0].id;
+                    } else {
+                      errors.push(`Row ${rowNum}: Category name '${row.categoryName.trim()}' not found`);
+                      continue;
+                    }
+                  }
+                  
                   const productData = {
                     name: row.name?.trim(),
                     description: row.description?.trim() || null,
                     price: row.price ? parseFloat(row.price.toString()) : 0,
                     cost: row.cost ? parseFloat(row.cost.toString()) || null : null,
                     type: row.type?.trim() || 'one_time',
-                    categoryId: row.categoryId?.trim() || null,
+                    categoryId: categoryId,
                     status: row.status?.trim() || 'active'
                   };
 
