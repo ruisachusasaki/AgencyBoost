@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical, ArrowLeft } from "lucide-react";
 import type { CustomField, CustomFieldFolder } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
@@ -370,11 +370,21 @@ export default function CustomFields() {
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Database className="h-8 w-8 text-primary" />
-            Custom Fields
-          </h1>
-          <p className="text-gray-600 mt-2">Create and manage custom fields for contacts and email templates</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Database className="h-8 w-8 text-primary" />
+                Custom Fields
+              </h1>
+              <p className="text-gray-600 mt-2">Create and manage custom fields for contacts and email templates</p>
+            </div>
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Settings</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Tabs */}

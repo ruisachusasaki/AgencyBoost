@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent, Download, Upload, ChevronUp, ChevronDown } from "lucide-react";
+import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent, Download, Upload, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import type { Product, ProductCategory } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -518,7 +519,13 @@ export default function Products() {
               <p className="text-gray-600 mt-2">Manage your products and services catalog with cost analysis</p>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
+              <Link href="/settings">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to Settings</span>
+                </Button>
+              </Link>
               <Button onClick={handleExportProducts} variant="outline" className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 Export CSV

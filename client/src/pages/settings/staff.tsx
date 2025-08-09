@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -224,6 +224,15 @@ export default function Staff() {
             Manage your team members and their access levels
           </p>
         </div>
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
+      </div>
+      
+      <div className="flex justify-end">
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>

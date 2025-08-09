@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 interface Integration {
   id: string;
@@ -158,11 +159,21 @@ export default function Integrations() {
     <div className="p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Plug className="h-8 w-8 text-primary" />
-            Integrations
-          </h1>
-          <p className="text-gray-600 mt-2">Connect external services and tools to streamline your workflow</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Plug className="h-8 w-8 text-primary" />
+                Integrations
+              </h1>
+              <p className="text-gray-600 mt-2">Connect external services and tools to streamline your workflow</p>
+            </div>
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Settings</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Summary Stats */}

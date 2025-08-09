@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Plus, Edit, Trash2, Users, Eye, Edit3, Trash, Settings } from "lucide-react";
+import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 interface Role {
   id: string;
@@ -198,18 +199,25 @@ export default function RolesPermissions() {
             <p className="text-gray-600 mt-2">Create custom roles and manage permissions</p>
           </div>
           
-          <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Role
+          <div className="flex items-center gap-3">
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Settings</span>
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
-              <DialogHeader>
-                <DialogTitle>Create Custom Role</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddRole} className="space-y-6">
+            </Link>
+            <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Role
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Create Custom Role</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddRole} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="roleName">Role Name *</Label>
@@ -249,19 +257,19 @@ export default function RolesPermissions() {
                       <div key={module} className="px-4 py-3 grid grid-cols-6 gap-4 items-center border-b">
                         <div className="font-medium">{module}</div>
                         <div className="text-center">
-                          <Switch size="sm" />
+                          <Switch />
                         </div>
                         <div className="text-center">
-                          <Switch size="sm" />
+                          <Switch />
                         </div>
                         <div className="text-center">
-                          <Switch size="sm" />
+                          <Switch />
                         </div>
                         <div className="text-center">
-                          <Switch size="sm" />
+                          <Switch />
                         </div>
                         <div className="text-center">
-                          {(module === "Settings" || module === "Users") && <Switch size="sm" />}
+                          {(module === "Settings" || module === "Users") && <Switch />}
                         </div>
                       </div>
                     ))}
@@ -278,7 +286,8 @@ export default function RolesPermissions() {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Summary Cards */}

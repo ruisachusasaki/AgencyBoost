@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Building, Upload } from "lucide-react";
+import { Building, Upload, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -74,11 +75,21 @@ export default function BusinessProfile() {
     <div className="p-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Building className="h-8 w-8 text-primary" />
-            Business Profile
-          </h1>
-          <p className="text-gray-600 mt-2">Manage your company information and branding</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Building className="h-8 w-8 text-primary" />
+                Business Profile
+              </h1>
+              <p className="text-gray-600 mt-2">Manage your company information and branding</p>
+            </div>
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Settings</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

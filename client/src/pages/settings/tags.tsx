@@ -43,8 +43,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTagSchema, type Tag, type InsertTag } from "@shared/schema";
+import { Link } from "wouter";
+import { ArrowLeft, Tag as TagIcon, Edit, Trash2, Plus, Search, Pencil, ChevronUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { TagIcon, Plus, Pencil, Trash2, Search, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 
 type SortField = 'name' | 'createdAt' | 'updatedAt';
@@ -292,9 +293,17 @@ export default function TagsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <TagIcon className="h-6 w-6 text-[#46a1a0]" />
-          <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TagIcon className="h-6 w-6 text-[#46a1a0]" />
+            <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
+          </div>
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Settings</span>
+            </Button>
+          </Link>
         </div>
         <p className="text-muted-foreground">
           Organize and categorize your clients with custom tags

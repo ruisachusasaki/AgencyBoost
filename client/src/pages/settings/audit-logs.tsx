@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ScrollText, Search, Filter, User, Calendar, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollText, Search, Filter, User, Calendar, Activity, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import type { AuditLog } from "@shared/schema";
 
 interface AuditLogDisplay extends AuditLog {
@@ -135,11 +137,21 @@ export default function AuditLogs() {
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <ScrollText className="h-8 w-8 text-primary" />
-            Audit Logs
-          </h1>
-          <p className="text-gray-600 mt-2">Track all system activity and changes</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <ScrollText className="h-8 w-8 text-primary" />
+                Audit Logs
+              </h1>
+              <p className="text-gray-600 mt-2">Track all system activity and changes</p>
+            </div>
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Settings</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}
