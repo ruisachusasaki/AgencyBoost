@@ -68,6 +68,11 @@ export default function Clients() {
   const getClientDisplayName = (client: Client) => {
     if (!client || !customFieldsData) return client?.name || "";
     
+    // Check if custom field values exist
+    if (!client.customFieldValues) {
+      return client.name || "";
+    }
+    
     // Find First Name and Last Name fields by exact name match
     const firstNameField = customFieldsData.find(field => 
       field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
@@ -94,6 +99,11 @@ export default function Clients() {
 
   const getBusinessDisplayName = (client: Client) => {
     if (!client || !customFieldsData) return client?.company || "";
+    
+    // Check if custom field values exist
+    if (!client.customFieldValues) {
+      return client.company || "";
+    }
     
     // Find Business Name field by exact name match
     const businessNameField = customFieldsData.find(field => 
