@@ -214,6 +214,51 @@ export default function Clients() {
     },
   });
 
+  // Apply filter to clients
+  const applyClientFilter = (clients: Client[], filter: ClientFilter): Client[] => {
+    if (filter.conditions.length === 0) return clients;
+
+    return clients.filter(client => {
+      const results = filter.conditions.map(condition => {
+        if (!condition.field || !condition.operator) return true;
+
+        const getValue = (field: string): string => {
+          switch (field) {
+            case 'name': return getClientDisplayName(client);
+            case 'company': return getBusinessDisplayName(client);
+            case 'email': return client.email || '';
+            case 'phone': return client.phone || '';
+            case 'city': return client.city || '';
+            case 'state': return client.state || '';
+            case 'status': return client.status || '';
+            case 'clientVertical': return client.clientVertical || '';
+            case 'contactOwner': return getContactOwnerName(client.contactOwner) || '';
+            case 'createdAt': return client.createdAt ? format(new Date(client.createdAt), 'yyyy-MM-dd') : '';
+            default: return '';
+          }
+        };
+
+        const fieldValue = getValue(condition.field).toLowerCase();
+        const searchValue = condition.value.toLowerCase();
+
+        switch (condition.operator) {
+          case 'contains': return fieldValue.includes(searchValue);
+          case 'equals': return fieldValue === searchValue;
+          case 'starts_with': return fieldValue.startsWith(searchValue);
+          case 'ends_with': return fieldValue.endsWith(searchValue);
+          case 'not_equals': return fieldValue !== searchValue;
+          case 'is_empty': return fieldValue === '';
+          case 'is_not_empty': return fieldValue !== '';
+          default: return true;
+        }
+      });
+
+      return filter.logic === 'AND' 
+        ? results.every(result => result)
+        : results.some(result => result);
+    });
+  };
+
   // Apply filtering and sorting to clients
   const filteredAndSortedClients = useMemo(() => {
     if (!clients || clients.length === 0) return clients;
@@ -414,51 +459,6 @@ export default function Clients() {
       ...prev,
       conditions: prev.conditions.filter((_, i) => i !== index)
     }));
-  };
-
-  // Apply filter to clients
-  const applyClientFilter = (clients: Client[], filter: ClientFilter): Client[] => {
-    if (filter.conditions.length === 0) return clients;
-
-    return clients.filter(client => {
-      const results = filter.conditions.map(condition => {
-        if (!condition.field || !condition.operator) return true;
-
-        const getValue = (field: string): string => {
-          switch (field) {
-            case 'name': return getClientDisplayName(client);
-            case 'company': return getBusinessDisplayName(client);
-            case 'email': return client.email || '';
-            case 'phone': return client.phone || '';
-            case 'city': return client.city || '';
-            case 'state': return client.state || '';
-            case 'status': return client.status || '';
-            case 'clientVertical': return client.clientVertical || '';
-            case 'contactOwner': return getContactOwnerName(client.contactOwner) || '';
-            case 'createdAt': return client.createdAt ? format(new Date(client.createdAt), 'yyyy-MM-dd') : '';
-            default: return '';
-          }
-        };
-
-        const fieldValue = getValue(condition.field).toLowerCase();
-        const searchValue = condition.value.toLowerCase();
-
-        switch (condition.operator) {
-          case 'contains': return fieldValue.includes(searchValue);
-          case 'equals': return fieldValue === searchValue;
-          case 'starts_with': return fieldValue.startsWith(searchValue);
-          case 'ends_with': return fieldValue.endsWith(searchValue);
-          case 'not_equals': return fieldValue !== searchValue;
-          case 'is_empty': return fieldValue === '';
-          case 'is_not_empty': return fieldValue !== '';
-          default: return true;
-        }
-      });
-
-      return filter.logic === 'AND' 
-        ? results.every(result => result)
-        : results.some(result => result);
-    });
   };
 
   // Save Smart List
