@@ -1721,23 +1721,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search, category, status } = req.query;
       
-      let queryBuilder = db.select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        cost: products.cost,
-        type: products.type,
-        categoryId: products.categoryId,
-        status: products.status,
-        usageCount: products.usageCount,
-        createdAt: products.createdAt,
-        updatedAt: products.updatedAt,
-        categoryName: productCategories.name
-      })
-      .from(products)
-      .leftJoin(productCategories, eq(products.categoryId, productCategories.id));
-
       const conditions = [];
       
       if (search && typeof search === 'string') {
@@ -1756,12 +1739,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status && typeof status === 'string') {
         conditions.push(eq(products.status, status));
       }
+
+      let baseQuery = db.select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        cost: products.cost,
+        type: products.type,
+        categoryId: products.categoryId,
+        status: products.status,
+        usageCount: products.usageCount,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
+        categoryName: productCategories.name
+      })
+      .from(products)
+      .leftJoin(productCategories, eq(products.categoryId, productCategories.id));
       
-      if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(and(...conditions));
-      }
-      
-      const result = await queryBuilder.orderBy(asc(products.name));
+      const result = conditions.length > 0 
+        ? await baseQuery.where(and(...conditions)).orderBy(asc(products.name))
+        : await baseQuery.orderBy(asc(products.name));
       res.json(result);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -1876,7 +1874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     continue;
                   }
 
-                  if (!productData.price || productData.price <= 0) {
+                  if (!productData.price || parseFloat(productData.price) <= 0) {
                     errors.push(`Row ${rowNum}: Valid price is required`);
                     continue;
                   }
