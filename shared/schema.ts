@@ -322,8 +322,9 @@ export const smartLists = pgTable("smart_lists", {
   description: text("description"),
   filters: jsonb("filters").notNull(), // JSON object containing filter criteria
   createdBy: varchar("created_by").notNull().references(() => users.id),
+  visibility: text("visibility").notNull().default("personal"), // personal, shared, universal
+  sharedWith: text("shared_with").array(), // Array of user IDs for shared lists
   isDefault: boolean("is_default").default(false),
-  isShared: boolean("is_shared").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1217,3 +1218,5 @@ export const insertNotificationSettingsSchema = createInsertSchema(notificationS
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
+
+// Smart Lists schema exports - remove duplicate and use existing one

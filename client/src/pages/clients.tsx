@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X, Share2, Globe, Lock, Database, Eye } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -37,8 +37,12 @@ interface SmartList {
   name: string;
   description?: string;
   filters: ClientFilter;
+  createdBy: string;
+  visibility: 'personal' | 'shared' | 'universal';
+  sharedWith?: string[];
   isDefault: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 interface Column {
@@ -101,6 +105,11 @@ export default function Clients() {
   const [smartListDescription, setSmartListDescription] = useState("");
   const [isSaveSmartListOpen, setIsSaveSmartListOpen] = useState(false);
   const [savedSmartLists, setSavedSmartLists] = useState<SmartList[]>([]);
+  const [activeTab, setActiveTab] = useState("all-clients");
+  const [isShareSmartListOpen, setIsShareSmartListOpen] = useState(false);
+  const [shareListId, setShareListId] = useState<string | null>(null);
+  const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
+  const [shareVisibility, setShareVisibility] = useState<'personal' | 'shared' | 'universal'>('personal');
 
   // Load saved Smart Lists on component mount
   React.useEffect(() => {
@@ -482,21 +491,117 @@ export default function Clients() {
   const handleLoadSmartList = (smartList: SmartList) => {
     setCurrentFilter(smartList.filters);
     setActiveSmartList(smartList.id);
+    setActiveTab(smartList.id);
     toast({
       title: "Smart List Applied",
       description: `Applied "${smartList.name}" filter.`
     });
   };
 
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    if (tabId === "all-clients") {
+      setActiveSmartList(null);
+      setCurrentFilter({ conditions: [], logic: 'AND' });
+    } else {
+      const smartList = getVisibleSmartLists().find(list => list.id === tabId);
+      if (smartList) {
+        setCurrentFilter(smartList.filters);
+        setActiveSmartList(smartList.id);
+      }
+    }
+  };
+
+  // Filter Smart Lists based on user permissions
+  const getVisibleSmartLists = () => {
+    const currentUserId = currentUser?.id || 'current-user';
+    return savedSmartLists.filter(list => {
+      // Personal lists - only visible to creator
+      if (list.visibility === 'personal') {
+        return list.createdBy === currentUserId;
+      }
+      // Shared lists - visible to creator and shared users
+      if (list.visibility === 'shared') {
+        return list.createdBy === currentUserId || 
+               (list.sharedWith && list.sharedWith.includes(currentUserId));
+      }
+      // Universal lists - visible to everyone
+      if (list.visibility === 'universal') {
+        return true;
+      }
+      return false;
+    });
+  };
+
+  // Share a Smart List
+  const handleShareSmartList = (smartListId: string) => {
+    const smartList = savedSmartLists.find(list => list.id === smartListId);
+    if (smartList && smartList.createdBy === (currentUser?.id || 'current-user')) {
+      setShareListId(smartListId);
+      setShareVisibility(smartList.visibility);
+      setShareWithUsers(smartList.sharedWith || []);
+      setIsShareSmartListOpen(true);
+    }
+  };
+
+  // Update Smart List sharing
+  const handleUpdateSharing = () => {
+    if (!shareListId) return;
+    try {
+      const updatedLists = savedSmartLists.map(list => {
+        if (list.id === shareListId) {
+          return {
+            ...list,
+            visibility: shareVisibility,
+            sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined,
+            updatedAt: new Date()
+          };
+        }
+        return list;
+      });
+      
+      setSavedSmartLists(updatedLists);
+      localStorage.setItem('smartLists', JSON.stringify(updatedLists));
+      
+      toast({
+        title: "Sharing Updated",
+        description: "Smart List sharing settings updated successfully."
+      });
+      
+      setIsShareSmartListOpen(false);
+      setShareListId(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update sharing settings.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Delete a Smart List
   const handleDeleteSmartList = (smartListId: string) => {
     try {
+      const smartList = savedSmartLists.find(list => list.id === smartListId);
+      const currentUserId = currentUser?.id || 'current-user';
+      
+      // Only allow deletion if user is the creator
+      if (smartList?.createdBy !== currentUserId) {
+        toast({
+          title: "Permission Denied",
+          description: "You can only delete Smart Lists you created.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const updatedLists = savedSmartLists.filter(list => list.id !== smartListId);
       setSavedSmartLists(updatedLists);
       localStorage.setItem('smartLists', JSON.stringify(updatedLists));
       
       if (activeSmartList === smartListId) {
         setActiveSmartList(null);
+        setActiveTab("all-clients");
         setCurrentFilter({ conditions: [], logic: 'AND' });
       }
 
@@ -521,8 +626,12 @@ export default function Clients() {
         name: smartListName,
         description: smartListDescription,
         filters: currentFilter,
+        createdBy: currentUser?.id || 'current-user',
+        visibility: shareVisibility,
+        sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined,
         isDefault: false,
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
       const updatedLists = [...savedSmartLists, smartList];
@@ -536,6 +645,8 @@ export default function Clients() {
 
       setSmartListName('');
       setSmartListDescription('');
+      setShareVisibility('personal');
+      setShareWithUsers([]);
       setIsSaveSmartListOpen(false);
     } catch (error) {
       toast({
@@ -716,6 +827,66 @@ export default function Clients() {
           <Plus className="h-4 w-4 mr-2" />
           Add Client
         </Button>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          {[
+            { id: "all-clients", name: "All Clients", icon: Database, count: clients.length },
+            ...getVisibleSmartLists().map(smartList => ({
+              id: smartList.id,
+              name: smartList.name,
+              icon: smartList.visibility === 'personal' ? Lock : 
+                    smartList.visibility === 'shared' ? Share2 : Globe,
+              count: filteredAndSortedClients.length,
+              smartList: smartList
+            }))
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <div key={tab.id} className="flex items-center">
+                <button
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-[#46a1a0] text-[#46a1a0]"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.name} ({tab.count})
+                </button>
+                {'smartList' in tab && tab.smartList.createdBy === (currentUser?.id || 'current-user') && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                        <MoreHorizontal className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => 'smartList' in tab && handleShareSmartList(tab.smartList.id)}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          if ('smartList' in tab && confirm(`Delete "${tab.smartList.name}"?`)) {
+                            handleDeleteSmartList(tab.smartList.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Search, Import/Export, and Column Management */}
@@ -1123,14 +1294,14 @@ export default function Clients() {
 
       {/* Save Smart List Dialog */}
       <Dialog open={isSaveSmartListOpen} onOpenChange={setIsSaveSmartListOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Save Smart List</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Name</label>
+              <label className="text-sm font-medium">Name *</label>
               <Input
                 placeholder="Enter smart list name"
                 value={smartListName}
@@ -1147,20 +1318,233 @@ export default function Clients() {
               />
             </div>
 
-            <div className="text-sm text-slate-600">
-              This will save your current filter conditions for easy reuse.
+            {/* Visibility Settings */}
+            <div>
+              <label className="text-sm font-medium mb-3 block">Visibility</label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="personal"
+                    name="visibility"
+                    value="personal"
+                    checked={shareVisibility === 'personal'}
+                    onChange={(e) => setShareVisibility(e.target.value as 'personal' | 'shared' | 'universal')}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="personal" className="flex items-center text-sm">
+                    <Lock className="h-4 w-4 mr-2 text-gray-500" />
+                    Personal - Only visible to you
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="shared"
+                    name="visibility"
+                    value="shared"
+                    checked={shareVisibility === 'shared'}
+                    onChange={(e) => setShareVisibility(e.target.value as 'personal' | 'shared' | 'universal')}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="shared" className="flex items-center text-sm">
+                    <Share2 className="h-4 w-4 mr-2 text-gray-500" />
+                    Shared - Visible to specific users
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="universal"
+                    name="visibility"
+                    value="universal"
+                    checked={shareVisibility === 'universal'}
+                    onChange={(e) => setShareVisibility(e.target.value as 'personal' | 'shared' | 'universal')}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="universal" className="flex items-center text-sm">
+                    <Globe className="h-4 w-4 mr-2 text-gray-500" />
+                    Universal - Visible to all users
+                  </label>
+                </div>
+              </div>
             </div>
+
+            {shareVisibility === 'shared' && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Share with specific users
+                </label>
+                <div className="text-xs text-gray-600 mb-2">
+                  Select staff members who can access this Smart List
+                </div>
+                <div className="max-h-32 overflow-y-auto border rounded p-2 space-y-2">
+                  {staff.map((staffMember) => (
+                    <div key={staffMember.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`staff-${staffMember.id}`}
+                        checked={shareWithUsers.includes(staffMember.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setShareWithUsers([...shareWithUsers, staffMember.id]);
+                          } else {
+                            setShareWithUsers(shareWithUsers.filter(id => id !== staffMember.id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`staff-${staffMember.id}`} className="text-sm">
+                        {staffMember.firstName} {staffMember.lastName}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsSaveSmartListOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsSaveSmartListOpen(false);
+                  setSmartListName('');
+                  setSmartListDescription('');
+                  setShareVisibility('personal');
+                  setShareWithUsers([]);
+                }}
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleSaveSmartList}
-                disabled={!smartListName.trim()}
+                disabled={!smartListName.trim() || (shareVisibility === 'shared' && shareWithUsers.length === 0)}
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Smart List
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Smart List Dialog */}
+      <Dialog open={isShareSmartListOpen} onOpenChange={setIsShareSmartListOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Smart List</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {shareListId && (
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-sm font-medium text-blue-800">
+                  {savedSmartLists.find(list => list.id === shareListId)?.name}
+                </div>
+                <div className="text-xs text-blue-600">
+                  {savedSmartLists.find(list => list.id === shareListId)?.description}
+                </div>
+              </div>
+            )}
+
+            {/* Visibility Settings */}
+            <div>
+              <label className="text-sm font-medium mb-3 block">Visibility Settings</label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="share-personal"
+                    name="share-visibility"
+                    value="personal"
+                    checked={shareVisibility === 'personal'}
+                    onChange={(e) => setShareVisibility(e.target.value as 'personal' | 'shared' | 'universal')}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="share-personal" className="flex items-center text-sm">
+                    <Lock className="h-4 w-4 mr-2 text-gray-500" />
+                    Personal - Only visible to you
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="share-shared"
+                    name="share-visibility"
+                    value="shared"
+                    checked={shareVisibility === 'shared'}
+                    onChange={(e) => setShareVisibility(e.target.value as 'personal' | 'shared' | 'universal')}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="share-shared" className="flex items-center text-sm">
+                    <Share2 className="h-4 w-4 mr-2 text-gray-500" />
+                    Shared - Visible to specific users
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="share-universal"
+                    name="share-visibility"
+                    value="universal"
+                    checked={shareVisibility === 'universal'}
+                    onChange={(e) => setShareVisibility(e.target.value as 'personal' | 'shared' | 'universal')}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="share-universal" className="flex items-center text-sm">
+                    <Globe className="h-4 w-4 mr-2 text-gray-500" />
+                    Universal - Visible to all users
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {shareVisibility === 'shared' && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Share with specific users
+                </label>
+                <div className="text-xs text-gray-600 mb-2">
+                  Select staff members who can access this Smart List
+                </div>
+                <div className="max-h-32 overflow-y-auto border rounded p-2 space-y-2">
+                  {staff.map((staffMember) => (
+                    <div key={staffMember.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`share-staff-${staffMember.id}`}
+                        checked={shareWithUsers.includes(staffMember.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setShareWithUsers([...shareWithUsers, staffMember.id]);
+                          } else {
+                            setShareWithUsers(shareWithUsers.filter(id => id !== staffMember.id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`share-staff-${staffMember.id}`} className="text-sm">
+                        {staffMember.firstName} {staffMember.lastName}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsShareSmartListOpen(false);
+                  setShareListId(null);
+                  setShareWithUsers([]);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateSharing}
+                disabled={shareVisibility === 'shared' && shareWithUsers.length === 0}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Update Sharing
               </Button>
             </div>
           </div>
