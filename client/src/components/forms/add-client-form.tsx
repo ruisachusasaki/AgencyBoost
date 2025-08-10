@@ -69,7 +69,7 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
     resolver: zodResolver(addClientFormSchema),
     defaultValues: {
       status: "active",
-      contactOwner: "",
+      contactOwner: "none",
       tags: [],
       customFieldValues: {},
     },
@@ -79,7 +79,7 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
   useEffect(() => {
     const resetData = {
       status: "active" as const,
-      contactOwner: "",
+      contactOwner: "none",
       tags: [] as string[],
       customFieldValues: {} as Record<string, string>,
     };
@@ -110,7 +110,7 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
         state: customFieldValues[fieldMap["State"]] || "",
         website: customFieldValues[fieldMap["Website"]] || "",
         clientVertical: customFieldValues[fieldMap["Client Vertical"]] || "",
-        contactOwner: data.contactOwner || null,
+        contactOwner: data.contactOwner === "none" ? null : data.contactOwner || null,
         tags: data.tags,
         customFieldValues: customFieldValues,
         // Set other fields to null/default values
@@ -153,7 +153,7 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
       // Reset form to completely empty state
       form.reset({
         status: "active",
-        contactOwner: "",
+        contactOwner: "none",
         tags: [],
         customFieldValues: {},
       });
@@ -294,7 +294,7 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
                       <SelectValue placeholder="Select contact owner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {staff.map((staffMember) => (
                         <SelectItem key={staffMember.id} value={staffMember.id}>
                           {staffMember.firstName} {staffMember.lastName}
