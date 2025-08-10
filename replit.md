@@ -3,6 +3,9 @@
 ## Overview
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system designed specifically for marketing agencies. Its primary purpose is to provide a complete solution for managing clients, projects, campaigns, leads, tasks, and invoices. It includes integrated reporting capabilities and offers a responsive interface for tracking business operations and campaign performance, leveraging modern web technologies.
 
+## Recent Changes (August 2025)
+- **Smart Lists Enhancement**: Implemented comprehensive tab-based Smart Lists interface with advanced permission system, supporting personal, shared, and universal visibility levels with multi-user collaboration capabilities.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
@@ -64,6 +67,7 @@ Preferred communication style: Simple, everyday language.
 - **Staff Management**: Full CRUD operations for staff, including profile image uploads and advanced fields.
 - **Settings Management**: A comprehensive settings section with 10 specialized configuration areas: Business Profile, My Profile, Staff, Support, Roles & Permissions, Integrations, Custom Fields, Tags, Products, and Audit Logs.
 - **Campaign Template Management**: WYSIWYG editor for email and SMS templates, with folder organization and dynamic merge tags.
+- **Smart Lists System**: Advanced filtering with tab-based interface similar to Custom Fields page, featuring comprehensive permission system (personal, shared, universal visibility), multi-user collaboration with staff selection, visual indicators for list types, and automatic migration of legacy data.
 
 ## External Dependencies
 
