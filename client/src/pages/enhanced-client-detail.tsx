@@ -402,24 +402,27 @@ export default function EnhancedClientDetail() {
 
   // Update sections when custom field folders are loaded
   useEffect(() => {
-    if (customFieldFoldersData) {
-      const newSections: Section[] = [
-        { id: "contact-details", name: "Contact Details", isOpen: true }
-      ];
+    if (customFieldFoldersData && customFieldsData) {
+      const newSections: Section[] = [];
       
-      // Sort folders by order and add as sections
+      // Sort folders by order and add as sections only if they have fields
       const sortedFolders = [...customFieldFoldersData].sort((a, b) => (a.order || 0) - (b.order || 0));
       sortedFolders.forEach(folder => {
-        newSections.push({
-          id: folder.name.toLowerCase().replace(/\s+/g, '-'),
-          name: folder.name,
-          isOpen: false
-        });
+        // Check if this folder has any fields
+        const folderHasFields = customFieldsData.some(field => field.folderId === folder.id);
+        
+        if (folderHasFields) {
+          newSections.push({
+            id: folder.name.toLowerCase().replace(/\s+/g, '-'),
+            name: folder.name,
+            isOpen: true  // Open by default since these are the only sections
+          });
+        }
       });
       
       setSections(newSections);
     }
-  }, [customFieldFoldersData]);
+  }, [customFieldFoldersData, customFieldsData]);
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
@@ -633,203 +636,45 @@ export default function EnhancedClientDetail() {
               
               {isSectionOpen(section.id) && (
                 <div className="px-4 pb-4 overflow-x-hidden" style={{ wordWrap: 'break-word' }}>
-                  {section.id === "contact-details" ? (
-                    <div className="space-y-4 text-sm">
-                      <EditableField
-                        fieldId="name"
-                        label="Name"
-                        value={client.name}
-                        type="text"
-                        isCustomField={false}
-                        required={true}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="company"
-                        label="Company"
-                        value={client.company}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="position"
-                        label="Position"
-                        value={client.position}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="email"
-                        label="Email"
-                        value={client.email}
-                        type="email"
-                        isCustomField={false}
-                        className="text-[#46a1a0]"
-                        required={true}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="phone"
-                        label="Phone"
-                        value={client.phone}
-                        type="phone"
-                        isCustomField={false}
-                        className="text-[#46a1a0]"
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="address"
-                        label="Address"
-                        value={client.address}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="address2"
-                        label="Address 2 (Apt/Suite)"
-                        value={client.address2}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="city"
-                        label="City"
-                        value={client.city}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="state"
-                        label="State"
-                        value={client.state}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="zipCode"
-                        label="Zip Code"
-                        value={client.zipCode}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="website"
-                        label="Website"
-                        value={client.website}
-                        type="url"
-                        isCustomField={false}
-                        className="text-[#46a1a0]"
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="clientVertical"
-                        label="Client Vertical"
-                        value={client.clientVertical}
-                        type="dropdown"
-                        isCustomField={false}
-                        options={["Live Events", "Financial Lead Gen", "E-commerce", "SaaS", "Healthcare", "Real Estate", "Other"]}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="status"
-                        label="Contact Status"
-                        value={client.status}
-                        type="dropdown"
-                        isCustomField={false}
-                        options={["active", "inactive", "pending"]}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="contactSource"
-                        label="Contact Source"
-                        value={client.contactSource}
-                        type="dropdown"
-                        isCustomField={false}
-                        options={["Website", "Referral", "Social Media", "Advertising", "Cold Outreach", "Event", "Other"]}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="contactType"
-                        label="Contact Type"
-                        value={client.contactType}
-                        type="dropdown"
-                        isCustomField={false}
-                        options={["lead", "client", "prospect"]}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="notes"
-                        label="Notes"
-                        value={client.notes}
-                        type="textarea"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                    </div>
-                  ) : (
-                    // Custom Field Folder Content
-                    (() => {
-                      // Find the current folder data
-                      const currentFolder = customFieldFoldersData?.find(
-                        folder => folder.name.toLowerCase().replace(/\s+/g, '-') === section.id
-                      );
-                      
-                      // Get custom fields for this folder, sorted by order
-                      const folderFields = (customFieldsData?.filter(
-                        field => field.folderId === currentFolder?.id
-                      ) || []).sort((a, b) => {
-                        const aOrder = (a as any).order || 0;
-                        const bOrder = (b as any).order || 0;
-                        return aOrder - bOrder;
-                      });
+                  {(() => {
+                    // Find the current folder data
+                    const currentFolder = customFieldFoldersData?.find(
+                      folder => folder.name.toLowerCase().replace(/\s+/g, '-') === section.id
+                    );
+                    
+                    // Get custom fields for this folder, sorted by order
+                    const folderFields = (customFieldsData?.filter(
+                      field => field.folderId === currentFolder?.id
+                    ) || []).sort((a, b) => {
+                      const aOrder = (a as any).order || 0;
+                      const bOrder = (b as any).order || 0;
+                      return aOrder - bOrder;
+                    });
 
-                      if (folderFields.length === 0) {
-                        return (
-                          <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
-                            <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                            <h3 className="text-lg font-medium text-slate-900 mb-2">No Custom Fields</h3>
-                            <p className="text-slate-600 mb-4">
-                              No custom fields have been added to this folder yet.
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              Admins can add custom fields to this folder in Settings → Custom Fields.
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className="space-y-4 text-sm">
-                          {folderFields.map((field) => {
-                            // Get the field value from client custom field values (if exists)
-                            const fieldValue = (client?.customFieldValues as Record<string, any>)?.[field.id] || "";
-                            
-                            return (
-                              <EditableField
-                                key={field.id}
-                                fieldId={field.id}
-                                label={field.name}
-                                value={fieldValue}
-                                type={field.type}
-                                isCustomField={true}
-                                required={field.required}
-                                options={field.options}
-                                className={field.type === 'email' || field.type === 'url' ? "text-[#46a1a0]" : undefined}
-                                {...editableFieldProps}
-                              />
-                            );
-                          })}
-                        </div>
-                      );
-                    })()
-                  )}
+                    return (
+                      <div className="space-y-4 text-sm">
+                        {folderFields.map((field) => {
+                          // Get the field value from client custom field values (if exists)
+                          const fieldValue = (client?.customFieldValues as Record<string, any>)?.[field.id] || "";
+                          
+                          return (
+                            <EditableField
+                              key={field.id}
+                              fieldId={field.id}
+                              label={field.name}
+                              value={fieldValue}
+                              type={field.type}
+                              isCustomField={true}
+                              required={field.required}
+                              options={field.options}
+                              className={field.type === 'email' || field.type === 'url' ? "text-[#46a1a0]" : undefined}
+                              {...editableFieldProps}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
