@@ -384,6 +384,55 @@ export default function EnhancedClientDetail() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
 
+  // Helper functions to get dynamic names from custom fields
+  const getClientDisplayName = () => {
+    if (!client || !customFieldsData) return client?.name || "";
+    
+    // Find First Name and Last Name fields by name
+    const firstNameField = customFieldsData.find(field => 
+      field.name.toLowerCase() === 'first name' || field.name.toLowerCase() === 'firstname'
+    );
+    const lastNameField = customFieldsData.find(field => 
+      field.name.toLowerCase() === 'last name' || field.name.toLowerCase() === 'lastname'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
+    const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
+    
+    // If we have both first and last name from custom fields, use them
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`.trim();
+    }
+    // If we only have first name, use it
+    if (firstName) {
+      return firstName;
+    }
+    // Otherwise fall back to database name
+    return client.name || "";
+  };
+
+  const getBusinessDisplayName = () => {
+    if (!client || !customFieldsData) return client?.company || "";
+    
+    // Find Business Name field by name
+    const businessNameField = customFieldsData.find(field => 
+      field.name.toLowerCase() === 'business name' || 
+      field.name.toLowerCase() === 'company name' ||
+      field.name.toLowerCase() === 'businessname'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
+    
+    // If we have business name from custom fields, use it
+    if (businessName) {
+      return businessName;
+    }
+    // Otherwise fall back to database company
+    return client.company || "";
+  };
+
   // Fetch client data
   const { data: client, isLoading, error } = useQuery<Client>({
     queryKey: ['/api/clients', clientId],
@@ -606,8 +655,8 @@ export default function EnhancedClientDetail() {
               <User className="h-6 w-6 text-[#46a1a0]" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">{client.name}</h1>
-              <p className="text-sm text-gray-600">{client.company}</p>
+              <h1 className="text-lg font-semibold text-gray-900">{getClientDisplayName()}</h1>
+              <p className="text-sm text-gray-600">{getBusinessDisplayName()}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -687,7 +736,7 @@ export default function EnhancedClientDetail() {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{getClientDisplayName()}</h1>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-[#46a1a0] border-[#46a1a0]">
                 {client.status}
