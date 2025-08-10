@@ -1,5 +1,5 @@
 import { 
-  type Client, type InsertClient,
+  type Client, type InsertClient, clients,
   type Project, type InsertProject,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
@@ -41,6 +41,8 @@ import {
   type NotificationSettings, type InsertNotificationSettings
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -2313,4 +2315,264 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation using PostgreSQL
+
+class DbStorage implements IStorage {
+  // Clients
+  async getClients(): Promise<Client[]> {
+    return await db.select().from(clients);
+  }
+
+  async getClient(id: string): Promise<Client | undefined> {
+    const result = await db.select().from(clients).where(eq(clients.id, id));
+    return result[0];
+  }
+
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    const id = randomUUID();
+    const now = new Date();
+    const client: Client = { 
+      id,
+      ...insertClient,
+      createdAt: now,
+    };
+    
+    await db.insert(clients).values(client);
+    return client;
+  }
+
+  async updateClient(id: string, clientData: Partial<InsertClient>): Promise<Client | undefined> {
+    const result = await db.update(clients)
+      .set(clientData)
+      .where(eq(clients.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    const result = await db.delete(clients).where(eq(clients.id, id));
+    return true;
+  }
+
+  // For now, delegate other methods to memory storage until we need them
+  // This allows the system to work while we migrate clients to database
+  private memStorage = new MemStorage();
+
+  // Projects
+  async getProjects(): Promise<Project[]> { return this.memStorage.getProjects(); }
+  async getProject(id: string): Promise<Project | undefined> { return this.memStorage.getProject(id); }
+  async getProjectsByClient(clientId: string): Promise<Project[]> { return this.memStorage.getProjectsByClient(clientId); }
+  async createProject(project: InsertProject): Promise<Project> { return this.memStorage.createProject(project); }
+  async updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined> { return this.memStorage.updateProject(id, project); }
+  async deleteProject(id: string): Promise<boolean> { return this.memStorage.deleteProject(id); }
+
+  // Campaigns  
+  async getCampaigns(): Promise<Campaign[]> { return this.memStorage.getCampaigns(); }
+  async getCampaign(id: string): Promise<Campaign | undefined> { return this.memStorage.getCampaign(id); }
+  async getCampaignsByClient(clientId: string): Promise<Campaign[]> { return this.memStorage.getCampaignsByClient(clientId); }
+  async getCampaignsByProject(projectId: string): Promise<Campaign[]> { return this.memStorage.getCampaignsByProject(projectId); }
+  async createCampaign(campaign: InsertCampaign): Promise<Campaign> { return this.memStorage.createCampaign(campaign); }
+  async updateCampaign(id: string, campaign: Partial<InsertCampaign>): Promise<Campaign | undefined> { return this.memStorage.updateCampaign(id, campaign); }
+  async deleteCampaign(id: string): Promise<boolean> { return this.memStorage.deleteCampaign(id); }
+
+  // Leads
+  async getLeads(): Promise<Lead[]> { return this.memStorage.getLeads(); }
+  async getLead(id: string): Promise<Lead | undefined> { return this.memStorage.getLead(id); }
+  async createLead(lead: InsertLead): Promise<Lead> { return this.memStorage.createLead(lead); }
+  async updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined> { return this.memStorage.updateLead(id, lead); }
+  async deleteLead(id: string): Promise<boolean> { return this.memStorage.deleteLead(id); }
+
+  // Tasks
+  async getTasks(): Promise<Task[]> { return this.memStorage.getTasks(); }
+  async getTask(id: string): Promise<Task | undefined> { return this.memStorage.getTask(id); }
+  async getTasksByClient(clientId: string): Promise<Task[]> { return this.memStorage.getTasksByClient(clientId); }
+  async getTasksByProject(projectId: string): Promise<Task[]> { return this.memStorage.getTasksByProject(projectId); }
+  async createTask(task: InsertTask): Promise<Task> { return this.memStorage.createTask(task); }
+  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
+  async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }
+
+  // Invoices  
+  async getInvoices(): Promise<Invoice[]> { return this.memStorage.getInvoices(); }
+  async getInvoice(id: string): Promise<Invoice | undefined> { return this.memStorage.getInvoice(id); }
+  async getInvoicesByClient(clientId: string): Promise<Invoice[]> { return this.memStorage.getInvoicesByClient(clientId); }
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> { return this.memStorage.createInvoice(invoice); }
+  async updateInvoice(id: string, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined> { return this.memStorage.updateInvoice(id, invoice); }
+  async deleteInvoice(id: string): Promise<boolean> { return this.memStorage.deleteInvoice(id); }
+
+  // Social Media
+  async getSocialMediaAccounts(): Promise<SocialMediaAccount[]> { return this.memStorage.getSocialMediaAccounts(); }
+  async getSocialMediaAccount(id: string): Promise<SocialMediaAccount | undefined> { return this.memStorage.getSocialMediaAccount(id); }
+  async getSocialMediaAccountsByClient(clientId: string): Promise<SocialMediaAccount[]> { return this.memStorage.getSocialMediaAccountsByClient(clientId); }
+  async createSocialMediaAccount(account: InsertSocialMediaAccount): Promise<SocialMediaAccount> { return this.memStorage.createSocialMediaAccount(account); }
+  async updateSocialMediaAccount(id: string, account: Partial<InsertSocialMediaAccount>): Promise<SocialMediaAccount | undefined> { return this.memStorage.updateSocialMediaAccount(id, account); }
+  async deleteSocialMediaAccount(id: string): Promise<boolean> { return this.memStorage.deleteSocialMediaAccount(id); }
+
+  async getSocialMediaPosts(): Promise<SocialMediaPost[]> { return this.memStorage.getSocialMediaPosts(); }
+  async getSocialMediaPost(id: string): Promise<SocialMediaPost | undefined> { return this.memStorage.getSocialMediaPost(id); }
+  async getSocialMediaPostsByAccount(accountId: string): Promise<SocialMediaPost[]> { return this.memStorage.getSocialMediaPostsByAccount(accountId); }
+  async createSocialMediaPost(post: InsertSocialMediaPost): Promise<SocialMediaPost> { return this.memStorage.createSocialMediaPost(post); }
+  async updateSocialMediaPost(id: string, post: Partial<InsertSocialMediaPost>): Promise<SocialMediaPost | undefined> { return this.memStorage.updateSocialMediaPost(id, post); }
+  async deleteSocialMediaPost(id: string): Promise<boolean> { return this.memStorage.deleteSocialMediaPost(id); }
+
+  async getSocialMediaTemplates(): Promise<SocialMediaTemplate[]> { return this.memStorage.getSocialMediaTemplates(); }
+  async getSocialMediaTemplate(id: string): Promise<SocialMediaTemplate | undefined> { return this.memStorage.getSocialMediaTemplate(id); }
+  async createSocialMediaTemplate(template: InsertSocialMediaTemplate): Promise<SocialMediaTemplate> { return this.memStorage.createSocialMediaTemplate(template); }
+  async updateSocialMediaTemplate(id: string, template: Partial<InsertSocialMediaTemplate>): Promise<SocialMediaTemplate | undefined> { return this.memStorage.updateSocialMediaTemplate(id, template); }
+  async deleteSocialMediaTemplate(id: string): Promise<boolean> { return this.memStorage.deleteSocialMediaTemplate(id); }
+
+  async getSocialMediaAnalytics(): Promise<SocialMediaAnalytics[]> { return this.memStorage.getSocialMediaAnalytics(); }
+  async getSocialMediaAnalytic(id: string): Promise<SocialMediaAnalytics | undefined> { return this.memStorage.getSocialMediaAnalytic(id); }
+  async getSocialMediaAnalyticsByAccount(accountId: string): Promise<SocialMediaAnalytics[]> { return this.memStorage.getSocialMediaAnalyticsByAccount(accountId); }
+  async createSocialMediaAnalytics(analytics: InsertSocialMediaAnalytics): Promise<SocialMediaAnalytics> { return this.memStorage.createSocialMediaAnalytics(analytics); }
+  async updateSocialMediaAnalytics(id: string, analytics: Partial<InsertSocialMediaAnalytics>): Promise<SocialMediaAnalytics | undefined> { return this.memStorage.updateSocialMediaAnalytics(id, analytics); }
+  async deleteSocialMediaAnalytics(id: string): Promise<boolean> { return this.memStorage.deleteSocialMediaAnalytics(id); }
+
+  // Workflows
+  async getWorkflows(): Promise<Workflow[]> { return this.memStorage.getWorkflows(); }
+  async getWorkflow(id: string): Promise<Workflow | undefined> { return this.memStorage.getWorkflow(id); }
+  async createWorkflow(workflow: InsertWorkflow): Promise<Workflow> { return this.memStorage.createWorkflow(workflow); }
+  async updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined> { return this.memStorage.updateWorkflow(id, workflow); }
+  async deleteWorkflow(id: string): Promise<boolean> { return this.memStorage.deleteWorkflow(id); }
+
+  async getWorkflowExecutions(): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutions(); }
+  async getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined> { return this.memStorage.getWorkflowExecution(id); }
+  async getWorkflowExecutionsByWorkflow(workflowId: string): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutionsByWorkflow(workflowId); }
+  async createWorkflowExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution> { return this.memStorage.createWorkflowExecution(execution); }
+  async updateWorkflowExecution(id: string, execution: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> { return this.memStorage.updateWorkflowExecution(id, execution); }
+  async deleteWorkflowExecution(id: string): Promise<boolean> { return this.memStorage.deleteWorkflowExecution(id); }
+
+  async getWorkflowTemplates(): Promise<WorkflowTemplate[]> { return this.memStorage.getWorkflowTemplates(); }
+  async getWorkflowTemplate(id: string): Promise<WorkflowTemplate | undefined> { return this.memStorage.getWorkflowTemplate(id); }
+  async createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate> { return this.memStorage.createWorkflowTemplate(template); }
+  async updateWorkflowTemplate(id: string, template: Partial<InsertWorkflowTemplate>): Promise<WorkflowTemplate | undefined> { return this.memStorage.updateWorkflowTemplate(id, template); }
+  async deleteWorkflowTemplate(id: string): Promise<boolean> { return this.memStorage.deleteWorkflowTemplate(id); }
+
+  // Task Categories
+  async getTaskCategories(): Promise<TaskCategory[]> { return this.memStorage.getTaskCategories(); }
+  async getTaskCategory(id: string): Promise<TaskCategory | undefined> { return this.memStorage.getTaskCategory(id); }
+  async createTaskCategory(category: InsertTaskCategory): Promise<TaskCategory> { return this.memStorage.createTaskCategory(category); }
+  async updateTaskCategory(id: string, category: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined> { return this.memStorage.updateTaskCategory(id, category); }
+  async deleteTaskCategory(id: string): Promise<boolean> { return this.memStorage.deleteTaskCategory(id); }
+
+  // Enhanced Tasks  
+  async getEnhancedTasks(): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasks(); }
+  async getEnhancedTask(id: string): Promise<EnhancedTask | undefined> { return this.memStorage.getEnhancedTask(id); }
+  async getEnhancedTasksByCategory(categoryId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByCategory(categoryId); }
+  async getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByProject(projectId); }
+  async createEnhancedTask(task: InsertEnhancedTask): Promise<EnhancedTask> { return this.memStorage.createEnhancedTask(task); }
+  async updateEnhancedTask(id: string, task: Partial<InsertEnhancedTask>): Promise<EnhancedTask | undefined> { return this.memStorage.updateEnhancedTask(id, task); }
+  async deleteEnhancedTask(id: string): Promise<boolean> { return this.memStorage.deleteEnhancedTask(id); }
+
+  // Task History
+  async getTaskHistories(): Promise<TaskHistory[]> { return this.memStorage.getTaskHistories(); }
+  async getTaskHistory(id: string): Promise<TaskHistory | undefined> { return this.memStorage.getTaskHistory(id); }
+  async getTaskHistoriesByTask(taskId: string): Promise<TaskHistory[]> { return this.memStorage.getTaskHistoriesByTask(taskId); }
+  async createTaskHistory(history: InsertTaskHistory): Promise<TaskHistory> { return this.memStorage.createTaskHistory(history); }
+
+  // Automation
+  async getAutomationTriggers(): Promise<AutomationTrigger[]> { return this.memStorage.getAutomationTriggers(); }
+  async getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined> { return this.memStorage.getAutomationTrigger(id); }
+  async createAutomationTrigger(trigger: InsertAutomationTrigger): Promise<AutomationTrigger> { return this.memStorage.createAutomationTrigger(trigger); }
+  async updateAutomationTrigger(id: string, trigger: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined> { return this.memStorage.updateAutomationTrigger(id, trigger); }
+  async deleteAutomationTrigger(id: string): Promise<boolean> { return this.memStorage.deleteAutomationTrigger(id); }
+
+  async getAutomationActions(): Promise<AutomationAction[]> { return this.memStorage.getAutomationActions(); }
+  async getAutomationAction(id: string): Promise<AutomationAction | undefined> { return this.memStorage.getAutomationAction(id); }
+  async createAutomationAction(action: InsertAutomationAction): Promise<AutomationAction> { return this.memStorage.createAutomationAction(action); }
+  async updateAutomationAction(id: string, action: Partial<InsertAutomationAction>): Promise<AutomationAction | undefined> { return this.memStorage.updateAutomationAction(id, action); }
+  async deleteAutomationAction(id: string): Promise<boolean> { return this.memStorage.deleteAutomationAction(id); }
+
+  // Templates
+  async getTemplateFolders(): Promise<TemplateFolder[]> { return this.memStorage.getTemplateFolders(); }
+  async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> { return this.memStorage.getTemplateFolder(id); }
+  async createTemplateFolder(folder: InsertTemplateFolder): Promise<TemplateFolder> { return this.memStorage.createTemplateFolder(folder); }
+  async updateTemplateFolder(id: string, folder: Partial<InsertTemplateFolder>): Promise<TemplateFolder | undefined> { return this.memStorage.updateTemplateFolder(id, folder); }
+  async deleteTemplateFolder(id: string): Promise<boolean> { return this.memStorage.deleteTemplateFolder(id); }
+
+  async getEmailTemplates(): Promise<EmailTemplate[]> { return this.memStorage.getEmailTemplates(); }
+  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> { return this.memStorage.getEmailTemplate(id); }
+  async getEmailTemplatesByFolder(folderId: string): Promise<EmailTemplate[]> { return this.memStorage.getEmailTemplatesByFolder(folderId); }
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> { return this.memStorage.createEmailTemplate(template); }
+  async updateEmailTemplate(id: string, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined> { return this.memStorage.updateEmailTemplate(id, template); }
+  async deleteEmailTemplate(id: string): Promise<boolean> { return this.memStorage.deleteEmailTemplate(id); }
+
+  async getSmsTemplates(): Promise<SmsTemplate[]> { return this.memStorage.getSmsTemplates(); }
+  async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> { return this.memStorage.getSmsTemplate(id); }
+  async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> { return this.memStorage.getSmsTemplatesByFolder(folderId); }
+  async createSmsTemplate(template: InsertSmsTemplate): Promise<SmsTemplate> { return this.memStorage.createSmsTemplate(template); }
+  async updateSmsTemplate(id: string, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined> { return this.memStorage.updateSmsTemplate(id, template); }
+  async deleteSmsTemplate(id: string): Promise<boolean> { return this.memStorage.deleteSmsTemplate(id); }
+
+  // Custom Fields
+  async getCustomFields(): Promise<CustomField[]> { return this.memStorage.getCustomFields(); }
+  async getCustomField(id: string): Promise<CustomField | undefined> { return this.memStorage.getCustomField(id); }
+  async createCustomField(field: InsertCustomField): Promise<CustomField> { return this.memStorage.createCustomField(field); }
+  async updateCustomField(id: string, field: Partial<InsertCustomField>): Promise<CustomField | undefined> { return this.memStorage.updateCustomField(id, field); }
+  async deleteCustomField(id: string): Promise<boolean> { return this.memStorage.deleteCustomField(id); }
+  async reorderCustomFields(fieldOrders: Array<{id: string, order: number}>): Promise<void> { return this.memStorage.reorderCustomFields(fieldOrders); }
+
+  async getCustomFieldFolders(): Promise<CustomFieldFolder[]> { return this.memStorage.getCustomFieldFolders(); }
+  async getCustomFieldFolder(id: string): Promise<CustomFieldFolder | undefined> { return this.memStorage.getCustomFieldFolder(id); }
+  async createCustomFieldFolder(folder: InsertCustomFieldFolder): Promise<CustomFieldFolder> { return this.memStorage.createCustomFieldFolder(folder); }
+  async updateCustomFieldFolder(id: string, folder: Partial<InsertCustomFieldFolder>): Promise<CustomFieldFolder | undefined> { return this.memStorage.updateCustomFieldFolder(id, folder); }
+  async deleteCustomFieldFolder(id: string): Promise<boolean> { return this.memStorage.deleteCustomFieldFolder(id); }
+  async reorderCustomFieldFolders(folderOrders: Array<{id: string, order: number}>): Promise<void> { return this.memStorage.reorderCustomFieldFolders(folderOrders); }
+
+  // Staff
+  async getStaff(): Promise<Staff[]> { return this.memStorage.getStaff(); }
+  async getStaffMember(id: string): Promise<Staff | undefined> { return this.memStorage.getStaffMember(id); }
+  async createStaffMember(staff: InsertStaff): Promise<Staff> { return this.memStorage.createStaffMember(staff); }
+  async updateStaffMember(id: string, staff: Partial<InsertStaff>): Promise<Staff | undefined> { return this.memStorage.updateStaffMember(id, staff); }
+  async deleteStaffMember(id: string): Promise<boolean> { return this.memStorage.deleteStaffMember(id); }
+
+  // Tags
+  async getTags(): Promise<Tag[]> { return this.memStorage.getTags(); }
+  async getTag(id: string): Promise<Tag | undefined> { return this.memStorage.getTag(id); }
+  async createTag(tag: InsertTag): Promise<Tag> { return this.memStorage.createTag(tag); }
+  async updateTag(id: string, tag: Partial<InsertTag>): Promise<Tag | undefined> { return this.memStorage.updateTag(id, tag); }
+  async deleteTag(id: string): Promise<boolean> { return this.memStorage.deleteTag(id); }
+
+  // Products
+  async getProducts(): Promise<Product[]> { return this.memStorage.getProducts(); }
+  async getProduct(id: string): Promise<Product | undefined> { return this.memStorage.getProduct(id); }
+  async createProduct(product: InsertProduct): Promise<Product> { return this.memStorage.createProduct(product); }
+  async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> { return this.memStorage.updateProduct(id, product); }
+  async deleteProduct(id: string): Promise<boolean> { return this.memStorage.deleteProduct(id); }
+
+  // Audit Logs
+  async getAuditLogs(): Promise<AuditLog[]> { return this.memStorage.getAuditLogs(); }
+  async getAuditLog(id: string): Promise<AuditLog | undefined> { return this.memStorage.getAuditLog(id); }
+  async getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]> { return this.memStorage.getAuditLogsByEntity(entityType, entityId); }
+  async getAuditLogsByUser(userId: string): Promise<AuditLog[]> { return this.memStorage.getAuditLogsByUser(userId); }
+  async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> { return this.memStorage.createAuditLog(auditLog); }
+
+  // Roles and Permissions  
+  async getRoles(): Promise<Role[]> { return this.memStorage.getRoles(); }
+  async getRole(id: string): Promise<Role | undefined> { return this.memStorage.getRole(id); }
+  async createRole(role: InsertRole): Promise<Role> { return this.memStorage.createRole(role); }
+  async updateRole(id: string, role: Partial<InsertRole>): Promise<Role | undefined> { return this.memStorage.updateRole(id, role); }
+  async deleteRole(id: string): Promise<boolean> { return this.memStorage.deleteRole(id); }
+
+  async getPermissions(): Promise<Permission[]> { return this.memStorage.getPermissions(); }
+  async getPermission(id: string): Promise<Permission | undefined> { return this.memStorage.getPermission(id); }
+  async createPermission(permission: InsertPermission): Promise<Permission> { return this.memStorage.createPermission(permission); }
+  async updatePermission(id: string, permission: Partial<InsertPermission>): Promise<Permission | undefined> { return this.memStorage.updatePermission(id, permission); }
+  async deletePermission(id: string): Promise<boolean> { return this.memStorage.deletePermission(id); }
+
+  async getUserRoles(): Promise<UserRole[]> { return this.memStorage.getUserRoles(); }
+  async getUserRole(id: string): Promise<UserRole | undefined> { return this.memStorage.getUserRole(id); }
+  async getUserRolesByUser(userId: string): Promise<UserRole[]> { return this.memStorage.getUserRolesByUser(userId); }
+  async getUserRolesByRole(roleId: string): Promise<UserRole[]> { return this.memStorage.getUserRolesByRole(roleId); }
+  async createUserRole(userRole: InsertUserRole): Promise<UserRole> { return this.memStorage.createUserRole(userRole); }
+  async updateUserRole(id: string, userRole: Partial<InsertUserRole>): Promise<UserRole | undefined> { return this.memStorage.updateUserRole(id, userRole); }
+  async deleteUserRole(id: string): Promise<boolean> { return this.memStorage.deleteUserRole(id); }
+
+  // Notifications
+  async getNotificationSettings(): Promise<NotificationSettings[]> { return this.memStorage.getNotificationSettings(); }
+  async getNotificationSetting(id: string): Promise<NotificationSettings | undefined> { return this.memStorage.getNotificationSetting(id); }
+  async createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> { return this.memStorage.createNotificationSettings(settings); }
+  async updateNotificationSettings(id: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined> { return this.memStorage.updateNotificationSettings(id, settings); }
+  async deleteNotificationSettings(id: string): Promise<boolean> { return this.memStorage.deleteNotificationSettings(id); }
+}
+
+export const storage = new DbStorage();
