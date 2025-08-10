@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Eye, Search, Filter, Calendar } from "lucide-react";
+import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Eye, Search, Filter, Calendar, ArrowLeft, Activity } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface PermissionAuditLog {
   id: string;
@@ -116,8 +117,21 @@ export default function PermissionAudit() {
 
   return (
     <div className="space-y-6">
+      {/* Back to Settings Button */}
+      <div className="flex items-center space-x-2">
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
+      </div>
+
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Permission Audit Trail</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
+          <Activity className="h-8 w-8 text-[#46a1a0]" />
+          <span>Permission Audit Trail</span>
+        </h1>
         <p className="text-muted-foreground">
           Comprehensive tracking of all permission changes and role assignments
         </p>
