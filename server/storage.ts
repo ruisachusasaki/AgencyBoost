@@ -23,6 +23,7 @@ import {
   type TemplateFolder, type InsertTemplateFolder,
   type EmailTemplate, type InsertEmailTemplate,
   type SmsTemplate, type InsertSmsTemplate,
+  type SmartList, type InsertSmartList,
   type Workflow, type InsertWorkflow,
   type WorkflowExecution, type InsertWorkflowExecution,
   type WorkflowTemplate, type InsertWorkflowTemplate,
@@ -76,6 +77,13 @@ export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined>;
   deleteLead(id: string): Promise<boolean>;
+  
+  // Smart Lists
+  getSmartLists(userId: string): Promise<SmartList[]>;
+  getSmartList(id: string): Promise<SmartList | undefined>;
+  createSmartList(smartList: InsertSmartList): Promise<SmartList>;
+  updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined>;
+  deleteSmartList(id: string): Promise<boolean>;
   
   // Tasks
   getTasks(): Promise<Task[]>;

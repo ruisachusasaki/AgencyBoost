@@ -315,6 +315,19 @@ export const leads = pgTable("leads", {
   lastContactDate: timestamp("last_contact_date"),
 });
 
+// Smart Lists for saved client filters
+export const smartLists = pgTable("smart_lists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  filters: jsonb("filters").notNull(), // JSON object containing filter criteria
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  isDefault: boolean("is_default").default(false),
+  isShared: boolean("is_shared").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -563,6 +576,12 @@ export const insertSmsTemplateSchema = createInsertSchema(smsTemplates).omit({
   usageCount: true,
 });
 
+export const insertSmartListSchema = createInsertSchema(smartLists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
@@ -647,6 +666,9 @@ export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
 
 export type SmsTemplate = typeof smsTemplates.$inferSelect;
 export type InsertSmsTemplate = z.infer<typeof insertSmsTemplateSchema>;
+
+export type SmartList = typeof smartLists.$inferSelect;
+export type InsertSmartList = z.infer<typeof insertSmartListSchema>;
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;

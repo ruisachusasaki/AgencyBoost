@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,26 @@ import type { Client } from "@shared/schema";
 
 type SortField = 'name' | 'company' | 'phone' | 'email' | 'contactOwner' | 'createdAt' | 'lastActivity';
 type SortDirection = 'asc' | 'desc';
+
+interface FilterCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+interface ClientFilter {
+  conditions: FilterCondition[];
+  logic: 'AND' | 'OR';
+}
+
+interface SmartList {
+  id: string;
+  name: string;
+  description?: string;
+  filters: ClientFilter;
+  isDefault: boolean;
+  createdAt: Date;
+}
 
 interface Column {
   key: string;
@@ -69,6 +89,18 @@ export default function Clients() {
   const [pageSize, setPageSize] = useState(20);
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Filtering state
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState<ClientFilter>({
+    conditions: [],
+    logic: 'AND'
+  });
+  const [activeSmartList, setActiveSmartList] = useState<string | null>(null);
+  const [smartListName, setSmartListName] = useState("");
+  const [smartListDescription, setSmartListDescription] = useState("");
+  const [isSaveSmartListOpen, setIsSaveSmartListOpen] = useState(false);
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -182,11 +214,15 @@ export default function Clients() {
     },
   });
 
-  // Apply sorting to clients
+  // Apply filtering and sorting to clients
   const filteredAndSortedClients = useMemo(() => {
     if (!clients || clients.length === 0) return clients;
 
-    const sorted = [...clients].sort((a, b) => {
+    // First apply filters
+    const filtered = applyClientFilter(clients, currentFilter);
+
+    // Then apply sorting
+    const sorted = [...filtered].sort((a, b) => {
       let aValue: any = '';
       let bValue: any = '';
 
@@ -238,7 +274,7 @@ export default function Clients() {
     });
 
     return sorted;
-  }, [clients, sortField, sortDirection, staff, customFieldsData]);
+  }, [clients, sortField, sortDirection, staff, customFieldsData, currentFilter]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -354,6 +390,109 @@ export default function Clients() {
       newVisibleColumns.add(columnKey);
     }
     setVisibleColumns(newVisibleColumns);
+  };
+
+  // Filter condition management
+  const addFilterCondition = () => {
+    setCurrentFilter(prev => ({
+      ...prev,
+      conditions: [...prev.conditions, { field: '', operator: 'contains', value: '' }]
+    }));
+  };
+
+  const updateFilterCondition = (index: number, key: keyof FilterCondition, value: string) => {
+    setCurrentFilter(prev => ({
+      ...prev,
+      conditions: prev.conditions.map((condition, i) => 
+        i === index ? { ...condition, [key]: value } : condition
+      )
+    }));
+  };
+
+  const removeFilterCondition = (index: number) => {
+    setCurrentFilter(prev => ({
+      ...prev,
+      conditions: prev.conditions.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Apply filter to clients
+  const applyClientFilter = (clients: Client[], filter: ClientFilter): Client[] => {
+    if (filter.conditions.length === 0) return clients;
+
+    return clients.filter(client => {
+      const results = filter.conditions.map(condition => {
+        if (!condition.field || !condition.operator) return true;
+
+        const getValue = (field: string): string => {
+          switch (field) {
+            case 'name': return getClientDisplayName(client);
+            case 'company': return getBusinessDisplayName(client);
+            case 'email': return client.email || '';
+            case 'phone': return client.phone || '';
+            case 'city': return client.city || '';
+            case 'state': return client.state || '';
+            case 'status': return client.status || '';
+            case 'clientVertical': return client.clientVertical || '';
+            case 'contactOwner': return getContactOwnerName(client.contactOwner) || '';
+            case 'createdAt': return client.createdAt ? format(new Date(client.createdAt), 'yyyy-MM-dd') : '';
+            default: return '';
+          }
+        };
+
+        const fieldValue = getValue(condition.field).toLowerCase();
+        const searchValue = condition.value.toLowerCase();
+
+        switch (condition.operator) {
+          case 'contains': return fieldValue.includes(searchValue);
+          case 'equals': return fieldValue === searchValue;
+          case 'starts_with': return fieldValue.startsWith(searchValue);
+          case 'ends_with': return fieldValue.endsWith(searchValue);
+          case 'not_equals': return fieldValue !== searchValue;
+          case 'is_empty': return fieldValue === '';
+          case 'is_not_empty': return fieldValue !== '';
+          default: return true;
+        }
+      });
+
+      return filter.logic === 'AND' 
+        ? results.every(result => result)
+        : results.some(result => result);
+    });
+  };
+
+  // Save Smart List
+  const handleSaveSmartList = async () => {
+    try {
+      // For now, we'll store in localStorage until backend is ready
+      const smartList = {
+        id: `smart-list-${Date.now()}`,
+        name: smartListName,
+        description: smartListDescription,
+        filters: currentFilter,
+        isDefault: false,
+        createdAt: new Date()
+      };
+
+      const existingLists = JSON.parse(localStorage.getItem('smartLists') || '[]');
+      existingLists.push(smartList);
+      localStorage.setItem('smartLists', JSON.stringify(existingLists));
+
+      toast({
+        title: "Success",
+        description: "Smart List saved successfully."
+      });
+
+      setSmartListName('');
+      setSmartListDescription('');
+      setIsSaveSmartListOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save Smart List.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -566,6 +705,20 @@ export default function Clients() {
             {isExporting ? 'Exporting...' : 'Export'}
           </Button>
           
+          <Button 
+            variant="outline"
+            onClick={() => setIsFilterOpen(true)}
+            className={currentFilter.conditions.length > 0 ? 'bg-blue-50 border-blue-200' : ''}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+            {currentFilter.conditions.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {currentFilter.conditions.length}
+              </Badge>
+            )}
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -723,6 +876,200 @@ export default function Clients() {
             <SimpleAddClientForm 
               onSuccess={() => setIsCreateDialogOpen(false)}
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Filter Dialog */}
+      <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Filter Clients</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Smart Lists Section */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-700 mb-3">Smart Lists</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={activeSmartList === null ? "default" : "outline"}
+                  onClick={() => {
+                    setActiveSmartList(null);
+                    setCurrentFilter({ conditions: [], logic: 'AND' });
+                  }}
+                  className="justify-start"
+                >
+                  All Clients
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSaveSmartListOpen(true)}
+                  disabled={currentFilter.conditions.length === 0}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save as Smart List
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Conditions */}
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-medium text-slate-700">Filter Conditions</h3>
+                <Select
+                  value={currentFilter.logic}
+                  onValueChange={(value) => setCurrentFilter(prev => ({ ...prev, logic: value as 'AND' | 'OR' }))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AND">AND</SelectItem>
+                    <SelectItem value="OR">OR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                {currentFilter.conditions.map((condition, index) => (
+                  <div key={index} className="flex gap-2 items-center p-3 border rounded-lg bg-slate-50">
+                    <Select
+                      value={condition.field}
+                      onValueChange={(value) => updateFilterCondition(index, 'field', value)}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="company">Business</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="phone">Phone</SelectItem>
+                        <SelectItem value="city">City</SelectItem>
+                        <SelectItem value="state">State</SelectItem>
+                        <SelectItem value="status">Status</SelectItem>
+                        <SelectItem value="clientVertical">Client Vertical</SelectItem>
+                        <SelectItem value="contactOwner">Contact Owner</SelectItem>
+                        <SelectItem value="createdAt">Created Date</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={condition.operator}
+                      onValueChange={(value) => updateFilterCondition(index, 'operator', value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Operator" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="contains">Contains</SelectItem>
+                        <SelectItem value="equals">Equals</SelectItem>
+                        <SelectItem value="starts_with">Starts with</SelectItem>
+                        <SelectItem value="ends_with">Ends with</SelectItem>
+                        <SelectItem value="not_equals">Not equals</SelectItem>
+                        <SelectItem value="is_empty">Is empty</SelectItem>
+                        <SelectItem value="is_not_empty">Is not empty</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Input
+                      placeholder="Value"
+                      value={condition.value}
+                      onChange={(e) => updateFilterCondition(index, 'value', e.target.value)}
+                      className="flex-1"
+                      disabled={condition.operator === 'is_empty' || condition.operator === 'is_not_empty'}
+                    />
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFilterCondition(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                <Button
+                  variant="outline"
+                  onClick={addFilterCondition}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Condition
+                </Button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCurrentFilter({ conditions: [], logic: 'AND' });
+                  setActiveSmartList(null);
+                }}
+                disabled={currentFilter.conditions.length === 0}
+              >
+                Clear All
+              </Button>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsFilterOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => setIsFilterOpen(false)}>
+                  Apply Filters
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Smart List Dialog */}
+      <Dialog open={isSaveSmartListOpen} onOpenChange={setIsSaveSmartListOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Smart List</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                placeholder="Enter smart list name"
+                value={smartListName}
+                onChange={(e) => setSmartListName(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Description (Optional)</label>
+              <Input
+                placeholder="Enter description"
+                value={smartListDescription}
+                onChange={(e) => setSmartListDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="text-sm text-slate-600">
+              This will save your current filter conditions for easy reuse.
+            </div>
+            
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setIsSaveSmartListOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveSmartList}
+                disabled={!smartListName.trim()}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Smart List
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
