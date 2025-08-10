@@ -361,21 +361,24 @@ export default function RolesPermissions() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/settings">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Roles & Permissions</h1>
-            <p className="text-muted-foreground">Manage user roles and their permissions</p>
+      <div className="space-y-4">
+        <Link to="/settings">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+              <p className="text-muted-foreground">Manage user roles and their permissions</p>
+            </div>
           </div>
-        </div>
 
-        <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+          <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -395,7 +398,8 @@ export default function RolesPermissions() {
               onCancel={() => setIsAddRoleDialogOpen(false)}
             />
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Roles Grid */}

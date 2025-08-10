@@ -16,7 +16,7 @@ export interface PermissionChange {
 }
 
 export interface AuditContext {
-  performedBy: string;
+  performedBy?: string | null;
   performedByName: string;
   ipAddress?: string;
   userAgent?: string;
@@ -98,7 +98,7 @@ export class PermissionAuditService {
       changesSummary,
       changesCount: changes.length,
       permissionsAfter: this.groupPermissionsByModule(permissions),
-      performedBy: context.performedBy,
+      performedBy: context.performedBy || null,
       performedByName: context.performedByName,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
@@ -139,7 +139,7 @@ export class PermissionAuditService {
       changesCount: changes.length,
       permissionsBefore: this.groupPermissionsByModule(oldPermissions),
       permissionsAfter: this.groupPermissionsByModule(newPermissions),
-      performedBy: context.performedBy,
+      performedBy: context.performedBy || null,
       performedByName: context.performedByName,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
@@ -172,7 +172,7 @@ export class PermissionAuditService {
       changesSummary,
       changesCount: changes.length,
       permissionsBefore: this.groupPermissionsByModule(permissions),
-      performedBy: context.performedBy,
+      performedBy: context.performedBy || null,
       performedByName: context.performedByName,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
@@ -201,7 +201,7 @@ export class PermissionAuditService {
       targetUserName,
       changesSummary: this.generateChangesSummary('role_assigned', role.name, [], targetUserName),
       changesCount: 0,
-      performedBy: context.performedBy,
+      performedBy: context.performedBy || null,
       performedByName: context.performedByName,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
@@ -230,7 +230,7 @@ export class PermissionAuditService {
       targetUserName,
       changesSummary: this.generateChangesSummary('role_unassigned', role.name, [], targetUserName),
       changesCount: 0,
-      performedBy: context.performedBy,
+      performedBy: context.performedBy || null,
       performedByName: context.performedByName,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,

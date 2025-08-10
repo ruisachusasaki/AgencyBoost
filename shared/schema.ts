@@ -901,7 +901,7 @@ export const permissionAuditLogs = pgTable("permission_audit_logs", {
   changesCount: integer("changes_count").default(0), // Number of permission changes
   
   // Actor information
-  performedBy: varchar("performed_by").notNull().references(() => users.id),
+  performedBy: varchar("performed_by").references(() => users.id),
   performedByName: text("performed_by_name").notNull(),
   
   // Technical details
