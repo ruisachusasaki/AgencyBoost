@@ -33,7 +33,12 @@ import {
   type AutomationTrigger, type InsertAutomationTrigger,
   type AutomationAction, type InsertAutomationAction,
   type Notification, type InsertNotification,
-  type Tag, type InsertTag
+  type Tag, type InsertTag,
+  type Staff, type InsertStaff,
+  type Role, type InsertRole,
+  type Permission, type InsertPermission,
+  type UserRole, type InsertUserRole,
+  type NotificationSettings, type InsertNotificationSettings
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -243,6 +248,25 @@ export interface IStorage {
   getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]>;
   getAuditLogsByUser(userId: string): Promise<AuditLog[]>;
   createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
+  
+  // Staff
+  getStaff(): Promise<Staff[]>;
+  getStaffMember(id: string): Promise<Staff | undefined>;
+  createStaffMember(staff: InsertStaff): Promise<Staff>;
+  updateStaffMember(id: string, staff: Partial<InsertStaff>): Promise<Staff | undefined>;
+  deleteStaffMember(id: string): Promise<boolean>;
+  
+  // Roles
+  getRoles(): Promise<Role[]>;
+  getRole(id: string): Promise<Role | undefined>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: string, role: Partial<InsertRole>): Promise<Role | undefined>;
+  deleteRole(id: string): Promise<boolean>;
+  
+  // Notification Settings
+  getNotificationSettings(userId: string): Promise<NotificationSettings | undefined>;
+  createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings>;
+  updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined>;
 }
 
 export class MemStorage implements IStorage {

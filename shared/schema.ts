@@ -872,9 +872,9 @@ export const permissions = pgTable("permissions", {
 
 export const userRoles = pgTable("user_roles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
-  assignedBy: varchar("assigned_by").references(() => users.id),
+  assignedBy: varchar("assigned_by").references(() => staff.id),
   assignedAt: timestamp("assigned_at").defaultNow(),
 });
 
@@ -888,7 +888,7 @@ export const permissionAuditLogs = pgTable("permission_audit_logs", {
   roleName: text("role_name"),
   
   // User assignment fields
-  targetUserId: varchar("target_user_id").references(() => users.id), // User who received/lost role
+  targetUserId: varchar("target_user_id").references(() => staff.id), // User who received/lost role
   targetUserName: text("target_user_name"),
   
   // Permission change details
@@ -901,7 +901,7 @@ export const permissionAuditLogs = pgTable("permission_audit_logs", {
   changesCount: integer("changes_count").default(0), // Number of permission changes
   
   // Actor information
-  performedBy: varchar("performed_by").references(() => users.id),
+  performedBy: varchar("performed_by").references(() => staff.id),
   performedByName: text("performed_by_name").notNull(),
   
   // Technical details
@@ -1024,7 +1024,7 @@ export const staff = pgTable("staff", {
   lastName: varchar("last_name", { length: 100 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   phone: varchar("phone", { length: 20 }),
-  userType: varchar("user_type", { length: 50 }).notNull().default("User"),
+  roleId: varchar("role_id").references(() => roles.id),
   profileImagePath: text("profile_image_path"),
   
   // Address fields
@@ -1149,3 +1149,49 @@ export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSc
 
 export type PermissionChangeHistory = typeof permissionChangeHistory.$inferSelect;
 export type InsertPermissionChangeHistory = z.infer<typeof insertPermissionChangeHistorySchema>;
+
+// Notification Settings Table - User notification preferences
+export const notificationSettings = pgTable("notification_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  
+  // Client assignment notifications
+  clientAssignedInApp: boolean("client_assigned_in_app").default(true),
+  clientAssignedEmail: boolean("client_assigned_email").default(true),
+  clientAssignedSms: boolean("client_assigned_sms").default(false),
+  
+  // Internal chat notifications  
+  chatAddedInApp: boolean("chat_added_in_app").default(true),
+  chatAddedEmail: boolean("chat_added_email").default(false),
+  chatAddedSms: boolean("chat_added_sms").default(false),
+  
+  // Chat messages notifications (In-App only for all messages)
+  chatMessagesInApp: boolean("chat_messages_in_app").default(true),
+  
+  // Mention notifications
+  mentionedInApp: boolean("mentioned_in_app").default(true),
+  mentionedEmail: boolean("mentioned_email").default(true),
+  mentionedSms: boolean("mentioned_sms").default(false),
+  
+  // Mention follow-up notifications
+  mentionFollowUpInApp: boolean("mention_follow_up_in_app").default(true),
+  mentionFollowUpEmail: boolean("mention_follow_up_email").default(false),
+  mentionFollowUpSms: boolean("mention_follow_up_sms").default(false),
+  
+  // Task assignment notifications
+  taskAssignedInApp: boolean("task_assigned_in_app").default(true),
+  taskAssignedEmail: boolean("task_assigned_email").default(true),
+  taskAssignedSms: boolean("task_assigned_sms").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertNotificationSettingsSchema = createInsertSchema(notificationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;

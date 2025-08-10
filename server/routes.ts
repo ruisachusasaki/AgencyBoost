@@ -13,9 +13,9 @@ import {
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
-  insertRoleSchema, insertPermissionSchema, insertUserRoleSchema,
+  insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles
+  roles, permissions, userRoles, notificationSettings
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2444,6 +2444,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching permission audit log details:', error);
       res.status(500).json({ message: "Failed to fetch permission audit log details" });
+    }
+  });
+
+  // Notification Settings Routes
+  app.get("/api/notification-settings/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Get notification settings from database
+      const settings = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId)).limit(1);
+      
+      if (settings.length === 0) {
+        // Return default settings if none exist
+        return res.json({
+          userId,
+          clientAssignedInApp: true,
+          clientAssignedEmail: true,
+          clientAssignedSms: false,
+          chatAddedInApp: true,
+          chatAddedEmail: false,
+          chatAddedSms: false,
+          chatMessagesInApp: true,
+          mentionedInApp: true,
+          mentionedEmail: true,
+          mentionedSms: false,
+          mentionFollowUpInApp: true,
+          mentionFollowUpEmail: false,
+          mentionFollowUpSms: false,
+          taskAssignedInApp: true,
+          taskAssignedEmail: true,
+          taskAssignedSms: false,
+        });
+      }
+      
+      res.json(settings[0]);
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+      res.status(500).json({ error: "Failed to fetch notification settings" });
+    }
+  });
+
+  app.put("/api/notification-settings/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const settingsData = req.body;
+      
+      // Check if settings exist
+      const existingSettings = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId)).limit(1);
+      
+      let result;
+      if (existingSettings.length === 0) {
+        // Create new settings
+        result = await db.insert(notificationSettings).values({
+          ...settingsData,
+          userId,
+        }).returning();
+      } else {
+        // Update existing settings
+        result = await db.update(notificationSettings)
+          .set({
+            ...settingsData,
+            updatedAt: new Date(),
+          })
+          .where(eq(notificationSettings.userId, userId))
+          .returning();
+      }
+      
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      res.status(500).json({ error: "Failed to update notification settings" });
     }
   });
 

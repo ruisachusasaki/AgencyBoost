@@ -4,18 +4,19 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, Building, Users } from "lucide-react";
+import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, Building, Users, Bell, Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Staff, InsertStaff } from "@shared/schema";
+import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings } from "@shared/schema";
 
 const departments = [
   "Media Buying",
@@ -42,7 +43,7 @@ const staffFormSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
-  userType: z.string().min(1, "User type is required"),
+  roleId: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -70,6 +71,15 @@ export default function StaffDetail() {
     queryKey: ["/api/staff"]
   });
 
+  const { data: roles = [] } = useQuery<Role[]>({
+    queryKey: ["/api/roles"]
+  });
+
+  const { data: notificationSettings } = useQuery<NotificationSettings>({
+    queryKey: ["/api/notification-settings", id],
+    enabled: !!id
+  });
+
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
@@ -77,7 +87,7 @@ export default function StaffDetail() {
       lastName: "",
       email: "",
       phone: "",
-      userType: "User",
+      roleId: "none",
       address: "",
       city: "",
       state: "",
@@ -98,7 +108,7 @@ export default function StaffDetail() {
         lastName: staffMember.lastName,
         email: staffMember.email,
         phone: staffMember.phone || "",
-        userType: staffMember.userType,
+        roleId: staffMember.roleId || "none",
         address: staffMember.address || "",
         city: staffMember.city || "",
         state: staffMember.state || "",
@@ -384,10 +394,10 @@ export default function StaffDetail() {
                   />
                   <FormField
                     control={form.control}
-                    name="userType"
+                    name="roleId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>User Type</FormLabel>
+                        <FormLabel>Role & Permissions</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -395,13 +405,14 @@ export default function StaffDetail() {
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select user type" />
+                              <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {userTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                            <SelectItem value="none">No Role Assigned</SelectItem>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -583,6 +594,147 @@ export default function StaffDetail() {
                         </FormItem>
                       )}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Calendar Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Calendar className="h-5 w-5" />
+                    <span>Calendar Configuration</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
+                    <p>Calendar integration settings will be available here once the calendar system is implemented.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notification Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Bell className="h-5 w-5" />
+                    <span>Notification Settings</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Client Assignment */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Notify when a Client gets assigned to me</h4>
+                    <div className="flex items-center space-x-8">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="client-assigned-app" />
+                        <Label htmlFor="client-assigned-app" className="text-sm font-normal">In-App</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="client-assigned-email" />
+                        <Label htmlFor="client-assigned-email" className="text-sm font-normal">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="client-assigned-sms" />
+                        <Label htmlFor="client-assigned-sms" className="text-sm font-normal">SMS</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Internal Chat Added */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Notify when I am added to a internal chat</h4>
+                    <div className="flex items-center space-x-8">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="chat-added-app" />
+                        <Label htmlFor="chat-added-app" className="text-sm font-normal">In-App</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="chat-added-email" />
+                        <Label htmlFor="chat-added-email" className="text-sm font-normal">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="chat-added-sms" />
+                        <Label htmlFor="chat-added-sms" className="text-sm font-normal">SMS</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Messages */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Notify for all new messages in internal chats I am part of</h4>
+                    <div className="flex items-center space-x-8">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="chat-messages-app" />
+                        <Label htmlFor="chat-messages-app" className="text-sm font-normal">In-App</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 opacity-50">
+                        <Checkbox id="chat-messages-email" disabled />
+                        <Label htmlFor="chat-messages-email" className="text-sm font-normal text-muted-foreground">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 opacity-50">
+                        <Checkbox id="chat-messages-sms" disabled />
+                        <Label htmlFor="chat-messages-sms" className="text-sm font-normal text-muted-foreground">SMS</Label>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Note: Web only - Email and SMS not available for all messages</p>
+                  </div>
+
+                  {/* Mentions */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Notify when I am mentioned in any conversation</h4>
+                    <div className="flex items-center space-x-8">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="mentioned-app" />
+                        <Label htmlFor="mentioned-app" className="text-sm font-normal">In-App</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="mentioned-email" />
+                        <Label htmlFor="mentioned-email" className="text-sm font-normal">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="mentioned-sms" />
+                        <Label htmlFor="mentioned-sms" className="text-sm font-normal">SMS</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mention Follow-ups */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Notify for all new messages in conversations where I am mentioned</h4>
+                    <div className="flex items-center space-x-8">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="mention-followup-app" />
+                        <Label htmlFor="mention-followup-app" className="text-sm font-normal">In-App</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="mention-followup-email" />
+                        <Label htmlFor="mention-followup-email" className="text-sm font-normal">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="mention-followup-sms" />
+                        <Label htmlFor="mention-followup-sms" className="text-sm font-normal">SMS</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Task Assignment */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Notify when a task gets assigned to me</h4>
+                    <div className="flex items-center space-x-8">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="task-assigned-app" />
+                        <Label htmlFor="task-assigned-app" className="text-sm font-normal">In-App</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="task-assigned-email" />
+                        <Label htmlFor="task-assigned-email" className="text-sm font-normal">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="task-assigned-sms" />
+                        <Label htmlFor="task-assigned-sms" className="text-sm font-normal">SMS</Label>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
