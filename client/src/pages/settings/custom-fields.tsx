@@ -313,6 +313,13 @@ export default function CustomFields() {
     </TableHead>
   );
 
+  // Get folder name by ID - moved up before sorting logic
+  const getFolderName = (folderId: string | null) => {
+    if (!folderId) return "No Folder";
+    const folder = folders.find(f => f.id === folderId);
+    return folder?.name || "Unknown Folder";
+  };
+
   const sortedCustomFields = [...customFields].sort((a, b) => {
     let aValue = '';
     let bValue = '';
@@ -374,12 +381,7 @@ export default function CustomFields() {
     return `{{${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}}}`;
   };
 
-  // Get folder name by ID
-  const getFolderName = (folderId: string | null) => {
-    if (!folderId) return "No Folder";
-    const folder = folders.find(f => f.id === folderId);
-    return folder?.name || "Unknown Folder";
-  };
+
 
   // Count fields in folders
   const getFolderFieldCount = (folderId: string) => {
