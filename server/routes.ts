@@ -1305,7 +1305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               or(
                 like(sql`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
                 like(staff.email, `%${search}%`),
-                like(staff.userType, `%${search}%`)
+                like(staff.department, `%${search}%`)
               )
             )
           );
