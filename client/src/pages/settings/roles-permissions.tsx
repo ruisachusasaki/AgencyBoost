@@ -10,427 +10,463 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { Role, Permission, InsertRole } from "@shared/schema";
 
-interface Role {
-  id: string;
-  name: string;
-  description: string;
+interface RoleWithPermissions extends Role {
   userCount: number;
   permissions: Permission[];
-  isSystem: boolean;
-  createdAt: string;
 }
 
-interface Permission {
+interface PermissionFormData {
   module: string;
-  actions: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-    manage?: boolean;
-  };
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canManage: boolean;
 }
 
 export default function RolesPermissions() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Mock roles data
-  const [roles] = useState<Role[]>([
-    {
-      id: "1",
-      name: "Admin",
-      description: "Full system access with all permissions",
-      userCount: 2,
-      isSystem: true,
-      createdAt: "2024-01-01",
-      permissions: [
-        { module: "Clients", actions: { view: true, create: true, edit: true, delete: true } },
-        { module: "Projects", actions: { view: true, create: true, edit: true, delete: true } },
-        { module: "Campaigns", actions: { view: true, create: true, edit: true, delete: true } },
-        { module: "Settings", actions: { view: true, create: true, edit: true, delete: true, manage: true } },
-        { module: "Users", actions: { view: true, create: true, edit: true, delete: true, manage: true } },
-        { module: "Reports", actions: { view: true, create: true, edit: true, delete: true } }
-      ]
-    },
-    {
-      id: "2",
-      name: "Manager",
-      description: "Team management with limited admin access",
-      userCount: 3,
-      isSystem: true,
-      createdAt: "2024-01-01",
-      permissions: [
-        { module: "Clients", actions: { view: true, create: true, edit: true, delete: false } },
-        { module: "Projects", actions: { view: true, create: true, edit: true, delete: true } },
-        { module: "Campaigns", actions: { view: true, create: true, edit: true, delete: true } },
-        { module: "Settings", actions: { view: true, create: false, edit: false, delete: false } },
-        { module: "Users", actions: { view: true, create: false, edit: false, delete: false } },
-        { module: "Reports", actions: { view: true, create: true, edit: false, delete: false } }
-      ]
-    },
-    {
-      id: "3",
-      name: "User",
-      description: "Standard user access for daily operations",
-      userCount: 8,
-      isSystem: true,
-      createdAt: "2024-01-01",
-      permissions: [
-        { module: "Clients", actions: { view: true, create: true, edit: true, delete: false } },
-        { module: "Projects", actions: { view: true, create: false, edit: true, delete: false } },
-        { module: "Campaigns", actions: { view: true, create: false, edit: false, delete: false } },
-        { module: "Settings", actions: { view: false, create: false, edit: false, delete: false } },
-        { module: "Users", actions: { view: false, create: false, edit: false, delete: false } },
-        { module: "Reports", actions: { view: true, create: false, edit: false, delete: false } }
-      ]
-    },
-    {
-      id: "4",
-      name: "Accounting",
-      description: "Access to financial data and invoicing",
-      userCount: 1,
-      isSystem: false,
-      createdAt: "2024-02-15",
-      permissions: [
-        { module: "Clients", actions: { view: true, create: false, edit: false, delete: false } },
-        { module: "Projects", actions: { view: true, create: false, edit: false, delete: false } },
-        { module: "Campaigns", actions: { view: false, create: false, edit: false, delete: false } },
-        { module: "Settings", actions: { view: false, create: false, edit: false, delete: false } },
-        { module: "Users", actions: { view: false, create: false, edit: false, delete: false } },
-        { module: "Reports", actions: { view: true, create: true, edit: false, delete: false } }
-      ]
-    }
-  ]);
-
+  const [editingRole, setEditingRole] = useState<RoleWithPermissions | null>(null);
   const [newRole, setNewRole] = useState({
     name: "",
     description: "",
-    permissions: [] as Permission[]
+    permissions: [] as PermissionFormData[]
   });
 
+  // Available modules for permissions
   const modules = [
-    "Clients", "Projects", "Campaigns", "Tasks", "Invoices", 
-    "Reports", "Settings", "Users", "Workflows", "Social Media"
+    "clients", "projects", "campaigns", "tasks", "invoices", 
+    "leads", "workflows", "social_media", "reports", "settings", "staff", "roles"
   ];
 
-  const handleAddRole = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement API call to add role
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
+  // Fetch roles
+  const { data: roles = [], isLoading } = useQuery<RoleWithPermissions[]>({
+    queryKey: ["/api/roles"],
+  });
+
+  // Create role mutation
+  const createRoleMutation = useMutation({
+    mutationFn: async (roleData: InsertRole & { permissions: PermissionFormData[] }) => {
+      return apiRequest("/api/roles", {
+        method: "POST",
+        body: JSON.stringify(roleData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
         description: "Role created successfully.",
       });
-      
       setIsAddRoleDialogOpen(false);
       setNewRole({ name: "", description: "", permissions: [] });
-    } catch (error) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create role. Please try again.",
+        description: error.message || "Failed to create role. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const handleDeleteRole = async (roleId: string, roleName: string) => {
-    if (!confirm(`Are you sure you want to delete the "${roleName}" role? This will affect all users assigned to this role.`)) return;
-    
-    try {
-      // TODO: Implement API call to delete role
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+  // Update role mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, ...roleData }: { id: string } & InsertRole & { permissions: PermissionFormData[] }) => {
+      return apiRequest(`/api/roles/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(roleData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+      toast({
+        title: "Success",
+        description: "Role updated successfully.",
+      });
+      setEditingRole(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update role. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete role mutation
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      return apiRequest(`/api/roles/${roleId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
         description: "Role deleted successfully.",
       });
-    } catch (error) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to delete role. Please try again.",
+        description: error.message || "Failed to delete role. Please try again.",
         variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    createRoleMutation.mutate(newRole);
+  };
+
+  const handleUpdateRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingRole) {
+      const { id, userCount, createdAt, updatedAt, ...roleData } = editingRole;
+      updateRoleMutation.mutate({ 
+        id, 
+        ...roleData, 
+        permissions: editingRole.permissions.map(p => ({
+          module: p.module,
+          canView: p.canView,
+          canCreate: p.canCreate,
+          canEdit: p.canEdit,
+          canDelete: p.canDelete,
+          canManage: p.canManage || false,
+        }))
       });
     }
   };
 
+  const handleDeleteRole = (roleId: string, roleName: string) => {
+    if (!confirm(`Are you sure you want to delete the "${roleName}" role? This will affect all users assigned to this role.`)) return;
+    deleteRoleMutation.mutate(roleId);
+  };
+
+  const initializePermissions = () => {
+    return modules.map(module => ({
+      module,
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canManage: false,
+    }));
+  };
+
+  const updatePermission = (
+    permissions: PermissionFormData[], 
+    setPermissions: (perms: PermissionFormData[]) => void,
+    module: string, 
+    action: keyof Omit<PermissionFormData, 'module'>, 
+    value: boolean
+  ) => {
+    const updated = permissions.map(perm => 
+      perm.module === module ? { ...perm, [action]: value } : perm
+    );
+    setPermissions(updated);
+  };
+
   const getPermissionIcon = (action: string) => {
     switch (action) {
-      case "view": return <Eye className="h-3 w-3" />;
-      case "create": return <Plus className="h-3 w-3" />;
-      case "edit": return <Edit className="h-3 w-3" />;
-      case "delete": return <Trash2 className="h-3 w-3" />;
-      case "manage": return <Settings className="h-3 w-3" />;
+      case "canView": return <Eye className="h-3 w-3" />;
+      case "canCreate": return <Plus className="h-3 w-3" />;
+      case "canEdit": return <Edit className="h-3 w-3" />;
+      case "canDelete": return <Trash2 className="h-3 w-3" />;
+      case "canManage": return <Settings className="h-3 w-3" />;
       default: return null;
     }
   };
 
-  const getActionColor = (action: string, hasPermission: boolean) => {
-    if (!hasPermission) return "text-gray-300";
-    
-    switch (action) {
-      case "view": return "text-blue-600";
-      case "create": return "text-green-600";
-      case "edit": return "text-yellow-600";
-      case "delete": return "text-red-600";
-      case "manage": return "text-purple-600";
-      default: return "text-gray-600";
-    }
+  const formatModuleName = (module: string) => {
+    return module.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back to Settings */}
-        <div className="mb-4">
-          <Link href="/settings">
-            <Button variant="outline" size="sm" className="flex items-center space-x-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Settings</span>
-            </Button>
-          </Link>
-        </div>
+  const RoleForm = ({ 
+    role, 
+    isEdit = false, 
+    onSubmit, 
+    onCancel 
+  }: { 
+    role: { name: string; description: string; permissions: PermissionFormData[] },
+    isEdit?: boolean,
+    onSubmit: (e: React.FormEvent) => void,
+    onCancel: () => void 
+  }) => {
+    const [localRole, setLocalRole] = useState(role);
 
-        <div className="mb-8 flex items-center justify-between">
+    // Initialize permissions if empty
+    if (localRole.permissions.length === 0) {
+      const initialPermissions = initializePermissions();
+      setLocalRole(prev => ({ ...prev, permissions: initialPermissions }));
+    }
+
+    return (
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Shield className="h-8 w-8 text-primary" />
-              Roles & Permissions
-            </h1>
-            <p className="text-gray-600 mt-2">Create custom roles and manage permissions</p>
+            <Label htmlFor="name">Role Name</Label>
+            <Input
+              id="name"
+              value={localRole.name}
+              onChange={(e) => {
+                setLocalRole(prev => ({ ...prev, name: e.target.value }));
+                if (isEdit && editingRole) {
+                  setEditingRole({ ...editingRole, name: e.target.value });
+                } else {
+                  setNewRole(prev => ({ ...prev, name: e.target.value }));
+                }
+              }}
+              placeholder="Enter role name"
+              required
+            />
           </div>
           
-          <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Role
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={localRole.description || ""}
+              onChange={(e) => {
+                setLocalRole(prev => ({ ...prev, description: e.target.value }));
+                if (isEdit && editingRole) {
+                  setEditingRole({ ...editingRole, description: e.target.value });
+                } else {
+                  setNewRole(prev => ({ ...prev, description: e.target.value }));
+                }
+              }}
+              placeholder="Enter role description"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-medium">Permissions</h4>
+          <div className="border rounded-lg">
+            <div className="grid grid-cols-6 gap-2 p-3 border-b bg-muted/50 text-sm font-medium">
+              <div>Module</div>
+              <div className="text-center">View</div>
+              <div className="text-center">Create</div>
+              <div className="text-center">Edit</div>
+              <div className="text-center">Delete</div>
+              <div className="text-center">Manage</div>
+            </div>
+            {localRole.permissions.map((perm) => (
+              <div key={perm.module} className="grid grid-cols-6 gap-2 p-3 border-b last:border-b-0">
+                <div className="font-medium">{formatModuleName(perm.module)}</div>
+                {(['canView', 'canCreate', 'canEdit', 'canDelete', 'canManage'] as const).map((action) => (
+                  <div key={action} className="flex justify-center">
+                    <Switch
+                      checked={perm[action]}
+                      onCheckedChange={(checked) => {
+                        const updatedPermissions = localRole.permissions.map(p => 
+                          p.module === perm.module ? { ...p, [action]: checked } : p
+                        );
+                        setLocalRole(prev => ({ ...prev, permissions: updatedPermissions }));
+                        
+                        if (isEdit && editingRole) {
+                          setEditingRole({ 
+                            ...editingRole, 
+                            permissions: editingRole.permissions.map(p => 
+                              p.module === perm.module ? { ...p, [action]: checked } : p
+                            )
+                          });
+                        } else {
+                          setNewRole(prev => ({ ...prev, permissions: updatedPermissions }));
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={createRoleMutation.isPending || updateRoleMutation.isPending}
+          >
+            {isEdit ? 'Update Role' : 'Create Role'}
+          </Button>
+        </div>
+      </form>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Link to="/settings">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+            <p className="text-muted-foreground">Loading roles...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link to="/settings">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+            <p className="text-muted-foreground">Manage user roles and their permissions</p>
+          </div>
+        </div>
+
+        <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Role
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Custom Role</DialogTitle>
+              <DialogTitle>Create New Role</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddRole} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="roleName">Role Name *</Label>
-                    <Input
-                      id="roleName"
-                      value={newRole.name}
-                      onChange={(e) => setNewRole({...newRole, name: e.target.value})}
-                      placeholder="e.g., Content Manager"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="roleDescription">Description</Label>
-                    <Input
-                      id="roleDescription"
-                      value={newRole.description}
-                      onChange={(e) => setNewRole({...newRole, description: e.target.value})}
-                      placeholder="Brief description of this role"
-                    />
-                  </div>
-                </div>
-                
-                {/* Permissions Grid */}
-                <div>
-                  <Label className="text-base font-semibold">Permissions</Label>
-                  <div className="mt-3 border rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 grid grid-cols-6 gap-4 text-sm font-medium text-gray-700 border-b">
-                      <div>Module</div>
-                      <div className="text-center">View</div>
-                      <div className="text-center">Create</div>
-                      <div className="text-center">Edit</div>
-                      <div className="text-center">Delete</div>
-                      <div className="text-center">Manage</div>
-                    </div>
-                    
-                    {modules.map((module) => (
-                      <div key={module} className="px-4 py-3 grid grid-cols-6 gap-4 items-center border-b">
-                        <div className="font-medium">{module}</div>
-                        <div className="text-center">
-                          <Switch />
-                        </div>
-                        <div className="text-center">
-                          <Switch />
-                        </div>
-                        <div className="text-center">
-                          <Switch />
-                        </div>
-                        <div className="text-center">
-                          <Switch />
-                        </div>
-                        <div className="text-center">
-                          {(module === "Settings" || module === "Users") && <Switch />}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsAddRoleDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Creating..." : "Create Role"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+            <RoleForm
+              role={newRole}
+              onSubmit={handleAddRole}
+              onCancel={() => setIsAddRoleDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Shield className="h-8 w-8 text-primary mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{roles.length}</div>
-                  <div className="text-sm text-gray-600">Total Roles</div>
+      {/* Roles Grid */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {roles.map((role) => (
+          <Card key={role.id} className="relative">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-lg">{role.name}</CardTitle>
+                  {role.isSystem && (
+                    <Badge variant="secondary" className="text-xs">
+                      System
+                    </Badge>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-green-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div>
-                  <div className="text-sm text-gray-600">Total Users</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-blue-600 font-bold">S</span>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{roles.filter(r => r.isSystem).length}</div>
-                  <div className="text-sm text-gray-600">System Roles</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-purple-600 font-bold">C</span>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{roles.filter(r => !r.isSystem).length}</div>
-                  <div className="text-sm text-gray-600">Custom Roles</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Roles List */}
-        <div className="grid gap-6">
-          {roles.map((role) => (
-            <Card key={role.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-primary" />
-                      {role.name}
-                    </CardTitle>
-                    <div className="flex space-x-2">
-                      <Badge variant={role.isSystem ? "default" : "secondary"}>
-                        {role.isSystem ? "System" : "Custom"}
-                      </Badge>
-                      <Badge variant="outline">
-                        <Users className="h-3 w-3 mr-1" />
-                        {role.userCount} users
-                      </Badge>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-1">
+                  <Dialog 
+                    open={editingRole?.id === role.id} 
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setEditingRole({
+                          ...role,
+                          permissions: role.permissions.map(p => ({
+                            module: p.module,
+                            canView: p.canView,
+                            canCreate: p.canCreate,
+                            canEdit: p.canEdit,
+                            canDelete: p.canDelete,
+                            canManage: p.canManage || false,
+                          }))
+                        });
+                      } else {
+                        setEditingRole(null);
+                      }
+                    }}
+                  >
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Edit Role: {role.name}</DialogTitle>
+                      </DialogHeader>
+                      {editingRole && (
+                        <RoleForm
+                          role={editingRole}
+                          isEdit={true}
+                          onSubmit={handleUpdateRole}
+                          onCancel={() => setEditingRole(null)}
+                        />
+                      )}
+                    </DialogContent>
+                  </Dialog>
                   
-                  <div className="flex items-center space-x-1">
+                  {!role.isSystem && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setEditingRole(role)}
+                      onClick={() => handleDeleteRole(role.id, role.name)}
+                      disabled={deleteRoleMutation.isPending}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
-                    {!role.isSystem && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteRole(role.id, role.name)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
-                {role.description && (
-                  <p className="text-gray-600 mt-2">{role.description}</p>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900">Permissions:</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {role.permissions.map((permission) => (
-                      <div key={permission.module} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium">{permission.module}</span>
-                        <div className="flex items-center space-x-2">
-                          {Object.entries(permission.actions).map(([action, hasPermission]) => (
-                            <div 
-                              key={action}
-                              className={`flex items-center space-x-1 ${getActionColor(action, hasPermission)}`}
-                              title={action.charAt(0).toUpperCase() + action.slice(1)}
-                            >
-                              {getPermissionIcon(action)}
-                            </div>
-                          ))}
+              </div>
+              <p className="text-sm text-muted-foreground">{role.description}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4" />
+                <span>{role.userCount} users assigned</span>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium mb-2">Permissions Summary</h4>
+                <div className="space-y-1">
+                  {role.permissions.map((perm) => {
+                    const actions = [];
+                    if (perm.canView) actions.push("View");
+                    if (perm.canCreate) actions.push("Create");
+                    if (perm.canEdit) actions.push("Edit");
+                    if (perm.canDelete) actions.push("Delete");
+                    if (perm.canManage) actions.push("Manage");
+                    
+                    if (actions.length > 0) {
+                      return (
+                        <div key={perm.module} className="flex justify-between text-xs">
+                          <span className="font-medium">{formatModuleName(perm.module)}:</span>
+                          <span className="text-muted-foreground">{actions.join(", ")}</span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      );
+                    }
+                    return null;
+                  }).filter(Boolean)}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Admin Note */}
-        <Card className="mt-8 border-red-200 bg-red-50">
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <Shield className="h-5 w-5 text-red-600 mr-2" />
-              <p className="text-sm text-red-800">
-                <strong>Admin Only:</strong> Role and permission management is restricted to system administrators only.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

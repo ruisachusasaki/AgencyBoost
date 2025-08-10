@@ -13,7 +13,9 @@ import {
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
-  users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs
+  insertRoleSchema, insertPermissionSchema, insertUserRoleSchema,
+  users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
+  roles, permissions, userRoles
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2048,6 +2050,316 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error('Error creating audit log:', error);
       res.status(500).json({ message: "Failed to create audit log" });
+    }
+  });
+
+  // Roles API Routes
+  app.get("/api/roles", async (req, res) => {
+    try {
+      const rolesWithPermissions = await db
+        .select({
+          id: roles.id,
+          name: roles.name,
+          description: roles.description,
+          isSystem: roles.isSystem,
+          createdAt: roles.createdAt,
+          updatedAt: roles.updatedAt,
+          userCount: sql<number>`CAST(COUNT(${userRoles.userId}) AS INTEGER)`,
+        })
+        .from(roles)
+        .leftJoin(userRoles, eq(roles.id, userRoles.roleId))
+        .groupBy(roles.id, roles.name, roles.description, roles.isSystem, roles.createdAt, roles.updatedAt)
+        .orderBy(asc(roles.name));
+
+      // Get permissions for each role
+      const rolesWithPermissionsData = await Promise.all(
+        rolesWithPermissions.map(async (role) => {
+          const rolePermissions = await db
+            .select()
+            .from(permissions)
+            .where(eq(permissions.roleId, role.id));
+          
+          return {
+            ...role,
+            permissions: rolePermissions
+          };
+        })
+      );
+
+      res.json(rolesWithPermissionsData);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  app.get("/api/roles/:id", async (req, res) => {
+    try {
+      const role = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.id, req.params.id))
+        .limit(1);
+      
+      if (role.length === 0) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      const rolePermissions = await db
+        .select()
+        .from(permissions)
+        .where(eq(permissions.roleId, req.params.id));
+
+      res.json({
+        ...role[0],
+        permissions: rolePermissions
+      });
+    } catch (error) {
+      console.error('Error fetching role:', error);
+      res.status(500).json({ message: "Failed to fetch role" });
+    }
+  });
+
+  app.post("/api/roles", async (req, res) => {
+    try {
+      const { permissions: rolePermissions, ...roleData } = req.body;
+      const validatedRoleData = insertRoleSchema.parse(roleData);
+      
+      // Create role
+      const [newRole] = await db.insert(roles).values(validatedRoleData).returning();
+      
+      // Create permissions for the role
+      if (rolePermissions && rolePermissions.length > 0) {
+        const permissionsToInsert = rolePermissions.map((perm: any) => ({
+          roleId: newRole.id,
+          module: perm.module,
+          canView: perm.canView || false,
+          canCreate: perm.canCreate || false,
+          canEdit: perm.canEdit || false,
+          canDelete: perm.canDelete || false,
+          canManage: perm.canManage || false,
+        }));
+        
+        await db.insert(permissions).values(permissionsToInsert);
+      }
+
+      await createAuditLog(
+        "created",
+        "role",
+        newRole.id,
+        newRole.name,
+        undefined,
+        `Created new role: ${newRole.name}`,
+        null,
+        newRole,
+        req
+      );
+
+      res.status(201).json(newRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating role:', error);
+      res.status(500).json({ message: "Failed to create role" });
+    }
+  });
+
+  app.put("/api/roles/:id", async (req, res) => {
+    try {
+      const { permissions: rolePermissions, ...roleData } = req.body;
+      
+      // Get existing role for audit log
+      const existingRole = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.id, req.params.id))
+        .limit(1);
+      
+      if (existingRole.length === 0) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      // Update role
+      const [updatedRole] = await db
+        .update(roles)
+        .set({ ...roleData, updatedAt: new Date() })
+        .where(eq(roles.id, req.params.id))
+        .returning();
+
+      // Update permissions - delete existing and insert new ones
+      await db.delete(permissions).where(eq(permissions.roleId, req.params.id));
+      
+      if (rolePermissions && rolePermissions.length > 0) {
+        const permissionsToInsert = rolePermissions.map((perm: any) => ({
+          roleId: req.params.id,
+          module: perm.module,
+          canView: perm.canView || false,
+          canCreate: perm.canCreate || false,
+          canEdit: perm.canEdit || false,
+          canDelete: perm.canDelete || false,
+          canManage: perm.canManage || false,
+        }));
+        
+        await db.insert(permissions).values(permissionsToInsert);
+      }
+
+      await createAuditLog(
+        "updated",
+        "role",
+        updatedRole.id,
+        updatedRole.name,
+        undefined,
+        `Updated role: ${updatedRole.name}`,
+        existingRole[0],
+        updatedRole,
+        req
+      );
+
+      res.json(updatedRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating role:', error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  app.delete("/api/roles/:id", async (req, res) => {
+    try {
+      // Check if role exists and is not a system role
+      const role = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.id, req.params.id))
+        .limit(1);
+      
+      if (role.length === 0) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      if (role[0].isSystem) {
+        return res.status(400).json({ message: "Cannot delete system role" });
+      }
+
+      // Check if any users are assigned to this role
+      const usersWithRole = await db
+        .select()
+        .from(userRoles)
+        .where(eq(userRoles.roleId, req.params.id))
+        .limit(1);
+      
+      if (usersWithRole.length > 0) {
+        return res.status(400).json({ message: "Cannot delete role that is assigned to users" });
+      }
+
+      // Delete role (permissions will be deleted automatically due to cascade)
+      await db.delete(roles).where(eq(roles.id, req.params.id));
+
+      await createAuditLog(
+        "deleted",
+        "role",
+        role[0].id,
+        role[0].name,
+        undefined,
+        `Deleted role: ${role[0].name}`,
+        role[0],
+        null,
+        req
+      );
+
+      res.json({ message: "Role deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting role:', error);
+      res.status(500).json({ message: "Failed to delete role" });
+    }
+  });
+
+  // User Roles API Routes
+  app.get("/api/users/:userId/roles", async (req, res) => {
+    try {
+      const userRoleData = await db
+        .select({
+          roleId: userRoles.roleId,
+          roleName: roles.name,
+          roleDescription: roles.description,
+          assignedAt: userRoles.assignedAt,
+        })
+        .from(userRoles)
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, req.params.userId));
+
+      res.json(userRoleData);
+    } catch (error) {
+      console.error('Error fetching user roles:', error);
+      res.status(500).json({ message: "Failed to fetch user roles" });
+    }
+  });
+
+  app.post("/api/users/:userId/roles", async (req, res) => {
+    try {
+      const { roleId, assignedBy } = req.body;
+      const validatedData = insertUserRoleSchema.parse({
+        userId: req.params.userId,
+        roleId,
+        assignedBy,
+      });
+
+      const [newUserRole] = await db.insert(userRoles).values(validatedData).returning();
+
+      await createAuditLog(
+        "created",
+        "user_role",
+        newUserRole.id,
+        `User role assignment`,
+        assignedBy,
+        `Assigned role to user ${req.params.userId}`,
+        null,
+        newUserRole,
+        req
+      );
+
+      res.status(201).json(newUserRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error assigning user role:', error);
+      res.status(500).json({ message: "Failed to assign user role" });
+    }
+  });
+
+  app.delete("/api/users/:userId/roles/:roleId", async (req, res) => {
+    try {
+      const result = await db
+        .delete(userRoles)
+        .where(and(
+          eq(userRoles.userId, req.params.userId),
+          eq(userRoles.roleId, req.params.roleId)
+        ))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "User role assignment not found" });
+      }
+
+      await createAuditLog(
+        "deleted",
+        "user_role",
+        result[0].id,
+        "User role unassignment",
+        undefined,
+        `Removed role from user ${req.params.userId}`,
+        result[0],
+        null,
+        req
+      );
+
+      res.json({ message: "User role removed successfully" });
+    } catch (error) {
+      console.error('Error removing user role:', error);
+      res.status(500).json({ message: "Failed to remove user role" });
     }
   });
 
