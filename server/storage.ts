@@ -2375,6 +2375,10 @@ class DbStorage implements IStorage {
     return true;
   }
 
+  async getAllClientsForExport(): Promise<Client[]> {
+    return await db.select().from(clients).orderBy(clients.createdAt);
+  }
+
   // For now, delegate other methods to memory storage until we need them
   // This allows the system to work while we migrate clients to database
   private memStorage = new MemStorage();

@@ -216,6 +216,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import clients from CSV
+  app.post("/api/clients/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      if (!req.file.originalname.toLowerCase().endsWith('.csv')) {
+        return res.status(400).json({ message: "File must be a CSV" });
+      }
+
+      const csvData: any[] = [];
+      const stream = Readable.from(req.file.buffer.toString());
+      
+      return new Promise((resolve) => {
+        stream
+          .pipe(csv())
+          .on('data', (data) => csvData.push(data))
+          .on('end', async () => {
+            try {
+              let imported = 0;
+              let errors = 0;
+              const errorDetails: string[] = [];
+
+              for (const row of csvData) {
+                try {
+                  // Map CSV columns to client fields
+                  const clientData = {
+                    name: row.name || row.Name || `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim(),
+                    email: row.email || row.Email,
+                    phone: row.phone || row.Phone,
+                    company: row.company || row.Company || row['Business Name'],
+                    status: row.status || row.Status || 'active',
+                    contactOwner: row.contactOwner || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+                    address: row.address || row.Address,
+                    city: row.city || row.City,
+                    state: row.state || row.State,
+                    zipCode: row.zipCode || row['Zip Code'],
+                    website: row.website || row.Website,
+                    notes: row.notes || row.Notes,
+                    clientVertical: row.clientVertical || row['Client Vertical']
+                  };
+
+                  // Validate required fields
+                  if (!clientData.email) {
+                    errorDetails.push(`Row ${imported + errors + 1}: Email is required`);
+                    errors++;
+                    continue;
+                  }
+
+                  const validatedData = insertClientSchema.parse(clientData);
+                  await storage.createClient(validatedData);
+                  imported++;
+
+                  // Log the import for audit
+                  await createAuditLog(
+                    "created",
+                    "contact",
+                    "bulk-import",
+                    validatedData.name || validatedData.email,
+                    "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+                    "Contact imported from CSV",
+                    null,
+                    validatedData,
+                    req
+                  );
+                } catch (error) {
+                  errors++;
+                  if (error instanceof Error) {
+                    errorDetails.push(`Row ${imported + errors}: ${error.message}`);
+                  }
+                }
+              }
+
+              resolve(res.json({
+                imported,
+                errors,
+                total: csvData.length,
+                errorDetails: errorDetails.slice(0, 10) // Limit error details
+              }));
+            } catch (error) {
+              resolve(res.status(500).json({ message: "Failed to process CSV data", error: error instanceof Error ? error.message : "Unknown error" }));
+            }
+          })
+          .on('error', (error) => {
+            resolve(res.status(500).json({ message: "Failed to parse CSV", error: error.message }));
+          });
+      });
+    } catch (error) {
+      console.error("Import error:", error);
+      res.status(500).json({ message: "Failed to import clients", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Export clients to CSV
+  app.get("/api/clients/export", async (req, res) => {
+    try {
+      const clients = await storage.getAllClientsForExport();
+      
+      if (clients.length === 0) {
+        return res.status(404).json({ message: "No clients to export" });
+      }
+
+      // Prepare CSV headers
+      const csvHeaders = [
+        'Name', 'Email', 'Phone', 'Company', 'Status', 'Address', 'City', 
+        'State', 'Zip Code', 'Website', 'Notes', 'Client Vertical', 'Created Date'
+      ];
+
+      // Prepare CSV data
+      const csvData = clients.map(client => [
+        client.name || '',
+        client.email || '',
+        client.phone || '',
+        client.company || '',
+        client.status || '',
+        client.address || '',
+        client.city || '',
+        client.state || '',
+        client.zipCode || '',
+        client.website || '',
+        client.notes || '',
+        client.clientVertical || '',
+        client.createdAt ? new Date(client.createdAt).toISOString().split('T')[0] : ''
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvData.map(row => row.map(field => `"${field}"`).join(','))
+      ].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="clients-export-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvContent);
+
+      // Log the export
+      await createAuditLog(
+        "created",
+        "export",
+        "clients-export",
+        "Clients Export",
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Exported ${clients.length} clients to CSV`,
+        null,
+        { count: clients.length },
+        req
+      );
+    } catch (error) {
+      console.error("Export error:", error);
+      res.status(500).json({ message: "Failed to export clients", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Project routes
   app.get("/api/projects", async (req, res) => {
     try {

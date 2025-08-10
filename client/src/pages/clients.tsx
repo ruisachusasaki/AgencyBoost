@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +67,8 @@ export default function Clients() {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -189,6 +191,103 @@ export default function Clients() {
     } else {
       setSortField(field);
       setSortDirection('asc');
+    }
+  };
+
+  // Import CSV handler
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a CSV file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/clients/import', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Import successful",
+          description: `${result.imported} clients imported successfully`,
+        });
+        // Refresh the clients data
+        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      } else {
+        toast({
+          title: "Import failed",
+          description: result.message || "Failed to import clients",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Import error",
+        description: "An error occurred while importing clients",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
+
+  // Export CSV handler
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('/api/clients/export', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `clients-export-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Export successful",
+          description: "Clients exported successfully",
+        });
+      } else {
+        const result = await response.json();
+        toast({
+          title: "Export failed",
+          description: result.message || "Failed to export clients",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Export error",
+        description: "An error occurred while exporting clients",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -363,7 +462,7 @@ export default function Clients() {
         </Button>
       </div>
 
-      {/* Search and Column Management */}
+      {/* Search, Import/Export, and Column Management */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
@@ -375,25 +474,52 @@ export default function Clients() {
           />
         </div>
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {AVAILABLE_COLUMNS.map((column) => (
-              <DropdownMenuCheckboxItem
-                key={column.key}
-                checked={visibleColumns.has(column.key)}
-                onCheckedChange={() => toggleColumnVisibility(column.key)}
-              >
-                {column.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileImport}
+            className="hidden"
+            id="csv-import"
+          />
+          <Button
+            variant="outline"
+            onClick={() => document.getElementById('csv-import')?.click()}
+            disabled={isImporting}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isImporting ? 'Importing...' : 'Import'}
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {isExporting ? 'Exporting...' : 'Export'}
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {AVAILABLE_COLUMNS.map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.key}
+                  checked={visibleColumns.has(column.key)}
+                  onCheckedChange={() => toggleColumnVisibility(column.key)}
+                >
+                  {column.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <Card>
