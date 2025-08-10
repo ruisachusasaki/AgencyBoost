@@ -244,7 +244,7 @@ export default function StaffDetail() {
   const managerOptions = allStaff.filter(member => member.id !== staffMember.id);
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
@@ -292,10 +292,9 @@ export default function StaffDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Image Card */}
-        <div className="lg:col-span-1">
-          <Card className="h-fit">
+        <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Upload className="h-5 w-5" />
@@ -304,11 +303,11 @@ export default function StaffDetail() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
-                <Avatar className="h-24 w-24 lg:h-28 lg:w-28">
+                <Avatar className="h-32 w-32">
                   <AvatarImage 
                     src={staffMember.profileImagePath ? staffMember.profileImagePath : undefined} 
                   />
-                  <AvatarFallback className="text-lg lg:text-xl">
+                  <AvatarFallback className="text-2xl">
                     {staffMember.firstName.charAt(0)}{staffMember.lastName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
@@ -327,10 +326,9 @@ export default function StaffDetail() {
               )}
             </CardContent>
           </Card>
-        </div>
 
         {/* Main Form */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Basic Information */}
@@ -470,7 +468,7 @@ export default function StaffDetail() {
                       <FormItem>
                         <FormLabel>Manager</FormLabel>
                         <Select
-                          value={field.value}
+                          value={field.value || undefined}
                           onValueChange={field.onChange}
                           disabled={!isEditing}
                         >

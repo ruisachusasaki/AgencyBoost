@@ -13,7 +13,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50">
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)}
@@ -21,7 +21,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       
-      <main className="flex-1">
+      <main className="flex-1 overflow-auto">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <div className="p-6">
           {children}
