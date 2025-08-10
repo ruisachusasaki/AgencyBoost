@@ -400,13 +400,6 @@ export default function EnhancedClientDetail() {
     const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
     const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
     
-    // Debug logging to see what we're finding
-    console.log('Debug - First Name Field:', firstNameField);
-    console.log('Debug - Last Name Field:', lastNameField);
-    console.log('Debug - First Name Value:', firstName);
-    console.log('Debug - Last Name Value:', lastName);
-    console.log('Debug - Custom Field Values:', customFieldValues);
-    
     // If we have both first and last name from custom fields, use them
     if (firstName && lastName) {
       return `${firstName} ${lastName}`.trim();
@@ -429,10 +422,6 @@ export default function EnhancedClientDetail() {
     
     const customFieldValues = client.customFieldValues as Record<string, any> || {};
     const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
-    
-    // Debug logging
-    console.log('Debug - Business Name Field:', businessNameField);
-    console.log('Debug - Business Name Value:', businessName);
     
     // If we have business name from custom fields, use it
     if (businessName) {
