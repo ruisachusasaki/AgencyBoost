@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X } from "lucide-react";
 import type { Client } from "@shared/schema";
 import { format } from "date-fns";
@@ -143,7 +145,84 @@ const EditableField = ({
                 ))}
               </SelectContent>
             </Select>
-          ) : type === 'textarea' ? (
+          ) : type === 'dropdown_multiple' && options ? (
+            <div className="flex-1">
+              <div className="space-y-2 p-2 border rounded-md max-h-32 overflow-y-auto">
+                {options.map((option) => {
+                  const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()) : [];
+                  const isChecked = currentValues.includes(option);
+                  return (
+                    <div key={option} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${fieldId}-${option}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          let newValues = [...currentValues];
+                          if (checked) {
+                            if (!newValues.includes(option)) {
+                              newValues.push(option);
+                            }
+                          } else {
+                            newValues = newValues.filter(v => v !== option);
+                          }
+                          setFieldEditValue(newValues.join(', '));
+                        }}
+                      />
+                      <Label htmlFor={`${fieldId}-${option}`} className="text-sm font-normal">
+                        {option}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : type === 'radio' && options ? (
+            <div className="flex-1">
+              <RadioGroup value={fieldEditValue} onValueChange={setFieldEditValue}>
+                <div className="space-y-2 p-2 border rounded-md max-h-32 overflow-y-auto">
+                  {options.map((option) => (
+                    <div key={option} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option} id={`${fieldId}-${option}`} />
+                      <Label htmlFor={`${fieldId}-${option}`} className="text-sm font-normal">
+                        {option}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+            </div>
+          ) : type === 'checkbox' && options ? (
+            <div className="flex-1">
+              <div className="space-y-2 p-2 border rounded-md max-h-32 overflow-y-auto">
+                {options.map((option) => {
+                  const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()) : [];
+                  const isChecked = currentValues.includes(option);
+                  return (
+                    <div key={option} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${fieldId}-${option}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          let newValues = [...currentValues];
+                          if (checked) {
+                            if (!newValues.includes(option)) {
+                              newValues.push(option);
+                            }
+                          } else {
+                            newValues = newValues.filter(v => v !== option);
+                          }
+                          setFieldEditValue(newValues.join(', '));
+                        }}
+                      />
+                      <Label htmlFor={`${fieldId}-${option}`} className="text-sm font-normal">
+                        {option}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : type === 'multiline' || type === 'textarea' ? (
             <Textarea
               placeholder="Enter value"
               value={fieldEditValue}
@@ -218,6 +297,23 @@ const EditableField = ({
           ) : type === 'currency' && value ? (
             <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
               ${Number(value).toFixed(2)}
+            </p>
+          ) : type === 'multiline' && value ? (
+            <div className={`${className} group-hover:bg-gray-50 p-1 rounded whitespace-pre-wrap`}>
+              {value || "Not specified"}
+            </div>
+          ) : (type === 'dropdown_multiple' || type === 'checkbox') && value ? (
+            <div className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+              {value.split(',').map((item: string, index: number) => (
+                <Badge key={index} variant="secondary" className="mr-1 mb-1 text-xs">
+                  {item.trim()}
+                </Badge>
+              ))}
+              {!value && "Not specified"}
+            </div>
+          ) : type === 'radio' && value ? (
+            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+              <Badge variant="outline" className="text-xs">{value}</Badge>
             </p>
           ) : (
             <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
@@ -652,7 +748,11 @@ export default function EnhancedClientDetail() {
                       // Get custom fields for this folder, sorted by order
                       const folderFields = (customFieldsData?.filter(
                         field => field.folderId === currentFolder?.id
-                      ) || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+                      ) || []).sort((a, b) => {
+                        const aOrder = (a as any).order || 0;
+                        const bOrder = (b as any).order || 0;
+                        return aOrder - bOrder;
+                      });
 
                       if (folderFields.length === 0) {
                         return (
