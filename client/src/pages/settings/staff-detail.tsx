@@ -116,7 +116,7 @@ export default function StaffDetail() {
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "",
-        managerId: staffMember.managerId ?? "none",
+        managerId: staffMember.managerId || "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
     }
@@ -244,7 +244,7 @@ export default function StaffDetail() {
   const managerOptions = allStaff.filter(member => member.id !== staffMember.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -292,9 +292,9 @@ export default function StaffDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Profile Image Card */}
-        <Card>
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Upload className="h-5 w-5" />
@@ -303,11 +303,11 @@ export default function StaffDetail() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center">
-              <Avatar className="h-32 w-32">
+              <Avatar className="h-24 w-24 lg:h-32 lg:w-32">
                 <AvatarImage 
                   src={staffMember.profileImagePath ? staffMember.profileImagePath : undefined} 
                 />
-                <AvatarFallback className="text-2xl">
+                <AvatarFallback className="text-xl lg:text-2xl">
                   {staffMember.firstName.charAt(0)}{staffMember.lastName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
@@ -328,7 +328,7 @@ export default function StaffDetail() {
         </Card>
 
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6 overflow-hidden">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Basic Information */}
@@ -598,146 +598,149 @@ export default function StaffDetail() {
                 </CardContent>
               </Card>
 
-              {/* Calendar Configuration */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Calendar className="h-5 w-5" />
-                    <span>Calendar Configuration</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
-                    <p>Calendar integration settings will be available here once the calendar system is implemented.</p>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Calendar Configuration & Notification Settings */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Calendar className="h-5 w-5" />
+                      <span>Calendar Configuration</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
+                      <p>Calendar integration settings will be available here once the calendar system is implemented.</p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Notification Settings */}
-              <Card>
+                <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Bell className="h-5 w-5" />
                     <span>Notification Settings</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Client Assignment */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Notify when a Client gets assigned to me</h4>
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="client-assigned-app" />
-                        <Label htmlFor="client-assigned-app" className="text-sm font-normal">In-App</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="client-assigned-email" />
-                        <Label htmlFor="client-assigned-email" className="text-sm font-normal">Email</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="client-assigned-sms" />
-                        <Label htmlFor="client-assigned-sms" className="text-sm font-normal">SMS</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Internal Chat Added */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Notify when I am added to a internal chat</h4>
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="chat-added-app" />
-                        <Label htmlFor="chat-added-app" className="text-sm font-normal">In-App</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="chat-added-email" />
-                        <Label htmlFor="chat-added-email" className="text-sm font-normal">Email</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="chat-added-sms" />
-                        <Label htmlFor="chat-added-sms" className="text-sm font-normal">SMS</Label>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4">
+                    {/* Client Assignment */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Assignment</h4>
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="client-assigned-app" />
+                          <Label htmlFor="client-assigned-app" className="text-xs font-normal">In-App</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="client-assigned-email" />
+                          <Label htmlFor="client-assigned-email" className="text-xs font-normal">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="client-assigned-sms" />
+                          <Label htmlFor="client-assigned-sms" className="text-xs font-normal">SMS</Label>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Chat Messages */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Notify for all new messages in internal chats I am part of</h4>
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="chat-messages-app" />
-                        <Label htmlFor="chat-messages-app" className="text-sm font-normal">In-App</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 opacity-50">
-                        <Checkbox id="chat-messages-email" disabled />
-                        <Label htmlFor="chat-messages-email" className="text-sm font-normal text-muted-foreground">Email</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 opacity-50">
-                        <Checkbox id="chat-messages-sms" disabled />
-                        <Label htmlFor="chat-messages-sms" className="text-sm font-normal text-muted-foreground">SMS</Label>
+                    {/* Internal Chat Added */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Added to Internal Chat</h4>
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="chat-added-app" />
+                          <Label htmlFor="chat-added-app" className="text-xs font-normal">In-App</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="chat-added-email" />
+                          <Label htmlFor="chat-added-email" className="text-xs font-normal">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="chat-added-sms" />
+                          <Label htmlFor="chat-added-sms" className="text-xs font-normal">SMS</Label>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">Note: Web only - Email and SMS not available for all messages</p>
-                  </div>
 
-                  {/* Mentions */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Notify when I am mentioned in any conversation</h4>
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="mentioned-app" />
-                        <Label htmlFor="mentioned-app" className="text-sm font-normal">In-App</Label>
+                    {/* Chat Messages */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">All Chat Messages</h4>
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="chat-messages-app" />
+                          <Label htmlFor="chat-messages-app" className="text-xs font-normal">In-App</Label>
+                        </div>
+                        <div className="flex items-center space-x-2 opacity-50">
+                          <Checkbox id="chat-messages-email" disabled />
+                          <Label htmlFor="chat-messages-email" className="text-xs font-normal text-muted-foreground">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2 opacity-50">
+                          <Checkbox id="chat-messages-sms" disabled />
+                          <Label htmlFor="chat-messages-sms" className="text-xs font-normal text-muted-foreground">SMS</Label>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="mentioned-email" />
-                        <Label htmlFor="mentioned-email" className="text-sm font-normal">Email</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="mentioned-sms" />
-                        <Label htmlFor="mentioned-sms" className="text-sm font-normal">SMS</Label>
+                      <p className="text-xs text-muted-foreground">Web only - Email and SMS unavailable</p>
+                    </div>
+
+                    {/* Mentions */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Mentions</h4>
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="mentioned-app" />
+                          <Label htmlFor="mentioned-app" className="text-xs font-normal">In-App</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="mentioned-email" />
+                          <Label htmlFor="mentioned-email" className="text-xs font-normal">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="mentioned-sms" />
+                          <Label htmlFor="mentioned-sms" className="text-xs font-normal">SMS</Label>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Mention Follow-ups */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Notify for all new messages in conversations where I am mentioned</h4>
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="mention-followup-app" />
-                        <Label htmlFor="mention-followup-app" className="text-sm font-normal">In-App</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="mention-followup-email" />
-                        <Label htmlFor="mention-followup-email" className="text-sm font-normal">Email</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="mention-followup-sms" />
-                        <Label htmlFor="mention-followup-sms" className="text-sm font-normal">SMS</Label>
+                    {/* Mention Follow-ups */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Mention Follow-ups</h4>
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="mention-followup-app" />
+                          <Label htmlFor="mention-followup-app" className="text-xs font-normal">In-App</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="mention-followup-email" />
+                          <Label htmlFor="mention-followup-email" className="text-xs font-normal">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="mention-followup-sms" />
+                          <Label htmlFor="mention-followup-sms" className="text-xs font-normal">SMS</Label>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Task Assignment */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Notify when a task gets assigned to me</h4>
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="task-assigned-app" />
-                        <Label htmlFor="task-assigned-app" className="text-sm font-normal">In-App</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="task-assigned-email" />
-                        <Label htmlFor="task-assigned-email" className="text-sm font-normal">Email</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="task-assigned-sms" />
-                        <Label htmlFor="task-assigned-sms" className="text-sm font-normal">SMS</Label>
+                    {/* Task Assignment */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Task Assignment</h4>
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="task-assigned-app" />
+                          <Label htmlFor="task-assigned-app" className="text-xs font-normal">In-App</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="task-assigned-email" />
+                          <Label htmlFor="task-assigned-email" className="text-xs font-normal">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="task-assigned-sms" />
+                          <Label htmlFor="task-assigned-sms" className="text-xs font-normal">SMS</Label>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+                </Card>
+              </div>
             </form>
           </Form>
         </div>
