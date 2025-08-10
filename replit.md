@@ -58,7 +58,8 @@ Preferred communication style: Simple, everyday language.
 - **Pagination**: Complete pagination system for clients with dropdown options (20, 50, 100 items per page), page navigation controls, and item counters. Also implemented for Custom Fields directory.
 - **Client Management**: Full CRUD operations with custom field integration, contact owner assignment, and admin-only deletion capabilities.
 - **Audit Logs**: Comprehensive system activity tracking with admin interface and detailed logging.
-- **Table Sorting**: Sortable columns for Products & Services, with optimized layout.
+- **Table Sorting**: Complete sorting functionality for clients table with visual up/down arrow indicators, supporting all columns except Actions. Includes proper data type handling for names, dates, contact owners, and custom field values.
+- **CSV Import/Export**: Full CSV import and export capabilities for clients with field mapping, validation, error handling, and audit logging.
 - **Custom Field Management**: Drag-and-drop reordering for folders and fields, with dedicated edit pages.
 - **Staff Management**: Full CRUD operations for staff, including profile image uploads and advanced fields.
 - **Settings Management**: A comprehensive settings section with 10 specialized configuration areas: Business Profile, My Profile, Staff, Support, Roles & Permissions, Integrations, Custom Fields, Tags, Products, and Audit Logs.
