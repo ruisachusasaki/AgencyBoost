@@ -389,8 +389,6 @@ export default function CustomFields() {
         </p>
       </div>
 
-      <div className="max-w-7xl mx-auto">
-
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
@@ -824,8 +822,6 @@ export default function CustomFields() {
           </Dialog>
         )}
 
-
-      </div>
     </div>
   );
 }
