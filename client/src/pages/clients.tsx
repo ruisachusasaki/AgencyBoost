@@ -111,37 +111,7 @@ export default function Clients() {
   const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
   const [shareVisibility, setShareVisibility] = useState<'personal' | 'shared' | 'universal'>('personal');
 
-  // Load saved Smart Lists on component mount
-  React.useEffect(() => {
-    const loadSavedSmartLists = () => {
-      try {
-        const saved = localStorage.getItem('smartLists');
-        if (saved) {
-          const lists = JSON.parse(saved) as SmartList[];
-          
-          // Migrate legacy Smart Lists to include proper user IDs and permission fields
-          const migrated = lists.map((list: any) => ({
-            ...list,
-            createdBy: list.createdBy || (currentUser?.id || 'current-user'),
-            visibility: list.visibility || 'personal',
-            sharedWith: list.sharedWith || undefined,
-            createdAt: list.createdAt ? new Date(list.createdAt) : new Date(),
-            updatedAt: list.updatedAt ? new Date(list.updatedAt) : new Date()
-          }));
-          
-          setSavedSmartLists(migrated);
-          
-          // Save migrated version back to localStorage if changed
-          if (JSON.stringify(lists) !== JSON.stringify(migrated)) {
-            localStorage.setItem('smartLists', JSON.stringify(migrated));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load saved Smart Lists:', error);
-      }
-    };
-    loadSavedSmartLists();
-  }, [currentUser]);
+
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -171,6 +141,40 @@ export default function Clients() {
 
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'Admin';
+
+  // Load saved Smart Lists after currentUser is available
+  React.useEffect(() => {
+    if (!currentUser) return; // Wait for currentUser to be loaded
+    
+    const loadSavedSmartLists = () => {
+      try {
+        const saved = localStorage.getItem('smartLists');
+        if (saved) {
+          const lists = JSON.parse(saved) as SmartList[];
+          
+          // Migrate legacy Smart Lists to include proper user IDs and permission fields
+          const migrated = lists.map((list: any) => ({
+            ...list,
+            createdBy: list.createdBy || currentUser.id || 'current-user',
+            visibility: list.visibility || 'personal',
+            sharedWith: list.sharedWith || undefined,
+            createdAt: list.createdAt ? new Date(list.createdAt) : new Date(),
+            updatedAt: list.updatedAt ? new Date(list.updatedAt) : new Date()
+          }));
+          
+          setSavedSmartLists(migrated);
+          
+          // Save migrated version back to localStorage if changed
+          if (JSON.stringify(lists) !== JSON.stringify(migrated)) {
+            localStorage.setItem('smartLists', JSON.stringify(migrated));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load saved Smart Lists:', error);
+      }
+    };
+    loadSavedSmartLists();
+  }, [currentUser]);
 
   // Helper function to get contact owner display name
   const getContactOwnerName = (contactOwnerId: string | null) => {
