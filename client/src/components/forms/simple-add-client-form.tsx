@@ -34,7 +34,7 @@ export function SimpleAddClientForm({ onSuccess }: SimpleAddClientFormProps) {
 
   const { data: staff = [] } = useQuery({
     queryKey: ["/api/staff"],
-  });
+  }) as { data: any[] };
 
   const form = useForm<SimpleClientFormData>({
     resolver: zodResolver(simpleClientSchema),
@@ -128,12 +128,7 @@ export function SimpleAddClientForm({ onSuccess }: SimpleAddClientFormProps) {
   const isLoading = createClientMutation.isPending;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Add New Client</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name *</Label>
@@ -235,8 +230,6 @@ export function SimpleAddClientForm({ onSuccess }: SimpleAddClientFormProps) {
               {isLoading ? "Creating..." : "Create Client"}
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+    </form>
   );
 }
