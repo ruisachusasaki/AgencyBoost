@@ -922,6 +922,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/custom-fields/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertCustomFieldSchema.partial().parse(req.body);
+      
+      const [updatedField] = await db
+        .update(customFields)
+        .set(validatedData)
+        .where(eq(customFields.id, id))
+        .returning();
+
+      if (!updatedField) {
+        return res.status(404).json({ message: "Custom field not found" });
+      }
+
+      res.json(updatedField);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating custom field:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.delete("/api/custom-fields/:id", async (req, res) => {
     try {
       const { id } = req.params;
