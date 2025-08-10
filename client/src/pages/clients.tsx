@@ -72,8 +72,7 @@ export default function Clients() {
   const [, setLocation] = useLocation();
 
   const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
-    queryKey: ["/api/clients", currentPage, pageSize],
-    queryFn: () => apiRequest("GET", `/api/clients?page=${currentPage}&limit=${pageSize}`),
+    queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`],
   });
 
   const clients = clientsData?.clients || [];
