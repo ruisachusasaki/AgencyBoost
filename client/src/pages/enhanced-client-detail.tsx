@@ -147,33 +147,52 @@ const EditableField = ({
             </Select>
           ) : type === 'dropdown_multiple' && options ? (
             <div className="flex-1">
-              <div className="space-y-2 p-2 border rounded-md max-h-32 overflow-y-auto">
-                {options.map((option) => {
-                  const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()) : [];
-                  const isChecked = currentValues.includes(option);
-                  return (
-                    <div key={option} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`${fieldId}-${option}`}
-                        checked={isChecked}
-                        onCheckedChange={(checked) => {
-                          let newValues = [...currentValues];
-                          if (checked) {
-                            if (!newValues.includes(option)) {
-                              newValues.push(option);
-                            }
-                          } else {
-                            newValues = newValues.filter(v => v !== option);
-                          }
-                          setFieldEditValue(newValues.join(', '));
-                        }}
-                      />
-                      <Label htmlFor={`${fieldId}-${option}`} className="text-sm font-normal">
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600 mb-2">Select multiple options:</div>
+                <Select 
+                  value="" 
+                  onValueChange={(value) => {
+                    const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()).filter(v => v) : [];
+                    if (!currentValues.includes(value)) {
+                      const newValues = [...currentValues, value];
+                      setFieldEditValue(newValues.join(', '));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Add option..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.filter(option => {
+                      const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()).filter(v => v) : [];
+                      return !currentValues.includes(option);
+                    }).map((option) => (
+                      <SelectItem key={option} value={option}>
                         {option}
-                      </Label>
-                    </div>
-                  );
-                })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldEditValue && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {fieldEditValue.split(',').map(v => v.trim()).filter(v => v).map((value, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs flex items-center gap-1">
+                        {value}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentValues = fieldEditValue.split(',').map(v => v.trim()).filter(v => v);
+                            const newValues = currentValues.filter(v => v !== value);
+                            setFieldEditValue(newValues.join(', '));
+                          }}
+                          className="ml-1 hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : type === 'radio' && options ? (
@@ -195,7 +214,7 @@ const EditableField = ({
             <div className="flex-1">
               <div className="space-y-2 p-2 border rounded-md max-h-32 overflow-y-auto">
                 {options.map((option) => {
-                  const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()) : [];
+                  const currentValues = fieldEditValue ? fieldEditValue.split(',').map(v => v.trim()).filter(v => v) : [];
                   const isChecked = currentValues.includes(option);
                   return (
                     <div key={option} className="flex items-center space-x-2">
@@ -213,8 +232,9 @@ const EditableField = ({
                           }
                           setFieldEditValue(newValues.join(', '));
                         }}
+                        className="data-[state=checked]:bg-[#46a1a0] data-[state=checked]:border-[#46a1a0] rounded-sm"
                       />
-                      <Label htmlFor={`${fieldId}-${option}`} className="text-sm font-normal">
+                      <Label htmlFor={`${fieldId}-${option}`} className="text-sm font-normal cursor-pointer">
                         {option}
                       </Label>
                     </div>
@@ -302,14 +322,20 @@ const EditableField = ({
             <div className={`${className} group-hover:bg-gray-50 p-1 rounded whitespace-pre-wrap`}>
               {value || "Not specified"}
             </div>
-          ) : (type === 'dropdown_multiple' || type === 'checkbox') && value ? (
+          ) : (type === 'dropdown_multiple' || type === 'checkbox') ? (
             <div className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
-              {value.split(',').map((item: string, index: number) => (
-                <Badge key={index} variant="secondary" className="mr-1 mb-1 text-xs">
-                  {item.trim()}
-                </Badge>
-              ))}
-              {!value && "Not specified"}
+              {value ? (
+                value.split(',').map((item: string, index: number) => {
+                  const trimmedItem = item.trim();
+                  return trimmedItem ? (
+                    <Badge key={index} variant="secondary" className="mr-1 mb-1 text-xs">
+                      {trimmedItem}
+                    </Badge>
+                  ) : null;
+                })
+              ) : (
+                <span className="text-gray-500">Not specified</span>
+              )}
             </div>
           ) : type === 'radio' && value ? (
             <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
@@ -484,12 +510,22 @@ export default function EnhancedClientDetail() {
     let processedValue: any = fieldEditValue;
     
     // Process value based on field type
-    if (fieldType === 'checkbox') {
-      processedValue = fieldEditValue === 'true';
-    } else if (fieldType === 'number') {
+    if (fieldType === 'number') {
       processedValue = fieldEditValue ? parseFloat(fieldEditValue) : null;
     } else if (fieldType === 'currency') {
       processedValue = fieldEditValue ? parseFloat(fieldEditValue.replace(/[^\d.-]/g, '')) : null;
+    } else if (fieldType === 'dropdown_multiple' || fieldType === 'checkbox') {
+      // Keep comma-separated string values for multiple selections
+      processedValue = fieldEditValue?.trim() || "";
+    } else if (fieldType === 'radio' || fieldType === 'dropdown') {
+      // Keep single string values
+      processedValue = fieldEditValue?.trim() || "";
+    } else if (fieldType === 'multiline') {
+      // Keep multiline text as-is
+      processedValue = fieldEditValue || "";
+    } else {
+      // Default: keep string value
+      processedValue = fieldEditValue || "";
     }
     
     updateFieldMutation.mutate({ fieldId, value: processedValue, isCustomField });
