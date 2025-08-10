@@ -118,14 +118,30 @@ export default function Clients() {
         const saved = localStorage.getItem('smartLists');
         if (saved) {
           const lists = JSON.parse(saved) as SmartList[];
-          setSavedSmartLists(lists);
+          
+          // Migrate legacy Smart Lists to include proper user IDs and permission fields
+          const migrated = lists.map((list: any) => ({
+            ...list,
+            createdBy: list.createdBy || (currentUser?.id || 'current-user'),
+            visibility: list.visibility || 'personal',
+            sharedWith: list.sharedWith || undefined,
+            createdAt: list.createdAt ? new Date(list.createdAt) : new Date(),
+            updatedAt: list.updatedAt ? new Date(list.updatedAt) : new Date()
+          }));
+          
+          setSavedSmartLists(migrated);
+          
+          // Save migrated version back to localStorage if changed
+          if (JSON.stringify(lists) !== JSON.stringify(migrated)) {
+            localStorage.setItem('smartLists', JSON.stringify(migrated));
+          }
         }
       } catch (error) {
         console.error('Failed to load saved Smart Lists:', error);
       }
     };
     loadSavedSmartLists();
-  }, []);
+  }, [currentUser]);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -586,7 +602,12 @@ export default function Clients() {
       const currentUserId = currentUser?.id || 'current-user';
       
       // Only allow deletion if user is the creator
-      if (smartList?.createdBy !== currentUserId) {
+      // Handle legacy Smart Lists that might not have proper user IDs
+      const canDelete = !smartList?.createdBy || 
+                       smartList.createdBy === currentUserId || 
+                       smartList.createdBy === 'current-user';
+      
+      if (!canDelete) {
         toast({
           title: "Permission Denied",
           description: "You can only delete Smart Lists you created.",
@@ -857,7 +878,11 @@ export default function Clients() {
                   <Icon className="h-4 w-4" />
                   {tab.name} ({tab.count})
                 </button>
-                {'smartList' in tab && tab.smartList.createdBy === (currentUser?.id || 'current-user') && (
+                {'smartList' in tab && (
+                  !tab.smartList.createdBy || 
+                  tab.smartList.createdBy === (currentUser?.id || 'current-user') || 
+                  tab.smartList.createdBy === 'current-user'
+                ) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
