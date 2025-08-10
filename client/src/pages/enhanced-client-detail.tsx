@@ -639,34 +639,37 @@ export default function EnhancedClientDetail() {
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Button variant="ghost" onClick={() => setLocation("/clients")} className="mb-4 p-0 h-auto font-normal text-sm text-primary">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Clients
-          </Button>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{getClientDisplayName()}</h1>
-                <p className="text-gray-600 mt-2">{getBusinessDisplayName()}</p>
-              </div>
+    <div className="space-y-6">
+      {/* Back Button */}
+      <div className="flex items-center space-x-2">
+        <Button variant="outline" size="sm" onClick={() => setLocation("/clients")} className="flex items-center space-x-2">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Clients</span>
+        </Button>
+      </div>
+
+      {/* Header */}
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-primary" />
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-primary border-primary">
-                {client.status}
-              </Badge>
-              <Badge variant="outline">
-                {client.contactType}
-              </Badge>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{getClientDisplayName()}</h1>
+              <p className="text-muted-foreground">{getBusinessDisplayName()}</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-primary border-primary">
+              {client.status}
+            </Badge>
+            <Badge variant="outline">
+              {client.contactType}
+            </Badge>
+          </div>
         </div>
+      </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1053,7 +1056,6 @@ export default function EnhancedClientDetail() {
             </Card>
           </div>
         </div>
-      </div>
     </div>
   );
 }
