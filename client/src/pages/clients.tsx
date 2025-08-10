@@ -182,8 +182,63 @@ export default function Clients() {
     },
   });
 
-  // For now, display all clients from current page as we handle filtering/sorting server-side later
-  const filteredAndSortedClients = clients;
+  // Apply sorting to clients
+  const filteredAndSortedClients = useMemo(() => {
+    if (!clients || clients.length === 0) return clients;
+
+    const sorted = [...clients].sort((a, b) => {
+      let aValue: any = '';
+      let bValue: any = '';
+
+      switch (sortField) {
+        case 'name':
+          aValue = getClientDisplayName(a).toLowerCase();
+          bValue = getClientDisplayName(b).toLowerCase();
+          break;
+        case 'company':
+          aValue = getBusinessDisplayName(a).toLowerCase();
+          bValue = getBusinessDisplayName(b).toLowerCase();
+          break;
+        case 'email':
+          aValue = (a.email || '').toLowerCase();
+          bValue = (b.email || '').toLowerCase();
+          break;
+        case 'phone':
+          aValue = a.phone || '';
+          bValue = b.phone || '';
+          break;
+        case 'contactOwner':
+          const aOwner = staff?.find((s: any) => s.id === a.contactOwner);
+          const bOwner = staff?.find((s: any) => s.id === b.contactOwner);
+          aValue = (aOwner ? `${aOwner.firstName} ${aOwner.lastName}` : '').toLowerCase();
+          bValue = (bOwner ? `${bOwner.firstName} ${bOwner.lastName}` : '').toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt || 0).getTime();
+          bValue = new Date(b.createdAt || 0).getTime();
+          break;
+        case 'lastActivity':
+          // For now, use createdAt as lastActivity placeholder
+          aValue = new Date(a.createdAt || 0).getTime();
+          bValue = new Date(b.createdAt || 0).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortField === 'createdAt' || sortField === 'lastActivity') {
+        // Handle date sorting
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      } else {
+        // Handle string sorting
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      }
+    });
+
+    return sorted;
+  }, [clients, sortField, sortDirection, staff, customFieldsData]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
