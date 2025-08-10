@@ -388,17 +388,24 @@ export default function EnhancedClientDetail() {
   const getClientDisplayName = () => {
     if (!client || !customFieldsData) return client?.name || "";
     
-    // Find First Name and Last Name fields by name
+    // Find First Name and Last Name fields by exact name match
     const firstNameField = customFieldsData.find(field => 
-      field.name.toLowerCase() === 'first name' || field.name.toLowerCase() === 'firstname'
+      field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
     );
     const lastNameField = customFieldsData.find(field => 
-      field.name.toLowerCase() === 'last name' || field.name.toLowerCase() === 'lastname'
+      field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
     );
     
     const customFieldValues = client.customFieldValues as Record<string, any> || {};
     const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
     const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
+    
+    // Debug logging to see what we're finding
+    console.log('Debug - First Name Field:', firstNameField);
+    console.log('Debug - Last Name Field:', lastNameField);
+    console.log('Debug - First Name Value:', firstName);
+    console.log('Debug - Last Name Value:', lastName);
+    console.log('Debug - Custom Field Values:', customFieldValues);
     
     // If we have both first and last name from custom fields, use them
     if (firstName && lastName) {
@@ -415,15 +422,17 @@ export default function EnhancedClientDetail() {
   const getBusinessDisplayName = () => {
     if (!client || !customFieldsData) return client?.company || "";
     
-    // Find Business Name field by name
+    // Find Business Name field by exact name match
     const businessNameField = customFieldsData.find(field => 
-      field.name.toLowerCase() === 'business name' || 
-      field.name.toLowerCase() === 'company name' ||
-      field.name.toLowerCase() === 'businessname'
+      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name'
     );
     
     const customFieldValues = client.customFieldValues as Record<string, any> || {};
     const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
+    
+    // Debug logging
+    console.log('Debug - Business Name Field:', businessNameField);
+    console.log('Debug - Business Name Value:', businessName);
     
     // If we have business name from custom fields, use it
     if (businessName) {
@@ -464,7 +473,7 @@ export default function EnhancedClientDetail() {
           newSections.push({
             id: folder.name.toLowerCase().replace(/\s+/g, '-'),
             name: folder.name,
-            isOpen: true  // Open by default since these are the only sections
+            isOpen: false  // Closed by default
           });
         }
       });
