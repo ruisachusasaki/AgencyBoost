@@ -70,8 +70,20 @@ export default function Clients() {
     queryKey: ['/api/auth/current-user'],
   });
 
+  // Fetch staff data to display contact owner names
+  const { data: staff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string }>>({
+    queryKey: ['/api/staff'],
+  });
+
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'Admin';
+
+  // Helper function to get contact owner display name
+  const getContactOwnerName = (contactOwnerId: string | null) => {
+    if (!contactOwnerId || !staff) return '-';
+    const staffMember = staff.find(s => s.id === contactOwnerId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : '-';
+  };
 
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = (client: Client) => {
@@ -268,7 +280,7 @@ export default function Clients() {
       case 'email':
         return client.email;
       case 'contactOwner':
-        return client.contactOwner || '-';
+        return getContactOwnerName(client.contactOwner);
       case 'createdAt':
         return client.createdAt ? format(new Date(client.createdAt), 'MMM dd, yyyy') : '-';
       case 'lastActivity':
