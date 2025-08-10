@@ -244,9 +244,9 @@ export default function StaffDetail() {
   const managerOptions = allStaff.filter(member => member.id !== staffMember.id);
 
   return (
-    <div className="space-y-6 max-w-full">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
           <Link href="/settings/staff">
             <Button variant="ghost" size="sm">
@@ -264,10 +264,10 @@ export default function StaffDetail() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-xl sm:text-2xl font-bold">
                 {staffMember.firstName} {staffMember.lastName}
               </h1>
-              <p className="text-muted-foreground">{staffMember.email}</p>
+              <p className="text-muted-foreground text-sm">{staffMember.email}</p>
             </div>
           </div>
         </div>
@@ -292,43 +292,45 @@ export default function StaffDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Profile Image Card */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Upload className="h-5 w-5" />
-              <span>Profile Image</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-center">
-              <Avatar className="h-24 w-24 lg:h-32 lg:w-32">
-                <AvatarImage 
-                  src={staffMember.profileImagePath ? staffMember.profileImagePath : undefined} 
-                />
-                <AvatarFallback className="text-xl lg:text-2xl">
-                  {staffMember.firstName.charAt(0)}{staffMember.lastName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            {isEditing && (
-              <ObjectUploader
-                maxNumberOfFiles={1}
-                maxFileSize={5242880} // 5MB
-                onGetUploadParameters={handleProfileImageUpload}
-                onComplete={handleUploadComplete}
-                buttonClassName="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload New Image
-              </ObjectUploader>
-            )}
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-1">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Upload className="h-5 w-5" />
+                <span>Profile Image</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-center">
+                <Avatar className="h-24 w-24 lg:h-28 lg:w-28">
+                  <AvatarImage 
+                    src={staffMember.profileImagePath ? staffMember.profileImagePath : undefined} 
+                  />
+                  <AvatarFallback className="text-lg lg:text-xl">
+                    {staffMember.firstName.charAt(0)}{staffMember.lastName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              {isEditing && (
+                <ObjectUploader
+                  maxNumberOfFiles={1}
+                  maxFileSize={5242880} // 5MB
+                  onGetUploadParameters={handleProfileImageUpload}
+                  onComplete={handleUploadComplete}
+                  buttonClassName="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload New Image
+                </ObjectUploader>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Main Form */}
-        <div className="lg:col-span-3 space-y-6 overflow-hidden">
+        <div className="lg:col-span-4 space-y-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Basic Information */}
@@ -598,65 +600,65 @@ export default function StaffDetail() {
                 </CardContent>
               </Card>
 
-              {/* Calendar Configuration & Notification Settings */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Calendar className="h-5 w-5" />
-                      <span>Calendar Configuration</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
-                      <p>Calendar integration settings will be available here once the calendar system is implemented.</p>
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Calendar Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Calendar className="h-5 w-5" />
+                    <span>Calendar Configuration</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                    <p>Calendar integration settings will be available here once the calendar system is implemented.</p>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
+              {/* Notification Settings */}
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Bell className="h-5 w-5" />
                     <span>Notification Settings</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4">
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Client Assignment */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">Client Assignment</h4>
-                      <div className="flex items-center space-x-6">
+                      <div className="flex flex-wrap gap-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox id="client-assigned-app" />
-                          <Label htmlFor="client-assigned-app" className="text-xs font-normal">In-App</Label>
+                          <Label htmlFor="client-assigned-app" className="text-xs">In-App</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="client-assigned-email" />
-                          <Label htmlFor="client-assigned-email" className="text-xs font-normal">Email</Label>
+                          <Label htmlFor="client-assigned-email" className="text-xs">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="client-assigned-sms" />
-                          <Label htmlFor="client-assigned-sms" className="text-xs font-normal">SMS</Label>
+                          <Label htmlFor="client-assigned-sms" className="text-xs">SMS</Label>
                         </div>
                       </div>
                     </div>
 
                     {/* Internal Chat Added */}
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Added to Internal Chat</h4>
-                      <div className="flex items-center space-x-6">
+                      <h4 className="font-medium text-sm">Added to Chat</h4>
+                      <div className="flex flex-wrap gap-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox id="chat-added-app" />
-                          <Label htmlFor="chat-added-app" className="text-xs font-normal">In-App</Label>
+                          <Label htmlFor="chat-added-app" className="text-xs">In-App</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="chat-added-email" />
-                          <Label htmlFor="chat-added-email" className="text-xs font-normal">Email</Label>
+                          <Label htmlFor="chat-added-email" className="text-xs">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="chat-added-sms" />
-                          <Label htmlFor="chat-added-sms" className="text-xs font-normal">SMS</Label>
+                          <Label htmlFor="chat-added-sms" className="text-xs">SMS</Label>
                         </div>
                       </div>
                     </div>
@@ -664,38 +666,38 @@ export default function StaffDetail() {
                     {/* Chat Messages */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">All Chat Messages</h4>
-                      <div className="flex items-center space-x-6">
+                      <div className="flex flex-wrap gap-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox id="chat-messages-app" />
-                          <Label htmlFor="chat-messages-app" className="text-xs font-normal">In-App</Label>
+                          <Label htmlFor="chat-messages-app" className="text-xs">In-App</Label>
                         </div>
                         <div className="flex items-center space-x-2 opacity-50">
                           <Checkbox id="chat-messages-email" disabled />
-                          <Label htmlFor="chat-messages-email" className="text-xs font-normal text-muted-foreground">Email</Label>
+                          <Label htmlFor="chat-messages-email" className="text-xs text-muted-foreground">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2 opacity-50">
                           <Checkbox id="chat-messages-sms" disabled />
-                          <Label htmlFor="chat-messages-sms" className="text-xs font-normal text-muted-foreground">SMS</Label>
+                          <Label htmlFor="chat-messages-sms" className="text-xs text-muted-foreground">SMS</Label>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">Web only - Email and SMS unavailable</p>
+                      <p className="text-xs text-muted-foreground">Web only</p>
                     </div>
 
                     {/* Mentions */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">Mentions</h4>
-                      <div className="flex items-center space-x-6">
+                      <div className="flex flex-wrap gap-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox id="mentioned-app" />
-                          <Label htmlFor="mentioned-app" className="text-xs font-normal">In-App</Label>
+                          <Label htmlFor="mentioned-app" className="text-xs">In-App</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="mentioned-email" />
-                          <Label htmlFor="mentioned-email" className="text-xs font-normal">Email</Label>
+                          <Label htmlFor="mentioned-email" className="text-xs">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="mentioned-sms" />
-                          <Label htmlFor="mentioned-sms" className="text-xs font-normal">SMS</Label>
+                          <Label htmlFor="mentioned-sms" className="text-xs">SMS</Label>
                         </div>
                       </div>
                     </div>
@@ -703,18 +705,18 @@ export default function StaffDetail() {
                     {/* Mention Follow-ups */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">Mention Follow-ups</h4>
-                      <div className="flex items-center space-x-6">
+                      <div className="flex flex-wrap gap-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox id="mention-followup-app" />
-                          <Label htmlFor="mention-followup-app" className="text-xs font-normal">In-App</Label>
+                          <Label htmlFor="mention-followup-app" className="text-xs">In-App</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="mention-followup-email" />
-                          <Label htmlFor="mention-followup-email" className="text-xs font-normal">Email</Label>
+                          <Label htmlFor="mention-followup-email" className="text-xs">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="mention-followup-sms" />
-                          <Label htmlFor="mention-followup-sms" className="text-xs font-normal">SMS</Label>
+                          <Label htmlFor="mention-followup-sms" className="text-xs">SMS</Label>
                         </div>
                       </div>
                     </div>
@@ -722,25 +724,24 @@ export default function StaffDetail() {
                     {/* Task Assignment */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">Task Assignment</h4>
-                      <div className="flex items-center space-x-6">
+                      <div className="flex flex-wrap gap-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox id="task-assigned-app" />
-                          <Label htmlFor="task-assigned-app" className="text-xs font-normal">In-App</Label>
+                          <Label htmlFor="task-assigned-app" className="text-xs">In-App</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="task-assigned-email" />
-                          <Label htmlFor="task-assigned-email" className="text-xs font-normal">Email</Label>
+                          <Label htmlFor="task-assigned-email" className="text-xs">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox id="task-assigned-sms" />
-                          <Label htmlFor="task-assigned-sms" className="text-xs font-normal">SMS</Label>
+                          <Label htmlFor="task-assigned-sms" className="text-xs">SMS</Label>
                         </div>
                       </div>
                     </div>
                   </div>
                 </CardContent>
-                </Card>
-              </div>
+              </Card>
             </form>
           </Form>
         </div>
