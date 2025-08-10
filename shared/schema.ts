@@ -183,7 +183,7 @@ export const clients = pgTable("clients", {
   notes: text("notes"),
   tags: text("tags").array(),
   clientVertical: text("client_vertical"), // Live Events, Financial Lead Gen
-  contactOwner: varchar("contact_owner").references(() => users.id),
+  contactOwner: uuid("contact_owner").references(() => staff.id),
   profileImage: text("profile_image"),
   
   // Billing information
