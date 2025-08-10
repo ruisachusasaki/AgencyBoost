@@ -53,7 +53,7 @@ export const customFieldFolders = pgTable("custom_field_folders", {
 export const customFields = pgTable("custom_fields", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  type: text("type").notNull(), // text, email, phone, dropdown, checkbox, date, url, number, currency
+  type: text("type").notNull(), // text, multiline, email, phone, dropdown, dropdown_multiple, checkbox, radio, date, url, number, currency
   options: text("options").array(), // for dropdown fields
   required: boolean("required").default(false),
   folderId: varchar("folder_id").references(() => customFieldFolders.id),

@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link as LinkIcon, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical, ArrowLeft } from "lucide-react";
+import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link as LinkIcon, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical, ArrowLeft, Radio, AlignLeft, List, X } from "lucide-react";
 import { Link } from "wouter";
 import type { CustomField, CustomFieldFolder } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -25,8 +25,11 @@ const fieldTypeIcons = {
   date: Calendar,
   url: LinkIcon,
   currency: DollarSign,
-  dropdown: CheckSquare,
-  checkbox: CheckSquare
+  dropdown: List,
+  checkbox: CheckSquare,
+  multiline: AlignLeft,
+  dropdown_multiple: List,
+  radio: Radio
 };
 
 type SortField = 'name' | 'type' | 'folder' | 'required';
@@ -48,7 +51,8 @@ export default function CustomFields() {
     name: "",
     type: "text",
     required: false,
-    folderId: ""
+    folderId: "",
+    options: [] as string[]
   });
 
   const [newFolder, setNewFolder] = useState({
@@ -99,7 +103,7 @@ export default function CustomFields() {
       queryClient.invalidateQueries({ queryKey: ["/api/custom-fields"] });
       toast({ title: "Success", description: "Custom field created successfully." });
       setIsAddFieldDialogOpen(false);
-      setNewField({ name: "", type: "text", required: false, folderId: "" });
+      setNewField({ name: "", type: "text", required: false, folderId: "", options: [] });
     },
     onError: (error: any) => {
       toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create field" });
@@ -367,6 +371,28 @@ export default function CustomFields() {
     return customFields.filter(field => field.folderId === folderId).length;
   };
 
+  // Helper functions for managing field options
+  const addOption = (fieldState: typeof newField | CustomField, setFieldState: any) => {
+    const updatedOptions = [...(fieldState.options || []), ""];
+    setFieldState({ ...fieldState, options: updatedOptions });
+  };
+
+  const updateOption = (index: number, value: string, fieldState: typeof newField | CustomField, setFieldState: any) => {
+    const updatedOptions = [...(fieldState.options || [])];
+    updatedOptions[index] = value;
+    setFieldState({ ...fieldState, options: updatedOptions });
+  };
+
+  const removeOption = (index: number, fieldState: typeof newField | CustomField, setFieldState: any) => {
+    const updatedOptions = (fieldState.options || []).filter((_, i) => i !== index);
+    setFieldState({ ...fieldState, options: updatedOptions });
+  };
+
+  // Check if field type requires options
+  const fieldTypeRequiresOptions = (type: string) => {
+    return ['dropdown', 'dropdown_multiple', 'checkbox', 'radio'].includes(type);
+  };
+
   return (
     <div className="space-y-6">
       {/* Back to Settings Button */}
@@ -460,6 +486,7 @@ export default function CustomFields() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="text">Text</SelectItem>
+                            <SelectItem value="multiline">Multiline Text</SelectItem>
                             <SelectItem value="email">Email</SelectItem>
                             <SelectItem value="phone">Phone</SelectItem>
                             <SelectItem value="number">Number</SelectItem>
@@ -467,7 +494,9 @@ export default function CustomFields() {
                             <SelectItem value="url">URL</SelectItem>
                             <SelectItem value="currency">Currency</SelectItem>
                             <SelectItem value="dropdown">Dropdown</SelectItem>
+                            <SelectItem value="dropdown_multiple">Dropdown (Multiple)</SelectItem>
                             <SelectItem value="checkbox">Checkbox</SelectItem>
+                            <SelectItem value="radio">Radio Select</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -487,6 +516,49 @@ export default function CustomFields() {
                           </SelectContent>
                         </Select>
                       </div>
+                      
+                      {/* Options management for dropdown, checkbox, radio fields */}
+                      {fieldTypeRequiresOptions(newField.type) && (
+                        <div>
+                          <Label htmlFor="fieldOptions">Options *</Label>
+                          <div className="space-y-2">
+                            {(newField.options || []).map((option, index) => (
+                              <div key={index} className="flex items-center space-x-2">
+                                <Input
+                                  value={option}
+                                  onChange={(e) => updateOption(index, e.target.value, newField, setNewField)}
+                                  placeholder={`Option ${index + 1}`}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeOption(index, newField, setNewField)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addOption(newField, setNewField)}
+                              className="w-full"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Option
+                            </Button>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {newField.type === 'dropdown' && 'Users can select one option from this list'}
+                            {newField.type === 'dropdown_multiple' && 'Users can select multiple options from this list'}
+                            {newField.type === 'checkbox' && 'Users can select multiple options from this list'}
+                            {newField.type === 'radio' && 'Users can select one option from this list'}
+                          </p>
+                        </div>
+                      )}
                       
                       <div className="flex items-center space-x-2">
                         <Switch
@@ -772,6 +844,7 @@ export default function CustomFields() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="multiline">Multiline Text</SelectItem>
                       <SelectItem value="email">Email</SelectItem>
                       <SelectItem value="phone">Phone</SelectItem>
                       <SelectItem value="number">Number</SelectItem>
@@ -779,7 +852,9 @@ export default function CustomFields() {
                       <SelectItem value="url">URL</SelectItem>
                       <SelectItem value="currency">Currency</SelectItem>
                       <SelectItem value="dropdown">Dropdown</SelectItem>
+                      <SelectItem value="dropdown_multiple">Dropdown (Multiple)</SelectItem>
                       <SelectItem value="checkbox">Checkbox</SelectItem>
+                      <SelectItem value="radio">Radio Select</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -799,6 +874,49 @@ export default function CustomFields() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Options management for dropdown, checkbox, radio fields in edit dialog */}
+                {fieldTypeRequiresOptions(editingField.type) && (
+                  <div>
+                    <Label htmlFor="editFieldOptions">Options *</Label>
+                    <div className="space-y-2">
+                      {(editingField.options || []).map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <Input
+                            value={option}
+                            onChange={(e) => updateOption(index, e.target.value, editingField, setEditingField)}
+                            placeholder={`Option ${index + 1}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeOption(index, editingField, setEditingField)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addOption(editingField, setEditingField)}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Option
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {editingField.type === 'dropdown' && 'Users can select one option from this list'}
+                      {editingField.type === 'dropdown_multiple' && 'Users can select multiple options from this list'}
+                      {editingField.type === 'checkbox' && 'Users can select multiple options from this list'}
+                      {editingField.type === 'radio' && 'Users can select one option from this list'}
+                    </p>
+                  </div>
+                )}
                 
                 <div className="flex items-center space-x-2">
                   <Switch
