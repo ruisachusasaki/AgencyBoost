@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useToast } from "@/hooks/use-toast";
 import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link as LinkIcon, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical, ArrowLeft, Radio, AlignLeft, List, X } from "lucide-react";
 import { Link } from "wouter";
@@ -46,6 +47,8 @@ export default function CustomFields() {
   const [activeTab, setActiveTab] = useState("all-fields");
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [newField, setNewField] = useState({
     name: "",
@@ -340,6 +343,18 @@ export default function CustomFields() {
     }
   });
 
+  // Calculate pagination
+  const totalItems = sortedCustomFields.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCustomFields = sortedCustomFields.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes or items per page changes
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1);
+  }
+
   const handleUpdateField = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingField) {
@@ -594,8 +609,9 @@ export default function CustomFields() {
                 ) : customFields.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">No custom fields found</div>
                 ) : (
-                  <div className="border rounded-md">
-                    <Table>
+                  <>
+                    <div className="border rounded-md">
+                      <Table>
                       <TableHeader>
                         <TableRow>
                           <SortableHeader field="name">Field Name</SortableHeader>
@@ -607,7 +623,7 @@ export default function CustomFields() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedCustomFields.map((field) => (
+                        {paginatedCustomFields.map((field) => (
                           <TableRow key={field.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
@@ -661,8 +677,81 @@ export default function CustomFields() {
                           </TableRow>
                         ))}
                       </TableBody>
-                    </Table>
-                  </div>
+                      </Table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalItems > 0 && (
+                      <div className="flex items-center justify-between px-6 py-4 border-t">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Items per page:</span>
+                          <Select
+                            value={itemsPerPage.toString()}
+                            onValueChange={(value) => {
+                              setItemsPerPage(parseInt(value));
+                              setCurrentPage(1);
+                            }}
+                          >
+                            <SelectTrigger className="w-20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                              <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <span className="text-sm text-gray-600">
+                            Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of {totalItems} fields
+                          </span>
+                        </div>
+
+                        {totalPages > 1 && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                              disabled={currentPage === 1}
+                            >
+                              Previous
+                            </Button>
+                            
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                              .filter(page => {
+                                return page === 1 || 
+                                       page === totalPages || 
+                                       (page >= currentPage - 1 && page <= currentPage + 1);
+                              })
+                              .map((page, index, array) => (
+                                <div key={page} className="flex items-center">
+                                  {index > 0 && array[index - 1] !== page - 1 && (
+                                    <span className="px-2 text-gray-500">...</span>
+                                  )}
+                                  <Button
+                                    variant={currentPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(page)}
+                                    className={currentPage === page ? "bg-[#46a1a0] hover:bg-[#46a1a0]/90" : ""}
+                                  >
+                                    {page}
+                                  </Button>
+                                </div>
+                              ))}
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                              disabled={currentPage === totalPages}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
