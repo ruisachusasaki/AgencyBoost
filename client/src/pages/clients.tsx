@@ -59,6 +59,58 @@ export default function Clients() {
     queryKey: ["/api/clients"],
   });
 
+  // Fetch custom fields data for dynamic name display
+  const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
+    queryKey: ['/api/custom-fields'],
+  });
+
+  // Helper functions to get dynamic names from custom fields
+  const getClientDisplayName = (client: Client) => {
+    if (!client || !customFieldsData) return client?.name || "";
+    
+    // Find First Name and Last Name fields by exact name match
+    const firstNameField = customFieldsData.find(field => 
+      field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
+    );
+    const lastNameField = customFieldsData.find(field => 
+      field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
+    const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
+    
+    // If we have both first and last name from custom fields, use them
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`.trim();
+    }
+    // If we only have first name, use it
+    if (firstName) {
+      return firstName;
+    }
+    // Otherwise fall back to database name
+    return client.name || "";
+  };
+
+  const getBusinessDisplayName = (client: Client) => {
+    if (!client || !customFieldsData) return client?.company || "";
+    
+    // Find Business Name field by exact name match
+    const businessNameField = customFieldsData.find(field => 
+      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
+    
+    // If we have business name from custom fields, use it
+    if (businessName) {
+      return businessName;
+    }
+    // Otherwise fall back to database company
+    return client.company || "";
+  };
+
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/clients/${id}`);
@@ -81,12 +133,16 @@ export default function Clients() {
 
   // Filter and sort clients
   const filteredAndSortedClients = useMemo(() => {
-    let filtered = clients.filter(client =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = clients.filter(client => {
+      const displayName = getClientDisplayName(client).toLowerCase();
+      const businessName = getBusinessDisplayName(client).toLowerCase();
+      const searchLower = searchTerm.toLowerCase();
+      
+      return displayName.includes(searchLower) ||
+        client.email.toLowerCase().includes(searchLower) ||
+        businessName.includes(searchLower) ||
+        client.phone?.toLowerCase().includes(searchLower);
+    });
 
     // Sort clients
     filtered.sort((a, b) => {
@@ -95,12 +151,12 @@ export default function Clients() {
 
       switch (sortField) {
         case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
+          aValue = getClientDisplayName(a).toLowerCase();
+          bValue = getClientDisplayName(b).toLowerCase();
           break;
         case 'company':
-          aValue = (a.company || '').toLowerCase();
-          bValue = (b.company || '').toLowerCase();
+          aValue = getBusinessDisplayName(a).toLowerCase();
+          bValue = getBusinessDisplayName(b).toLowerCase();
           break;
         case 'phone':
           aValue = (a.phone || '').toLowerCase();
@@ -135,7 +191,7 @@ export default function Clients() {
     });
 
     return filtered;
-  }, [clients, searchTerm, sortField, sortDirection]);
+  }, [clients, searchTerm, sortField, sortDirection, customFieldsData]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -183,11 +239,11 @@ export default function Clients() {
             onClick={() => setLocation(`/clients/${client.id}`)}
             className="text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
           >
-            {client.name}
+            {getClientDisplayName(client)}
           </button>
         );
       case 'company':
-        return client.company || '-';
+        return getBusinessDisplayName(client) || '-';
       case 'phone':
         return client.phone ? formatPhoneNumber(client.phone) : '-';
       case 'email':
