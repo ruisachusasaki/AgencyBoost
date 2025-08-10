@@ -391,9 +391,13 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle>Add New Client</DialogTitle>
             </DialogHeader>
-            <AddClientForm
-              onSuccess={() => setIsCreateDialogOpen(false)}
-            />
+            {/* Force remount of form component when dialog opens to prevent cached state */}
+            {isCreateDialogOpen && (
+              <AddClientForm
+                key={`add-client-${Date.now()}`}
+                onSuccess={() => setIsCreateDialogOpen(false)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

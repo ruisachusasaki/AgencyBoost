@@ -75,13 +75,18 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
     },
   });
 
-  // Reset form whenever component mounts to ensure clean state
+  // Force reset form state on mount to prevent cached data
   useEffect(() => {
-    form.reset({
-      status: "active",
+    const resetData = {
+      status: "active" as const,
       contactOwner: "",
-      tags: [],
-      customFieldValues: {},
+      tags: [] as string[],
+      customFieldValues: {} as Record<string, string>,
+    };
+    form.reset(resetData);
+    // Also clear any potential field registrations
+    Object.keys(form.getValues().customFieldValues || {}).forEach(fieldId => {
+      form.setValue(`customFieldValues.${fieldId}`, "");
     });
   }, [form]);
 
