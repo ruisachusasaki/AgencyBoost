@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,6 +75,16 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
     },
   });
 
+  // Reset form whenever component mounts to ensure clean state
+  useEffect(() => {
+    form.reset({
+      status: "active",
+      contactOwner: "",
+      tags: [],
+      customFieldValues: {},
+    });
+  }, [form]);
+
   const createClientMutation = useMutation({
     mutationFn: async (data: AddClientFormData) => {
       // Create the client data structure
@@ -135,7 +145,13 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
         title: "Client created",
         description: "The client has been successfully created.",
       });
-      form.reset();
+      // Reset form to completely empty state
+      form.reset({
+        status: "active",
+        contactOwner: "",
+        tags: [],
+        customFieldValues: {},
+      });
       onSuccess?.();
     },
     onError: (error: any) => {
