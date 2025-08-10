@@ -88,10 +88,32 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
   });
 
   const onSubmit = (data: InsertClient) => {
+    // Extract first and last name from the name field
+    const nameParts = data.name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    // Populate core custom field values for dynamic display
+    const enhancedData = {
+      ...data,
+      customFieldValues: {
+        ...data.customFieldValues,
+        // Core Contact fields for dynamic name display
+        "817cf194-9aa7-4963-9530-65c496457d53": firstName, // First Name
+        "46c68705-55d7-4fc7-bce3-bae600a619d2": lastName,  // Last Name
+        "26ca3019-98c8-4424-b629-249d6765f1dd": data.company || '', // Business Name
+        "d3d222e1-6df4-44f5-b65b-e82be49cfb94": data.email || '', // Email
+        "76c9f453-33e0-49fa-a2b8-0574fb97b1dd": data.phone || '', // Phone
+        "80ba8b5b-8248-4a3f-a177-1e3619927b3e": data.position || '', // Position
+        "ad71b498-7e6d-4864-bfe5-0b56f901d4b9": data.website || '', // Website
+        "cac6e6ee-bdf9-48bd-81a7-48672d2453ae": data.clientVertical || '', // Client Vertical
+      }
+    };
+    
     if (client) {
-      updateClientMutation.mutate(data);
+      updateClientMutation.mutate(enhancedData);
     } else {
-      createClientMutation.mutate(data);
+      createClientMutation.mutate(enhancedData);
     }
   };
 
