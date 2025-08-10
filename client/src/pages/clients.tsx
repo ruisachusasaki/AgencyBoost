@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal } from "lucide-react";
 import ClientForm from "@/components/forms/client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +41,7 @@ const AVAILABLE_COLUMNS: Column[] = [
   { key: 'clientVertical', label: 'Client Vertical', sortable: true, defaultVisible: false },
   { key: 'status', label: 'Status', sortable: true, defaultVisible: false },
   { key: 'website', label: 'Website', sortable: false, defaultVisible: false },
+  { key: 'actions', label: 'Actions', sortable: false, defaultVisible: true },
 ];
 
 export default function Clients() {
@@ -63,6 +64,14 @@ export default function Clients() {
   const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
     queryKey: ['/api/custom-fields'],
   });
+
+  // Fetch current user role to check admin permissions
+  const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
+
+  // Check if current user is admin
+  const isAdmin = currentUser?.role === 'Admin';
 
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = (client: Client) => {
@@ -235,8 +244,8 @@ export default function Clients() {
     }
   };
 
-  const handleDeleteClient = (id: string) => {
-    if (confirm("Are you sure you want to delete this client?")) {
+  const handleDeleteClient = (id: string, clientName: string) => {
+    if (confirm(`Are you sure you want to permanently delete "${clientName}"? This action cannot be undone and will remove all associated data including projects, campaigns, and invoices.`)) {
       deleteClientMutation.mutate(id);
     }
   };
@@ -292,6 +301,27 @@ export default function Clients() {
             {client.website}
           </a>
         ) : '-';
+      case 'actions':
+        return isAdmin ? (
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => handleDeleteClient(client.id, getClientDisplayName(client))}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Client
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : null;
       default:
         return '-';
     }

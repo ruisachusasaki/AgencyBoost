@@ -2543,6 +2543,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Temporary auth endpoint for demo purposes (returns admin user)
+  app.get("/api/auth/current-user", async (req, res) => {
+    try {
+      // For demo purposes, return a mock admin user
+      // In a real app, this would check session/JWT and return actual user data
+      const mockUser = {
+        id: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        role: "Admin",
+        firstName: "System",
+        lastName: "Administrator"
+      };
+      res.json(mockUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get current user" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
