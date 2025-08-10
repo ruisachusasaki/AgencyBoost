@@ -41,6 +41,7 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
       clientVertical: client?.clientVertical || "",
       contactOwner: client?.contactOwner || "",
       lastActivity: client?.lastActivity || null,
+      customFieldValues: client?.customFieldValues || {},
     },
   });
 
