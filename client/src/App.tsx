@@ -28,6 +28,7 @@ import EditFolder from "@/pages/settings/edit-folder";
 import Tags from "@/pages/settings/tags";
 import Products from "@/pages/settings/products";
 import AuditLogs from "@/pages/settings/audit-logs";
+import PermissionAudit from "@/pages/settings/permission-audit";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/settings/staff/:id" component={StaffDetail} />
       <Route path="/settings/support" component={Support} />
       <Route path="/settings/roles-permissions" component={RolesPermissions} />
+      <Route path="/settings/permission-audit" component={PermissionAudit} />
       <Route path="/settings/integrations" component={Integrations} />
       <Route path="/settings/custom-fields" component={CustomFields} />
       <Route path="/settings/custom-fields/:id/edit" component={EditFolder} />

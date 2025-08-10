@@ -878,6 +878,60 @@ export const userRoles = pgTable("user_roles", {
   assignedAt: timestamp("assigned_at").defaultNow(),
 });
 
+// Permission Audit Trail - Specialized audit logging for permission changes
+export const permissionAuditLogs = pgTable("permission_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auditType: text("audit_type").notNull(), // role_created, role_updated, role_deleted, role_assigned, role_unassigned, permission_changed
+  
+  // Role-related fields
+  roleId: varchar("role_id").references(() => roles.id),
+  roleName: text("role_name"),
+  
+  // User assignment fields
+  targetUserId: varchar("target_user_id").references(() => users.id), // User who received/lost role
+  targetUserName: text("target_user_name"),
+  
+  // Permission change details
+  moduleAffected: text("module_affected"), // Which module permissions changed
+  permissionsBefore: jsonb("permissions_before"), // Previous permission state
+  permissionsAfter: jsonb("permissions_after"), // New permission state
+  
+  // Change summary
+  changesSummary: text("changes_summary").notNull(), // Human-readable description
+  changesCount: integer("changes_count").default(0), // Number of permission changes
+  
+  // Actor information
+  performedBy: varchar("performed_by").notNull().references(() => users.id),
+  performedByName: text("performed_by_name").notNull(),
+  
+  // Technical details
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: text("session_id"),
+  
+  // Risk assessment
+  riskLevel: text("risk_level").default("low"), // low, medium, high, critical
+  isElevatedPermission: boolean("is_elevated_permission").default(false), // True if admin/manage permissions changed
+  
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+// Permission Change History - Detailed tracking of individual permission modifications
+export const permissionChangeHistory = pgTable("permission_change_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auditLogId: varchar("audit_log_id").notNull().references(() => permissionAuditLogs.id, { onDelete: "cascade" }),
+  
+  module: text("module").notNull(),
+  permissionType: text("permission_type").notNull(), // canView, canCreate, canEdit, canDelete, canManage
+  
+  oldValue: boolean("old_value"),
+  newValue: boolean("new_value").notNull(),
+  
+  changeType: text("change_type").notNull(), // granted, revoked, modified
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas for workflow system
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
@@ -1071,6 +1125,16 @@ export const insertUserRoleSchema = createInsertSchema(userRoles).omit({
   assignedAt: true,
 });
 
+export const insertPermissionAuditLogSchema = createInsertSchema(permissionAuditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertPermissionChangeHistorySchema = createInsertSchema(permissionChangeHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type Role = typeof roles.$inferSelect;
 export type InsertRole = z.infer<typeof insertRoleSchema>;
 
@@ -1079,3 +1143,9 @@ export type InsertPermission = z.infer<typeof insertPermissionSchema>;
 
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+
+export type PermissionAuditLog = typeof permissionAuditLogs.$inferSelect;
+export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
+
+export type PermissionChangeHistory = typeof permissionChangeHistory.$inferSelect;
+export type InsertPermissionChangeHistory = z.infer<typeof insertPermissionChangeHistorySchema>;

@@ -21,6 +21,7 @@ import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
+import { permissionAuditService } from "./permissionAuditService";
 
 // Helper function to create audit logs
 async function createAuditLog(
@@ -2129,6 +2130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newRole] = await db.insert(roles).values(validatedRoleData).returning();
       
       // Create permissions for the role
+      const createdPermissions = [];
       if (rolePermissions && rolePermissions.length > 0) {
         const permissionsToInsert = rolePermissions.map((perm: any) => ({
           roleId: newRole.id,
@@ -2140,9 +2142,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canManage: perm.canManage || false,
         }));
         
-        await db.insert(permissions).values(permissionsToInsert);
+        const insertedPermissions = await db.insert(permissions).values(permissionsToInsert).returning();
+        createdPermissions.push(...insertedPermissions);
       }
 
+      // Create permission audit log
+      try {
+        await permissionAuditService.logRoleCreation(
+          newRole,
+          createdPermissions,
+          {
+            performedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from session
+            performedByName: "System Admin", // Default name, should come from session
+            ipAddress: req?.ip || req?.connection?.remoteAddress || "127.0.0.1",
+            userAgent: req?.get("User-Agent") || "Unknown",
+            sessionId: (req as any)?.sessionID,
+          }
+        );
+      } catch (auditError) {
+        console.error('Failed to create permission audit log:', auditError);
+      }
+
+      // Create regular audit log for backwards compatibility
       await createAuditLog(
         "created",
         "role",
@@ -2169,7 +2190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { permissions: rolePermissions, ...roleData } = req.body;
       
-      // Get existing role for audit log
+      // Get existing role and permissions for audit log
       const existingRole = await db
         .select()
         .from(roles)
@@ -2179,6 +2200,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingRole.length === 0) {
         return res.status(404).json({ message: "Role not found" });
       }
+
+      const oldPermissions = await db
+        .select()
+        .from(permissions)
+        .where(eq(permissions.roleId, req.params.id));
 
       // Update role
       const [updatedRole] = await db
@@ -2190,6 +2216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update permissions - delete existing and insert new ones
       await db.delete(permissions).where(eq(permissions.roleId, req.params.id));
       
+      const newPermissions = [];
       if (rolePermissions && rolePermissions.length > 0) {
         const permissionsToInsert = rolePermissions.map((perm: any) => ({
           roleId: req.params.id,
@@ -2201,9 +2228,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canManage: perm.canManage || false,
         }));
         
-        await db.insert(permissions).values(permissionsToInsert);
+        const insertedPermissions = await db.insert(permissions).values(permissionsToInsert).returning();
+        newPermissions.push(...insertedPermissions);
       }
 
+      // Create permission audit log
+      try {
+        await permissionAuditService.logRoleUpdate(
+          updatedRole,
+          oldPermissions,
+          newPermissions,
+          {
+            performedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from session
+            performedByName: "System Admin", // Default name, should come from session
+            ipAddress: req?.ip || req?.connection?.remoteAddress || "127.0.0.1",
+            userAgent: req?.get("User-Agent") || "Unknown",
+            sessionId: (req as any)?.sessionID,
+          }
+        );
+      } catch (auditError) {
+        console.error('Failed to create permission audit log:', auditError);
+      }
+
+      // Create regular audit log for backwards compatibility
       await createAuditLog(
         "updated",
         "role",
@@ -2360,6 +2407,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error removing user role:', error);
       res.status(500).json({ message: "Failed to remove user role" });
+    }
+  });
+
+  // Permission Audit Log API Routes
+  app.get("/api/permission-audit-logs", async (req, res) => {
+    try {
+      const filters = {
+        roleId: req.query.roleId as string,
+        userId: req.query.userId as string,
+        auditType: req.query.auditType as string,
+        riskLevel: req.query.riskLevel as string,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+
+      const result = await permissionAuditService.getAuditLogs(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching permission audit logs:', error);
+      res.status(500).json({ message: "Failed to fetch permission audit logs" });
+    }
+  });
+
+  app.get("/api/permission-audit-logs/:id", async (req, res) => {
+    try {
+      const auditLog = await permissionAuditService.getAuditLogDetails(req.params.id);
+      
+      if (!auditLog) {
+        return res.status(404).json({ message: "Permission audit log not found" });
+      }
+
+      res.json(auditLog);
+    } catch (error) {
+      console.error('Error fetching permission audit log details:', error);
+      res.status(500).json({ message: "Failed to fetch permission audit log details" });
     }
   });
 

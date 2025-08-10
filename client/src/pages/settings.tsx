@@ -10,7 +10,8 @@ import {
   Database,
   Tag,
   Package,
-  ScrollText
+  ScrollText,
+  ShieldCheck
 } from "lucide-react";
 
 const settingsNavigation = [
@@ -19,6 +20,7 @@ const settingsNavigation = [
   { name: "Staff", href: "/settings/staff", icon: Users },
   { name: "Support", href: "/settings/support", icon: HeadphonesIcon },
   { name: "Roles & Permissions", href: "/settings/roles-permissions", icon: Shield },
+  { name: "Permission Audit", href: "/settings/permission-audit", icon: ShieldCheck },
   { name: "Integrations", href: "/settings/integrations", icon: Plug },
   { name: "Custom Fields", href: "/settings/custom-fields", icon: Database },
   { name: "Tags", href: "/settings/tags", icon: Tag },
@@ -69,6 +71,7 @@ function getSettingDescription(name: string): string {
     "Staff": "Manage team members and user accounts",
     "Support": "Configure support departments and ticketing",
     "Roles & Permissions": "Create custom roles and set permissions",
+    "Permission Audit": "Track permission changes and role assignments",
     "Integrations": "Connect external services and tools",
     "Custom Fields": "Create and manage custom contact fields",
     "Tags": "Organize and manage system tags",
