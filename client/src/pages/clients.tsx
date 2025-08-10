@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal } from "lucide-react";
-import AddClientForm from "@/components/forms/add-client-form";
+import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -380,23 +380,10 @@ export default function Clients() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
-            </DialogHeader>
-            <AddClientForm
-              key={isCreateDialogOpen ? `add-client-${Date.now()}` : 'closed'}
-              onSuccess={() => setIsCreateDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreateDialogOpen(!isCreateDialogOpen)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Client
+        </Button>
       </div>
 
       {/* Search and Column Management */}
@@ -481,7 +468,12 @@ export default function Clients() {
         </CardContent>
       </Card>
 
-
+      {/* Add Client Form */}
+      {isCreateDialogOpen && (
+        <SimpleAddClientForm 
+          onSuccess={() => setIsCreateDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
