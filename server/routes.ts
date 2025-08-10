@@ -120,6 +120,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      
+      // Handle duplicate email constraint
+      if (error instanceof Error && error.message.includes('duplicate key value violates unique constraint "clients_email_unique"')) {
+        return res.status(409).json({ 
+          message: "A client with this email already exists", 
+          error: "Email must be unique" 
+        });
+      }
+      
       console.error("Error creating client:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to create client", error: errorMessage });

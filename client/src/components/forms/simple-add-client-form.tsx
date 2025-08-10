@@ -113,9 +113,13 @@ export function SimpleAddClientForm({ onSuccess }: SimpleAddClientFormProps) {
       onSuccess?.();
     },
     onError: (error: any) => {
+      const errorMessage = error.status === 409 
+        ? "A client with this email already exists. Please use a different email address."
+        : error.message || "Failed to create client. Please try again.";
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to create client. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
