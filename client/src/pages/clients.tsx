@@ -459,13 +459,24 @@ export default function Clients() {
         className="cursor-pointer hover:bg-slate-50 select-none"
         onClick={() => handleSort(column)}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {children}
-          {isActive && (
-            sortDirection === 'asc' ? 
-              <ChevronUp className="h-4 w-4" /> : 
-              <ChevronDown className="h-4 w-4" />
-          )}
+          <div className="flex flex-col ml-1">
+            <ChevronUp 
+              className={`h-3 w-3 ${
+                isActive && sortDirection === 'asc' 
+                  ? 'text-blue-600' 
+                  : 'text-gray-400'
+              }`} 
+            />
+            <ChevronDown 
+              className={`h-3 w-3 -mt-1 ${
+                isActive && sortDirection === 'desc' 
+                  ? 'text-blue-600' 
+                  : 'text-gray-400'
+              }`} 
+            />
+          </div>
         </div>
       </TableHead>
     );
