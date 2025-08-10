@@ -2,11 +2,22 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, FolderOpen, DollarSign, UserPlus, TrendingUp, TrendingDown } from "lucide-react";
 import type { Client, Project, Lead, Invoice } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+
+interface PaginatedClientsResponse {
+  clients: Client[];
+  pagination: {
+    total: number;
+  };
+}
 
 export default function MetricsCards() {
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
+  const { data: clientsData } = useQuery<PaginatedClientsResponse>({
+    queryKey: ["/api/clients", 1, 1000], // Get a large page to count all clients
+    queryFn: () => apiRequest("GET", "/api/clients?page=1&limit=1000"),
   });
+
+  const totalClients = clientsData?.pagination?.total || 0;
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -31,7 +42,7 @@ export default function MetricsCards() {
   const metrics = [
     {
       title: "Total Clients",
-      value: clients.length.toString(),
+      value: totalClients.toString(),
       change: "+12% from last month",
       changeType: "positive" as const,
       icon: Users,

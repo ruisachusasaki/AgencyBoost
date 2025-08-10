@@ -63,8 +63,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client routes
   app.get("/api/clients", async (req, res) => {
     try {
-      const clients = await storage.getClients();
-      res.json(clients);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      
+      const result = await storage.getClientsWithPagination(limit, offset);
+      
+      res.json({
+        clients: result.clients,
+        pagination: {
+          page,
+          limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / limit),
+          hasNext: page * limit < result.total,
+          hasPrevious: page > 1
+        }
+      });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clients" });
     }

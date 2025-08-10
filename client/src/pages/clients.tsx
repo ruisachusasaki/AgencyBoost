@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +45,18 @@ const AVAILABLE_COLUMNS: Column[] = [
   { key: 'actions', label: 'Actions', sortable: false, defaultVisible: true },
 ];
 
+interface PaginatedClientsResponse {
+  clients: Client[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}
+
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -52,13 +65,19 @@ export default function Clients() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const { data: clients = [], isLoading } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
+  const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
+    queryKey: ["/api/clients", currentPage, pageSize],
+    queryFn: () => apiRequest("GET", `/api/clients?page=${currentPage}&limit=${pageSize}`),
   });
+
+  const clients = clientsData?.clients || [];
+  const pagination = clientsData?.pagination;
 
   // Fetch custom fields data for dynamic name display
   const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
@@ -162,67 +181,8 @@ export default function Clients() {
     },
   });
 
-  // Filter and sort clients
-  const filteredAndSortedClients = useMemo(() => {
-    let filtered = clients.filter(client => {
-      const displayName = getClientDisplayName(client).toLowerCase();
-      const businessName = getBusinessDisplayName(client).toLowerCase();
-      const searchLower = searchTerm.toLowerCase();
-      
-      return displayName.includes(searchLower) ||
-        client.email.toLowerCase().includes(searchLower) ||
-        businessName.includes(searchLower) ||
-        client.phone?.toLowerCase().includes(searchLower);
-    });
-
-    // Sort clients
-    filtered.sort((a, b) => {
-      let aValue: string | number | Date;
-      let bValue: string | number | Date;
-
-      switch (sortField) {
-        case 'name':
-          aValue = getClientDisplayName(a).toLowerCase();
-          bValue = getClientDisplayName(b).toLowerCase();
-          break;
-        case 'company':
-          aValue = getBusinessDisplayName(a).toLowerCase();
-          bValue = getBusinessDisplayName(b).toLowerCase();
-          break;
-        case 'phone':
-          aValue = (a.phone || '').toLowerCase();
-          bValue = (b.phone || '').toLowerCase();
-          break;
-        case 'email':
-          aValue = a.email.toLowerCase();
-          bValue = b.email.toLowerCase();
-          break;
-        case 'contactOwner':
-          aValue = (a.contactOwner || '').toLowerCase();
-          bValue = (b.contactOwner || '').toLowerCase();
-          break;
-        case 'createdAt':
-          aValue = new Date(a.createdAt || 0).getTime();
-          bValue = new Date(b.createdAt || 0).getTime();
-          break;
-        case 'lastActivity':
-          aValue = new Date(a.lastActivity || 0).getTime();
-          bValue = new Date(b.lastActivity || 0).getTime();
-          break;
-        default:
-          aValue = '';
-          bValue = '';
-      }
-
-      if (sortDirection === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
-    });
-
-    return filtered;
-  }, [clients, searchTerm, sortField, sortDirection, customFieldsData]);
+  // For now, display all clients from current page as we handle filtering/sorting server-side later
+  const filteredAndSortedClients = clients;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -479,6 +439,82 @@ export default function Clients() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination Controls */}
+      {pagination && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Items per page:</span>
+              <Select value={pageSize.toString()} onValueChange={(value) => {
+                setPageSize(Number(value));
+                setCurrentPage(1); // Reset to first page when changing page size
+              }}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} clients
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={!pagination.hasPrevious}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                let pageNum;
+                if (pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (pagination.page <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.totalPages - 2) {
+                  pageNum = pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = pagination.page - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === pagination.page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))}
+              disabled={!pagination.hasNext}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Add Client Modal */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

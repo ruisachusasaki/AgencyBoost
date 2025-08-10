@@ -42,11 +42,12 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
   getClients(): Promise<Client[]>;
+  getClientsWithPagination(limit: number, offset: number): Promise<{ clients: Client[]; total: number }>;
   getClient(id: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
@@ -922,6 +923,14 @@ export class MemStorage implements IStorage {
   // Clients
   async getClients(): Promise<Client[]> {
     return Array.from(this.clients.values());
+  }
+
+  async getClientsWithPagination(limit: number, offset: number): Promise<{ clients: Client[]; total: number }> {
+    const allClients = Array.from(this.clients.values());
+    return {
+      clients: allClients.slice(offset, offset + limit),
+      total: allClients.length
+    };
   }
 
   async getClient(id: string): Promise<Client | undefined> {
@@ -2321,6 +2330,18 @@ class DbStorage implements IStorage {
   // Clients
   async getClients(): Promise<Client[]> {
     return await db.select().from(clients);
+  }
+
+  async getClientsWithPagination(limit: number, offset: number): Promise<{ clients: Client[]; total: number }> {
+    const [clientsResult, totalResult] = await Promise.all([
+      db.select().from(clients).limit(limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(clients)
+    ]);
+    
+    return {
+      clients: clientsResult,
+      total: totalResult[0].count
+    };
   }
 
   async getClient(id: string): Promise<Client | undefined> {

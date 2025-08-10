@@ -4,15 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import type { Client } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+
+interface PaginatedClientsResponse {
+  clients: Client[];
+  pagination: {
+    total: number;
+  };
+}
 
 export default function RecentClients() {
-  const { data: clients = [], isLoading } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
+  const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
+    queryKey: ["/api/clients", 1, 10], // Get first 10 clients for recent display
+    queryFn: () => apiRequest("GET", "/api/clients?page=1&limit=10"),
   });
 
-  const recentClients = clients
+  const clients = clientsData?.clients || [];
+  const recentClients = Array.isArray(clients) ? clients
     .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
-    .slice(0, 3);
+    .slice(0, 3) : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
