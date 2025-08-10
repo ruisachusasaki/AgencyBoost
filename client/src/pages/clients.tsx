@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,23 @@ export default function Clients() {
   const [smartListName, setSmartListName] = useState("");
   const [smartListDescription, setSmartListDescription] = useState("");
   const [isSaveSmartListOpen, setIsSaveSmartListOpen] = useState(false);
+  const [savedSmartLists, setSavedSmartLists] = useState<SmartList[]>([]);
+
+  // Load saved Smart Lists on component mount
+  React.useEffect(() => {
+    const loadSavedSmartLists = () => {
+      try {
+        const saved = localStorage.getItem('smartLists');
+        if (saved) {
+          const lists = JSON.parse(saved) as SmartList[];
+          setSavedSmartLists(lists);
+        }
+      } catch (error) {
+        console.error('Failed to load saved Smart Lists:', error);
+      }
+    };
+    loadSavedSmartLists();
+  }, []);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -461,11 +478,45 @@ export default function Clients() {
     }));
   };
 
+  // Load a Smart List
+  const handleLoadSmartList = (smartList: SmartList) => {
+    setCurrentFilter(smartList.filters);
+    setActiveSmartList(smartList.id);
+    toast({
+      title: "Smart List Applied",
+      description: `Applied "${smartList.name}" filter.`
+    });
+  };
+
+  // Delete a Smart List
+  const handleDeleteSmartList = (smartListId: string) => {
+    try {
+      const updatedLists = savedSmartLists.filter(list => list.id !== smartListId);
+      setSavedSmartLists(updatedLists);
+      localStorage.setItem('smartLists', JSON.stringify(updatedLists));
+      
+      if (activeSmartList === smartListId) {
+        setActiveSmartList(null);
+        setCurrentFilter({ conditions: [], logic: 'AND' });
+      }
+
+      toast({
+        title: "Smart List Deleted",
+        description: "Smart List removed successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete Smart List.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Save Smart List
   const handleSaveSmartList = async () => {
     try {
-      // For now, we'll store in localStorage until backend is ready
-      const smartList = {
+      const smartList: SmartList = {
         id: `smart-list-${Date.now()}`,
         name: smartListName,
         description: smartListDescription,
@@ -474,9 +525,9 @@ export default function Clients() {
         createdAt: new Date()
       };
 
-      const existingLists = JSON.parse(localStorage.getItem('smartLists') || '[]');
-      existingLists.push(smartList);
-      localStorage.setItem('smartLists', JSON.stringify(existingLists));
+      const updatedLists = [...savedSmartLists, smartList];
+      setSavedSmartLists(updatedLists);
+      localStorage.setItem('smartLists', JSON.stringify(updatedLists));
 
       toast({
         title: "Success",
@@ -891,25 +942,67 @@ export default function Clients() {
             {/* Smart Lists Section */}
             <div>
               <h3 className="text-sm font-medium text-slate-700 mb-3">Smart Lists</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={activeSmartList === null ? "default" : "outline"}
-                  onClick={() => {
-                    setActiveSmartList(null);
-                    setCurrentFilter({ conditions: [], logic: 'AND' });
-                  }}
-                  className="justify-start"
-                >
-                  All Clients
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsSaveSmartListOpen(true)}
-                  disabled={currentFilter.conditions.length === 0}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save as Smart List
-                </Button>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={activeSmartList === null ? "default" : "outline"}
+                    onClick={() => {
+                      setActiveSmartList(null);
+                      setCurrentFilter({ conditions: [], logic: 'AND' });
+                    }}
+                    className="justify-start"
+                  >
+                    All Clients
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSaveSmartListOpen(true)}
+                    disabled={currentFilter.conditions.length === 0}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save as Smart List
+                  </Button>
+                </div>
+                
+                {savedSmartLists.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-slate-600 mb-2 mt-4">Saved Smart Lists</h4>
+                    <div className="space-y-1">
+                      {savedSmartLists.map((smartList) => (
+                        <div key={smartList.id} className="flex items-center justify-between p-2 rounded bg-slate-50 border">
+                          <div className="flex-1 min-w-0">
+                            <Button
+                              variant="ghost"
+                              onClick={() => handleLoadSmartList(smartList)}
+                              className={`justify-start p-0 h-auto font-normal text-left truncate ${
+                                activeSmartList === smartList.id ? 'text-blue-600 font-medium' : 'text-slate-700'
+                              }`}
+                            >
+                              {smartList.name}
+                              {smartList.description && (
+                                <span className="block text-xs text-slate-500 truncate">
+                                  {smartList.description}
+                                </span>
+                              )}
+                            </Button>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Delete "${smartList.name}"?`)) {
+                                handleDeleteSmartList(smartList.id);
+                              }
+                            }}
+                            className="h-6 w-6 p-0 text-slate-400 hover:text-red-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
