@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,15 @@ import type { Role, Permission, InsertRole } from "@shared/schema";
 interface RoleWithPermissions extends Role {
   userCount: number;
   permissions: Permission[];
+}
+
+interface EditablePermission {
+  module: string;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canManage: boolean;
 }
 
 interface PermissionFormData {
@@ -32,7 +41,7 @@ export default function RolesPermissions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<RoleWithPermissions | null>(null);
+  const [editingRole, setEditingRole] = useState<(Omit<RoleWithPermissions, 'permissions'> & { permissions: EditablePermission[] }) | null>(null);
   const [newRole, setNewRole] = useState({
     name: "",
     description: "",
@@ -53,10 +62,18 @@ export default function RolesPermissions() {
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: InsertRole & { permissions: PermissionFormData[] }) => {
-      return apiRequest("/api/roles", {
+      const response = await fetch("/api/roles", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(roleData),
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create role");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
@@ -79,10 +96,18 @@ export default function RolesPermissions() {
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, ...roleData }: { id: string } & InsertRole & { permissions: PermissionFormData[] }) => {
-      return apiRequest(`/api/roles/${id}`, {
+      const response = await fetch(`/api/roles/${id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(roleData),
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update role");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
@@ -104,9 +129,14 @@ export default function RolesPermissions() {
   // Delete role mutation
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
-      return apiRequest(`/api/roles/${roleId}`, {
+      const response = await fetch(`/api/roles/${roleId}`, {
         method: "DELETE",
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete role");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
@@ -138,11 +168,11 @@ export default function RolesPermissions() {
         ...roleData, 
         permissions: editingRole.permissions.map(p => ({
           module: p.module,
-          canView: p.canView,
-          canCreate: p.canCreate,
-          canEdit: p.canEdit,
-          canDelete: p.canDelete,
-          canManage: p.canManage || false,
+          canView: p.canView ?? false,
+          canCreate: p.canCreate ?? false,
+          canEdit: p.canEdit ?? false,
+          canDelete: p.canDelete ?? false,
+          canManage: p.canManage ?? false,
         }))
       });
     }
@@ -355,6 +385,9 @@ export default function RolesPermissions() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Role</DialogTitle>
+              <DialogDescription>
+                Create a new role and set specific permissions for different modules.
+              </DialogDescription>
             </DialogHeader>
             <RoleForm
               role={newRole}
@@ -389,11 +422,11 @@ export default function RolesPermissions() {
                           ...role,
                           permissions: role.permissions.map(p => ({
                             module: p.module,
-                            canView: p.canView,
-                            canCreate: p.canCreate,
-                            canEdit: p.canEdit,
-                            canDelete: p.canDelete,
-                            canManage: p.canManage || false,
+                            canView: p.canView ?? false,
+                            canCreate: p.canCreate ?? false,
+                            canEdit: p.canEdit ?? false,
+                            canDelete: p.canDelete ?? false,
+                            canManage: p.canManage ?? false,
                           }))
                         });
                       } else {
@@ -409,10 +442,24 @@ export default function RolesPermissions() {
                     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>Edit Role: {role.name}</DialogTitle>
+                        <DialogDescription>
+                          Modify the role name, description, and permissions for different modules.
+                        </DialogDescription>
                       </DialogHeader>
                       {editingRole && (
                         <RoleForm
-                          role={editingRole}
+                          role={{
+                            name: editingRole.name,
+                            description: editingRole.description || "",
+                            permissions: editingRole.permissions.map(p => ({
+                              module: p.module,
+                              canView: p.canView ?? false,
+                              canCreate: p.canCreate ?? false,
+                              canEdit: p.canEdit ?? false,
+                              canDelete: p.canDelete ?? false,
+                              canManage: p.canManage ?? false,
+                            }))
+                          }}
                           isEdit={true}
                           onSubmit={handleUpdateRole}
                           onCancel={() => setEditingRole(null)}
