@@ -2043,7 +2043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cb.created_at as "createdAt",
             pb.name as "productName",
             pb.description as "productDescription",
-            pb.revenue as "productPrice",
+            NULL as "productPrice",
             'bundle' as "productType",
             'bundle' as "itemType"
           FROM client_bundles cb
