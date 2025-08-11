@@ -1219,8 +1219,7 @@ export default function EnhancedClientDetail() {
     },
   });
 
-  // TEMPORARILY DISABLED sections update to fix infinite loop
-  /*
+  // Update sections based on custom field folders
   useEffect(() => {
     if (!customFieldFoldersData || !customFieldsData) return;
     
@@ -1241,12 +1240,19 @@ export default function EnhancedClientDetail() {
       }
     });
     
-    setSections(newSections);
+    // Only update if sections actually changed
+    setSections(prev => {
+      if (prev.length !== newSections.length) return newSections;
+      const prevIds = prev.map(s => s.id).sort();
+      const newIds = newSections.map(s => s.id).sort();
+      for (let i = 0; i < prevIds.length; i++) {
+        if (prevIds[i] !== newIds[i]) return newSections;
+      }
+      return prev;
+    });
   }, [customFieldFoldersData?.length, customFieldsData?.length]);
-  */
 
-  // TEMPORARILY DISABLED to fix infinite loop
-  /*
+  // Owner search filtering
   useEffect(() => {
     if (ownerSearchTerm && staffData) {
       const filtered = staffData.filter((staff: any) => 
@@ -1260,10 +1266,8 @@ export default function EnhancedClientDetail() {
       setShowOwnerSuggestions(false);
     }
   }, [ownerSearchTerm, staffData]);
-  */
 
-  // TEMPORARILY DISABLED to fix infinite loop
-  /*
+  // Follower search filtering
   useEffect(() => {
     if (!followerSearchTerm || !staffData || !client) {
       setFilteredFollowers([]);
@@ -1281,7 +1285,6 @@ export default function EnhancedClientDetail() {
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
   }, [followerSearchTerm, staffData, client?.id]);
-  */
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
