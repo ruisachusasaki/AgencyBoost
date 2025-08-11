@@ -165,36 +165,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check for DND (Do Not Disturb) changes - CRITICAL for compliance
       const dndChanges = [];
+      const dndDetails = [];
+      
       if (validatedData.dndAll !== undefined && validatedData.dndAll !== oldClient.dndAll) {
         const status = validatedData.dndAll ? "ENABLED" : "DISABLED";
+        const action = validatedData.dndAll ? "BLOCKED all communications" : "UNBLOCKED all communications";
         dndChanges.push(`DND All Channels ${status}`);
+        dndDetails.push(`User ${action} for client ${client.name || client.email}`);
         changes.push(`DND All Channels ${status}`);
       }
       if (validatedData.dndEmail !== undefined && validatedData.dndEmail !== oldClient.dndEmail) {
         const status = validatedData.dndEmail ? "ENABLED" : "DISABLED";
+        const action = validatedData.dndEmail ? "BLOCKED email communications" : "UNBLOCKED email communications";
         dndChanges.push(`Email DND ${status}`);
+        dndDetails.push(`User ${action} for client ${client.name || client.email}`);
         changes.push(`Email DND ${status}`);
       }
       if (validatedData.dndSms !== undefined && validatedData.dndSms !== oldClient.dndSms) {
         const status = validatedData.dndSms ? "ENABLED" : "DISABLED";
+        const action = validatedData.dndSms ? "BLOCKED SMS communications" : "UNBLOCKED SMS communications";
         dndChanges.push(`SMS DND ${status}`);
+        dndDetails.push(`User ${action} for client ${client.name || client.email}`);
         changes.push(`SMS DND ${status}`);
       }
       if (validatedData.dndCalls !== undefined && validatedData.dndCalls !== oldClient.dndCalls) {
         const status = validatedData.dndCalls ? "ENABLED" : "DISABLED";
+        const action = validatedData.dndCalls ? "BLOCKED call communications" : "UNBLOCKED call communications";
         dndChanges.push(`Calls DND ${status}`);
+        dndDetails.push(`User ${action} for client ${client.name || client.email}`);
         changes.push(`Calls DND ${status}`);
       }
 
       // Create separate audit logs for DND changes due to their critical nature
       if (dndChanges.length > 0) {
+        // Get current user - hardcoded for demo, in production get from session
+        const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+        
+        // Get staff name for audit log
+        const staffResult = await db.select().from(staff).where(eq(staff.id, currentUserId)).limit(1);
+        const staffName = staffResult.length > 0 ? `${staffResult[0].firstName} ${staffResult[0].lastName}` : "System Admin";
+        
         await createAuditLog(
           "updated",
           "dnd_settings",
           client.id,
           client.name || client.email,
-          "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          `CRITICAL: Communication preferences updated - ${dndChanges.join(", ")}`,
+          currentUserId,
+          `CRITICAL DND CHANGE by ${staffName}: ${dndDetails.join(". ")}. Summary: ${dndChanges.join(", ")}`,
           {
             dndAll: oldClient.dndAll,
             dndEmail: oldClient.dndEmail,
@@ -209,6 +226,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           req
         );
+
+        // Also create individual audit logs for each DND change for maximum traceability
+        for (const detail of dndDetails) {
+          await createAuditLog(
+            "updated",
+            "communication_block",
+            client.id,
+            client.name || client.email,
+            currentUserId,
+            `${detail} - Action performed by ${staffName}`,
+            null,
+            null,
+            req
+          );
+        }
       }
       
       // Log the general update
