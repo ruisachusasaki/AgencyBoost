@@ -1290,6 +1290,11 @@ export default function EnhancedClientDetail() {
                                     ${clientProduct.productPrice}
                                   </Badge>
                                 )}
+                                {clientProduct.productCost && (
+                                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                    Cost: ${clientProduct.productCost}
+                                  </Badge>
+                                )}
                                 {canDeleteProducts && (
                                   <Button
                                     variant="ghost"

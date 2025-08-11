@@ -2024,6 +2024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productName: products.name,
           productDescription: products.description,
           productPrice: products.price,
+          productCost: products.cost,
           productType: products.type,
           itemType: sql<string>`'product'`
         })
@@ -2031,7 +2032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(products, eq(clientProducts.productId, products.id))
         .where(eq(clientProducts.clientId, clientId));
 
-      // Get client bundles using parameterized query
+      // Get client bundles with calculated total cost
       let clientBundlesList = [];
       try {
         const result = await db.execute(sql`
@@ -2044,6 +2045,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pb.name as "productName",
             pb.description as "productDescription",
             NULL as "productPrice",
+            COALESCE(
+              (SELECT SUM(p.cost * bp.quantity) 
+               FROM bundle_products bp 
+               LEFT JOIN products p ON bp.product_id = p.id 
+               WHERE bp.bundle_id = cb.bundle_id), 
+              0
+            ) as "productCost",
             'bundle' as "productType",
             'bundle' as "itemType"
           FROM client_bundles cb
