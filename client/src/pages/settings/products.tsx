@@ -84,7 +84,7 @@ export default function ProductsSettings() {
   const [isCreateBundleOpen, setIsCreateBundleOpen] = useState(false);
   const [isEditBundleOpen, setIsEditBundleOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<ProductBundle | null>(null);
-  const [bundleProducts, setBundleProducts] = useState<Array<{productId: string, quantity: number}>>([]);
+  const [bundleProducts, setBundleProducts] = useState<Array<{productId: string}>>([]);
 
   // Fetch products
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
@@ -346,8 +346,8 @@ export default function ProductsSettings() {
       // Load existing products into the form
       if (detailedBundle.products && detailedBundle.products.length > 0) {
         const bundleProductsData = detailedBundle.products.map((product: any) => ({
-          productId: product.productId,
-          quantity: product.quantity
+          productId: product.productId
+          // No quantity needed - each product is 1 unit by default
         }));
         setBundleProducts(bundleProductsData);
       } else {
@@ -362,7 +362,7 @@ export default function ProductsSettings() {
   };
 
   const addProductToBundle = () => {
-    setBundleProducts([...bundleProducts, { productId: "", quantity: 1 }]);
+    setBundleProducts([...bundleProducts, { productId: "" }]);
   };
 
   const removeProductFromBundle = (index: number) => {
@@ -380,12 +380,13 @@ export default function ProductsSettings() {
       return { totalRevenue: 0, totalCost: 0, profit: 0, margin: 0 };
     }
 
+    // Each product is 1 unit in base bundle
     const totalRevenue = bundle.products.reduce((sum, product) => {
-      return sum + (parseFloat(product.productPrice || "0") * product.quantity);
+      return sum + parseFloat(product.productPrice || "0");
     }, 0);
 
     const totalCost = bundle.products.reduce((sum, product) => {
-      return sum + (parseFloat(product.productCost || "0") * product.quantity);
+      return sum + parseFloat(product.productCost || "0");
     }, 0);
 
     const profit = totalRevenue - totalCost;
@@ -726,14 +727,8 @@ export default function ProductsSettings() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="w-24">
-                          <Label>Quantity</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={bundleProduct.quantity}
-                            onChange={(e) => updateBundleProduct(index, "quantity", parseInt(e.target.value) || 1)}
-                          />
+                        <div className="flex-none text-sm text-gray-500 self-end pb-2">
+                          1 unit
                         </div>
                         <Button
                           type="button"
@@ -1005,12 +1000,12 @@ export default function ProductsSettings() {
                                         <div>
                                           <span className="font-medium">{product.productName}</span>
                                           <span className="text-sm text-gray-500 ml-2">
-                                            Qty: {product.quantity}
+                                            1 unit each
                                           </span>
                                         </div>
                                       </div>
                                       <div className="text-sm font-medium">
-                                        ${(parseFloat(product.productPrice) * product.quantity).toFixed(2)}
+                                        ${parseFloat(product.productPrice).toFixed(2)} each
                                       </div>
                                     </div>
                                   ))}
@@ -1098,14 +1093,8 @@ export default function ProductsSettings() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-24">
-                      <Label>Quantity</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={bundleProduct.quantity}
-                        onChange={(e) => updateBundleProduct(index, "quantity", parseInt(e.target.value) || 1)}
-                      />
+                    <div className="flex-none text-sm text-gray-500 self-end pb-2">
+                      1 unit
                     </div>
                     <Button
                       type="button"

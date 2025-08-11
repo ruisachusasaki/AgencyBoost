@@ -2213,8 +2213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productId: bundleProducts.productId,
           productName: products.name,
           productDescription: products.description,
-          quantity: bundleProducts.quantity,
-          baseQuantity: bundleProducts.quantity, // Add base quantity for comparison
+          productPrice: products.price,
+          productCost: products.cost,
           productType: products.type
         })
         .from(bundleProducts)
@@ -2242,11 +2242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Apply custom quantities to the products
+      // Apply custom quantities to the products (default to 1 if no custom quantity)
       const productsWithCustomQuantities = bundleProductsList.map(product => ({
         ...product,
-        quantity: customQuantities[product.productId] || product.quantity,
-        baseQuantity: product.quantity // Keep original base quantity for comparison
+        quantity: customQuantities[product.productId] || 1, // Default to 1 unit
+        baseQuantity: 1 // Base bundle always has 1 unit of each product
       }));
 
       res.json(productsWithCustomQuantities);

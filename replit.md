@@ -5,8 +5,9 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 
 ## Recent Changes (August 2025)
 - **Smart Lists Enhancement**: Implemented comprehensive tab-based Smart Lists interface with advanced permission system, supporting personal, shared, and universal visibility levels with multi-user collaboration capabilities.
-- **Product Bundles System**: Complete product bundles functionality with automatic financial calculations (revenue, costs, profit, margin %), multi-product selection, and tab-based interface matching Custom Fields page styling.
-- **Client Product Management**: Enhanced client detail pages with role-based delete permissions (Admin, Accounting, Manager) for products and bundles, plus automatic cost calculation display showing individual product costs and calculated bundle total costs. Implemented accordion-style bundle expansion allowing account managers to view detailed breakdown of bundle contents with quantities.
+- **Product Bundles System**: Redesigned bundles architecture where base bundles define product collections (1 unit each) and client-specific quantities are stored per client. This provides maximum flexibility with cleaner base bundle management.
+- **Client Product Management**: Enhanced client detail pages with role-based delete permissions (Admin, Accounting, Manager) for products and bundles, plus automatic cost calculation display. Implemented accordion-style bundle expansion with client-specific quantity customization and automatic cost recalculation.
+- **Product Editing**: Added complete CRUD operations for individual products including edit dialog, delete confirmation, and real-time cost/price updates.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

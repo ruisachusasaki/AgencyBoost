@@ -1439,7 +1439,7 @@ export default function EnhancedClientDetail() {
                                         Costs will be automatically recalculated based on new quantities
                                       </div>
                                       <div className="text-xs text-amber-600 mb-2 bg-amber-50 p-2 rounded border border-amber-200">
-                                        ⚠️ Note: These custom quantities will override the base bundle. If the base bundle quantities change, this client will keep these custom amounts.
+                                        ⚠️ Note: Base bundles include 1 unit of each product. Set custom quantities here for this specific client.
                                       </div>
                                       {bundleDetailsData[clientProduct.productId]?.map((bundleProduct: any, bundleIndex: number) => (
                                         <div
@@ -1492,6 +1492,11 @@ export default function EnhancedClientDetail() {
                                             <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
                                               Qty: {bundleProduct.quantity}
                                             </Badge>
+                                            {bundleProduct.quantity !== bundleProduct.baseQuantity && (
+                                              <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">
+                                                Custom
+                                              </Badge>
+                                            )}
                                           </div>
                                         ))}
                                       </>

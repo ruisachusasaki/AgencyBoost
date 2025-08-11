@@ -112,12 +112,12 @@ export const productBundles = pgTable("product_bundles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Bundle Products relationship (many-to-many)
+// Bundle Products relationship (many-to-many) - just defines which products belong to a bundle
 export const bundleProducts = pgTable("bundle_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
   productId: varchar("product_id").notNull().references(() => products.id),
-  quantity: integer("quantity").default(1),
+  // Removed quantity - each product is 1 unit by default, client-specific quantities stored in clientBundles
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -138,7 +138,7 @@ export const clientBundles = pgTable("client_bundles", {
   bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
   price: decimal("price", { precision: 10, scale: 2 }),
   status: text("status").default("active"),
-  customQuantities: jsonb("custom_quantities"), // Override quantities: { "product_id": quantity }
+  customQuantities: jsonb("custom_quantities"), // Client-specific quantities: { "product_id": quantity }
   createdAt: timestamp("created_at").defaultNow(),
 });
 
