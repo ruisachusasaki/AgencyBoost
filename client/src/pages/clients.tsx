@@ -111,19 +111,33 @@ export default function Clients() {
   const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
   const [shareVisibility, setShareVisibility] = useState<'personal' | 'shared' | 'universal'>('personal');
 
-  // Get unique values for dropdown fields from actual client data
+  // Get unique values for dropdown fields from actual client data or custom field options
   const getFieldOptions = (fieldName: string): string[] => {
     if (!clients || clients.length === 0) return [];
     
+    // Check if this is a custom field name
+    const customField = customFieldsData?.find(cf => cf.name === fieldName);
+    if (customField && customField.options && customField.options.length > 0) {
+      // Return the predefined options from the custom field
+      return customField.options.sort();
+    }
+    
+    // For non-custom fields or custom fields without predefined options, get values from client data
     const values = clients
       .map(client => {
         switch (fieldName) {
-          case 'clientVertical': return client.clientVertical;
           case 'status': return client.status;
           case 'state': return client.state;
           case 'city': return client.city;
           case 'contactOwner': return getContactOwnerName(client.contactOwner);
-          default: return null;
+          default: {
+            // Handle custom fields - look in customFieldValues
+            if (customField && client.customFieldValues) {
+              const customFieldValues = client.customFieldValues as Record<string, any>;
+              return customFieldValues[customField.id] || null;
+            }
+            return null;
+          }
         }
       })
       .filter((value): value is string => Boolean(value) && value !== '-')
@@ -135,7 +149,14 @@ export default function Clients() {
 
   // Check if a field should use dropdown for value selection
   const isDropdownField = (fieldName: string): boolean => {
-    return ['clientVertical', 'status', 'state', 'city', 'contactOwner'].includes(fieldName);
+    // Check if it's a custom field with options
+    const customField = customFieldsData?.find(cf => cf.name === fieldName);
+    if (customField && (customField.type === 'dropdown' || customField.type === 'dropdown_multiple')) {
+      return true;
+    }
+    
+    // Standard fields that should have dropdowns
+    return ['status', 'state', 'city', 'contactOwner'].includes(fieldName);
   };
 
 
@@ -310,7 +331,6 @@ export default function Clients() {
             case 'city': return client.city || '';
             case 'state': return client.state || '';
             case 'status': return client.status || '';
-            case 'clientVertical': return client.clientVertical || '';
             case 'contactOwner': return getContactOwnerName(client.contactOwner) || '';
             case 'createdAt': return client.createdAt ? format(new Date(client.createdAt), 'yyyy-MM-dd') : '';
             default: {
@@ -1298,9 +1318,14 @@ export default function Clients() {
                         <SelectItem value="city">City</SelectItem>
                         <SelectItem value="state">State</SelectItem>
                         <SelectItem value="status">Status</SelectItem>
-                        <SelectItem value="clientVertical">Client Vertical</SelectItem>
                         <SelectItem value="contactOwner">Contact Owner</SelectItem>
                         <SelectItem value="createdAt">Created Date</SelectItem>
+                        {/* Add custom fields */}
+                        {customFieldsData?.map((field) => (
+                          <SelectItem key={field.id} value={field.name}>
+                            {field.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
 
