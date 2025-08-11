@@ -3572,32 +3572,35 @@ export default function EnhancedClientDetail() {
                             // Search filter
                             const matchesSearch = !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase());
                             
-                            // File type filter
-                            let matchesType = true;
-                            if (documentFilterType !== "all") {
-                              const fileType = doc.fileType.toLowerCase();
-                              switch (documentFilterType) {
-                                case "pdf":
-                                  matchesType = fileType === "pdf";
-                                  break;
-                                case "doc":
-                                  matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
-                                  break;
-                                case "excel":
-                                  matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
-                                  break;
-                                case "presentation":
-                                  matchesType = ["ppt", "pptx", "key"].includes(fileType);
-                                  break;
-                                case "image":
-                                  matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
-                                  break;
-                                case "text":
-                                  matchesType = ["txt", "rtf"].includes(fileType);
-                                  break;
-                                default:
-                                  matchesType = true;
-                              }
+                            // File type filter - only apply if not "all"
+                            if (documentFilterType === "all") {
+                              return matchesSearch; // Skip file type filtering for "all"
+                            }
+                            
+                            const fileType = doc.fileType?.toLowerCase() || "";
+                            let matchesType = false;
+                            
+                            switch (documentFilterType) {
+                              case "pdf":
+                                matchesType = fileType === "pdf";
+                                break;
+                              case "doc":
+                                matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
+                                break;
+                              case "excel":
+                                matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
+                                break;
+                              case "presentation":
+                                matchesType = ["ppt", "pptx", "key"].includes(fileType);
+                                break;
+                              case "image":
+                                matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
+                                break;
+                              case "text":
+                                matchesType = ["txt", "rtf"].includes(fileType);
+                                break;
+                              default:
+                                matchesType = true;
                             }
                             
                             return matchesSearch && matchesType;
