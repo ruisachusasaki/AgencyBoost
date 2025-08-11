@@ -1,1077 +1,380 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, Edit, Trash2, DollarSign, Clock, Repeat, Search, Filter, TrendingUp, Percent, Download, Upload, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
-import type { Product, ProductCategory } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { 
+  Plus, 
+  Search, 
+  Package, 
+  Edit2, 
+  Trash2, 
+  DollarSign, 
+  TrendingUp,
+  Calculator,
+  Package2,
+  ShoppingCart,
+  X
+} from "lucide-react";
 
-interface EnhancedProduct extends Product {
-  categoryName?: string;
-  profit?: number;
-  marginPercent?: number;
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: string;
+  cost?: string;
+  type: string;
+  categoryId?: string;
+  status: string;
+  usageCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function Products() {
+interface ProductBundle {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  products?: BundleProduct[];
+}
+
+interface BundleProduct {
+  id: string;
+  bundleId: string;
+  productId: string;
+  quantity: number;
+  productName: string;
+  productDescription?: string;
+  productPrice: string;
+  productCost?: string;
+  productType: string;
+  productStatus: string;
+}
+
+interface ProductCategory {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+}
+
+export default function ProductsSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<EnhancedProduct | null>(null);
-  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+  const [activeTab, setActiveTab] = useState("products");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [sortField, setSortField] = useState<string>("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isCreateProductOpen, setIsCreateProductOpen] = useState(false);
+  const [isCreateBundleOpen, setIsCreateBundleOpen] = useState(false);
+  const [isEditBundleOpen, setIsEditBundleOpen] = useState(false);
+  const [editingBundle, setEditingBundle] = useState<ProductBundle | null>(null);
+  const [bundleProducts, setBundleProducts] = useState<Array<{productId: string, quantity: number}>>([]);
 
-  // Fetch products with enhanced data
-  const { data: products = [], isLoading: productsLoading } = useQuery<EnhancedProduct[]>({
-    queryKey: ["/api/products", { search: searchTerm || undefined, category: selectedCategory !== "all" ? selectedCategory : undefined, status: selectedStatus !== "all" ? selectedStatus : undefined }],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("search", searchTerm);
-      if (selectedCategory !== "all") params.append("category", selectedCategory);
-      if (selectedStatus !== "all") params.append("status", selectedStatus);
-      
-      const response = await fetch(`/api/products?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
-      const data = await response.json();
-      
-      // Calculate profit and margin for each product
-      return data.map((product: any) => {
-        const price = parseFloat(product.price || "0");
-        const cost = parseFloat(product.cost || "0");
-        const profit = price - cost;
-        const marginPercent = price > 0 ? (profit / price) * 100 : 0;
-        
-        return {
-          ...product,
-          profit,
-          marginPercent
-        };
-      });
-    },
+  // Fetch products
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ["/api/products"],
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch product categories
-  const { data: categories = [] } = useQuery<ProductCategory[]>({
+  // Fetch product bundles
+  const { data: bundles = [], isLoading: isLoadingBundles } = useQuery({
+    queryKey: ["/api/product-bundles"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/product-categories"],
-    queryFn: async () => {
-      const response = await fetch("/api/product-categories");
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      return response.json();
-    },
-  });
-
-  // Sorting function
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
-
-  // Sort products
-  const sortedProducts = [...products].sort((a, b) => {
-    let aValue: any = a[sortField as keyof EnhancedProduct];
-    let bValue: any = b[sortField as keyof EnhancedProduct];
-
-    // Handle special cases
-    if (sortField === "categoryName") {
-      aValue = a.categoryName || "";
-      bValue = b.categoryName || "";
-    } else if (sortField === "price" || sortField === "cost" || sortField === "profit") {
-      aValue = parseFloat(aValue?.toString() || "0");
-      bValue = parseFloat(bValue?.toString() || "0");
-    } else if (sortField === "marginPercent") {
-      aValue = a.marginPercent || 0;
-      bValue = b.marginPercent || 0;
-    }
-
-    // Convert to strings for comparison if not numbers
-    if (typeof aValue !== "number") {
-      aValue = String(aValue || "").toLowerCase();
-      bValue = String(bValue || "").toLowerCase();
-    }
-
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  // Sortable header component
-  const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
-    <TableHead 
-      className={`cursor-pointer hover:bg-gray-50 ${className}`}
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center justify-between whitespace-nowrap">
-        <span className="truncate">{children}</span>
-        <div className="flex flex-col ml-1 flex-shrink-0">
-          <ChevronUp 
-            className={`h-3 w-3 ${sortField === field && sortDirection === "asc" ? "text-[#46a1a0]" : "text-gray-300"}`} 
-          />
-          <ChevronDown 
-            className={`h-3 w-3 -mt-1 ${sortField === field && sortDirection === "desc" ? "text-[#46a1a0]" : "text-gray-300"}`} 
-          />
-        </div>
-      </div>
-    </TableHead>
-  );
-
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    description: "",
-    price: "",
-    cost: "",
-    type: "one_time" as "one_time" | "recurring",
-    categoryId: "",
-    status: "active" as "active" | "inactive"
-  });
-
-  const [newCategory, setNewCategory] = useState({
-    name: "",
-    description: ""
+    refetchOnWindowFocus: false,
   });
 
   // Create product mutation
   const createProductMutation = useMutation({
-    mutationFn: async (data: typeof newProduct) => {
-      const response = await fetch("/api/products", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ...data,
-          price: data.price,
-          cost: data.cost || null
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create product: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
+    mutationFn: (data: any) => apiRequest("/api/products", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Success", description: "Product created successfully." });
-      setIsAddDialogOpen(false);
-      setNewProduct({
-        name: "",
-        description: "",
-        price: "",
-        cost: "",
-        type: "one_time",
-        categoryId: "",
-        status: "active"
+      setIsCreateProductOpen(false);
+      toast({
+        title: "Success",
+        description: "Product created successfully",
       });
     },
     onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create product" });
-    }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create product",
+        variant: "destructive",
+      });
+    },
   });
 
-  // Update product mutation
-  const updateProductMutation = useMutation({
-    mutationFn: async (product: EnhancedProduct) => {
-      const response = await fetch(`/api/products/${product.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: product.name,
-          description: product.description,
-          price: product.price?.toString() || "0",
-          cost: product.cost ? product.cost.toString() : null,
-          type: product.type,
-          categoryId: product.categoryId,
-          status: product.status
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update product: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
+  // Create bundle mutation
+  const createBundleMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/product-bundles", "POST", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Success", description: "Product updated successfully." });
-      setEditingProduct(null);
-    },
-    onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update product" });
-    }
-  });
-
-  // Delete product mutation
-  const deleteProductMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: "DELETE"
+      queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
+      setIsCreateBundleOpen(false);
+      setBundleProducts([]);
+      toast({
+        title: "Success",
+        description: "Bundle created successfully",
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete product: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Success", description: "Product deleted successfully." });
     },
     onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete product" });
-    }
-  });
-
-  // Create category mutation
-  const createCategoryMutation = useMutation({
-    mutationFn: async (data: typeof newCategory) => {
-      const response = await fetch("/api/product-categories", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create bundle",
+        variant: "destructive",
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create category: ${response.statusText}`);
-      }
-      
-      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
-      toast({ title: "Success", description: "Category created successfully." });
-      setIsAddCategoryDialogOpen(false);
-      setNewCategory({ name: "", description: "" });
-    },
-    onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create category" });
-    }
   });
 
-  // Update category mutation
-  const updateCategoryMutation = useMutation({
-    mutationFn: async (category: ProductCategory) => {
-      const response = await fetch(`/api/product-categories/${category.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: category.name,
-          description: category.description
-        })
+  // Update bundle mutation
+  const updateBundleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/product-bundles/${id}`, "PUT", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
+      setIsEditBundleOpen(false);
+      setEditingBundle(null);
+      setBundleProducts([]);
+      toast({
+        title: "Success",
+        description: "Bundle updated successfully",
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update category: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
-      toast({ title: "Success", description: "Category updated successfully." });
-      setEditingCategory(null);
     },
     onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update category" });
-    }
-  });
-
-  // Delete category mutation
-  const deleteCategoryMutation = useMutation({
-    mutationFn: async (categoryId: string) => {
-      const response = await fetch(`/api/product-categories/${categoryId}`, {
-        method: "DELETE"
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update bundle",
+        variant: "destructive",
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to delete category: ${response.statusText}`);
-      }
-      
-      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
-      toast({ title: "Success", description: "Category deleted successfully." });
-    },
-    onError: (error: any) => {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete category" });
-    }
   });
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  // Delete bundle mutation
+  const deleteBundleMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/product-bundles/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
+      toast({
+        title: "Success",
+        description: "Bundle deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete bundle",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    createProductMutation.mutate(newProduct);
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      price: formData.get("price") as string,
+      cost: formData.get("cost") as string,
+      type: formData.get("type") as string,
+      categoryId: formData.get("categoryId") as string || undefined,
+      status: formData.get("status") as string,
+    };
+    createProductMutation.mutate(data);
   };
 
-  const handleEditProduct = (e: React.FormEvent) => {
+  const handleCreateBundle = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (editingProduct) {
-      updateProductMutation.mutate(editingProduct);
-    }
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      status: formData.get("status") as string,
+      products: bundleProducts,
+    };
+    createBundleMutation.mutate(data);
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    if (confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
-      deleteProductMutation.mutate(productId);
-    }
-  };
-
-  const handleAddCategory = (e: React.FormEvent) => {
+  const handleEditBundle = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    createCategoryMutation.mutate(newCategory);
-  };
-
-  const handleEditCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingCategory) {
-      updateCategoryMutation.mutate(editingCategory);
-    }
-  };
-
-  const handleDeleteCategory = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category? This action cannot be undone.")) {
-      deleteCategoryMutation.mutate(categoryId);
-    }
-  };
-
-  const formatCurrency = (amount: number | string | null | undefined) => {
-    const value = typeof amount === 'string' ? parseFloat(amount) : (amount || 0);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(value);
-  };
-
-  const formatPercent = (value: number) => {
-    return `${value.toFixed(1)}%`;
-  };
-
-  // Export products to CSV
-  const handleExportProducts = () => {
-    if (products.length === 0) {
-      toast({ variant: "destructive", title: "No Data", description: "No products available to export." });
-      return;
-    }
-
-    // Define CSV headers
-    const headers = [
-      'name',
-      'description', 
-      'price',
-      'cost',
-      'type',
-      'categoryId',
-      'categoryName',
-      'status'
-    ];
-
-    // Convert products to CSV format
-    const csvContent = [
-      headers.join(','),
-      ...products.map(product => [
-        `"${product.name?.replace(/"/g, '""') || ''}"`,
-        `"${product.description?.replace(/"/g, '""') || ''}"`,
-        product.price || '',
-        product.cost || '',
-        product.type || 'one_time',
-        product.categoryId || '',
-        `"${product.categoryName?.replace(/"/g, '""') || ''}"`,
-        product.status || 'active'
-      ].join(','))
-    ].join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `products-export-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!editingBundle) return;
     
-    toast({ title: "Success", description: `Exported ${products.length} products to CSV file.` });
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      status: formData.get("status") as string,
+      products: bundleProducts,
+    };
+    updateBundleMutation.mutate({ id: editingBundle.id, data });
   };
 
-  // Import products from CSV
-  const importProductsMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('/api/products/import', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to import products');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      setIsImportDialogOpen(false);
-      setImportFile(null);
-      toast({ 
-        title: "Success", 
-        description: `Successfully imported ${data.imported} products. ${data.errors ? `${data.errors} errors encountered.` : ''}` 
-      });
-    },
-    onError: (error: any) => {
-      toast({ variant: "destructive", title: "Import Failed", description: error.message });
-    }
-  });
-
-  const handleImportProducts = () => {
-    if (!importFile) {
-      toast({ variant: "destructive", title: "No File", description: "Please select a CSV file to import." });
-      return;
-    }
-    importProductsMutation.mutate(importFile);
+  const openEditBundle = (bundle: ProductBundle) => {
+    setEditingBundle(bundle);
+    setBundleProducts(bundle.products?.map(p => ({
+      productId: p.productId,
+      quantity: p.quantity
+    })) || []);
+    setIsEditBundleOpen(true);
   };
 
-  // Export category reference to CSV
-  const handleExportCategoryReference = () => {
-    if (categories.length === 0) {
-      toast({ variant: "destructive", title: "No Categories", description: "No categories available. Create some categories first." });
-      return;
-    }
-
-    // Define CSV headers for category reference
-    const headers = ['categoryId', 'categoryName'];
-
-    // Convert categories to CSV format
-    const csvContent = [
-      headers.join(','),
-      ...categories.map(category => [
-        category.id,
-        `"${category.name?.replace(/"/g, '""') || ''}"`
-      ].join(','))
-    ].join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `category-reference-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({ title: "Success", description: `Downloaded category reference with ${categories.length} categories.` });
+  const addProductToBundle = () => {
+    setBundleProducts([...bundleProducts, { productId: "", quantity: 1 }]);
   };
 
-  // Filter and calculate stats
-  const activeProducts = products.filter(p => p.status === 'active');
-  const inactiveProducts = products.filter(p => p.status === 'inactive');
-  const totalRevenue = products.reduce((sum, p) => sum + parseFloat(p.price?.toString() || "0"), 0);
-  const totalCost = products.reduce((sum, p) => sum + parseFloat(p.cost?.toString() || "0"), 0);
-  const totalProfit = totalRevenue - totalCost;
-  const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  const removeProductFromBundle = (index: number) => {
+    setBundleProducts(bundleProducts.filter((_, i) => i !== index));
+  };
+
+  const updateBundleProduct = (index: number, field: string, value: any) => {
+    const updated = [...bundleProducts];
+    updated[index] = { ...updated[index], [field]: value };
+    setBundleProducts(updated);
+  };
+
+  const calculateBundleMetrics = (bundle: ProductBundle) => {
+    if (!bundle.products || bundle.products.length === 0) {
+      return { totalRevenue: 0, totalCost: 0, profit: 0, margin: 0 };
+    }
+
+    const totalRevenue = bundle.products.reduce((sum, product) => {
+      return sum + (parseFloat(product.productPrice || "0") * product.quantity);
+    }, 0);
+
+    const totalCost = bundle.products.reduce((sum, product) => {
+      return sum + (parseFloat(product.productCost || "0") * product.quantity);
+    }, 0);
+
+    const profit = totalRevenue - totalCost;
+    const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+    return { totalRevenue, totalCost, profit, margin };
+  };
+
+  const filteredProducts = products.filter((product: Product) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredBundles = bundles.filter((bundle: ProductBundle) =>
+    bundle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (bundle.description && bundle.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back to Settings */}
-        <div className="mb-4">
-          <Link href="/settings">
-            <Button variant="outline" size="sm" className="flex items-center space-x-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Settings</span>
-            </Button>
-          </Link>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Products & Services</h1>
+          <p className="text-gray-600">Manage your products, services, and bundles</p>
         </div>
+      </div>
 
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Package className="h-8 w-8 text-[#46a1a0]" />
-                Products & Services
-              </h1>
-              <p className="text-gray-600 mt-2">Manage your products and services catalog with cost analysis</p>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <Button onClick={handleExportProducts} variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-              <Button onClick={handleExportCategoryReference} variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Category Reference
-              </Button>
-              <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Import CSV
-              </Button>
-            </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="products" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            Products
+          </TabsTrigger>
+          <TabsTrigger value="bundles" className="flex items-center gap-2">
+            <Package2 className="w-4 h-4" />
+            Bundles
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="flex justify-between items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder={`Search ${activeTab}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
-
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Product/Service</DialogTitle>
-                <DialogDescription>Add a new product or service to your catalog</DialogDescription>
-              </DialogHeader>
-                  <form onSubmit={handleAddProduct} className="space-y-4">
-                    <div>
-                      <Label htmlFor="productName">Product/Service Name *</Label>
-                      <Input
-                        id="productName"
-                        value={newProduct.name}
-                        onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={newProduct.description}
-                        onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                        rows={3}
-                        placeholder="Describe what this product or service includes..."
-                      />
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="price">Price * (Revenue)</Label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="price"
-                            type="number"
-                            step="0.01"
-                            value={newProduct.price}
-                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                            className="pl-10"
-                            placeholder="0.00"
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="cost">Cost (Optional)</Label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="cost"
-                            type="number"
-                            step="0.01"
-                            value={newProduct.cost}
-                            onChange={(e) => setNewProduct({...newProduct, cost: e.target.value})}
-                            className="pl-10"
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="type">Type</Label>
-                        <Select value={newProduct.type} onValueChange={(value: "one_time" | "recurring") => setNewProduct({...newProduct, type: value})}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="one_time">One-time</SelectItem>
-                            <SelectItem value="recurring">Recurring</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={newProduct.categoryId} onValueChange={(value) => setNewProduct({...newProduct, categoryId: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="status">Status</Label>
-                        <Select value={newProduct.status} onValueChange={(value: "active" | "inactive") => setNewProduct({...newProduct, status: value})}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createProductMutation.isPending} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                        {createProductMutation.isPending ? "Creating..." : "Create Product"}
-                      </Button>
-                    </div>
-                  </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Search and Filters */}
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search products by name or description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid md:grid-cols-5 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Package className="h-8 w-8 text-[#46a1a0] mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{products.length}</div>
-                  <div className="text-sm text-gray-600">Total Products</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <DollarSign className="h-8 w-8 text-green-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-                  <div className="text-sm text-gray-600">Total Revenue</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-blue-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{formatCurrency(totalProfit)}</div>
-                  <div className="text-sm text-gray-600">Total Profit</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Percent className="h-8 w-8 text-purple-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{formatPercent(overallMargin)}</div>
-                  <div className="text-sm text-gray-600">Overall Margin</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Clock className="h-8 w-8 text-orange-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold">{activeProducts.length}</div>
-                  <div className="text-sm text-gray-600">Active Products</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Categories Management Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Product Categories ({categories.length})</CardTitle>
-                <CardDescription>Organize your products with categories for better management</CardDescription>
-              </div>
-              <Button onClick={() => setIsAddCategoryDialogOpen(true)} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {categories.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-gray-500 mb-4">No categories created yet</p>
-                <Button onClick={() => setIsAddCategoryDialogOpen(true)} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Category
-                </Button>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map((category) => (
-                  <Card key={category.id} className="border border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{category.name}</h3>
-                          {category.description && (
-                            <p className="text-sm text-gray-600 mt-1">{category.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-1 ml-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingCategory(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Products Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Products & Services ({products.length})</CardTitle>
-                <CardDescription>Manage your product catalog with cost analysis and profit margins</CardDescription>
-              </div>
-              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {productsLoading ? (
-              <div className="text-center py-8">Loading products...</div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No products found</h3>
-                <p className="text-gray-500 mb-4">Start by creating your first product or service</p>
-                <Button onClick={() => setIsAddDialogOpen(true)} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                  <Plus className="h-4 w-4 mr-2" />
+          {activeTab === "products" && (
+            <Dialog open={isCreateProductOpen} onOpenChange={setIsCreateProductOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
                   Add Product
                 </Button>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <SortableHeader field="name" className="w-48">Product/Service</SortableHeader>
-                    <SortableHeader field="categoryName" className="w-24 min-w-24">Category</SortableHeader>
-                    <SortableHeader field="type" className="w-20">Type</SortableHeader>
-                    <SortableHeader field="price" className="text-right w-20">Price</SortableHeader>
-                    <SortableHeader field="cost" className="text-right w-20">Cost</SortableHeader>
-                    <SortableHeader field="profit" className="text-right w-20">Profit</SortableHeader>
-                    <SortableHeader field="marginPercent" className="text-right w-20">Margin %</SortableHeader>
-                    <SortableHeader field="status" className="w-16">Status</SortableHeader>
-                    <TableHead className="text-right w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="w-48">
-                        <div className="max-w-48">
-                          <div className="font-medium truncate">{product.name}</div>
-                          {product.description && (
-                            <div className="text-sm text-gray-500 mt-1 truncate">{product.description}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-24 max-w-24">
-                        <div className="truncate">
-                          {product.categoryName ? (
-                            <Badge variant="outline" className="truncate max-w-full">
-                              <span className="truncate">{product.categoryName}</span>
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">No category</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={product.type === 'recurring' ? 'default' : 'secondary'}>
-                          {product.type === 'recurring' ? (
-                            <>
-                              <Repeat className="h-3 w-3 mr-1" />
-                              Recurring
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="h-3 w-3 mr-1" />  
-                              One-time
-                            </>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-green-600">
-                        {formatCurrency(product.price)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {product.cost ? formatCurrency(product.cost) : <span className="text-gray-400">-</span>}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {product.cost ? (
-                          <span className={product.profit && product.profit > 0 ? "text-green-600" : "text-red-600"}>
-                            {formatCurrency(product.profit || 0)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {product.cost ? (
-                          <span className={product.marginPercent && product.marginPercent > 0 ? "text-green-600" : "text-red-600"}>
-                            {formatPercent(product.marginPercent || 0)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                          {product.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingProduct(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Edit Product Dialog */}
-        {editingProduct && (
-          <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Product: {editingProduct.name}</DialogTitle>
-                <DialogDescription>Update product information and pricing</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleEditProduct} className="space-y-4">
-                <div>
-                  <Label htmlFor="editProductName">Product/Service Name *</Label>
-                  <Input
-                    id="editProductName"
-                    value={editingProduct.name}
-                    onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="editDescription">Description</Label>
-                  <Textarea
-                    id="editDescription"
-                    value={editingProduct.description || ""}
-                    onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
-                    rows={3}
-                    placeholder="Describe what this product or service includes..."
-                  />
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-4">
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Product</DialogTitle>
+                  <DialogDescription>
+                    Add a new product or service to your catalog
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateProduct} className="space-y-4">
                   <div>
-                    <Label htmlFor="editPrice">Price * (Revenue)</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="editPrice"
-                        type="number"
-                        step="0.01"
-                        value={editingProduct.price?.toString() || ""}
-                        onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
-                        className="pl-10"
-                        placeholder="0.00"
-                        required
-                      />
-                    </div>
+                    <Label htmlFor="name">Product Name</Label>
+                    <Input id="name" name="name" required />
                   </div>
-                  
                   <div>
-                    <Label htmlFor="editCost">Cost</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="editCost"
-                        type="number"
-                        step="0.01"
-                        value={editingProduct.cost?.toString() || ""}
-                        onChange={(e) => setEditingProduct({...editingProduct, cost: e.target.value || null})}
-                        className="pl-10"
-                        placeholder="0.00"
-                      />
-                    </div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea id="description" name="description" />
                   </div>
-                </div>
-
-                {/* Calculated Fields Display */}
-                {editingProduct.cost && editingProduct.price && (
-                  <div className="grid md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-600">Profit (Calculated)</Label>
-                      <div className="text-lg font-semibold text-green-600">
-                        {formatCurrency((parseFloat(editingProduct.price.toString()) || 0) - (parseFloat(editingProduct.cost.toString()) || 0))}
-                      </div>
+                      <Label htmlFor="price">Price</Label>
+                      <Input id="price" name="price" type="number" step="0.01" required />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-600">Margin % (Calculated)</Label>
-                      <div className="text-lg font-semibold text-blue-600">
-                        {formatPercent(((parseFloat(editingProduct.price.toString()) || 0) - (parseFloat(editingProduct.cost.toString()) || 0)) / (parseFloat(editingProduct.price.toString()) || 1) * 100)}
-                      </div>
+                      <Label htmlFor="cost">Cost</Label>
+                      <Input id="cost" name="cost" type="number" step="0.01" />
                     </div>
                   </div>
-                )}
-                
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="editType">Type</Label>
-                    <Select value={editingProduct.type} onValueChange={(value: "one_time" | "recurring") => setEditingProduct({...editingProduct, type: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="one_time">One-time</SelectItem>
-                        <SelectItem value="recurring">Recurring</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="type">Type</Label>
+                      <Select name="type" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="one_time">One Time</SelectItem>
+                          <SelectItem value="recurring">Recurring</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select name="status" defaultValue="active">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  
                   <div>
-                    <Label htmlFor="editCategory">Category</Label>
-                    <Select value={editingProduct.categoryId || ""} onValueChange={(value) => setEditingProduct({...editingProduct, categoryId: value})}>
+                    <Label htmlFor="categoryId">Category</Label>
+                    <Select name="categoryId">
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map((category) => (
+                        {categories.map((category: ProductCategory) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
                           </SelectItem>
@@ -1079,10 +382,46 @@ export default function Products() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsCreateProductOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createProductMutation.isPending}>
+                      {createProductMutation.isPending ? "Creating..." : "Create Product"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {activeTab === "bundles" && (
+            <Dialog open={isCreateBundleOpen} onOpenChange={setIsCreateBundleOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Bundle
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Bundle</DialogTitle>
+                  <DialogDescription>
+                    Create a bundle with multiple products and services
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateBundle} className="space-y-4">
                   <div>
-                    <Label htmlFor="editStatus">Status</Label>
-                    <Select value={editingProduct.status} onValueChange={(value: "active" | "inactive") => setEditingProduct({...editingProduct, status: value})}>
+                    <Label htmlFor="bundle-name">Bundle Name</Label>
+                    <Input id="bundle-name" name="name" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="bundle-description">Description</Label>
+                    <Textarea id="bundle-description" name="description" />
+                  </div>
+                  <div>
+                    <Label htmlFor="bundle-status">Status</Label>
+                    <Select name="status" defaultValue="active">
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -1092,128 +431,423 @@ export default function Products() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setEditingProduct(null)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={updateProductMutation.isPending} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                    {updateProductMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <Label>Bundle Products</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addProductToBundle}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Product
+                      </Button>
+                    </div>
+                    
+                    {bundleProducts.map((bundleProduct, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <Label>Product</Label>
+                          <Select
+                            value={bundleProduct.productId}
+                            onValueChange={(value) => updateBundleProduct(index, "productId", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {products.map((product: Product) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} - ${product.price}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-24">
+                          <Label>Quantity</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={bundleProduct.quantity}
+                            onChange={(e) => updateBundleProduct(index, "quantity", parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeProductFromBundle(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => {
+                      setIsCreateBundleOpen(false);
+                      setBundleProducts([]);
+                    }}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createBundleMutation.isPending}>
+                      {createBundleMutation.isPending ? "Creating..." : "Create Bundle"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
 
-        {/* Edit Category Dialog */}
-        {editingCategory && (
-          <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Category: {editingCategory.name}</DialogTitle>
-                <DialogDescription>Update category information</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleEditCategory} className="space-y-4">
-                <div>
-                  <Label htmlFor="editCategoryName">Category Name *</Label>
-                  <Input
-                    id="editCategoryName"
-                    value={editingCategory.name}
-                    onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
-                    required
-                  />
+        <TabsContent value="products" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Products & Services
+              </CardTitle>
+              <CardDescription>
+                Manage your product and service catalog
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingProducts ? (
+                <div className="text-center py-8">Loading products...</div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {searchTerm ? "No products found matching your search" : "No products created yet"}
                 </div>
-                <div>
-                  <Label htmlFor="editCategoryDescription">Description</Label>
-                  <Textarea
-                    id="editCategoryDescription"
-                    value={editingCategory.description || ""}
-                    onChange={(e) => setEditingCategory({...editingCategory, description: e.target.value})}
-                    rows={2}
-                    placeholder="Optional description for this category..."
-                  />
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={updateCategoryMutation.isPending} className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
-                    {updateCategoryMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Cost</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Usage</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product: Product) => (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{product.name}</div>
+                            {product.description && (
+                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                                {product.description}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                            {product.price}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {product.cost ? (
+                            <div className="flex items-center">
+                              <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                              {product.cost}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={product.type === "recurring" ? "default" : "secondary"}>
+                            {product.type === "one_time" ? "One Time" : "Recurring"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={product.status === "active" ? "default" : "secondary"}>
+                            {product.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-600">{product.usageCount} clients</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm">
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Import Dialog */}
-        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Import Products from CSV</DialogTitle>
-              <DialogDescription>
-                Upload a CSV file to import products. Use "Export CSV" to see the format, and "Category Reference" to get category IDs.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <h4 className="font-medium text-blue-900 mb-2">CSV Format Tips:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Required columns: name, price</li>
-                  <li>• For categories: use either "categoryId" (recommended) or "categoryName"</li>
-                  <li>• Download "Category Reference" to get the exact category IDs</li>
-                  <li>• Type options: "one_time" or "recurring"</li>
-                  <li>• Status options: "active" or "inactive"</li>
-                </ul>
-              </div>
-              
-              <div>
-                <Label htmlFor="csvFile">CSV File</Label>
-                <Input
-                  id="csvFile"
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  className="mt-1"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Accepts CSV files up to 5MB
-                </p>
-              </div>
-              
-              {importFile && (
-                <div className="p-3 bg-gray-50 rounded-md">
-                  <p className="text-sm font-medium">Selected file:</p>
-                  <p className="text-sm text-gray-600">{importFile.name}</p>
-                  <p className="text-sm text-gray-600">{(importFile.size / 1024).toFixed(1)} KB</p>
+        <TabsContent value="bundles" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package2 className="w-5 h-5" />
+                Product Bundles
+              </CardTitle>
+              <CardDescription>
+                Manage bundles of products and services with automatic pricing calculations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingBundles ? (
+                <div className="text-center py-8">Loading bundles...</div>
+              ) : filteredBundles.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {searchTerm ? "No bundles found matching your search" : "No bundles created yet"}
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {filteredBundles.map((bundle: ProductBundle) => {
+                    const metrics = calculateBundleMetrics(bundle);
+                    return (
+                      <Card key={bundle.id} className="border-l-4 border-l-primary">
+                        <CardHeader>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <CardTitle className="text-lg">{bundle.name}</CardTitle>
+                              {bundle.description && (
+                                <CardDescription className="mt-1">
+                                  {bundle.description}
+                                </CardDescription>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={bundle.status === "active" ? "default" : "secondary"}>
+                                {bundle.status}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditBundle(bundle)}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Bundle</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this bundle? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteBundleMutation.mutate(bundle.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {/* Bundle Metrics */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="w-4 h-4 text-green-600" />
+                                  <span className="text-sm font-medium text-gray-600">Revenue</span>
+                                </div>
+                                <div className="text-lg font-bold text-green-600">
+                                  ${metrics.totalRevenue.toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Calculator className="w-4 h-4 text-red-600" />
+                                  <span className="text-sm font-medium text-gray-600">Cost</span>
+                                </div>
+                                <div className="text-lg font-bold text-red-600">
+                                  ${metrics.totalCost.toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-gray-600">Profit</span>
+                                </div>
+                                <div className="text-lg font-bold text-blue-600">
+                                  ${metrics.profit.toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="w-4 h-4 text-purple-600" />
+                                  <span className="text-sm font-medium text-gray-600">Margin</span>
+                                </div>
+                                <div className="text-lg font-bold text-purple-600">
+                                  {metrics.margin.toFixed(1)}%
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bundle Products */}
+                            {bundle.products && bundle.products.length > 0 && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Included Products</h4>
+                                <div className="space-y-2">
+                                  {bundle.products.map((product) => (
+                                    <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                      <div className="flex items-center gap-3">
+                                        <ShoppingCart className="w-4 h-4 text-gray-500" />
+                                        <div>
+                                          <span className="font-medium">{product.productName}</span>
+                                          <span className="text-sm text-gray-500 ml-2">
+                                            Qty: {product.quantity}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="text-sm font-medium">
+                                        ${(parseFloat(product.productPrice) * product.quantity).toFixed(2)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Bundle Dialog */}
+      <Dialog open={isEditBundleOpen} onOpenChange={setIsEditBundleOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Bundle</DialogTitle>
+            <DialogDescription>
+              Update bundle details and products
+            </DialogDescription>
+          </DialogHeader>
+          {editingBundle && (
+            <form onSubmit={handleEditBundle} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-bundle-name">Bundle Name</Label>
+                <Input 
+                  id="edit-bundle-name" 
+                  name="name" 
+                  defaultValue={editingBundle.name}
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-bundle-description">Description</Label>
+                <Textarea 
+                  id="edit-bundle-description" 
+                  name="description" 
+                  defaultValue={editingBundle.description || ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-bundle-status">Status</Label>
+                <Select name="status" defaultValue={editingBundle.status}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsImportDialogOpen(false);
-                    setImportFile(null);
-                  }}
-                >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label>Bundle Products</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addProductToBundle}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
+                
+                {bundleProducts.map((bundleProduct, index) => (
+                  <div key={index} className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Label>Product</Label>
+                      <Select
+                        value={bundleProduct.productId}
+                        onValueChange={(value) => updateBundleProduct(index, "productId", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map((product: Product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - ${product.price}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-24">
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={bundleProduct.quantity}
+                        onChange={(e) => updateBundleProduct(index, "quantity", parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeProductFromBundle(index)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsEditBundleOpen(false);
+                  setEditingBundle(null);
+                  setBundleProducts([]);
+                }}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleImportProducts}
-                  disabled={!importFile || importProductsMutation.isPending}
-                  className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
-                >
-                  {importProductsMutation.isPending ? "Importing..." : "Import Products"}
+                <Button type="submit" disabled={updateBundleMutation.isPending}>
+                  {updateBundleMutation.isPending ? "Updating..." : "Update Bundle"}
                 </Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

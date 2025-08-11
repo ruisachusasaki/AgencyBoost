@@ -14,8 +14,9 @@ import {
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
+  insertProductBundleSchema, insertBundleProductSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, notificationSettings, clientProducts
+  roles, permissions, userRoles, notificationSettings, clientProducts, productBundles, bundleProducts
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2285,6 +2286,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting product:', error);
       res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Product Bundles API
+  app.get("/api/product-bundles", async (req, res) => {
+    try {
+      const { search, status } = req.query;
+      
+      const conditions = [];
+      
+      if (search && typeof search === 'string') {
+        conditions.push(
+          or(
+            like(productBundles.name, `%${search}%`),
+            like(productBundles.description, `%${search}%`)
+          )
+        );
+      }
+      
+      if (status && typeof status === 'string') {
+        conditions.push(eq(productBundles.status, status));
+      }
+
+      let baseQuery = db.select().from(productBundles);
+      
+      const result = conditions.length > 0 
+        ? await baseQuery.where(and(...conditions)).orderBy(asc(productBundles.name))
+        : await baseQuery.orderBy(asc(productBundles.name));
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching product bundles:', error);
+      res.status(500).json({ message: "Failed to fetch product bundles" });
+    }
+  });
+
+  app.get("/api/product-bundles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get bundle details
+      const [bundle] = await db
+        .select()
+        .from(productBundles)
+        .where(eq(productBundles.id, id));
+      
+      if (!bundle) {
+        return res.status(404).json({ message: "Bundle not found" });
+      }
+
+      // Get bundle products with product details
+      const bundleProductsList = await db
+        .select({
+          id: bundleProducts.id,
+          bundleId: bundleProducts.bundleId,
+          productId: bundleProducts.productId,
+          quantity: bundleProducts.quantity,
+          productName: products.name,
+          productDescription: products.description,
+          productPrice: products.price,
+          productCost: products.cost,
+          productType: products.type,
+          productStatus: products.status
+        })
+        .from(bundleProducts)
+        .leftJoin(products, eq(bundleProducts.productId, products.id))
+        .where(eq(bundleProducts.bundleId, id))
+        .orderBy(asc(products.name));
+
+      res.json({
+        ...bundle,
+        products: bundleProductsList
+      });
+    } catch (error) {
+      console.error('Error fetching bundle:', error);
+      res.status(500).json({ message: "Failed to fetch bundle" });
+    }
+  });
+
+  app.post("/api/product-bundles", async (req, res) => {
+    try {
+      const { products: bundleProductsData, ...bundleData } = req.body;
+      
+      const validatedBundleData = insertProductBundleSchema.parse(bundleData);
+      
+      // Create the bundle
+      const [newBundle] = await db.insert(productBundles).values(validatedBundleData).returning();
+      
+      // Add products to bundle if provided
+      if (bundleProductsData && bundleProductsData.length > 0) {
+        const bundleProductsInserts = bundleProductsData.map((product: any) => ({
+          bundleId: newBundle.id,
+          productId: product.productId,
+          quantity: product.quantity || 1
+        }));
+        
+        await db.insert(bundleProducts).values(bundleProductsInserts);
+      }
+      
+      res.status(201).json(newBundle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating bundle:', error);
+      res.status(500).json({ message: "Failed to create bundle" });
+    }
+  });
+
+  app.put("/api/product-bundles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { products: bundleProductsData, ...bundleData } = req.body;
+      
+      const validatedData = insertProductBundleSchema.partial().parse(bundleData);
+      
+      // Update bundle
+      const [updatedBundle] = await db
+        .update(productBundles)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(productBundles.id, id))
+        .returning();
+
+      if (!updatedBundle) {
+        return res.status(404).json({ message: "Bundle not found" });
+      }
+
+      // Update bundle products if provided
+      if (bundleProductsData) {
+        // Remove existing bundle products
+        await db.delete(bundleProducts).where(eq(bundleProducts.bundleId, id));
+        
+        // Add new bundle products
+        if (bundleProductsData.length > 0) {
+          const bundleProductsInserts = bundleProductsData.map((product: any) => ({
+            bundleId: id,
+            productId: product.productId,
+            quantity: product.quantity || 1
+          }));
+          
+          await db.insert(bundleProducts).values(bundleProductsInserts);
+        }
+      }
+
+      res.json(updatedBundle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating bundle:', error);
+      res.status(500).json({ message: "Failed to update bundle" });
+    }
+  });
+
+  app.delete("/api/product-bundles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Remove bundle products first
+      await db.delete(bundleProducts).where(eq(bundleProducts.bundleId, id));
+      
+      // Remove the bundle
+      const [deletedBundle] = await db
+        .delete(productBundles)
+        .where(eq(productBundles.id, id))
+        .returning();
+
+      if (!deletedBundle) {
+        return res.status(404).json({ message: "Bundle not found" });
+      }
+
+      res.json({ message: "Bundle deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting bundle:', error);
+      res.status(500).json({ message: "Failed to delete bundle" });
     }
   });
 

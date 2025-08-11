@@ -102,6 +102,25 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Product Bundles
+export const productBundles = pgTable("product_bundles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("active"), // active, inactive
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bundle Products relationship (many-to-many)
+export const bundleProducts = pgTable("bundle_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  quantity: integer("quantity").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Client products/services assignments
 export const clientProducts = pgTable("client_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1106,6 +1125,23 @@ export const insertProductSchema = createInsertSchema(products).omit({
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
+
+// Product Bundles schema exports
+export const insertProductBundleSchema = createInsertSchema(productBundles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBundleProductSchema = createInsertSchema(bundleProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ProductBundle = typeof productBundles.$inferSelect;
+export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
+export type BundleProduct = typeof bundleProducts.$inferSelect;
+export type InsertBundleProduct = z.infer<typeof insertBundleProductSchema>;
 
 // Audit Logs Table - Track all system actions for admin oversight
 export const auditLogs = pgTable("audit_logs", {
