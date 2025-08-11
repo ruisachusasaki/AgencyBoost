@@ -79,6 +79,8 @@ export default function ProductsSettings() {
   const [activeTab, setActiveTab] = useState("products");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateProductOpen, setIsCreateProductOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isCreateBundleOpen, setIsCreateBundleOpen] = useState(false);
   const [isEditBundleOpen, setIsEditBundleOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<ProductBundle | null>(null);
@@ -140,6 +142,46 @@ export default function ProductsSettings() {
       toast({
         title: "Error",
         description: error.message || "Failed to create product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update product mutation
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/products/${id}`, "PUT", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setIsEditProductOpen(false);
+      setEditingProduct(null);
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/products/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete product",
         variant: "destructive",
       });
     },
@@ -242,6 +284,28 @@ export default function ProductsSettings() {
       status: formData.get("status") as string,
     };
     createProductMutation.mutate(data);
+  };
+
+  const handleEditProduct = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      price: formData.get("price") as string,
+      cost: formData.get("cost") as string,
+      type: formData.get("type") as string,
+      categoryId: formData.get("categoryId") as string || undefined,
+      status: formData.get("status") as string,
+    };
+    updateProductMutation.mutate({ id: editingProduct.id, data });
+  };
+
+  const openEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsEditProductOpen(true);
   };
 
   const handleCreateBundle = (e: React.FormEvent<HTMLFormElement>) => {
@@ -487,6 +551,115 @@ export default function ProductsSettings() {
             </Dialog>
           )}
 
+          {/* Edit Product Dialog */}
+          <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Product</DialogTitle>
+                <DialogDescription>
+                  Update product details and pricing
+                </DialogDescription>
+              </DialogHeader>
+              {editingProduct && (
+                <form onSubmit={handleEditProduct} className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name">Product Name</Label>
+                    <Input 
+                      id="edit-name" 
+                      name="name" 
+                      defaultValue={editingProduct.name}
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Textarea 
+                      id="edit-description" 
+                      name="description" 
+                      defaultValue={editingProduct.description || ""}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-price">Price</Label>
+                      <Input 
+                        id="edit-price" 
+                        name="price" 
+                        type="number" 
+                        step="0.01" 
+                        defaultValue={editingProduct.price}
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-cost">Cost</Label>
+                      <Input 
+                        id="edit-cost" 
+                        name="cost" 
+                        type="number" 
+                        step="0.01" 
+                        defaultValue={editingProduct.cost || ""}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-type">Type</Label>
+                      <Select name="type" defaultValue={editingProduct.type}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="one_time">One Time</SelectItem>
+                          <SelectItem value="recurring">Recurring</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-status">Status</Label>
+                      <Select name="status" defaultValue={editingProduct.status}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-categoryId">Category</Label>
+                    <Select name="categoryId" defaultValue={editingProduct.categoryId || ""}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsEditProductOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updateProductMutation.isPending}>
+                      {updateProductMutation.isPending ? "Updating..." : "Update Product"}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+
           {activeTab === "bundles" && (
             <Dialog open={isCreateBundleOpen} onOpenChange={setIsCreateBundleOpen}>
               <DialogTrigger asChild>
@@ -667,12 +840,33 @@ export default function ProductsSettings() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => openEditProduct(product)}>
                               <Edit2 className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => deleteProductMutation.mutate(product.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
