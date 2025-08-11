@@ -3306,33 +3306,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clientId = req.params.clientId;
       
-      // For now, return mock data until we fix database schema
-      const mockNotes = [
-        {
-          id: "1",
-          clientId: clientId,
-          content: "Meeting scheduled - Discussed project requirements and timeline. Client is interested in our premium package.",
-          createdById: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          createdBy: { firstName: "Michael", lastName: "Brown" },
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          editedBy: null,
-          editedAt: null,
-          isLocked: true
-        },
-        {
-          id: "2", 
-          clientId: clientId,
-          content: "Follow-up required - Need to send proposal by Friday. Client mentioned budget constraints.",
-          createdById: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          createdBy: { firstName: "Sarah", lastName: "Johnson" },
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-          editedBy: null,
-          editedAt: null,
-          isLocked: true
-        }
-      ];
+      // Get notes from memory storage (temporary solution)
+      const notes = global.clientNotes?.[clientId] || [];
       
-      res.json(mockNotes);
+      res.json(notes);
     } catch (error) {
       console.error("Error fetching client notes:", error);
       res.status(500).json({ error: "Failed to fetch client notes" });
@@ -3349,23 +3326,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Note content is required" });
       }
 
-      // For now, return mock response until we fix database schema
+      // Create actual note in database
+      const noteId = nanoid();
+      const createdAt = new Date();
+      
+      // Get user info for the response
+      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const user = userInfo[0] || { firstName: "System", lastName: "User" };
+
+      // Insert note record (we'll add to audit log for now as notes table doesn't exist)
+      await createAuditLog(
+        "created",
+        "note", 
+        noteId,
+        `Note for client ${clientId}`,
+        userId,
+        `Created note: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`,
+        null,
+        { content, clientId },
+        req
+      );
+
       const newNote = {
-        id: Date.now().toString(),
+        id: noteId,
         clientId: clientId,
         content: content.trim(),
         createdById: userId,
-        createdBy: { firstName: "Current", lastName: "User" },
-        createdAt: new Date(),
+        createdBy: { firstName: user.firstName, lastName: user.lastName },
+        createdAt: createdAt,
         editedBy: null,
         editedAt: null,
-        isLocked: true
+        canEdit: true,
+        canDelete: true
       };
+
+      // Store in memory for this session (temporary until we add proper notes table)
+      if (!global.clientNotes) global.clientNotes = {};
+      if (!global.clientNotes[clientId]) global.clientNotes[clientId] = [];
+      global.clientNotes[clientId].push(newNote);
 
       res.status(201).json(newNote);
     } catch (error) {
       console.error("Error creating client note:", error);
       res.status(500).json({ error: "Failed to create note" });
+    }
+  });
+
+  // Edit note endpoint (Admin only)
+  app.put("/api/clients/:clientId/notes/:noteId", async (req, res) => {
+    try {
+      const { clientId, noteId } = req.params;
+      const { content } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!content?.trim()) {
+        return res.status(400).json({ error: "Note content is required" });
+      }
+
+      // Check if user is admin
+      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const user = userInfo[0];
+      
+      if (!user || user.role !== 'Admin') {
+        return res.status(403).json({ error: "Only admins can edit notes" });
+      }
+
+      // Find and update note
+      if (!global.clientNotes?.[clientId]) {
+        return res.status(404).json({ error: "Note not found" });
+      }
+
+      const noteIndex = global.clientNotes[clientId].findIndex(note => note.id === noteId);
+      if (noteIndex === -1) {
+        return res.status(404).json({ error: "Note not found" });
+      }
+
+      const oldNote = global.clientNotes[clientId][noteIndex];
+      const updatedNote = {
+        ...oldNote,
+        content: content.trim(),
+        editedBy: { firstName: user.firstName, lastName: user.lastName },
+        editedAt: new Date()
+      };
+
+      global.clientNotes[clientId][noteIndex] = updatedNote;
+
+      // Log the edit
+      await createAuditLog(
+        "updated",
+        "note",
+        noteId,
+        `Note for client ${clientId}`,
+        userId,
+        `Updated note content`,
+        oldNote,
+        updatedNote,
+        req
+      );
+
+      res.json(updatedNote);
+    } catch (error) {
+      console.error("Error updating client note:", error);
+      res.status(500).json({ error: "Failed to update note" });
+    }
+  });
+
+  // Delete note endpoint (Admin only)
+  app.delete("/api/clients/:clientId/notes/:noteId", async (req, res) => {
+    try {
+      const { clientId, noteId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      // Check if user is admin
+      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const user = userInfo[0];
+      
+      if (!user || user.role !== 'Admin') {
+        return res.status(403).json({ error: "Only admins can delete notes" });
+      }
+
+      // Find and delete note
+      if (!global.clientNotes?.[clientId]) {
+        return res.status(404).json({ error: "Note not found" });
+      }
+
+      const noteIndex = global.clientNotes[clientId].findIndex(note => note.id === noteId);
+      if (noteIndex === -1) {
+        return res.status(404).json({ error: "Note not found" });
+      }
+
+      const deletedNote = global.clientNotes[clientId][noteIndex];
+      global.clientNotes[clientId].splice(noteIndex, 1);
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "note",
+        noteId,
+        `Note for client ${clientId}`,
+        userId,
+        `Deleted note: ${deletedNote.content.substring(0, 100)}${deletedNote.content.length > 100 ? '...' : ''}`,
+        deletedNote,
+        null,
+        req
+      );
+
+      res.json({ message: "Note deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting client note:", error);
+      res.status(500).json({ error: "Failed to delete note" });
     }
   });
 

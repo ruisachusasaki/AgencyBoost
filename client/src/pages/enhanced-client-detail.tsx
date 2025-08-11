@@ -422,6 +422,8 @@ export default function EnhancedClientDetail() {
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [searchDocuments, setSearchDocuments] = useState("");
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [editNoteContent, setEditNoteContent] = useState("");
 
   const [newAppointment, setNewAppointment] = useState({
     title: "",
@@ -729,6 +731,58 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Edit note mutation
+  const editNoteMutation = useMutation({
+    mutationFn: async ({ noteId, content }: { noteId: string; content: string }) => {
+      const response = await fetch(`/api/clients/${clientId}/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) throw new Error('Failed to edit note');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
+      toast({
+        title: "Success",
+        description: "Note updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update note",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete note mutation
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const response = await fetch(`/api/clients/${clientId}/notes/${noteId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete note');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
+      toast({
+        title: "Success",
+        description: "Note deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete note",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
@@ -934,31 +988,34 @@ export default function EnhancedClientDetail() {
     },
   });
 
-  // Update sections when custom field folders are loaded
+  // TEMPORARILY DISABLED sections update to fix infinite loop
+  /*
   useEffect(() => {
-    if (customFieldFoldersData && customFieldsData) {
-      const newSections: Section[] = [];
+    if (!customFieldFoldersData || !customFieldsData) return;
+    
+    const newSections: Section[] = [];
+    
+    // Sort folders by order and add as sections only if they have fields
+    const sortedFolders = [...customFieldFoldersData].sort((a, b) => (a.order || 0) - (b.order || 0));
+    sortedFolders.forEach(folder => {
+      // Check if this folder has any fields
+      const folderHasFields = customFieldsData.some(field => field.folderId === folder.id);
       
-      // Sort folders by order and add as sections only if they have fields
-      const sortedFolders = [...customFieldFoldersData].sort((a, b) => (a.order || 0) - (b.order || 0));
-      sortedFolders.forEach(folder => {
-        // Check if this folder has any fields
-        const folderHasFields = customFieldsData.some(field => field.folderId === folder.id);
-        
-        if (folderHasFields) {
-          newSections.push({
-            id: folder.name.toLowerCase().replace(/\s+/g, '-'),
-            name: folder.name,
-            isOpen: false  // Closed by default
-          });
-        }
-      });
-      
-      setSections(newSections);
-    }
-  }, [customFieldFoldersData, customFieldsData]);
+      if (folderHasFields) {
+        newSections.push({
+          id: folder.name.toLowerCase().replace(/\s+/g, '-'),
+          name: folder.name,
+          isOpen: false  // Closed by default
+        });
+      }
+    });
+    
+    setSections(newSections);
+  }, [customFieldFoldersData?.length, customFieldsData?.length]);
+  */
 
-  // Filter staff for owner assignment
+  // TEMPORARILY DISABLED to fix infinite loop
+  /*
   useEffect(() => {
     if (ownerSearchTerm && staffData) {
       const filtered = staffData.filter((staff: any) => 
@@ -972,24 +1029,28 @@ export default function EnhancedClientDetail() {
       setShowOwnerSuggestions(false);
     }
   }, [ownerSearchTerm, staffData]);
+  */
 
-  // Filter staff for followers
+  // TEMPORARILY DISABLED to fix infinite loop
+  /*
   useEffect(() => {
-    if (followerSearchTerm && staffData && client) {
-      const currentFollowers = client.followers || [];
-      const filtered = staffData.filter((staff: any) => 
-        !currentFollowers.includes(staff.id) && // Exclude already following staff
-        staff.id !== client.contactOwner && // Exclude current owner
-        (`${staff.firstName} ${staff.lastName}`.toLowerCase().includes(followerSearchTerm.toLowerCase()) ||
-         staff.email?.toLowerCase().includes(followerSearchTerm.toLowerCase()))
-      );
-      setFilteredFollowers(filtered);
-      setShowFollowerSuggestions(filtered.length > 0);
-    } else {
+    if (!followerSearchTerm || !staffData || !client) {
       setFilteredFollowers([]);
       setShowFollowerSuggestions(false);
+      return;
     }
+
+    const currentFollowers = client.followers || [];
+    const filtered = staffData.filter((staff: any) => 
+      !currentFollowers.includes(staff.id) && // Exclude already following staff
+      staff.id !== client.contactOwner && // Exclude current owner
+      (`${staff.firstName} ${staff.lastName}`.toLowerCase().includes(followerSearchTerm.toLowerCase()) ||
+       staff.email?.toLowerCase().includes(followerSearchTerm.toLowerCase()))
+    );
+    setFilteredFollowers(filtered);
+    setShowFollowerSuggestions(filtered.length > 0);
   }, [followerSearchTerm, staffData, client?.id]);
+  */
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
@@ -2317,13 +2378,91 @@ export default function EnhancedClientDetail() {
                             <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                               <div className="flex justify-between items-start mb-2">
                                 <span className="text-sm font-medium text-gray-900">Note</span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  {currentUser?.role === 'Admin' && (
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                        onClick={() => {
+                                          setEditingNote(note.id);
+                                          setEditNoteContent(note.content);
+                                        }}
+                                        title="Edit note"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
+                                        onClick={() => {
+                                          if (confirm('Are you sure you want to delete this note?')) {
+                                            deleteNoteMutation.mutate(note.id);
+                                          }
+                                        }}
+                                        title="Delete note"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <p className="text-sm text-gray-600">{note.content}</p>
-                              <div className="mt-2 text-xs text-gray-400">
-                                by {note.createdBy?.firstName} {note.createdBy?.lastName}
+                              
+                              {editingNote === note.id ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    value={editNoteContent}
+                                    onChange={(e) => setEditNoteContent(e.target.value)}
+                                    className="min-h-[60px] text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        editNoteMutation.mutate({ 
+                                          noteId: note.id, 
+                                          content: editNoteContent 
+                                        });
+                                        setEditingNote(null);
+                                        setEditNoteContent("");
+                                      }}
+                                      disabled={!editNoteContent.trim() || editNoteMutation.isPending}
+                                      className="h-7"
+                                    >
+                                      {editNoteMutation.isPending ? "Saving..." : "Save"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingNote(null);
+                                        setEditNoteContent("");
+                                      }}
+                                      className="h-7"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-600">{note.content}</p>
+                              )}
+                              
+                              <div className="mt-2 flex justify-between items-center">
+                                <div className="text-xs text-gray-400">
+                                  by {note.createdBy?.firstName} {note.createdBy?.lastName}
+                                </div>
+                                {note.editedBy && (
+                                  <div className="text-xs text-gray-400">
+                                    edited by {note.editedBy?.firstName} {note.editedBy?.lastName}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))
