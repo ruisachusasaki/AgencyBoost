@@ -95,12 +95,12 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   const clientCampaigns = campaigns.filter(c => c.clientId === selectedClientId);
 
   const onSubmit = (data: InsertTask) => {
-    // Clean up empty string IDs
+    // Clean up empty string IDs and "none" values
     const cleanData = {
       ...data,
-      clientId: data.clientId || null,
-      projectId: data.projectId || null,
-      campaignId: data.campaignId || null,
+      clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
+      projectId: data.projectId && data.projectId !== "none" ? data.projectId : null,
+      campaignId: data.campaignId && data.campaignId !== "none" ? data.campaignId : null,
     };
 
     if (task) {
@@ -237,7 +237,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Client</SelectItem>
+                    <SelectItem value="none">No Client</SelectItem>
                     {clients.map((client: Client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -263,7 +263,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Project</SelectItem>
+                    <SelectItem value="none">No Project</SelectItem>
                     {clientProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
@@ -289,7 +289,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Campaign</SelectItem>
+                    <SelectItem value="none">No Campaign</SelectItem>
                     {clientCampaigns.map((campaign) => (
                       <SelectItem key={campaign.id} value={campaign.id}>
                         {campaign.name}
