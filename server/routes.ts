@@ -15,7 +15,7 @@ import {
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, notificationSettings
+  roles, permissions, userRoles, notificationSettings, clientProducts
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2004,6 +2004,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching product:', error);
       res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  // Client Products API - Get products for a specific client
+  app.get("/api/clients/:clientId/products", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      const clientProductsList = await db
+        .select({
+          id: clientProducts.id,
+          productId: clientProducts.productId,
+          price: clientProducts.price,
+          status: clientProducts.status,
+          createdAt: clientProducts.createdAt,
+          productName: products.name,
+          productDescription: products.description,
+          productPrice: products.price,
+          productType: products.type
+        })
+        .from(clientProducts)
+        .leftJoin(products, eq(clientProducts.productId, products.id))
+        .where(eq(clientProducts.clientId, clientId))
+        .orderBy(asc(products.name));
+      
+      res.json(clientProductsList);
+    } catch (error) {
+      console.error('Error fetching client products:', error);
+      res.status(500).json({ message: "Failed to fetch client products" });
+    }
+  });
+
+  // Add product to client
+  app.post("/api/clients/:clientId/products", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { productId, price } = req.body;
+
+      // Check if the client-product relationship already exists
+      const existing = await db
+        .select()
+        .from(clientProducts)
+        .where(
+          and(
+            eq(clientProducts.clientId, clientId),
+            eq(clientProducts.productId, productId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "Product already assigned to client" });
+      }
+
+      const [newClientProduct] = await db
+        .insert(clientProducts)
+        .values({
+          clientId,
+          productId,
+          price: price || null,
+          status: "active"
+        })
+        .returning();
+
+      res.status(201).json(newClientProduct);
+    } catch (error) {
+      console.error('Error adding product to client:', error);
+      res.status(500).json({ message: "Failed to add product to client" });
+    }
+  });
+
+  // Remove product from client
+  app.delete("/api/clients/:clientId/products/:productId", async (req, res) => {
+    try {
+      const { clientId, productId } = req.params;
+
+      const [deleted] = await db
+        .delete(clientProducts)
+        .where(
+          and(
+            eq(clientProducts.clientId, clientId),
+            eq(clientProducts.productId, productId)
+          )
+        )
+        .returning();
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Client product relationship not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error removing product from client:', error);
+      res.status(500).json({ message: "Failed to remove product from client" });
     }
   });
 

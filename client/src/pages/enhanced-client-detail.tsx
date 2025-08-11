@@ -547,6 +547,17 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Fetch client products data
+  const { data: clientProductsData = [], isLoading: clientProductsLoading } = useQuery({
+    queryKey: ['/api/clients', clientId, 'products'],
+    queryFn: async () => {
+      const response = await fetch(`/api/clients/${clientId}/products`);
+      if (!response.ok) throw new Error('Failed to fetch client products');
+      return response.json();
+    },
+    enabled: !!clientId,
+  });
+
   // Update sections when custom field folders are loaded
   useEffect(() => {
     if (customFieldFoldersData && customFieldsData) {
@@ -705,32 +716,32 @@ export default function EnhancedClientDetail() {
   };
 
   // Service management functions
-  const addServiceToClient = async (serviceName: string) => {
-    if (!client || !serviceName.trim()) return;
+  const addServiceToClient = async (productId: string, productName: string) => {
+    if (!client || !productId) return;
     
     try {
-      const currentServices = client.services || [];
-      if (currentServices.includes(serviceName)) {
+      // Check if product already assigned
+      const isAlreadyAssigned = clientProductsData.some((cp: any) => cp.productId === productId);
+      if (isAlreadyAssigned) {
         toast({
           title: "Service already exists",
-          description: `"${serviceName}" is already assigned to this client`,
+          description: `"${productName}" is already assigned to this client`,
           variant: "destructive"
         });
         return;
       }
 
-      const updatedServices = [...currentServices, serviceName];
-      await apiRequest('PUT', `/api/clients/${clientId}`, {
-        services: updatedServices
+      await apiRequest('POST', `/api/clients/${clientId}/products`, {
+        productId,
       });
 
       toast({
         title: "Service added",
-        description: `"${serviceName}" has been added to ${client.name}`,
+        description: `"${productName}" has been added to ${client.name}`,
       });
 
-      // Refresh client data
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      // Refresh client products data
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
     } catch (error) {
       toast({
         title: "Error adding service",
@@ -745,14 +756,15 @@ export default function EnhancedClientDetail() {
 
     try {
       // Create the product in the database
-      await apiRequest('POST', '/api/products', {
+      const createdProduct = await apiRequest('POST', '/api/products', {
         name: newServiceName,
         description: '',
         price: 0,
+        type: 'one_time'
       });
 
       // Add the service to the client
-      await addServiceToClient(newServiceName);
+      await addServiceToClient(createdProduct.id, createdProduct.name);
 
       // Refresh products data
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -782,7 +794,7 @@ export default function EnhancedClientDetail() {
     if (value.trim()) {
       const filtered = productsData.filter((product: any) => 
         product.name.toLowerCase().includes(value.toLowerCase()) &&
-        !(client.services || []).includes(product.name)
+        !clientProductsData.some((cp: any) => cp.productId === product.id)
       );
       setFilteredProducts(filtered);
       setShowServiceSuggestions(true);
@@ -792,8 +804,8 @@ export default function EnhancedClientDetail() {
     }
   };
 
-  const selectExistingService = (serviceName: string) => {
-    addServiceToClient(serviceName);
+  const selectExistingService = (productId: string, productName: string) => {
+    addServiceToClient(productId, productName);
     setNewServiceName("");
     setIsAddingService(false);
     setShowServiceSuggestions(false);
@@ -1188,27 +1200,24 @@ export default function EnhancedClientDetail() {
                   </button>
                   {servicesExpanded.services && (
                     <div className="mt-3 space-y-2">
-                      {client.services && client.services.length > 0 ? (
+                      {clientProductsData && clientProductsData.length > 0 ? (
                         <div className="space-y-2">
-                          {client.services.map((serviceName: string, index: number) => {
-                            const product = productsData.find((p: any) => p.name === serviceName);
-                            return (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-2 bg-gray-50 rounded border"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <ShoppingCart className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm font-medium">{serviceName}</span>
-                                </div>
-                                {product && product.price && (
-                                  <Badge variant="outline" className="text-xs">
-                                    ${product.price}
-                                  </Badge>
-                                )}
+                          {clientProductsData.map((clientProduct: any, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-2 bg-gray-50 rounded border"
+                            >
+                              <div className="flex items-center gap-2">
+                                <ShoppingCart className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm font-medium">{clientProduct.productName}</span>
                               </div>
-                            );
-                          })}
+                              {clientProduct.productPrice && (
+                                <Badge variant="outline" className="text-xs">
+                                  ${clientProduct.productPrice}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <p className="text-sm text-gray-500">No services assigned</p>
@@ -1686,7 +1695,7 @@ export default function EnhancedClientDetail() {
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       if (filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase()) {
-                        selectExistingService(filteredProducts[0].name);
+                        selectExistingService(filteredProducts[0].id, filteredProducts[0].name);
                       } else {
                         createNewProduct();
                       }
@@ -1714,7 +1723,7 @@ export default function EnhancedClientDetail() {
                         {filteredProducts.map((product: any) => (
                           <button
                             key={product.id}
-                            onClick={() => selectExistingService(product.name)}
+                            onClick={() => selectExistingService(product.id, product.name)}
                             className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between border-b last:border-b-0"
                           >
                             <div className="flex items-center gap-2">
@@ -1750,7 +1759,7 @@ export default function EnhancedClientDetail() {
                   <>
                     {filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase() ? (
                       <Button 
-                        onClick={() => selectExistingService(filteredProducts[0].name)}
+                        onClick={() => selectExistingService(filteredProducts[0].id, filteredProducts[0].name)}
                         className="bg-green-600 hover:bg-green-700"
                       >
                         Add Existing Service
