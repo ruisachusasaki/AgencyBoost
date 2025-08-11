@@ -417,6 +417,8 @@ export default function EnhancedClientDetail() {
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [searchDocuments, setSearchDocuments] = useState("");
+  const [documentFilterType, setDocumentFilterType] = useState("all");
+  const [documentSortBy, setDocumentSortBy] = useState("newest");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -3519,6 +3521,38 @@ export default function EnhancedClientDetail() {
                           className="pl-10 text-sm"
                         />
                       </div>
+                      
+                      {/* Filter Controls */}
+                      <div className="flex gap-2 text-xs">
+                        <Select value={documentFilterType} onValueChange={setDocumentFilterType}>
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue placeholder="File Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="pdf">PDF</SelectItem>
+                            <SelectItem value="doc">Documents</SelectItem>
+                            <SelectItem value="excel">Spreadsheets</SelectItem>
+                            <SelectItem value="presentation">Presentations</SelectItem>
+                            <SelectItem value="image">Images</SelectItem>
+                            <SelectItem value="text">Text Files</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select value={documentSortBy} onValueChange={setDocumentSortBy}>
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue placeholder="Sort By" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="newest">Newest First</SelectItem>
+                            <SelectItem value="oldest">Oldest First</SelectItem>
+                            <SelectItem value="name">Name A-Z</SelectItem>
+                            <SelectItem value="name-desc">Name Z-A</SelectItem>
+                            <SelectItem value="size-large">Largest First</SelectItem>
+                            <SelectItem value="size-small">Smallest First</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -3534,7 +3568,58 @@ export default function EnhancedClientDetail() {
                         </div>
                       ) : (
                         clientDocuments
-                          .filter((doc: any) => !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase()))
+                          .filter((doc: any) => {
+                            // Search filter
+                            const matchesSearch = !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase());
+                            
+                            // File type filter
+                            let matchesType = true;
+                            if (documentFilterType !== "all") {
+                              const fileType = doc.fileType.toLowerCase();
+                              switch (documentFilterType) {
+                                case "pdf":
+                                  matchesType = fileType === "pdf";
+                                  break;
+                                case "doc":
+                                  matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
+                                  break;
+                                case "excel":
+                                  matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
+                                  break;
+                                case "presentation":
+                                  matchesType = ["ppt", "pptx", "key"].includes(fileType);
+                                  break;
+                                case "image":
+                                  matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
+                                  break;
+                                case "text":
+                                  matchesType = ["txt", "rtf"].includes(fileType);
+                                  break;
+                                default:
+                                  matchesType = true;
+                              }
+                            }
+                            
+                            return matchesSearch && matchesType;
+                          })
+                          .sort((a: any, b: any) => {
+                            switch (documentSortBy) {
+                              case "newest":
+                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                              case "oldest":
+                                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                              case "name":
+                                return a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase());
+                              case "name-desc":
+                                return b.fileName.toLowerCase().localeCompare(a.fileName.toLowerCase());
+                              case "size-large":
+                                return b.fileSize - a.fileSize;
+                              case "size-small":
+                                return a.fileSize - b.fileSize;
+                              default:
+                                return 0;
+                            }
+                          })
                           .map((doc: any) => {
                             const getFileIconColor = (fileType: string) => {
                               switch (fileType.toLowerCase()) {
