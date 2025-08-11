@@ -59,6 +59,29 @@ async function createAuditLog(
   }
 }
 
+// Permission checking function
+async function hasPermission(userId: string, module: string, permission: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage'): Promise<boolean> {
+  try {
+    // For now, check if user is admin - in production this would check user roles from database
+    const adminUserIds = ["e56be30d-c086-446c-ada4-7ccef37ad7fb"]; // Default admin user
+    
+    // Admin users have all permissions
+    if (adminUserIds.includes(userId)) {
+      return true;
+    }
+    
+    // In a real implementation, this would:
+    // 1. Query user roles from userRoles table
+    // 2. Get permissions for those roles from permissions table
+    // 3. Check if any role has the required permission for the module
+    // For now, return false for non-admin users
+    return false;
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return false;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file uploads
   const upload = multer({ 
@@ -718,10 +741,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/tasks/:id", async (req, res) => {
     try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      // Check if user has permission to delete tasks
+      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
+      if (!canDelete) {
+        return res.status(403).json({ message: "Access denied. Only administrators can delete tasks." });
+      }
+
       const deleted = await storage.deleteTask(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Task not found" });
       }
+
+      // Also remove from global tasks storage if it exists
+      if (global.tasks) {
+        global.tasks = global.tasks.filter(task => task.id !== req.params.id);
+      }
+
+      // Remove from client tasks storage as well
+      if (global.clientTasks) {
+        Object.keys(global.clientTasks).forEach(clientId => {
+          global.clientTasks[clientId] = global.clientTasks[clientId].filter(task => task.id !== req.params.id);
+        });
+      }
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "task",
+        req.params.id,
+        "Task",
+        userId,
+        "Task deleted by administrator",
+        null,
+        null,
+        req
+      );
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete task" });
@@ -3726,10 +3783,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete client task route
   app.delete("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
     try {
       const { clientId, taskId } = req.params;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      // Check if user has permission to delete tasks
+      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
+      if (!canDelete) {
+        return res.status(403).json({ error: "Access denied. Only administrators can delete tasks." });
+      }
 
       if (!global.clientTasks?.[clientId]) {
         return res.status(404).json({ error: "Client not found or has no tasks" });
@@ -3741,7 +3805,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const deletedTask = global.clientTasks[clientId][taskIndex];
+      
+      // Remove from client tasks
       global.clientTasks[clientId].splice(taskIndex, 1);
+
+      // Also remove from global tasks storage
+      if (global.tasks) {
+        global.tasks = global.tasks.filter(task => task.id !== taskId);
+      }
 
       // Also delete associated comments
       if (global.taskComments?.[taskId]) {
@@ -3755,7 +3826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taskId,
         deletedTask.title,
         userId,
-        `Deleted task: ${deletedTask.title}`,
+        `Task deleted by administrator from client ${clientId}`,
         deletedTask,
         null,
         req
@@ -3765,6 +3836,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting client task:", error);
       res.status(500).json({ error: "Failed to delete task" });
+    }
+  });
+
+
+
+  // User permissions endpoint
+  app.get("/api/auth/permissions", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const permissions = {
+        tasks: {
+          canDelete: await hasPermission(userId, 'tasks', 'canDelete')
+        }
+      };
+      
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ error: "Failed to fetch permissions" });
     }
   });
 

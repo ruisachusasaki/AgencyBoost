@@ -656,6 +656,16 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Fetch user permissions
+  const { data: userPermissions } = useQuery({
+    queryKey: ['/api/auth/permissions'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/permissions');
+      if (!response.ok) throw new Error('Failed to fetch permissions');
+      return response.json();
+    },
+  });
+
   // Fetch client products data
   const { data: clientProductsData = [], isLoading: clientProductsLoading } = useQuery({
     queryKey: ['/api/clients', clientId, 'products'],
@@ -918,6 +928,7 @@ export default function EnhancedClientDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] }); // Also invalidate global tasks
       setIsEditTaskDialogOpen(false);
       setEditingTaskId(null);
       setEditTask({
@@ -948,6 +959,37 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Error",
         description: "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete task mutation (Admin only)
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await fetch(`/api/clients/${clientId}/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Only administrators can delete tasks.');
+        }
+        throw new Error('Failed to delete task');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] }); // Also invalidate global tasks
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -3283,6 +3325,24 @@ export default function EnhancedClientDetail() {
                                       <ChevronRight className="h-3 w-3 ml-1" />
                                     )}
                                   </Button>
+                                  {/* Delete button - Admin only */}
+                                  {userPermissions?.tasks?.canDelete && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+                                          deleteTaskMutation.mutate(task.id);
+                                        }
+                                      }}
+                                      className="h-6 px-2 text-xs text-gray-400 hover:text-red-600"
+                                      disabled={deleteTaskMutation.isPending}
+                                      title="Delete task (Admin only)"
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-1" />
+                                      Delete
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
 
