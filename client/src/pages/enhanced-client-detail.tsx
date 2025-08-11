@@ -1691,12 +1691,17 @@ export default function EnhancedClientDetail() {
                   value={newServiceName}
                   onChange={(e) => handleServiceInputChange(e.target.value)}
                   placeholder="Type to search existing services or create new..."
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      if (filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase()) {
-                        selectExistingService(filteredProducts[0].id, filteredProducts[0].name);
-                      } else {
+                      if (filteredProducts.length > 0) {
+                        // If there's an exact match, use it, otherwise use the first filtered result
+                        const exactMatch = filteredProducts.find((p: any) => 
+                          p.name.toLowerCase() === newServiceName.toLowerCase()
+                        );
+                        const productToSelect = exactMatch || filteredProducts[0];
+                        selectExistingService(productToSelect.id, productToSelect.name);
+                      } else if (newServiceName.trim()) {
                         createNewProduct();
                       }
                     }
