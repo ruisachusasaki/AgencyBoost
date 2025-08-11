@@ -779,7 +779,11 @@ export default function EnhancedClientDetail() {
     measureHeight();
     
     // Set up a resize observer to measure height when content changes
-    const resizeObserver = new ResizeObserver(measureHeight);
+    const resizeObserver = new ResizeObserver(() => {
+      // Add a small delay to ensure DOM has updated after animations
+      setTimeout(measureHeight, 100);
+    });
+    
     if (leftColumnRef.current) {
       resizeObserver.observe(leftColumnRef.current);
     }
@@ -794,16 +798,20 @@ export default function EnhancedClientDetail() {
     if (!leftColumnHeight) return undefined;
     
     // Account for the right column header, form inputs, and padding
-    // Subtract approximately 140px for the header, search, and add note form
-    const availableHeight = leftColumnHeight - 140;
+    // Subtract approximately 160px for the header, search, and add note form
+    const availableHeight = leftColumnHeight - 160;
     
     // Debug logging (you can remove this later)
     console.log('Left column height:', leftColumnHeight);
     console.log('Available height for notes:', availableHeight);
-    console.log('Constraint applied:', availableHeight > 100);
+    console.log('Constraint applied:', availableHeight > 150);
     
-    // Apply constraint more aggressively - even for smaller heights
-    return availableHeight > 100 ? `${availableHeight}px` : '400px';
+    // Apply constraint when we have reasonable space, otherwise use a minimum
+    if (availableHeight > 150) {
+      return `${availableHeight}px`;
+    } else {
+      return '300px'; // Minimum height to ensure some scrolling occurs
+    }
   };
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
