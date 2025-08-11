@@ -588,8 +588,8 @@ export default function EnhancedClientDetail() {
   const { data: bundleDetailsData = {} } = useQuery({
     queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId],
     queryFn: async () => {
-      const bundleDetails = {};
-      for (const bundleId of expandedBundles) {
+      const bundleDetails: Record<string, any> = {};
+      for (const bundleId of Array.from(expandedBundles)) {
         try {
           const response = await fetch(`/api/product-bundles/${bundleId}/products?clientId=${clientId}`);
           if (response.ok) {
@@ -805,7 +805,7 @@ export default function EnhancedClientDetail() {
     if (value.trim()) {
       const filtered = tagsData.filter((tag: Tag) => 
         tag.name.toLowerCase().includes(value.toLowerCase()) &&
-        !(client.tags || []).includes(tag.name)
+        !(client?.tags || []).includes(tag.name)
       );
       setFilteredTags(filtered);
       setShowSuggestions(true);
@@ -868,7 +868,7 @@ export default function EnhancedClientDetail() {
         description: '',
         cost: 0,
         type: 'one_time'
-      });
+      }) as any;
 
       // Add the service to the client
       await addServiceToClient(createdProduct.id, createdProduct.name);
@@ -1369,7 +1369,7 @@ export default function EnhancedClientDetail() {
                                         setEditingBundleQuantities(clientProduct.productId);
                                         // Initialize temp quantities with current bundle data
                                         const currentBundle = bundleDetailsData[clientProduct.productId] || [];
-                                        const initialQuantities = {};
+                                        const initialQuantities: Record<string, number> = {};
                                         currentBundle.forEach((product: any) => {
                                           initialQuantities[product.productId] = product.quantity;
                                         });
@@ -1436,7 +1436,7 @@ export default function EnhancedClientDetail() {
                                       <div className="text-xs text-amber-600 mb-2 bg-amber-50 p-2 rounded border border-amber-200">
                                         ⚠️ Note: Base bundles include 1 unit of each product. Set custom quantities here for this specific client.
                                       </div>
-                                      {bundleDetailsData[clientProduct.productId]?.map((bundleProduct: any, bundleIndex: number) => (
+                                      {(bundleDetailsData[clientProduct.productId] as any[])?.map((bundleProduct: any, bundleIndex: number) => (
                                         <div
                                           key={bundleIndex}
                                           className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
@@ -1462,11 +1462,11 @@ export default function EnhancedClientDetail() {
                                     </div>
                                   ) : (
                                     // View mode for bundle contents
-                                    bundleDetailsData[clientProduct.productId] ? (
+                                    (bundleDetailsData[clientProduct.productId] as any[]) ? (
                                       <>
                                         {/* Check if this client has custom quantities */}
                                         {(() => {
-                                          const hasCustomQuantities = bundleDetailsData[clientProduct.productId]?.some((product: any) => 
+                                          const hasCustomQuantities = (bundleDetailsData[clientProduct.productId] as any[])?.some((product: any) => 
                                             product.quantity !== product.baseQuantity
                                           );
                                           return hasCustomQuantities && (
@@ -1476,7 +1476,7 @@ export default function EnhancedClientDetail() {
                                           );
                                         })()}
                                         
-                                        {bundleDetailsData[clientProduct.productId].map((bundleProduct: any, bundleIndex: number) => (
+                                        {(bundleDetailsData[clientProduct.productId] as any[]).map((bundleProduct: any, bundleIndex: number) => (
                                           <div
                                             key={bundleIndex}
                                             className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
