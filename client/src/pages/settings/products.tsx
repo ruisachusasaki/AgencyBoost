@@ -148,7 +148,7 @@ export default function ProductsSettings() {
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/products/${id}`, "PUT", data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/products/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsEditProductOpen(false);
