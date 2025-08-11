@@ -2228,11 +2228,6 @@ export default function EnhancedClientDetail() {
                                                 ${bundleProduct.productCost} each
                                               </Badge>
                                             )}
-                                            {bundleProduct.quantity !== bundleProduct.baseQuantity && (
-                                              <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">
-                                                Custom
-                                              </Badge>
-                                            )}
                                           </div>
                                         ))}
                                       </>
