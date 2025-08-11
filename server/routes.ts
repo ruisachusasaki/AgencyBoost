@@ -162,8 +162,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (validatedData.phone && validatedData.phone !== oldClient.phone) {
         changes.push(`phone from "${oldClient.phone}" to "${validatedData.phone}"`);
       }
+
+      // Check for DND (Do Not Disturb) changes - CRITICAL for compliance
+      const dndChanges = [];
+      if (validatedData.dndAll !== undefined && validatedData.dndAll !== oldClient.dndAll) {
+        const status = validatedData.dndAll ? "ENABLED" : "DISABLED";
+        dndChanges.push(`DND All Channels ${status}`);
+        changes.push(`DND All Channels ${status}`);
+      }
+      if (validatedData.dndEmail !== undefined && validatedData.dndEmail !== oldClient.dndEmail) {
+        const status = validatedData.dndEmail ? "ENABLED" : "DISABLED";
+        dndChanges.push(`Email DND ${status}`);
+        changes.push(`Email DND ${status}`);
+      }
+      if (validatedData.dndSms !== undefined && validatedData.dndSms !== oldClient.dndSms) {
+        const status = validatedData.dndSms ? "ENABLED" : "DISABLED";
+        dndChanges.push(`SMS DND ${status}`);
+        changes.push(`SMS DND ${status}`);
+      }
+      if (validatedData.dndCalls !== undefined && validatedData.dndCalls !== oldClient.dndCalls) {
+        const status = validatedData.dndCalls ? "ENABLED" : "DISABLED";
+        dndChanges.push(`Calls DND ${status}`);
+        changes.push(`Calls DND ${status}`);
+      }
+
+      // Create separate audit logs for DND changes due to their critical nature
+      if (dndChanges.length > 0) {
+        await createAuditLog(
+          "updated",
+          "dnd_settings",
+          client.id,
+          client.name || client.email,
+          "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          `CRITICAL: Communication preferences updated - ${dndChanges.join(", ")}`,
+          {
+            dndAll: oldClient.dndAll,
+            dndEmail: oldClient.dndEmail,
+            dndSms: oldClient.dndSms,
+            dndCalls: oldClient.dndCalls
+          },
+          {
+            dndAll: client.dndAll,
+            dndEmail: client.dndEmail,
+            dndSms: client.dndSms,
+            dndCalls: client.dndCalls
+          },
+          req
+        );
+      }
       
-      // Log the update
+      // Log the general update
       await createAuditLog(
         "updated",
         "contact",
