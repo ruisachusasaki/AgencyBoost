@@ -3568,8 +3568,8 @@ export default function EnhancedClientDetail() {
                                   <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
                                     <FileText className="h-4 w-4" />
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 break-words">{doc.fileName}</p>
                                     <p className="text-xs text-gray-500">
                                       Uploaded {new Date(doc.createdAt).toLocaleDateString()} • {formatFileSize(doc.fileSize)}
                                     </p>
