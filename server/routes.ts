@@ -3394,8 +3394,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clientId = req.params.clientId;
       
-      // Get notes from memory storage (temporary solution)
-      const notes = global.clientNotes?.[clientId] || [];
+      // Get notes from database with creator information
+      const notes = await db
+        .select({
+          id: clientNotes.id,
+          clientId: clientNotes.clientId,
+          content: clientNotes.content,
+          createdAt: clientNotes.createdAt,
+          editedAt: clientNotes.editedAt,
+          createdBy: {
+            id: sql`created_by.id`,
+            firstName: sql`created_by.first_name`,
+            lastName: sql`created_by.last_name`
+          },
+          editedBy: sql`CASE WHEN edited_by.id IS NOT NULL THEN json_build_object('id', edited_by.id, 'firstName', edited_by.first_name, 'lastName', edited_by.last_name) ELSE NULL END`
+        })
+        .from(clientNotes)
+        .leftJoin(sql`${staff} AS created_by`, eq(clientNotes.createdById, sql`created_by.id`))
+        .leftJoin(sql`${staff} AS edited_by`, eq(clientNotes.editedBy, sql`edited_by.id`))
+        .where(eq(clientNotes.clientId, clientId))
+        .orderBy(desc(clientNotes.createdAt));
       
       res.json(notes);
     } catch (error) {
@@ -3414,19 +3432,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Note content is required" });
       }
 
-      // Create actual note in database
-      const noteId = nanoid();
-      const createdAt = new Date();
-      
       // Get user info for the response
       const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
       const user = userInfo[0] || { firstName: "System", lastName: "User" };
 
-      // Insert note record (we'll add to audit log for now as notes table doesn't exist)
+      // Insert note into database
+      const newNoteData = {
+        clientId: clientId,
+        content: content.trim(),
+        createdById: userId,
+        isLocked: true // Notes are locked after creation as per schema
+      };
+
+      const insertedNote = await db.insert(clientNotes).values(newNoteData).returning();
+      const createdNote = insertedNote[0];
+
+      // Create audit log
       await createAuditLog(
         "created",
         "note", 
-        noteId,
+        createdNote.id,
         `Note for client ${clientId}`,
         userId,
         `Created note: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`,
@@ -3435,25 +3460,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
-      const newNote = {
-        id: noteId,
-        clientId: clientId,
-        content: content.trim(),
-        createdById: userId,
+      // Return note with user information for UI
+      const noteResponse = {
+        id: createdNote.id,
+        clientId: createdNote.clientId,
+        content: createdNote.content,
+        createdById: createdNote.createdById,
         createdBy: { firstName: user.firstName, lastName: user.lastName },
-        createdAt: createdAt,
+        createdAt: createdNote.createdAt,
         editedBy: null,
         editedAt: null,
-        canEdit: true,
-        canDelete: true
+        isLocked: createdNote.isLocked
       };
 
-      // Store in memory for this session (temporary until we add proper notes table)
-      if (!global.clientNotes) global.clientNotes = {};
-      if (!global.clientNotes[clientId]) global.clientNotes[clientId] = [];
-      global.clientNotes[clientId].push(newNote);
-
-      res.status(201).json(newNote);
+      res.status(201).json(noteResponse);
     } catch (error) {
       console.error("Error creating client note:", error);
       res.status(500).json({ error: "Failed to create note" });
@@ -3479,25 +3499,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Only admins can edit notes" });
       }
 
-      // Find and update note
-      if (!global.clientNotes?.[clientId]) {
+      // Get the existing note to check if it exists and get old content for audit
+      const existingNote = await db.select().from(clientNotes)
+        .where(and(eq(clientNotes.id, noteId), eq(clientNotes.clientId, clientId)))
+        .limit(1);
+
+      if (!existingNote.length) {
         return res.status(404).json({ error: "Note not found" });
       }
 
-      const noteIndex = global.clientNotes[clientId].findIndex(note => note.id === noteId);
-      if (noteIndex === -1) {
+      const oldNote = existingNote[0];
+
+      // Update note in database
+      const updatedNote = await db.update(clientNotes)
+        .set({
+          content: content.trim(),
+          editedBy: userId,
+          editedAt: new Date()
+        })
+        .where(and(eq(clientNotes.id, noteId), eq(clientNotes.clientId, clientId)))
+        .returning();
+
+      if (!updatedNote.length) {
         return res.status(404).json({ error: "Note not found" });
       }
-
-      const oldNote = global.clientNotes[clientId][noteIndex];
-      const updatedNote = {
-        ...oldNote,
-        content: content.trim(),
-        editedBy: { firstName: user.firstName, lastName: user.lastName },
-        editedAt: new Date()
-      };
-
-      global.clientNotes[clientId][noteIndex] = updatedNote;
 
       // Log the edit
       await createAuditLog(
@@ -3507,12 +3532,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `Note for client ${clientId}`,
         userId,
         `Updated note content`,
-        oldNote,
-        updatedNote,
+        { content: oldNote.content },
+        { content: updatedNote[0].content },
         req
       );
 
-      res.json(updatedNote);
+      // Return note with user information for UI
+      const noteResponse = {
+        id: updatedNote[0].id,
+        clientId: updatedNote[0].clientId,
+        content: updatedNote[0].content,
+        createdById: updatedNote[0].createdById,
+        createdAt: updatedNote[0].createdAt,
+        editedBy: { firstName: user.firstName, lastName: user.lastName },
+        editedAt: updatedNote[0].editedAt,
+        isLocked: updatedNote[0].isLocked
+      };
+
+      res.json(noteResponse);
     } catch (error) {
       console.error("Error updating client note:", error);
       res.status(500).json({ error: "Failed to update note" });
@@ -3533,18 +3570,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Only admins can delete notes" });
       }
 
-      // Find and delete note
-      if (!global.clientNotes?.[clientId]) {
+      // Get the existing note before deletion for audit logging
+      const existingNote = await db.select().from(clientNotes)
+        .where(and(eq(clientNotes.id, noteId), eq(clientNotes.clientId, clientId)))
+        .limit(1);
+
+      if (!existingNote.length) {
         return res.status(404).json({ error: "Note not found" });
       }
 
-      const noteIndex = global.clientNotes[clientId].findIndex(note => note.id === noteId);
-      if (noteIndex === -1) {
+      const noteToDelete = existingNote[0];
+
+      // Delete note from database
+      const deleteResult = await db.delete(clientNotes)
+        .where(and(eq(clientNotes.id, noteId), eq(clientNotes.clientId, clientId)))
+        .returning();
+
+      if (!deleteResult.length) {
         return res.status(404).json({ error: "Note not found" });
       }
-
-      const deletedNote = global.clientNotes[clientId][noteIndex];
-      global.clientNotes[clientId].splice(noteIndex, 1);
 
       // Log the deletion
       await createAuditLog(
@@ -3553,8 +3597,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         noteId,
         `Note for client ${clientId}`,
         userId,
-        `Deleted note: ${deletedNote.content.substring(0, 100)}${deletedNote.content.length > 100 ? '...' : ''}`,
-        deletedNote,
+        `Deleted note: ${noteToDelete.content.substring(0, 100)}${noteToDelete.content.length > 100 ? '...' : ''}`,
+        { content: noteToDelete.content },
         null,
         req
       );

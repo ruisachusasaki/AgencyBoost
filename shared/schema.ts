@@ -1011,9 +1011,9 @@ export const permissions = pgTable("permissions", {
 
 export const userRoles = pgTable("user_roles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
-  assignedBy: varchar("assigned_by").references(() => staff.id),
+  assignedBy: uuid("assigned_by").references(() => staff.id),
   assignedAt: timestamp("assigned_at").defaultNow(),
 });
 
@@ -1027,7 +1027,7 @@ export const permissionAuditLogs = pgTable("permission_audit_logs", {
   roleName: text("role_name"),
   
   // User assignment fields
-  targetUserId: varchar("target_user_id").references(() => staff.id), // User who received/lost role
+  targetUserId: uuid("target_user_id").references(() => staff.id), // User who received/lost role
   targetUserName: text("target_user_name"),
   
   // Permission change details
@@ -1040,7 +1040,7 @@ export const permissionAuditLogs = pgTable("permission_audit_logs", {
   changesCount: integer("changes_count").default(0), // Number of permission changes
   
   // Actor information
-  performedBy: varchar("performed_by").references(() => staff.id),
+  performedBy: uuid("performed_by").references(() => staff.id),
   performedByName: text("performed_by_name").notNull(),
   
   // Technical details
