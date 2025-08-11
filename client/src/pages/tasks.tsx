@@ -24,9 +24,11 @@ export default function Tasks() {
     queryKey: ["/api/tasks"],
   });
 
-  const { data: clients = [] } = useQuery<Client[]>({
+  const { data: clientsData } = useQuery({
     queryKey: ["/api/clients"],
   });
+  
+  const clients = clientsData?.clients || [];
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
