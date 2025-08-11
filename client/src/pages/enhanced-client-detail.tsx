@@ -1250,7 +1250,7 @@ export default function EnhancedClientDetail() {
       }
       return prev;
     });
-  }, [customFieldFoldersData?.length, customFieldsData?.length]);
+  }, [customFieldFoldersData, customFieldsData]);
 
   // Owner search filtering
   useEffect(() => {
@@ -1284,7 +1284,7 @@ export default function EnhancedClientDetail() {
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData, client?.id]);
+  }, [followerSearchTerm, staffData, client]);
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
@@ -1773,7 +1773,7 @@ export default function EnhancedClientDetail() {
       </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left Column - Contact Details */}
           <div className="lg:col-span-1">
             <Card>
@@ -2314,7 +2314,7 @@ export default function EnhancedClientDetail() {
           </div>
 
           {/* Middle Column - Activity & Quick Actions */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-3">
             {/* Recent Activity - Moved to Top */}
             <Card className="mb-6">
               <CardHeader>
