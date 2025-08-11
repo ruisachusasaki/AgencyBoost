@@ -39,6 +39,16 @@ export default function Tasks() {
     queryKey: ["/api/campaigns"],
   });
 
+  // Fetch current user for role checking
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/me'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/me');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    },
+  });
+
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/tasks/${id}`);
@@ -376,19 +386,22 @@ export default function Tasks() {
 
                     <div className="flex items-center gap-2">
                       <Link href={`/tasks/${task.id}`}>
-                        <Button variant="ghost" size="sm" title="Edit task">
+                        <Button variant="ghost" size="sm" title="View task">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
                       
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteTask(task.id)}
-                        disabled={deleteTaskMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      {currentUser?.role === 'Admin' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDeleteTask(task.id)}
+                          disabled={deleteTaskMutation.isPending}
+                          title="Delete task (Admin only)"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
