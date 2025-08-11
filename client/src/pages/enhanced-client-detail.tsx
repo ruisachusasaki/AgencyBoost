@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock } from "lucide-react";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -415,11 +415,22 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
+  const [searchDocuments, setSearchDocuments] = useState("");
+  const [newAppointment, setNewAppointment] = useState({
+    title: "",
+    description: "",
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    endTime: "",
+    location: "",
+    status: "confirmed"
+  });
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [clientTasks, setClientTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState<NewTask>({
@@ -2021,35 +2032,80 @@ export default function EnhancedClientDetail() {
             </Card>
           </div>
 
-          {/* Right Column - Notes & Tasks */}
+          {/* Right Column - Client Activity Hub */}
           <div className="lg:col-span-1">
             <Card>
-              <CardHeader>
-                <div className="flex border-b border-gray-200 -mb-6">
+              <CardHeader className="pb-4">
+                {/* Horizontal Icons Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Client Hub</h2>
+                </div>
+                <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
                   <button
                     onClick={() => setActiveRightSection("notes")}
-                    className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                       activeRightSection === "notes"
-                        ? "border-primary text-primary"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                     }`}
+                    title="Notes"
                   >
+                    <StickyNote className="h-4 w-4" />
                     Notes
                   </button>
                   <button
                     onClick={() => setActiveRightSection("tasks")}
-                    className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                       activeRightSection === "tasks"
-                        ? "border-primary text-primary"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                     }`}
+                    title="Tasks"
                   >
+                    <CheckCircle className="h-4 w-4" />
                     Tasks
+                  </button>
+                  <button
+                    onClick={() => setActiveRightSection("appointments")}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                      activeRightSection === "appointments"
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    }`}
+                    title="Appointments"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Meetings
+                  </button>
+                  <button
+                    onClick={() => setActiveRightSection("documents")}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                      activeRightSection === "documents"
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    }`}
+                    title="Documents"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Files
+                  </button>
+                  <button
+                    onClick={() => setActiveRightSection("payments")}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                      activeRightSection === "payments"
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    }`}
+                    title="Payments"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Billing
                   </button>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                {activeRightSection === "notes" ? (
+                {/* Notes Section */}
+                {activeRightSection === "notes" && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Notes</h3>
@@ -2059,12 +2115,15 @@ export default function EnhancedClientDetail() {
                     </div>
                     
                     <div className="space-y-3">
-                      <Input
-                        placeholder="Search notes..."
-                        value={searchNotes}
-                        onChange={(e) => setSearchNotes(e.target.value)}
-                        className="text-sm"
-                      />
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search notes..."
+                          value={searchNotes}
+                          onChange={(e) => setSearchNotes(e.target.value)}
+                          className="pl-10 text-sm"
+                        />
+                      </div>
                       <Textarea
                         placeholder="Add a note..."
                         value={newNote}
@@ -2080,24 +2139,29 @@ export default function EnhancedClientDetail() {
                       </Button>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-sm font-medium text-gray-900">Meeting scheduled</span>
                           <span className="text-xs text-gray-500">2h ago</span>
                         </div>
                         <p className="text-sm text-gray-600">Discussed project requirements and timeline. Client is interested in our premium package.</p>
+                        <div className="mt-2 text-xs text-gray-400">by Michael Brown</div>
                       </div>
-                      <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-sm font-medium text-gray-900">Follow-up required</span>
                           <span className="text-xs text-gray-500">1d ago</span>
                         </div>
                         <p className="text-sm text-gray-600">Need to send proposal by Friday. Client mentioned budget constraints.</p>
+                        <div className="mt-2 text-xs text-gray-400">by Sarah Johnson</div>
                       </div>
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {/* Tasks Section */}
+                {activeRightSection === "tasks" && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Tasks</h3>
@@ -2254,6 +2318,157 @@ export default function EnhancedClientDetail() {
                           </div>
                         ))
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Appointments Section */}
+                {activeRightSection === "appointments" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Appointments</h3>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-blue-900">Strategy Meeting</span>
+                          <span className="text-xs text-blue-600">Tomorrow</span>
+                        </div>
+                        <p className="text-sm text-blue-700 mb-1">Review campaign performance and Q4 planning</p>
+                        <div className="flex items-center gap-4 text-xs text-blue-600">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            2:00 PM - 3:00 PM
+                          </span>
+                          <span>Conference Room A</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-green-900">Campaign Review</span>
+                          <span className="text-xs text-green-600">Next Week</span>
+                        </div>
+                        <p className="text-sm text-green-700 mb-1">Monthly performance review and adjustments</p>
+                        <div className="flex items-center gap-4 text-xs text-green-600">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            10:00 AM - 11:30 AM
+                          </span>
+                          <span>Virtual Meeting</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Documents Section */}
+                {activeRightSection === "documents" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Documents</h3>
+                      <Button size="sm" variant="outline">
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search documents..."
+                          value={searchDocuments}
+                          onChange={(e) => setSearchDocuments(e.target.value)}
+                          className="pl-10 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-red-100 rounded">
+                            <FileText className="h-4 w-4 text-red-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">Campaign_Proposal_Q4.pdf</p>
+                            <p className="text-xs text-gray-500">Uploaded 2 days ago • 2.3 MB</p>
+                            <p className="text-xs text-gray-400">by Michael Brown</p>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-green-100 rounded">
+                            <FileText className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">Brand_Guidelines.docx</p>
+                            <p className="text-xs text-gray-500">Uploaded 1 week ago • 5.1 MB</p>
+                            <p className="text-xs text-gray-400">by Sarah Johnson</p>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payments Section */}
+                {activeRightSection === "payments" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Billing & Payments</h3>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-green-900">Payment Received</span>
+                          <span className="text-sm font-bold text-green-700">+$2,500.00</span>
+                        </div>
+                        <p className="text-sm text-green-700 mb-1">Invoice #INV-2024-0156 - Monthly retainer</p>
+                        <div className="flex items-center gap-4 text-xs text-green-600">
+                          <span>Aug 5, 2024</span>
+                          <span>•</span>
+                          <span>Credit Card ****4532</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-yellow-900">Pending Payment</span>
+                          <span className="text-sm font-bold text-yellow-700">$1,200.00</span>
+                        </div>
+                        <p className="text-sm text-yellow-700 mb-1">Invoice #INV-2024-0157 - Additional services</p>
+                        <div className="flex items-center gap-4 text-xs text-yellow-600">
+                          <span>Due: Aug 15, 2024</span>
+                          <span>•</span>
+                          <span>3 days overdue</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-gray-900">Upcoming Billing</span>
+                          <span className="text-sm font-bold text-gray-700">$2,500.00</span>
+                        </div>
+                        <p className="text-sm text-gray-700 mb-1">Monthly retainer renewal</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                          <span>Due: Sep 1, 2024</span>
+                          <span>•</span>
+                          <span>Auto-pay enabled</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -15,8 +15,11 @@ import {
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
+  insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
+  insertClientDocumentSchema, insertClientTransactionSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts
+  roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
+  clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";

@@ -61,6 +61,74 @@ export const customFields = pgTable("custom_fields", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client notes - locked after creation, admin-only editing
+export const clientNotes = pgTable("client_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  content: text("content").notNull(),
+  createdById: uuid("created_by_id").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  editedBy: uuid("edited_by").references(() => staff.id),
+  editedAt: timestamp("edited_at"),
+  isLocked: boolean("is_locked").default(true), // Locked after creation
+});
+
+// Client tasks - enhanced with recurring functionality
+export const clientTasks = pgTable("client_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  dueDate: timestamp("due_date"),
+  status: text("status").notNull().default("pending"), // pending, completed, overdue
+  assignedTo: uuid("assigned_to").references(() => staff.id),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: jsonb("recurrence_pattern"), // {type: 'daily/weekly/monthly', interval: 1, endType: 'never/date/count', endValue: null}
+  createEvenIfOverdue: boolean("create_even_if_overdue").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Client appointments - calendaring functionality
+export const clientAppointments = pgTable("client_appointments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  location: text("location"),
+  status: text("status").notNull().default("confirmed"), // confirmed, showed, no_show, cancelled
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Client documents - file uploads
+export const clientDocuments = pgTable("client_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(), // pdf, xls, xlsx, jpg, png, doc, docx
+  fileSize: integer("file_size").notNull(),
+  fileUrl: text("file_url").notNull(),
+  uploadedBy: uuid("uploaded_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Client payments/transactions (placeholder for future invoicing integration)
+export const clientTransactions = pgTable("client_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  type: text("type").notNull(), // transaction, subscription, invoice
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  status: text("status").notNull(), // pending, completed, failed, cancelled
+  transactionDate: timestamp("transaction_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Tags for organizing clients
 export const tags = pgTable("tags", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1046,6 +1114,35 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+// Insert schemas for new client functionality
+export const insertClientNoteSchema = createInsertSchema(clientNotes).omit({
+  id: true,
+  createdAt: true,
+  editedAt: true,
+});
+
+export const insertClientTaskSchema = createInsertSchema(clientTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClientAppointmentSchema = createInsertSchema(clientAppointments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClientTransactionSchema = createInsertSchema(clientTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Export enhanced workflow and task types
 export type Workflow = typeof workflows.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
@@ -1076,6 +1173,22 @@ export type InsertAutomationAction = z.infer<typeof insertAutomationActionSchema
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Export types for new client functionality
+export type ClientNote = typeof clientNotes.$inferSelect;
+export type InsertClientNote = z.infer<typeof insertClientNoteSchema>;
+
+export type ClientTask = typeof clientTasks.$inferSelect;
+export type InsertClientTask = z.infer<typeof insertClientTaskSchema>;
+
+export type ClientAppointment = typeof clientAppointments.$inferSelect;
+export type InsertClientAppointment = z.infer<typeof insertClientAppointmentSchema>;
+
+export type ClientDocument = typeof clientDocuments.$inferSelect;
+export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
+
+export type ClientTransaction = typeof clientTransactions.$inferSelect;
+export type InsertClientTransaction = z.infer<typeof insertClientTransactionSchema>;
 
 // Staff Management
 export const staff = pgTable("staff", {
