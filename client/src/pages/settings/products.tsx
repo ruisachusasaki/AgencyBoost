@@ -20,11 +20,12 @@ import {
   Edit2, 
   Trash2, 
   DollarSign, 
-
   Package2,
   ShoppingCart,
   X,
-  ArrowLeft
+  ArrowLeft,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -88,7 +89,7 @@ export default function ProductsSettings() {
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [sortField, setSortField] = useState<'name' | 'cost' | 'type' | 'status' | 'createdAt'>('name');
+  const [sortField, setSortField] = useState<'name' | 'type' | 'status' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch products
@@ -413,7 +414,11 @@ export default function ProductsSettings() {
 
   const getSortIcon = (field: typeof sortField) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' ? '↑' : '↓';
+    return sortDirection === 'asc' ? (
+      <ChevronUp className="w-4 h-4 inline ml-1" />
+    ) : (
+      <ChevronDown className="w-4 h-4 inline ml-1" />
+    );
   };
 
   // Filter and sort products
@@ -431,10 +436,7 @@ export default function ProductsSettings() {
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
           break;
-        case 'cost':
-          aValue = parseFloat(a.cost || '0');
-          bValue = parseFloat(b.cost || '0');
-          break;
+
         case 'type':
           aValue = a.type.toLowerCase();
           bValue = b.type.toLowerCase();
@@ -837,12 +839,7 @@ export default function ProductsSettings() {
                       >
                         Name {getSortIcon('name')}
                       </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-gray-50 select-none"
-                        onClick={() => handleSort('cost')}
-                      >
-                        Cost {getSortIcon('cost')}
-                      </TableHead>
+                      <TableHead>Cost</TableHead>
                       <TableHead 
                         className="cursor-pointer hover:bg-gray-50 select-none"
                         onClick={() => handleSort('type')}
