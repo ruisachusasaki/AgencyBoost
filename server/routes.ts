@@ -3484,37 +3484,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clientId = req.params.clientId;
       
-      // For now, return mock data until we fix database schema
-      const mockTasks = [
-        {
-          id: "1",
-          clientId: clientId,
-          title: "Send campaign proposal",
-          description: "Prepare and send Q4 campaign proposal with budget breakdown",
-          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-          status: "pending",
-          assignedTo: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          assignedToUser: { firstName: "Michael", lastName: "Brown" },
-          createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          isRecurring: false,
-          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-        },
-        {
-          id: "2",
-          clientId: clientId,
-          title: "Follow up on contract",
-          description: "Check status of signed contract and next steps",
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
-          status: "pending",
-          assignedTo: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          assignedToUser: { firstName: "Sarah", lastName: "Johnson" },
-          createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          isRecurring: false,
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-        }
-      ];
+      // Get tasks from memory storage (temporary solution)  
+      const tasks = global.clientTasks?.[clientId] || [];
       
-      res.json(mockTasks);
+      res.json(tasks);
     } catch (error) {
       console.error("Error fetching client tasks:", error);
       res.status(500).json({ error: "Failed to fetch client tasks" });
@@ -3524,27 +3497,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clients/:clientId/tasks", async (req, res) => {
     try {
       const clientId = req.params.clientId;
-      const { title, description, dueDate, assignedTo, isRecurring } = req.body;
+      const { title, description, dueDate, assignedTo, status } = req.body;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
       if (!title?.trim()) {
         return res.status(400).json({ error: "Task title is required" });
       }
 
-      // For now, return mock response until we fix database schema
       const newTask = {
-        id: Date.now().toString(),
+        id: nanoid(),
         clientId: clientId,
         title: title.trim(),
         description: description?.trim() || null,
         dueDate: dueDate ? new Date(dueDate) : null,
-        status: "pending",
+        status: status || "pending",
         assignedTo: assignedTo || userId,
-        assignedToUser: { firstName: "Assigned", lastName: "User" },
+        assignedToUser: { firstName: "Task", lastName: "User" },
         createdBy: userId,
-        isRecurring: !!isRecurring,
         createdAt: new Date(),
+        updatedAt: new Date()
       };
+
+      // Store in memory
+      if (!global.clientTasks) global.clientTasks = {};
+      if (!global.clientTasks[clientId]) global.clientTasks[clientId] = [];
+      global.clientTasks[clientId].push(newTask);
+
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "task",
+        newTask.id,
+        newTask.title,
+        userId,
+        `Created task for client ${clientId}: ${newTask.title}`,
+        null,
+        newTask,
+        req
+      );
 
       res.status(201).json(newTask);
     } catch (error) {
@@ -3556,24 +3546,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
     try {
       const { clientId, taskId } = req.params;
-      const { status } = req.body;
+      const updateData = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
-      if (!status) {
-        return res.status(400).json({ error: "Status is required" });
+      if (!global.clientTasks?.[clientId]) {
+        return res.status(404).json({ error: "Client not found or has no tasks" });
       }
 
-      // For now, return mock response until we fix database schema
+      const taskIndex = global.clientTasks[clientId].findIndex(t => t.id === taskId);
+      if (taskIndex === -1) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const oldTask = { ...global.clientTasks[clientId][taskIndex] };
       const updatedTask = {
-        id: taskId,
-        clientId: clientId,
-        status: status,
+        ...global.clientTasks[clientId][taskIndex],
+        ...updateData,
         updatedAt: new Date()
       };
+
+      global.clientTasks[clientId][taskIndex] = updatedTask;
+
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "task",
+        taskId,
+        updatedTask.title,
+        userId,
+        `Updated task: ${updatedTask.title}`,
+        oldTask,
+        updatedTask,
+        req
+      );
 
       res.json(updatedTask);
     } catch (error) {
       console.error("Error updating client task:", error);
       res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
+    try {
+      const { clientId, taskId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!global.clientTasks?.[clientId]) {
+        return res.status(404).json({ error: "Client not found or has no tasks" });
+      }
+
+      const taskIndex = global.clientTasks[clientId].findIndex(t => t.id === taskId);
+      if (taskIndex === -1) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const deletedTask = global.clientTasks[clientId][taskIndex];
+      global.clientTasks[clientId].splice(taskIndex, 1);
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "task",
+        taskId,
+        deletedTask.title,
+        userId,
+        `Deleted task: ${deletedTask.title}`,
+        deletedTask,
+        null,
+        req
+      );
+
+      res.json({ message: "Task deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting client task:", error);
+      res.status(500).json({ error: "Failed to delete task" });
     }
   });
 
