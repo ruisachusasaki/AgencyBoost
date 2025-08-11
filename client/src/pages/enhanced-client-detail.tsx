@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1219,9 +1219,9 @@ export default function EnhancedClientDetail() {
     },
   });
 
-  // Update sections based on custom field folders
-  useEffect(() => {
-    if (!customFieldFoldersData || !customFieldsData) return;
+  // Memoize sections calculation to prevent infinite re-renders
+  const calculatedSections = useMemo(() => {
+    if (!customFieldFoldersData || !customFieldsData) return [];
     
     const newSections: Section[] = [];
     
@@ -1240,17 +1240,21 @@ export default function EnhancedClientDetail() {
       }
     });
     
-    // Only update if sections actually changed
+    return newSections;
+  }, [customFieldFoldersData, customFieldsData]);
+
+  // Update sections only when calculated sections change
+  useEffect(() => {
+    if (calculatedSections.length === 0) return;
+    
     setSections(prev => {
-      if (prev.length !== newSections.length) return newSections;
-      const prevIds = prev.map(s => s.id).sort();
-      const newIds = newSections.map(s => s.id).sort();
-      for (let i = 0; i < prevIds.length; i++) {
-        if (prevIds[i] !== newIds[i]) return newSections;
-      }
+      if (prev.length !== calculatedSections.length) return calculatedSections;
+      const prevIds = prev.map(s => s.id).sort().join(',');
+      const newIds = calculatedSections.map(s => s.id).sort().join(',');
+      if (prevIds !== newIds) return calculatedSections;
       return prev;
     });
-  }, [customFieldFoldersData, customFieldsData]);
+  }, [calculatedSections]);
 
   // Owner search filtering
   useEffect(() => {
@@ -1773,7 +1777,7 @@ export default function EnhancedClientDetail() {
       </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
           {/* Left Column - Contact Details */}
           <div className="lg:col-span-2">
             <Card>
@@ -2314,7 +2318,7 @@ export default function EnhancedClientDetail() {
           </div>
 
           {/* Middle Column - Activity & Quick Actions */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             {/* Recent Activity - Moved to Top */}
             <Card className="mb-6">
               <CardHeader>
