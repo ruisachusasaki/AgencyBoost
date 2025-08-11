@@ -97,6 +97,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sortBy = req.query.sortBy as string || "name"; // default sort by name
       const sortOrder = req.query.sortOrder as string || "asc"; // default ascending
       
+      // Add cache-busting headers for fresh data
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
       const result = await storage.getClientsWithPagination(limit, offset, sortBy, sortOrder);
       
       res.json({

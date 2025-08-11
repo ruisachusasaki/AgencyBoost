@@ -20,9 +20,10 @@ interface PaginatedClientsResponse {
 
 export default function RecentClients() {
   const { data: clientsData, isLoading, error } = useQuery<PaginatedClientsResponse>({
-    queryKey: ["/api/clients", "recent", "v4"],
+    queryKey: ["/api/clients", "recent", "v5"],
     queryFn: async () => {
-      const response = await fetch("/api/clients?page=1&limit=3&sortBy=createdAt&sortOrder=desc");
+      const timestamp = Date.now();
+      const response = await fetch(`/api/clients?page=1&limit=3&sortBy=createdAt&sortOrder=desc&_t=${timestamp}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
