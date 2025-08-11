@@ -688,15 +688,23 @@ export default function EnhancedClientDetail() {
   // Update contact owner mutation
   const updateOwnerMutation = useMutation({
     mutationFn: async (ownerId: string) => {
+      console.log('Updating owner for client:', clientId, 'to:', ownerId);
       const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactOwner: ownerId }),
       });
-      if (!response.ok) throw new Error('Failed to update contact owner');
-      return response.json();
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Update owner error response:', response.status, errorData);
+        throw new Error(`Failed to update contact owner: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Owner update successful:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Owner mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
       setIsAssigningOwner(false);
       setOwnerSearchTerm("");
@@ -705,10 +713,11 @@ export default function EnhancedClientDetail() {
         description: "Contact owner has been updated successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Owner update mutation error:', error);
       toast({
         title: "Error",
-        description: "Failed to assign contact owner",
+        description: `Failed to assign contact owner: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -717,15 +726,23 @@ export default function EnhancedClientDetail() {
   // Update followers mutation
   const updateFollowersMutation = useMutation({
     mutationFn: async (followers: string[]) => {
+      console.log('Updating followers for client:', clientId, 'to:', followers);
       const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ followers }),
       });
-      if (!response.ok) throw new Error('Failed to update followers');
-      return response.json();
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Update followers error response:', response.status, errorData);
+        throw new Error(`Failed to update followers: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Followers update successful:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Followers mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
       setIsAddingFollowers(false);
       setFollowerSearchTerm("");
@@ -734,10 +751,11 @@ export default function EnhancedClientDetail() {
         description: "Client followers have been updated successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Followers update mutation error:', error);
       toast({
         title: "Error",
-        description: "Failed to update followers",
+        description: `Failed to update followers: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -770,7 +788,7 @@ export default function EnhancedClientDetail() {
   // Filter staff for owner assignment
   useEffect(() => {
     if (ownerSearchTerm && staffData) {
-      const filtered = staffData.filter(staff => 
+      const filtered = staffData.filter((staff: any) => 
         `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(ownerSearchTerm.toLowerCase()) ||
         staff.email?.toLowerCase().includes(ownerSearchTerm.toLowerCase())
       );
@@ -786,7 +804,7 @@ export default function EnhancedClientDetail() {
   useEffect(() => {
     if (followerSearchTerm && staffData) {
       const currentFollowers = client?.followers || [];
-      const filtered = staffData.filter(staff => 
+      const filtered = staffData.filter((staff: any) => 
         !currentFollowers.includes(staff.id) && // Exclude already following staff
         staff.id !== client?.contactOwner && // Exclude current owner
         (`${staff.firstName} ${staff.lastName}`.toLowerCase().includes(followerSearchTerm.toLowerCase()) ||
@@ -1196,20 +1214,15 @@ export default function EnhancedClientDetail() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">Owner:</span>
                 {client.contactOwner ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <UserCircle className="h-3 w-3" />
-                      {staffData.find(staff => staff.id === client.contactOwner)?.firstName} {staffData.find(staff => staff.id === client.contactOwner)?.lastName}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsAssigningOwner(true)}
-                      className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAssigningOwner(true)}
+                    className="h-8 px-2 text-xs hover:bg-gray-100"
+                  >
+                    <UserCircle className="h-3 w-3 mr-1" />
+                    {staffData.find((staff: any) => staff.id === client.contactOwner)?.firstName} {staffData.find((staff: any) => staff.id === client.contactOwner)?.lastName}
+                  </Button>
                 ) : (
                   <Button
                     variant="outline"
@@ -2380,7 +2393,7 @@ export default function EnhancedClientDetail() {
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">Current Followers</Label>
                   <div className="space-y-2">
                     {client.followers.map((followerId) => {
-                      const follower = staffData.find(staff => staff.id === followerId);
+                      const follower = staffData.find((staff: any) => staff.id === followerId);
                       if (!follower) return null;
                       return (
                         <div key={followerId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
