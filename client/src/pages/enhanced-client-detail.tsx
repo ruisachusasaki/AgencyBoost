@@ -3764,12 +3764,13 @@ function TaskComments({ taskId }: { taskId: string }) {
     });
   };
 
-  // Render mention in text
+  // Render mention and URLs in text
   const renderCommentContent = (content: string) => {
+    // First handle mentions
     const mentionRegex = /@(\w+\s+\w+)/g;
     const parts = content.split(mentionRegex);
     
-    return parts.map((part, index) => {
+    const processedParts = parts.map((part, index) => {
       if (index % 2 === 1) { // This is a mention
         return (
           <span key={index} className="bg-blue-100 text-blue-800 px-1 rounded">
@@ -3777,8 +3778,32 @@ function TaskComments({ taskId }: { taskId: string }) {
           </span>
         );
       }
-      return part;
+      
+      // Handle URLs in non-mention parts
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urlParts = part.split(urlRegex);
+      
+      return urlParts.map((urlPart, urlIndex) => {
+        if (urlIndex % 2 === 1) { // This is a URL
+          const displayUrl = urlPart.length > 50 ? urlPart.substring(0, 47) + '...' : urlPart;
+          return (
+            <a
+              key={`${index}-${urlIndex}`}
+              href={urlPart}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline break-all"
+              title={urlPart}
+            >
+              {displayUrl}
+            </a>
+          );
+        }
+        return urlPart;
+      });
     });
+    
+    return processedParts;
   };
 
   return (

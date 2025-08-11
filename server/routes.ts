@@ -3728,6 +3728,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       global.taskComments[taskId].push(newComment);
 
+      // Create notifications for mentioned users
+      if (mentions && mentions.length > 0) {
+        if (!global.notifications) {
+          global.notifications = {};
+        }
+        
+        for (const mentionedUserId of mentions) {
+          if (!global.notifications[mentionedUserId]) {
+            global.notifications[mentionedUserId] = [];
+          }
+          
+          const notification = {
+            id: nanoid(),
+            type: 'mention',
+            title: 'You were mentioned in a task comment',
+            message: `${author.firstName} ${author.lastName} mentioned you in a comment`,
+            entityType: 'task',
+            entityId: taskId,
+            relatedId: newComment.id,
+            isRead: false,
+            createdAt: new Date(),
+            createdBy: userId
+          };
+          
+          global.notifications[mentionedUserId].push(notification);
+        }
+      }
+
       // Log the comment creation
       await createAuditLog(
         "created",
@@ -3850,6 +3878,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting task comment:", error);
       res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
+  // Notifications endpoints
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      if (!global.notifications) {
+        global.notifications = {};
+      }
+      
+      const userNotifications = global.notifications[userId] || [];
+      
+      // Sort by newest first
+      const sortedNotifications = userNotifications.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      res.json(sortedNotifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/notifications/:notificationId/read", async (req, res) => {
+    try {
+      const { notificationId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      if (!global.notifications?.[userId]) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      const notification = global.notifications[userId].find((n: any) => n.id === notificationId);
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      notification.isRead = true;
+      
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/mark-all-read", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      if (!global.notifications?.[userId]) {
+        return res.json({ message: "No notifications to mark as read" });
+      }
+      
+      global.notifications[userId].forEach((notification: any) => {
+        notification.isRead = true;
+      });
+      
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ error: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:notificationId", async (req, res) => {
+    try {
+      const { notificationId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      if (!global.notifications?.[userId]) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      const notificationIndex = global.notifications[userId].findIndex((n: any) => n.id === notificationId);
+      if (notificationIndex === -1) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      global.notifications[userId].splice(notificationIndex, 1);
+      
+      res.json({ message: "Notification deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ error: "Failed to delete notification" });
     }
   });
 
