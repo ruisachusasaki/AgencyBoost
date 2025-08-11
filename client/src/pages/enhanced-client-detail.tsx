@@ -794,9 +794,16 @@ export default function EnhancedClientDetail() {
     if (!leftColumnHeight) return undefined;
     
     // Account for the right column header, form inputs, and padding
-    // Subtract approximately 200px for the header, search, and add note form
-    const availableHeight = leftColumnHeight - 200;
-    return availableHeight > 400 ? `${availableHeight}px` : undefined;
+    // Subtract approximately 140px for the header, search, and add note form
+    const availableHeight = leftColumnHeight - 140;
+    
+    // Debug logging (you can remove this later)
+    console.log('Left column height:', leftColumnHeight);
+    console.log('Available height for notes:', availableHeight);
+    console.log('Constraint applied:', availableHeight > 100);
+    
+    // Apply constraint more aggressively - even for smaller heights
+    return availableHeight > 100 ? `${availableHeight}px` : '400px';
   };
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
