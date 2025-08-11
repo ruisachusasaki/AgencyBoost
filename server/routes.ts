@@ -3301,6 +3301,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Notes endpoints
+  app.get("/api/clients/:clientId/notes", async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      
+      // For now, return mock data until we fix database schema
+      const mockNotes = [
+        {
+          id: "1",
+          clientId: clientId,
+          content: "Meeting scheduled - Discussed project requirements and timeline. Client is interested in our premium package.",
+          createdById: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          createdBy: { firstName: "Michael", lastName: "Brown" },
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          editedBy: null,
+          editedAt: null,
+          isLocked: true
+        },
+        {
+          id: "2", 
+          clientId: clientId,
+          content: "Follow-up required - Need to send proposal by Friday. Client mentioned budget constraints.",
+          createdById: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          createdBy: { firstName: "Sarah", lastName: "Johnson" },
+          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+          editedBy: null,
+          editedAt: null,
+          isLocked: true
+        }
+      ];
+      
+      res.json(mockNotes);
+    } catch (error) {
+      console.error("Error fetching client notes:", error);
+      res.status(500).json({ error: "Failed to fetch client notes" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/notes", async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      const { content } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!content?.trim()) {
+        return res.status(400).json({ error: "Note content is required" });
+      }
+
+      // For now, return mock response until we fix database schema
+      const newNote = {
+        id: Date.now().toString(),
+        clientId: clientId,
+        content: content.trim(),
+        createdById: userId,
+        createdBy: { firstName: "Current", lastName: "User" },
+        createdAt: new Date(),
+        editedBy: null,
+        editedAt: null,
+        isLocked: true
+      };
+
+      res.status(201).json(newNote);
+    } catch (error) {
+      console.error("Error creating client note:", error);
+      res.status(500).json({ error: "Failed to create note" });
+    }
+  });
+
+  // Client Tasks endpoints
+  app.get("/api/clients/:clientId/tasks", async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      
+      // For now, return mock data until we fix database schema
+      const mockTasks = [
+        {
+          id: "1",
+          clientId: clientId,
+          title: "Send campaign proposal",
+          description: "Prepare and send Q4 campaign proposal with budget breakdown",
+          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+          status: "pending",
+          assignedTo: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          assignedToUser: { firstName: "Michael", lastName: "Brown" },
+          createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          isRecurring: false,
+          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        },
+        {
+          id: "2",
+          clientId: clientId,
+          title: "Follow up on contract",
+          description: "Check status of signed contract and next steps",
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+          status: "pending",
+          assignedTo: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          assignedToUser: { firstName: "Sarah", lastName: "Johnson" },
+          createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          isRecurring: false,
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        }
+      ];
+      
+      res.json(mockTasks);
+    } catch (error) {
+      console.error("Error fetching client tasks:", error);
+      res.status(500).json({ error: "Failed to fetch client tasks" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/tasks", async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      const { title, description, dueDate, assignedTo, isRecurring } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!title?.trim()) {
+        return res.status(400).json({ error: "Task title is required" });
+      }
+
+      // For now, return mock response until we fix database schema
+      const newTask = {
+        id: Date.now().toString(),
+        clientId: clientId,
+        title: title.trim(),
+        description: description?.trim() || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        status: "pending",
+        assignedTo: assignedTo || userId,
+        assignedToUser: { firstName: "Assigned", lastName: "User" },
+        createdBy: userId,
+        isRecurring: !!isRecurring,
+        createdAt: new Date(),
+      };
+
+      res.status(201).json(newTask);
+    } catch (error) {
+      console.error("Error creating client task:", error);
+      res.status(500).json({ error: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
+    try {
+      const { clientId, taskId } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+
+      // For now, return mock response until we fix database schema
+      const updatedTask = {
+        id: taskId,
+        clientId: clientId,
+        status: status,
+        updatedAt: new Date()
+      };
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error updating client task:", error);
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  // Client Documents endpoints
+  app.get("/api/clients/:clientId/documents", async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      
+      // For now, return mock data until we fix database schema
+      const mockDocuments = [
+        {
+          id: "1",
+          clientId: clientId,
+          fileName: "Campaign_Proposal_Q4.pdf",
+          fileType: "pdf",
+          fileSize: 2400000, // 2.4 MB
+          fileUrl: "/documents/campaign_proposal_q4.pdf",
+          uploadedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          uploadedByUser: { firstName: "Michael", lastName: "Brown" },
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        },
+        {
+          id: "2",
+          clientId: clientId,
+          fileName: "Brand_Guidelines.docx",
+          fileType: "docx",
+          fileSize: 5100000, // 5.1 MB
+          fileUrl: "/documents/brand_guidelines.docx",
+          uploadedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          uploadedByUser: { firstName: "Sarah", lastName: "Johnson" },
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
+        }
+      ];
+      
+      res.json(mockDocuments);
+    } catch (error) {
+      console.error("Error fetching client documents:", error);
+      res.status(500).json({ error: "Failed to fetch client documents" });
+    }
+  });
+
   // Temporary auth endpoint for demo purposes (returns admin user)
   app.get("/api/auth/current-user", async (req, res) => {
     try {

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -421,6 +422,7 @@ export default function EnhancedClientDetail() {
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [searchDocuments, setSearchDocuments] = useState("");
+
   const [newAppointment, setNewAppointment] = useState({
     title: "",
     description: "",
@@ -615,6 +617,39 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId,
   });
 
+  // Fetch client notes data
+  const { data: clientNotes = [], isLoading: notesLoading } = useQuery({
+    queryKey: ['/api/clients', clientId, 'notes'],
+    queryFn: async () => {
+      const response = await fetch(`/api/clients/${clientId}/notes`);
+      if (!response.ok) throw new Error('Failed to fetch client notes');
+      return response.json();
+    },
+    enabled: !!clientId && activeRightSection === "notes",
+  });
+
+  // Fetch client tasks data
+  const { data: clientTasksData = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ['/api/clients', clientId, 'tasks'],
+    queryFn: async () => {
+      const response = await fetch(`/api/clients/${clientId}/tasks`);
+      if (!response.ok) throw new Error('Failed to fetch client tasks');
+      return response.json();
+    },
+    enabled: !!clientId && activeRightSection === "tasks",
+  });
+
+  // Fetch client documents data
+  const { data: clientDocuments = [], isLoading: documentsLoading } = useQuery({
+    queryKey: ['/api/clients', clientId, 'documents'],
+    queryFn: async () => {
+      const response = await fetch(`/api/clients/${clientId}/documents`);
+      if (!response.ok) throw new Error('Failed to fetch client documents');
+      return response.json();
+    },
+    enabled: !!clientId && activeRightSection === "documents",
+  });
+
   // Fetch bundle details for expanded bundles with client-specific quantities
   const { data: bundleDetailsData = {} } = useQuery({
     queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId],
@@ -661,6 +696,97 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Error",
         description: "Failed to remove product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create note mutation
+  const createNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const response = await fetch(`/api/clients/${clientId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) throw new Error('Failed to create note');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
+      setNewNote("");
+      toast({
+        title: "Success",
+        description: "Note created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create note",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create task mutation
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      const response = await fetch(`/api/clients/${clientId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      });
+      if (!response.ok) throw new Error('Failed to create task');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
+      setNewTask({
+        title: "",
+        description: "",
+        dueDate: "",
+        dueTime: "",
+        assignee: "",
+        recurring: false
+      });
+      setIsTaskDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update task status mutation
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+      const response = await fetch(`/api/clients/${clientId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error('Failed to update task');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update task",
         variant: "destructive",
       });
     },
@@ -849,11 +975,11 @@ export default function EnhancedClientDetail() {
 
   // Filter staff for followers
   useEffect(() => {
-    if (followerSearchTerm && staffData) {
-      const currentFollowers = client?.followers || [];
+    if (followerSearchTerm && staffData && client) {
+      const currentFollowers = client.followers || [];
       const filtered = staffData.filter((staff: any) => 
         !currentFollowers.includes(staff.id) && // Exclude already following staff
-        staff.id !== client?.contactOwner && // Exclude current owner
+        staff.id !== client.contactOwner && // Exclude current owner
         (`${staff.firstName} ${staff.lastName}`.toLowerCase().includes(followerSearchTerm.toLowerCase()) ||
          staff.email?.toLowerCase().includes(followerSearchTerm.toLowerCase()))
       );
@@ -863,7 +989,7 @@ export default function EnhancedClientDetail() {
       setFilteredFollowers([]);
       setShowFollowerSuggestions(false);
     }
-  }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
+  }, [followerSearchTerm, staffData, client?.id]);
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
@@ -2040,68 +2166,101 @@ export default function EnhancedClientDetail() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">Client Hub</h2>
                 </div>
-                <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
-                  <button
-                    onClick={() => setActiveRightSection("notes")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      activeRightSection === "notes"
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    }`}
-                    title="Notes"
-                  >
-                    <StickyNote className="h-4 w-4" />
-                    Notes
-                  </button>
-                  <button
-                    onClick={() => setActiveRightSection("tasks")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      activeRightSection === "tasks"
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    }`}
-                    title="Tasks"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Tasks
-                  </button>
-                  <button
-                    onClick={() => setActiveRightSection("appointments")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      activeRightSection === "appointments"
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    }`}
-                    title="Appointments"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Meetings
-                  </button>
-                  <button
-                    onClick={() => setActiveRightSection("documents")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      activeRightSection === "documents"
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    }`}
-                    title="Documents"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Files
-                  </button>
-                  <button
-                    onClick={() => setActiveRightSection("payments")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      activeRightSection === "payments"
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    }`}
-                    title="Payments"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    Billing
-                  </button>
-                </div>
+                <TooltipProvider>
+                  <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("notes")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "notes"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Notes</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("tasks")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "tasks"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Tasks</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("appointments")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
+                            activeRightSection === "appointments"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-400"
+                          }`}
+                          disabled
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Meetings (Coming Soon)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("documents")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "documents"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Upload className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Files</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("payments")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
+                            activeRightSection === "payments"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-400"
+                          }`}
+                          disabled
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Billing (Coming Soon)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </CardHeader>
               <CardContent className="pt-6">
                 {/* Notes Section */}
@@ -2133,29 +2292,42 @@ export default function EnhancedClientDetail() {
                       <Button 
                         size="sm" 
                         className="w-full bg-primary hover:bg-primary/90"
-                        disabled={!newNote.trim()}
+                        disabled={!newNote.trim() || createNoteMutation.isPending}
+                        onClick={() => createNoteMutation.mutate(newNote)}
                       >
-                        Add Note
+                        {createNoteMutation.isPending ? "Adding..." : "Add Note"}
                       </Button>
                     </div>
 
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-gray-900">Meeting scheduled</span>
-                          <span className="text-xs text-gray-500">2h ago</span>
+                      {notesLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading notes...</div>
                         </div>
-                        <p className="text-sm text-gray-600">Discussed project requirements and timeline. Client is interested in our premium package.</p>
-                        <div className="mt-2 text-xs text-gray-400">by Michael Brown</div>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-gray-900">Follow-up required</span>
-                          <span className="text-xs text-gray-500">1d ago</span>
+                      ) : clientNotes.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No notes yet</p>
+                          <p className="text-xs text-gray-400">Add a note to get started</p>
                         </div>
-                        <p className="text-sm text-gray-600">Need to send proposal by Friday. Client mentioned budget constraints.</p>
-                        <div className="mt-2 text-xs text-gray-400">by Sarah Johnson</div>
-                      </div>
+                      ) : (
+                        clientNotes
+                          .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
+                          .map((note: any) => (
+                            <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-sm font-medium text-gray-900">Note</span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600">{note.content}</p>
+                              <div className="mt-2 text-xs text-gray-400">
+                                by {note.createdBy?.firstName} {note.createdBy?.lastName}
+                              </div>
+                            </div>
+                          ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -2245,33 +2417,20 @@ export default function EnhancedClientDetail() {
                               <Button
                                 onClick={() => {
                                   if (newTask.title.trim()) {
-                                    const task: Task = {
-                                      id: Date.now().toString(),
+                                    const taskData = {
                                       title: newTask.title,
                                       description: newTask.description,
                                       dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
-                                      status: "pending"
+                                      assignedTo: newTask.assignee,
+                                      isRecurring: newTask.recurring
                                     };
-                                    setClientTasks(prev => [...prev, task]);
-                                    setNewTask({
-                                      title: "",
-                                      description: "",
-                                      dueDate: "",
-                                      dueTime: "",
-                                      assignee: "",
-                                      recurring: false
-                                    });
-                                    setIsTaskDialogOpen(false);
-                                    toast({
-                                      title: "Task Created",
-                                      description: "New task has been created successfully.",
-                                    });
+                                    createTaskMutation.mutate(taskData);
                                   }
                                 }}
-                                disabled={!newTask.title.trim()}
+                                disabled={!newTask.title.trim() || createTaskMutation.isPending}
                                 className="bg-primary hover:bg-primary/90"
                               >
-                                Create Task
+                                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
                               </Button>
                             </div>
                           </div>
@@ -2280,43 +2439,63 @@ export default function EnhancedClientDetail() {
                     </div>
 
                     <div className="space-y-3">
-                      {clientTasks.length === 0 ? (
+                      {tasksLoading ? (
                         <div className="text-center py-8 text-gray-500">
-                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <div className="text-sm">Loading tasks...</div>
+                        </div>
+                      ) : clientTasksData.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-sm">No tasks yet</p>
                           <p className="text-xs text-gray-400">Create a task to get started</p>
                         </div>
                       ) : (
-                        clientTasks.map((task) => (
-                          <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-2 flex-1">
-                                <Checkbox
-                                  checked={task.status === "completed"}
-                                  onCheckedChange={(checked) => {
-                                    setClientTasks(prev => prev.map(t => 
-                                      t.id === task.id 
-                                        ? { ...t, status: checked ? "completed" : "pending" }
-                                        : t
-                                    ));
-                                  }}
-                                  className="mt-0.5"
-                                />
-                                <div className="flex-1">
-                                  <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-gray-500" : "text-gray-900"}`}>
-                                    {task.title}
-                                  </p>
-                                  {task.description && (
-                                    <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                                  )}
-                                  {task.dueDate && (
-                                    <p className="text-xs text-gray-500 mt-1">Due: {task.dueDate}</p>
-                                  )}
+                        clientTasksData.map((task: any) => {
+                          const isCompleted = task.status === 'completed';
+                          const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+                          const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
+                          const dueDateColor = isOverdue ? 'bg-red-100 text-red-700' : dueDate && dueDate <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
+                          
+                          return (
+                            <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <Checkbox
+                                    checked={isCompleted}
+                                    onCheckedChange={(checked) => {
+                                      updateTaskStatusMutation.mutate({
+                                        taskId: task.id,
+                                        status: checked ? 'completed' : 'pending'
+                                      });
+                                    }}
+                                    className="mt-0.5"
+                                  />
+                                  <div className="flex-1">
+                                    <p className={`text-sm font-medium ${isCompleted ? "line-through text-gray-500" : "text-gray-900"}`}>
+                                      {task.title}
+                                    </p>
+                                    {task.description && (
+                                      <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                                    )}
+                                    {dueDate && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Due: {dueDate.toLocaleDateString()} at {dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      assigned to {task.assignedToUser?.firstName} {task.assignedToUser?.lastName}
+                                    </p>
+                                  </div>
                                 </div>
+                                {dueDate && (
+                                  <span className={`text-xs px-2 py-1 rounded ${dueDateColor}`}>
+                                    {isOverdue ? 'Overdue' : `Due ${dueDate.toLocaleDateString()}`}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -2388,36 +2567,69 @@ export default function EnhancedClientDetail() {
                     </div>
 
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-red-100 rounded">
-                            <FileText className="h-4 w-4 text-red-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">Campaign_Proposal_Q4.pdf</p>
-                            <p className="text-xs text-gray-500">Uploaded 2 days ago • 2.3 MB</p>
-                            <p className="text-xs text-gray-400">by Michael Brown</p>
-                          </div>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
+                      {documentsLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading documents...</div>
                         </div>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-green-100 rounded">
-                            <FileText className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">Brand_Guidelines.docx</p>
-                            <p className="text-xs text-gray-500">Uploaded 1 week ago • 5.1 MB</p>
-                            <p className="text-xs text-gray-400">by Sarah Johnson</p>
-                          </div>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
+                      ) : clientDocuments.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No documents yet</p>
+                          <p className="text-xs text-gray-400">Upload a document to get started</p>
                         </div>
-                      </div>
+                      ) : (
+                        clientDocuments
+                          .filter((doc: any) => !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase()))
+                          .map((doc: any) => {
+                            const getFileIconColor = (fileType: string) => {
+                              switch (fileType.toLowerCase()) {
+                                case 'pdf':
+                                  return 'bg-red-100 text-red-600';
+                                case 'docx':
+                                case 'doc':
+                                  return 'bg-blue-100 text-blue-600';
+                                case 'xlsx':
+                                case 'xls':
+                                  return 'bg-green-100 text-green-600';
+                                case 'pptx':
+                                case 'ppt':
+                                  return 'bg-orange-100 text-orange-600';
+                                default:
+                                  return 'bg-gray-100 text-gray-600';
+                              }
+                            };
+                            
+                            const formatFileSize = (bytes: number) => {
+                              if (bytes === 0) return '0 B';
+                              const k = 1024;
+                              const sizes = ['B', 'KB', 'MB', 'GB'];
+                              const i = Math.floor(Math.log(bytes) / Math.log(k));
+                              return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                            };
+                            
+                            return (
+                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer">
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
+                                    <FileText className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
+                                    <p className="text-xs text-gray-500">
+                                      Uploaded {new Date(doc.createdAt).toLocaleDateString()} • {formatFileSize(doc.fileSize)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      by {doc.uploadedByUser?.firstName} {doc.uploadedByUser?.lastName}
+                                    </p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View document">
+                                    <ExternalLink className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
                     </div>
                   </div>
                 )}
