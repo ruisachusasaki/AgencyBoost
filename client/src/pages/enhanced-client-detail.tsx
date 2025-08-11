@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart } from "lucide-react";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -445,12 +445,23 @@ export default function EnhancedClientDetail() {
   const [filteredTags, setFilteredTags] = useState<Tag[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
+  // Services state
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [newServiceName, setNewServiceName] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
+  
   // Actions section accordion state
   const [actionsExpanded, setActionsExpanded] = useState({
     tags: true,
     campaigns: false,
     workflows: false,
     opportunities: false
+  });
+  
+  // Services section accordion state
+  const [servicesExpanded, setServicesExpanded] = useState({
+    services: true
   });
 
   // Helper functions to get dynamic names from custom fields
@@ -522,6 +533,16 @@ export default function EnhancedClientDetail() {
     queryFn: async () => {
       const response = await fetch('/api/tags');
       if (!response.ok) throw new Error('Failed to fetch tags');
+      return response.json();
+    },
+  });
+
+  // Fetch products data
+  const { data: productsData = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['/api/products'],
+    queryFn: async () => {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();
     },
   });
@@ -681,6 +702,101 @@ export default function EnhancedClientDetail() {
     setNewTagName("");
     setIsAddingTag(false);
     setShowSuggestions(false);
+  };
+
+  // Service management functions
+  const addServiceToClient = async (serviceName: string) => {
+    if (!client || !serviceName.trim()) return;
+    
+    try {
+      const currentServices = client.services || [];
+      if (currentServices.includes(serviceName)) {
+        toast({
+          title: "Service already exists",
+          description: `"${serviceName}" is already assigned to this client`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const updatedServices = [...currentServices, serviceName];
+      await apiRequest('PUT', `/api/clients/${clientId}`, {
+        services: updatedServices
+      });
+
+      toast({
+        title: "Service added",
+        description: `"${serviceName}" has been added to ${client.name}`,
+      });
+
+      // Refresh client data
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+    } catch (error) {
+      toast({
+        title: "Error adding service",
+        description: "Failed to add service to client",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createNewProduct = async () => {
+    if (!newServiceName.trim()) return;
+
+    try {
+      // Create the product in the database
+      await apiRequest('POST', '/api/products', {
+        name: newServiceName,
+        description: '',
+        price: 0,
+      });
+
+      // Add the service to the client
+      await addServiceToClient(newServiceName);
+
+      // Refresh products data
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+
+      // Reset form
+      setNewServiceName("");
+      setIsAddingService(false);
+      setShowServiceSuggestions(false);
+
+      toast({
+        title: "Service created",
+        description: `"${newServiceName}" has been created and added to ${client?.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error creating service",
+        description: "Failed to create new service",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Filter products based on input
+  const handleServiceInputChange = (value: string) => {
+    setNewServiceName(value);
+    
+    if (value.trim()) {
+      const filtered = productsData.filter((product: any) => 
+        product.name.toLowerCase().includes(value.toLowerCase()) &&
+        !(client.services || []).includes(product.name)
+      );
+      setFilteredProducts(filtered);
+      setShowServiceSuggestions(true);
+    } else {
+      setFilteredProducts([]);
+      setShowServiceSuggestions(false);
+    }
+  };
+
+  const selectExistingService = (serviceName: string) => {
+    addServiceToClient(serviceName);
+    setNewServiceName("");
+    setIsAddingService(false);
+    setShowServiceSuggestions(false);
   };
 
   // Field update mutation (handles both custom and standard fields)
@@ -1030,6 +1146,73 @@ export default function EnhancedClientDetail() {
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No opportunities tracked</p>
                       <p className="text-xs text-gray-400">Sales opportunities will appear when pipeline functionality is added</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Services Section */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                  Services
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Services Accordion */}
+                <div className="pb-2">
+                  <button
+                    onClick={() => setServicesExpanded(prev => ({ ...prev, services: !prev.services }))}
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                  >
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      Products & Services
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsAddingService(true);
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      {servicesExpanded.services ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </button>
+                  {servicesExpanded.services && (
+                    <div className="mt-3 space-y-2">
+                      {client.services && client.services.length > 0 ? (
+                        <div className="space-y-2">
+                          {client.services.map((serviceName: string, index: number) => {
+                            const product = productsData.find((p: any) => p.name === serviceName);
+                            return (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 bg-gray-50 rounded border"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <ShoppingCart className="h-4 w-4 text-gray-500" />
+                                  <span className="text-sm font-medium">{serviceName}</span>
+                                </div>
+                                {product && product.price && (
+                                  <Badge variant="outline" className="text-xs">
+                                    ${product.price}
+                                  </Badge>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No services assigned</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1477,6 +1660,107 @@ export default function EnhancedClientDetail() {
                         disabled={!newTagName.trim()}
                       >
                         Create & Add Tag
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Service Dialog */}
+        <Dialog open={isAddingService} onOpenChange={setIsAddingService}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Service</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="relative">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Search or Create Service</Label>
+                <Input
+                  value={newServiceName}
+                  onChange={(e) => handleServiceInputChange(e.target.value)}
+                  placeholder="Type to search existing services or create new..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase()) {
+                        selectExistingService(filteredProducts[0].name);
+                      } else {
+                        createNewProduct();
+                      }
+                    }
+                  }}
+                  onFocus={() => {
+                    if (newServiceName.trim()) {
+                      setShowServiceSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay hiding suggestions to allow clicking
+                    setTimeout(() => setShowServiceSuggestions(false), 200);
+                  }}
+                />
+                
+                {/* Autocomplete Suggestions */}
+                {showServiceSuggestions && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {filteredProducts.length > 0 ? (
+                      <>
+                        <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b">
+                          Existing Services
+                        </div>
+                        {filteredProducts.map((product: any) => (
+                          <button
+                            key={product.id}
+                            onClick={() => selectExistingService(product.name)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between border-b last:border-b-0"
+                          >
+                            <div className="flex items-center gap-2">
+                              <ShoppingCart className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                              <span className="text-sm truncate">{product.name}</span>
+                            </div>
+                            {product.price && (
+                              <Badge variant="outline" className="text-xs">
+                                ${product.price}
+                              </Badge>
+                            )}
+                          </button>
+                        ))}
+                      </>
+                    ) : newServiceName.trim() ? (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No existing services found. Press Enter to create "{newServiceName}"
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => {
+                  setIsAddingService(false);
+                  setNewServiceName("");
+                  setShowServiceSuggestions(false);
+                }}>
+                  Cancel
+                </Button>
+                {newServiceName.trim() && (
+                  <>
+                    {filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase() ? (
+                      <Button 
+                        onClick={() => selectExistingService(filteredProducts[0].name)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        Add Existing Service
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={createNewProduct}
+                        disabled={!newServiceName.trim()}
+                      >
+                        Create & Add Service
                       </Button>
                     )}
                   </>
