@@ -1243,18 +1243,26 @@ export default function EnhancedClientDetail() {
     return newSections;
   }, [customFieldFoldersData, customFieldsData]);
 
-  // Update sections only when calculated sections change
+  // Update sections only when calculated sections structure changes
+  const calculatedSectionsStr = useMemo(() => 
+    JSON.stringify(calculatedSections.map(s => ({ id: s.id, name: s.name }))), 
+    [calculatedSections]
+  );
+  
   useEffect(() => {
     if (calculatedSections.length === 0) return;
     
     setSections(prev => {
-      if (prev.length !== calculatedSections.length) return calculatedSections;
-      const prevIds = prev.map(s => s.id).sort().join(',');
-      const newIds = calculatedSections.map(s => s.id).sort().join(',');
-      if (prevIds !== newIds) return calculatedSections;
+      const prevStr = JSON.stringify(prev.map(s => ({ id: s.id, name: s.name })));
+      if (prevStr !== calculatedSectionsStr) {
+        return calculatedSections.map(section => ({
+          ...section,
+          isOpen: prev.find(p => p.id === section.id)?.isOpen || false
+        }));
+      }
       return prev;
     });
-  }, [calculatedSections]);
+  }, [calculatedSectionsStr, calculatedSections]);
 
   // Owner search filtering
   useEffect(() => {

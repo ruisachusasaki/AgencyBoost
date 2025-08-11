@@ -278,6 +278,45 @@ export interface IStorage {
   getNotificationSettings(userId: string): Promise<NotificationSettings | undefined>;
   createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings>;
   updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined>;
+  
+  // Missing methods that are called in routes.ts
+  getWorkflowsByCategory(category: string): Promise<Workflow[]>;
+  getSocialMediaPostsByClient(clientId: string): Promise<SocialMediaPost[]>;
+  getSocialMediaTemplatesByClient(clientId: string): Promise<SocialMediaTemplate[]>;
+  getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]>;
+  getEnhancedTasksByAssignee(assigneeId: string): Promise<EnhancedTask[]>;
+  getEnhancedTasksByWorkflow(workflowId: string): Promise<EnhancedTask[]>;
+  getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]>;
+  getAutomationActionsByCategory(category: string): Promise<AutomationAction[]>;
+  reorderCustomFields(fieldIds: string[]): Promise<void>;
+  updateCustomFieldFolder(id: string, folder: Partial<InsertCustomFieldFolder>): Promise<CustomFieldFolder | undefined>;
+  deleteCustomFieldFolder(id: string): Promise<boolean>;
+  reorderCustomFieldFolders(folderIds: string[]): Promise<void>;
+  getProducts(): Promise<Product[]>;
+  getProduct(id: string): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<boolean>;
+  getPermissions(): Promise<Permission[]>;
+  getPermission(id: string): Promise<Permission | undefined>;
+  createPermission(permission: InsertPermission): Promise<Permission>;
+  updatePermission(id: string, permission: Partial<InsertPermission>): Promise<Permission | undefined>;
+  deletePermission(id: string): Promise<boolean>;
+  getUserRoles(): Promise<UserRole[]>;
+  getUserRole(id: string): Promise<UserRole | undefined>;
+  getUserRolesByUser(userId: string): Promise<UserRole[]>;
+  getUserRolesByRole(roleId: string): Promise<UserRole[]>;
+  createUserRole(userRole: InsertUserRole): Promise<UserRole>;
+  updateUserRole(id: string, userRole: Partial<InsertUserRole>): Promise<UserRole | undefined>;
+  deleteUserRole(id: string): Promise<boolean>;
+  getSmartLists(userId: string): Promise<SmartList[]>;
+  getSmartList(id: string): Promise<SmartList | undefined>;
+  createSmartList(smartList: InsertSmartList): Promise<SmartList>;
+  updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined>;
+  deleteSmartList(id: string): Promise<boolean>;
+  deleteAutomationTrigger(id: string): Promise<boolean>;
+  deleteAutomationAction(id: string): Promise<boolean>;
+  deleteWorkflowExecution(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
