@@ -170,16 +170,7 @@ const EditableField = ({
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </span>
-        {!isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-            onClick={() => startEditing(fieldId, value)}
-          >
-            <Edit2 className="h-3 w-3" />
-          </Button>
-        )}
+
       </label>
       
       {isEditing ? (
