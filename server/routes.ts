@@ -3497,11 +3497,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clients/:clientId/tasks", async (req, res) => {
     try {
       const clientId = req.params.clientId;
-      const { title, description, dueDate, assignedTo, status } = req.body;
+      const { title, description, dueDate, assignedTo, status, isRecurring, recurringConfig } = req.body;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
       if (!title?.trim()) {
         return res.status(400).json({ error: "Task title is required" });
+      }
+
+      // Find assigned user details if assignedTo is provided
+      let assignedToUser = null;
+      if (assignedTo) {
+        const assignedStaff = await db.select().from(staff).where(eq(staff.id, assignedTo)).limit(1);
+        if (assignedStaff.length > 0) {
+          assignedToUser = {
+            firstName: assignedStaff[0].firstName,
+            lastName: assignedStaff[0].lastName
+          };
+        }
       }
 
       const newTask = {
@@ -3512,8 +3524,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: dueDate ? new Date(dueDate) : null,
         status: status || "pending",
         assignedTo: assignedTo || userId,
-        assignedToUser: { firstName: "Task", lastName: "User" },
+        assignedToUser: assignedToUser || { firstName: "Unassigned", lastName: "User" },
         createdBy: userId,
+        isRecurring: !!isRecurring,
+        // Map recurringConfig fields to schema fields
+        recurringInterval: isRecurring ? (recurringConfig?.interval || 1) : null,
+        recurringUnit: isRecurring ? (recurringConfig?.unit || "days") : null,
+        recurringEndType: isRecurring ? (recurringConfig?.endType || "never") : null,
+        recurringEndDate: isRecurring && recurringConfig?.endType === "on" && recurringConfig?.endDate ? new Date(recurringConfig.endDate) : null,
+        recurringEndOccurrences: isRecurring && recurringConfig?.endType === "after" ? (recurringConfig?.endAfter || 1) : null,
+        createIfOverdue: isRecurring ? !!recurringConfig?.createIfOverdue : false,
         createdAt: new Date(),
         updatedAt: new Date()
       };

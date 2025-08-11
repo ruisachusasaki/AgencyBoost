@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
@@ -446,6 +446,21 @@ export default function EnhancedClientDetail() {
     recurring: false
   });
 
+  // Enhanced recurring task state
+  const [recurringConfig, setRecurringConfig] = useState({
+    interval: 1,
+    unit: "days" as "hours" | "days" | "weeks" | "months" | "years",
+    endType: "never" as "never" | "on" | "after",
+    endDate: "",
+    endAfter: 1,
+    createIfOverdue: false
+  });
+
+  // Assignee search state
+  const [assigneeSearchTerm, setAssigneeSearchTerm] = useState("");
+  const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
+  const [filteredAssignees, setFilteredAssignees] = useState<any[]>([]);
+
   // Field editing state (works for both custom and standard fields)
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
@@ -804,6 +819,17 @@ export default function EnhancedClientDetail() {
         assignee: "",
         recurring: false
       });
+      setRecurringConfig({
+        interval: 1,
+        unit: "days",
+        endType: "never",
+        endDate: "",
+        endAfter: 1,
+        createIfOverdue: false
+      });
+      setAssigneeSearchTerm("");
+      setShowAssigneeSuggestions(false);
+      setFilteredAssignees([]);
       setIsTaskDialogOpen(false);
       toast({
         title: "Success",
@@ -2521,36 +2547,190 @@ export default function EnhancedClientDetail() {
                                 />
                               </div>
                             </div>
-                            <div>
+                            <div className="relative">
                               <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                              <Select
-                                value={newTask.assignee}
-                                onValueChange={(value) => setNewTask(prev => ({ ...prev, assignee: value }))}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select assignee" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {mockUsers.map((user) => (
-                                    <SelectItem key={user.id} value={user.id}>
-                                      {user.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="recurring"
-                                checked={newTask.recurring}
-                                onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, recurring: !!checked }))}
+                              <Input
+                                value={assigneeSearchTerm}
+                                onChange={(e) => {
+                                  setAssigneeSearchTerm(e.target.value);
+                                  if (e.target.value.trim() && staffData) {
+                                    const filtered = staffData.filter((staff: any) => 
+                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
+                                    );
+                                    setFilteredAssignees(filtered);
+                                    setShowAssigneeSuggestions(filtered.length > 0);
+                                  } else {
+                                    setFilteredAssignees([]);
+                                    setShowAssigneeSuggestions(false);
+                                  }
+                                }}
+                                placeholder="Search staff members..."
+                                onFocus={() => {
+                                  if (assigneeSearchTerm.trim() && staffData) {
+                                    const filtered = staffData.filter((staff: any) => 
+                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
+                                      staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
+                                    );
+                                    setFilteredAssignees(filtered);
+                                    setShowAssigneeSuggestions(filtered.length > 0);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => setShowAssigneeSuggestions(false), 200);
+                                }}
                               />
-                              <Label htmlFor="recurring" className="text-sm font-medium text-gray-700">
-                                Recurring task
-                              </Label>
+                              
+                              {showAssigneeSuggestions && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                  {filteredAssignees.map((staff: any) => (
+                                    <button
+                                      key={staff.id}
+                                      onClick={() => {
+                                        setNewTask(prev => ({ ...prev, assignee: staff.id }));
+                                        setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
+                                        setShowAssigneeSuggestions(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                                    >
+                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                                        <div className="text-xs text-gray-500">{staff.email}</div>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="recurring"
+                                  checked={newTask.recurring}
+                                  onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, recurring: !!checked }))}
+                                />
+                                <Label htmlFor="recurring" className="text-sm font-medium text-gray-700">
+                                  Recurring Task
+                                </Label>
+                              </div>
+
+                              {newTask.recurring && (
+                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Repeats every</Label>
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={recurringConfig.interval}
+                                      onChange={(e) => setRecurringConfig(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
+                                      className="w-20"
+                                    />
+                                    <Select
+                                      value={recurringConfig.unit}
+                                      onValueChange={(value: any) => setRecurringConfig(prev => ({ ...prev, unit: value }))}
+                                    >
+                                      <SelectTrigger className="w-32">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="hours">Hour(s)</SelectItem>
+                                        <SelectItem value="days">Day(s)</SelectItem>
+                                        <SelectItem value="weeks">Week(s)</SelectItem>
+                                        <SelectItem value="months">Month(s)</SelectItem>
+                                        <SelectItem value="years">Year(s)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-gray-700">Ends On:</Label>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id="end-never"
+                                          checked={recurringConfig.endType === "never"}
+                                          onCheckedChange={() => setRecurringConfig(prev => ({ ...prev, endType: "never" }))}
+                                        />
+                                        <Label htmlFor="end-never" className="text-sm">Never</Label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id="end-on"
+                                          checked={recurringConfig.endType === "on"}
+                                          onCheckedChange={() => setRecurringConfig(prev => ({ ...prev, endType: "on" }))}
+                                        />
+                                        <Label htmlFor="end-on" className="text-sm">On</Label>
+                                        {recurringConfig.endType === "on" && (
+                                          <Input
+                                            type="date"
+                                            value={recurringConfig.endDate}
+                                            onChange={(e) => setRecurringConfig(prev => ({ ...prev, endDate: e.target.value }))}
+                                            className="ml-2"
+                                          />
+                                        )}
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id="end-after"
+                                          checked={recurringConfig.endType === "after"}
+                                          onCheckedChange={() => setRecurringConfig(prev => ({ ...prev, endType: "after" }))}
+                                        />
+                                        <Label htmlFor="end-after" className="text-sm">After</Label>
+                                        {recurringConfig.endType === "after" && (
+                                          <>
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              value={recurringConfig.endAfter}
+                                              onChange={(e) => setRecurringConfig(prev => ({ ...prev, endAfter: parseInt(e.target.value) || 1 }))}
+                                              className="w-20 ml-2"
+                                            />
+                                            <span className="text-sm text-gray-600">occurrences</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="create-if-overdue"
+                                      checked={recurringConfig.createIfOverdue}
+                                      onCheckedChange={(checked) => setRecurringConfig(prev => ({ ...prev, createIfOverdue: !!checked }))}
+                                    />
+                                    <Label htmlFor="create-if-overdue" className="text-sm text-gray-700">
+                                      Create a new task even if previous task is overdue
+                                    </Label>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             <div className="flex justify-end gap-2">
-                              <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
+                              <Button variant="outline" onClick={() => {
+                                setIsTaskDialogOpen(false);
+                                setNewTask({
+                                  title: "",
+                                  description: "",
+                                  dueDate: "",
+                                  dueTime: "",
+                                  assignee: "",
+                                  recurring: false
+                                });
+                                setRecurringConfig({
+                                  interval: 1,
+                                  unit: "days",
+                                  endType: "never",
+                                  endDate: "",
+                                  endAfter: 1,
+                                  createIfOverdue: false
+                                });
+                                setAssigneeSearchTerm("");
+                                setShowAssigneeSuggestions(false);
+                                setFilteredAssignees([]);
+                              }}>
                                 Cancel
                               </Button>
                               <Button
@@ -2560,8 +2740,9 @@ export default function EnhancedClientDetail() {
                                       title: newTask.title,
                                       description: newTask.description,
                                       dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
-                                      assignedTo: newTask.assignee,
-                                      isRecurring: newTask.recurring
+                                      assignedTo: newTask.assignee || undefined,
+                                      isRecurring: newTask.recurring,
+                                      recurringConfig: newTask.recurring ? recurringConfig : undefined
                                     };
                                     createTaskMutation.mutate(taskData);
                                   }
@@ -2621,9 +2802,17 @@ export default function EnhancedClientDetail() {
                                         Due: {dueDate.toLocaleDateString()} at {dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                       </p>
                                     )}
-                                    <p className="text-xs text-gray-400 mt-1">
-                                      assigned to {task.assignedToUser?.firstName} {task.assignedToUser?.lastName}
-                                    </p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-xs text-gray-400">
+                                        assigned to {task.assignedToUser?.firstName} {task.assignedToUser?.lastName}
+                                      </p>
+                                      {task.isRecurring && (
+                                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 border-blue-200">
+                                          <RefreshCw className="h-3 w-3 mr-1" />
+                                          Recurring
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                                 {dueDate && (
