@@ -424,6 +424,37 @@ export default function EnhancedClientDetail() {
   const [searchDocuments, setSearchDocuments] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+  // Helper function to toggle note expansion
+  const toggleNoteExpansion = (noteId: string) => {
+    setExpandedNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(noteId)) {
+        newSet.delete(noteId);
+      } else {
+        newSet.add(noteId);
+      }
+      return newSet;
+    });
+  };
+
+  // Helper function to format note content with preserved line breaks
+  const formatNoteContent = (content: string, noteId: string, maxLength: number = 300) => {
+    const isExpanded = expandedNotes.has(noteId);
+    const shouldTruncate = content.length > maxLength;
+    
+    let displayContent = content;
+    if (shouldTruncate && !isExpanded) {
+      displayContent = content.substring(0, maxLength) + '...';
+    }
+
+    return {
+      displayContent,
+      shouldTruncate,
+      isExpanded
+    };
+  };
 
   const [newAppointment, setNewAppointment] = useState({
     title: "",
@@ -2697,7 +2728,27 @@ export default function EnhancedClientDetail() {
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-sm text-gray-600">{note.content}</p>
+                                (() => {
+                                  const { displayContent, shouldTruncate, isExpanded } = formatNoteContent(note.content, note.id);
+                                  return (
+                                    <div className="space-y-2">
+                                      <p 
+                                        className="text-sm text-gray-600 whitespace-pre-wrap"
+                                        style={{ wordBreak: 'break-word' }}
+                                      >
+                                        {displayContent}
+                                      </p>
+                                      {shouldTruncate && (
+                                        <button
+                                          onClick={() => toggleNoteExpansion(note.id)}
+                                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+                                        >
+                                          {isExpanded ? 'Show less' : 'Show more'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })()
                               )}
                               
                               <div className="mt-2 flex justify-between items-center">
