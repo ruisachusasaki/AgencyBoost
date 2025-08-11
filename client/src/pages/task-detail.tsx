@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign } from "@shared/schema";
-import TaskFormClean from "@/components/forms/task-form-clean";
+import SimpleTaskForm from "@/components/forms/simple-task-form";
 import TaskComments from "@/components/task-comments";
 import { useState } from "react";
 
@@ -241,7 +241,7 @@ export default function TaskDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TaskFormClean
+                <SimpleTaskForm
                   task={task}
                   onSuccess={() => {
                     setIsEditing(false);
@@ -279,8 +279,8 @@ export default function TaskDetail() {
                       <User className="h-4 w-4 text-slate-400" />
                       <span className="text-sm">
                         {(task as any).assignedToUser 
-                          ? `${(task as any).assignedToUser.firstName} ${(task as any).assignedToUser.lastName}` 
-                          : task.assignedTo
+                          ? `${String((task as any).assignedToUser.firstName || '')} ${String((task as any).assignedToUser.lastName || '')}` 
+                          : String(task.assignedTo || '')
                         }
                       </span>
                     </div>

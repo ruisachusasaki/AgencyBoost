@@ -229,7 +229,7 @@ export default function TaskFormClean({ task, onSuccess }: TaskFormProps) {
                   <SelectItem value="none">No Assignment</SelectItem>
                   {staffData.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
-                      {member.firstName} {member.lastName}
+                      {String(member.firstName || '')} {String(member.lastName || '')}
                     </SelectItem>
                   ))}
                 </SelectContent>
