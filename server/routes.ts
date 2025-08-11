@@ -3491,15 +3491,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Note content is required" });
       }
 
-      // For now, allow the default admin user to edit notes (we confirmed this user is Admin)
-      // TODO: Fix the role checking query later
-      if (userId !== "e56be30d-c086-446c-ada4-7ccef37ad7fb") {
+      // Check if user is admin using a simple role lookup
+      const userWithRole = await db.select({
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        roleName: roles.name
+      })
+      .from(staff)
+      .leftJoin(roles, eq(staff.roleId, roles.id))
+      .where(eq(staff.id, userId))
+      .limit(1);
+      
+      const user = userWithRole[0];
+      
+      if (!user || user.roleName !== 'Admin') {
         return res.status(403).json({ error: "Only admins can edit notes" });
       }
-
-      // Get user info for audit logging
-      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
-      const user = userInfo[0];
 
       // Get the existing note to check if it exists and get old content for audit
       const existingNote = await db.select().from(clientNotes)
@@ -3564,9 +3571,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { clientId, noteId } = req.params;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
-      // For now, allow the default admin user to delete notes (we confirmed this user is Admin)
-      // TODO: Fix the role checking query later
-      if (userId !== "e56be30d-c086-446c-ada4-7ccef37ad7fb") {
+      // Check if user is admin using a simple role lookup
+      const userWithRole = await db.select({
+        roleName: roles.name
+      })
+      .from(staff)
+      .leftJoin(roles, eq(staff.roleId, roles.id))
+      .where(eq(staff.id, userId))
+      .limit(1);
+      
+      const user = userWithRole[0];
+      
+      if (!user || user.roleName !== 'Admin') {
         return res.status(403).json({ error: "Only admins can delete notes" });
       }
 
