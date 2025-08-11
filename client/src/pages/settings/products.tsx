@@ -90,9 +90,32 @@ export default function ProductsSettings() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch product bundles
+  // Fetch product bundles with detailed product information
   const { data: bundles = [], isLoading: isLoadingBundles } = useQuery<ProductBundle[]>({
     queryKey: ["/api/product-bundles"],
+    queryFn: async () => {
+      const response = await fetch("/api/product-bundles");
+      if (!response.ok) throw new Error('Failed to fetch bundles');
+      const bundlesData = await response.json();
+      
+      // Fetch detailed information for each bundle
+      const bundlesWithProducts = await Promise.all(
+        bundlesData.map(async (bundle: ProductBundle) => {
+          try {
+            const detailResponse = await fetch(`/api/product-bundles/${bundle.id}`);
+            if (detailResponse.ok) {
+              return await detailResponse.json();
+            }
+            return bundle;
+          } catch (error) {
+            console.error(`Error fetching details for bundle ${bundle.id}:`, error);
+            return bundle;
+          }
+        })
+      );
+      
+      return bundlesWithProducts;
+    },
     refetchOnWindowFocus: false,
   });
 
@@ -247,13 +270,31 @@ export default function ProductsSettings() {
     updateBundleMutation.mutate({ id: editingBundle.id, data });
   };
 
-  const openEditBundle = (bundle: ProductBundle) => {
-    setEditingBundle(bundle);
-    setBundleProducts(bundle.products?.map(p => ({
-      productId: p.productId,
-      quantity: p.quantity
-    })) || []);
-    setIsEditBundleOpen(true);
+  const openEditBundle = async (bundle: ProductBundle) => {
+    try {
+      // Fetch detailed bundle data with products
+      const response = await fetch(`/api/product-bundles/${bundle.id}`);
+      if (!response.ok) throw new Error('Failed to fetch bundle details');
+      const detailedBundle = await response.json();
+      
+      setEditingBundle(detailedBundle);
+      
+      // Load existing products into the form
+      if (detailedBundle.products && detailedBundle.products.length > 0) {
+        const bundleProductsData = detailedBundle.products.map((product: any) => ({
+          productId: product.productId,
+          quantity: product.quantity
+        }));
+        setBundleProducts(bundleProductsData);
+      } else {
+        setBundleProducts([]);
+      }
+      
+      setIsEditBundleOpen(true);
+    } catch (error) {
+      console.error('Error loading bundle details:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to load bundle details" });
+    }
   };
 
   const addProductToBundle = () => {
