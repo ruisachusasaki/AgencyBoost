@@ -412,14 +412,41 @@ export default function ProductsSettings() {
     setCurrentPage(1); // Reset to first page when sorting
   };
 
-  const getSortIcon = (field: typeof sortField) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="w-4 h-4 inline ml-1" />
-    ) : (
-      <ChevronDown className="w-4 h-4 inline ml-1" />
-    );
-  };
+  // Custom sortable table head component to match Custom Fields style
+  const SortableTableHead = ({ 
+    field, 
+    children, 
+    className = "" 
+  }: { 
+    field: typeof sortField; 
+    children: React.ReactNode; 
+    className?: string;
+  }) => (
+    <TableHead 
+      className={`cursor-pointer hover:bg-gray-50 select-none ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortDirection === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortDirection === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
 
   // Filter and sort products
   const filteredProducts = products
@@ -833,25 +860,10 @@ export default function ProductsSettings() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-gray-50 select-none"
-                        onClick={() => handleSort('name')}
-                      >
-                        Name {getSortIcon('name')}
-                      </TableHead>
+                      <SortableTableHead field="name">Name</SortableTableHead>
                       <TableHead>Cost</TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-gray-50 select-none"
-                        onClick={() => handleSort('type')}
-                      >
-                        Type {getSortIcon('type')}
-                      </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-gray-50 select-none"
-                        onClick={() => handleSort('status')}
-                      >
-                        Status {getSortIcon('status')}
-                      </TableHead>
+                      <SortableTableHead field="type">Type</SortableTableHead>
+                      <SortableTableHead field="status">Status</SortableTableHead>
                       <TableHead>Usage</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -929,50 +941,75 @@ export default function ProductsSettings() {
                 </Table>
               )}
               
-              {/* Pagination Controls */}
+              {/* Pagination Controls - Matching Custom Fields Style */}
               {totalProducts > 0 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Showing {startIndex + 1} to {Math.min(endIndex, totalProducts)} of {totalProducts} products
-                    </span>
-                    <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-                      setItemsPerPage(Number(value));
-                      setCurrentPage(1);
-                    }}>
-                      <SelectTrigger className="w-20">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="20">20</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <span className="text-sm text-gray-600">per page</span>
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Showing {startIndex + 1} to {Math.min(endIndex, totalProducts)} of {totalProducts} products</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Show</span>
+                      <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+                        setItemsPerPage(Number(value));
+                        setCurrentPage(1);
+                      }}>
+                        <SelectTrigger className="w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm text-muted-foreground">per page</span>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-sm text-gray-600">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          return page === 1 || 
+                                 page === totalPages || 
+                                 (page >= currentPage - 1 && page <= currentPage + 1);
+                        })
+                        .map((page, index, array) => (
+                          <div key={page} className="flex items-center">
+                            {index > 0 && array[index - 1] !== page - 1 && (
+                              <span className="text-muted-foreground px-2">...</span>
+                            )}
+                            <Button
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="min-w-8"
+                            >
+                              {page}
+                            </Button>
+                          </div>
+                        ))}
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
