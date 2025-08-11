@@ -2214,6 +2214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productName: products.name,
           productDescription: products.description,
           quantity: bundleProducts.quantity,
+          baseQuantity: bundleProducts.quantity, // Add base quantity for comparison
           productType: products.type
         })
         .from(bundleProducts)
@@ -2244,7 +2245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply custom quantities to the products
       const productsWithCustomQuantities = bundleProductsList.map(product => ({
         ...product,
-        quantity: customQuantities[product.productId] || product.quantity
+        quantity: customQuantities[product.productId] || product.quantity,
+        baseQuantity: product.quantity // Keep original base quantity for comparison
       }));
 
       res.json(productsWithCustomQuantities);

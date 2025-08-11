@@ -1438,6 +1438,9 @@ export default function EnhancedClientDetail() {
                                       <div className="text-xs text-blue-600 mb-2">
                                         Costs will be automatically recalculated based on new quantities
                                       </div>
+                                      <div className="text-xs text-amber-600 mb-2 bg-amber-50 p-2 rounded border border-amber-200">
+                                        ⚠️ Note: These custom quantities will override the base bundle. If the base bundle quantities change, this client will keep these custom amounts.
+                                      </div>
                                       {bundleDetailsData[clientProduct.productId]?.map((bundleProduct: any, bundleIndex: number) => (
                                         <div
                                           key={bundleIndex}
@@ -1465,19 +1468,33 @@ export default function EnhancedClientDetail() {
                                   ) : (
                                     // View mode for bundle contents
                                     bundleDetailsData[clientProduct.productId] ? (
-                                      bundleDetailsData[clientProduct.productId].map((bundleProduct: any, bundleIndex: number) => (
-                                        <div
-                                          key={bundleIndex}
-                                          className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
-                                        >
-                                          <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
-                                          <ShoppingCart className="h-3 w-3 text-gray-400" />
-                                          <span className="text-gray-600">{bundleProduct.productName}</span>
-                                          <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
-                                            Qty: {bundleProduct.quantity}
-                                          </Badge>
-                                        </div>
-                                      ))
+                                      <>
+                                        {/* Check if this client has custom quantities */}
+                                        {(() => {
+                                          const hasCustomQuantities = bundleDetailsData[clientProduct.productId]?.some((product: any) => 
+                                            product.quantity !== product.baseQuantity
+                                          );
+                                          return hasCustomQuantities && (
+                                            <div className="text-xs text-amber-600 mb-2 bg-amber-50 p-2 rounded border border-amber-200">
+                                              🎯 This client has custom quantities (different from base bundle)
+                                            </div>
+                                          );
+                                        })()}
+                                        
+                                        {bundleDetailsData[clientProduct.productId].map((bundleProduct: any, bundleIndex: number) => (
+                                          <div
+                                            key={bundleIndex}
+                                            className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
+                                          >
+                                            <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+                                            <ShoppingCart className="h-3 w-3 text-gray-400" />
+                                            <span className="text-gray-600">{bundleProduct.productName}</span>
+                                            <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
+                                              Qty: {bundleProduct.quantity}
+                                            </Badge>
+                                          </div>
+                                        ))}
+                                      </>
                                     ) : (
                                       <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm text-gray-500">
                                         Loading bundle details...
