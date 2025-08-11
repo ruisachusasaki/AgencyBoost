@@ -6,7 +6,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 ## Recent Changes (August 2025)
 - **Smart Lists Enhancement**: Implemented comprehensive tab-based Smart Lists interface with advanced permission system, supporting personal, shared, and universal visibility levels with multi-user collaboration capabilities.
 - **Product Bundles System**: Complete product bundles functionality with automatic financial calculations (revenue, costs, profit, margin %), multi-product selection, and tab-based interface matching Custom Fields page styling.
-- **Client Product Management**: Enhanced client detail pages with role-based delete permissions (Admin, Accounting, Manager) for products and bundles, plus automatic cost calculation display showing individual product costs and calculated bundle total costs.
+- **Client Product Management**: Enhanced client detail pages with role-based delete permissions (Admin, Accounting, Manager) for products and bundles, plus automatic cost calculation display showing individual product costs and calculated bundle total costs. Implemented accordion-style bundle expansion allowing account managers to view detailed breakdown of bundle contents with quantities.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -70,7 +70,7 @@ Preferred communication style: Simple, everyday language.
 - **Settings Management**: A comprehensive settings section with 10 specialized configuration areas: Business Profile, My Profile, Staff, Support, Roles & Permissions, Integrations, Custom Fields, Tags, Products, and Audit Logs.
 - **Campaign Template Management**: WYSIWYG editor for email and SMS templates, with folder organization and dynamic merge tags.
 - **Smart Lists System**: Advanced filtering with tab-based interface similar to Custom Fields page, featuring comprehensive permission system (personal, shared, universal visibility), multi-user collaboration with staff selection, visual indicators for list types, and automatic migration of legacy data.
-- **Enhanced Client Product Display**: Complete product and bundle management in client detail pages with cost visibility, role-based deletion controls, visual distinction between products and bundles (Package icons, teal styling), and automatic calculation of bundle costs from component products with quantities.
+- **Enhanced Client Product Display**: Complete product and bundle management in client detail pages with cost visibility, role-based deletion controls, visual distinction between products and bundles (Package icons, teal styling), automatic calculation of bundle costs from component products with quantities, and accordion-style bundle expansion showing detailed product breakdown for account manager visibility.
 
 ## External Dependencies
 
