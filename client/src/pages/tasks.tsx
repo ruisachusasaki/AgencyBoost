@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, Calendar, CheckCircle } from "lucide-react";
-import TaskForm from "@/components/forms/task-form";
+import BasicTaskForm from "@/components/forms/basic-task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Client, Project, Campaign } from "@shared/schema";
@@ -209,7 +209,7 @@ export default function Tasks() {
             <DialogHeader>
               <DialogTitle>Add New Task</DialogTitle>
             </DialogHeader>
-            <TaskForm
+            <BasicTaskForm
               onSuccess={() => setIsCreateDialogOpen(false)}
             />
           </DialogContent>
@@ -300,7 +300,7 @@ export default function Tasks() {
                     <DialogHeader>
                       <DialogTitle>Add New Task</DialogTitle>
                     </DialogHeader>
-                    <TaskForm
+                    <BasicTaskForm
                       onSuccess={() => setIsCreateDialogOpen(false)}
                     />
                   </DialogContent>
