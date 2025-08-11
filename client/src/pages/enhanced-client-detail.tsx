@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
@@ -461,6 +461,16 @@ export default function EnhancedClientDetail() {
   const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
   const [filteredAssignees, setFilteredAssignees] = useState<any[]>([]);
 
+  // Comments state
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [newComment, setNewComment] = useState("");
+  const [commentSearchTerm, setCommentSearchTerm] = useState("");
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionUsers, setMentionUsers] = useState<any[]>([]);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editCommentContent, setEditCommentContent] = useState("");
+
   // Field editing state (works for both custom and standard fields)
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
@@ -867,6 +877,88 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Error",
         description: "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async ({ taskId, content, mentions }: { taskId: string; content: string; mentions: string[] }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, mentions }),
+      });
+      if (!response.ok) throw new Error('Failed to create comment');
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', variables.taskId, 'comments'] });
+      setNewComment("");
+      toast({
+        title: "Success",
+        description: "Comment added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit comment mutation
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ taskId, commentId, content, mentions }: { taskId: string; commentId: string; content: string; mentions: string[] }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, mentions }),
+      });
+      if (!response.ok) throw new Error('Failed to update comment');
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', variables.taskId, 'comments'] });
+      setEditingComment(null);
+      setEditCommentContent("");
+      toast({
+        title: "Success",
+        description: "Comment updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async ({ taskId, commentId }: { taskId: string; commentId: string }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete comment');
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', variables.taskId, 'comments'] });
+      toast({
+        title: "Success",
+        description: "Comment deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete comment",
         variant: "destructive",
       });
     },
@@ -2815,12 +2907,41 @@ export default function EnhancedClientDetail() {
                                     </div>
                                   </div>
                                 </div>
-                                {dueDate && (
-                                  <span className={`text-xs px-2 py-1 rounded ${dueDateColor}`}>
-                                    {isOverdue ? 'Overdue' : `Due ${dueDate.toLocaleDateString()}`}
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  {dueDate && (
+                                    <span className={`text-xs px-2 py-1 rounded ${dueDateColor}`}>
+                                      {isOverdue ? 'Overdue' : `Due ${dueDate.toLocaleDateString()}`}
+                                    </span>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedTasks);
+                                      if (expandedTasks.has(task.id)) {
+                                        newExpanded.delete(task.id);
+                                      } else {
+                                        newExpanded.add(task.id);
+                                      }
+                                      setExpandedTasks(newExpanded);
+                                    }}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    <MessageSquare className="h-3 w-3 mr-1" />
+                                    Comments
+                                    {expandedTasks.has(task.id) ? (
+                                      <ChevronDown className="h-3 w-3 ml-1" />
+                                    ) : (
+                                      <ChevronRight className="h-3 w-3 ml-1" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
+
+                              {/* Comments Section */}
+                              {expandedTasks.has(task.id) && (
+                                <TaskComments taskId={task.id} />
+                              )}
                             </div>
                           );
                         })
@@ -3437,6 +3558,384 @@ export default function EnhancedClientDetail() {
             </div>
           </DialogContent>
         </Dialog>
+    </div>
+  );
+}
+
+// Task Comments Component
+function TaskComments({ taskId }: { taskId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [newComment, setNewComment] = useState("");
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editCommentContent, setEditCommentContent] = useState("");
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+
+  // Fetch comments for this task
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['/api/tasks', taskId, 'comments'],
+    queryFn: async () => {
+      const response = await fetch(`/api/tasks/${taskId}/comments`);
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      return response.json();
+    },
+  });
+
+  // Fetch staff for mentions
+  const { data: staffData = [] } = useQuery({
+    queryKey: ['/api/staff'],
+    queryFn: async () => {
+      const response = await fetch('/api/staff');
+      if (!response.ok) throw new Error('Failed to fetch staff');
+      return response.json();
+    },
+  });
+
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async ({ content, mentions }: { content: string; mentions: string[] }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, mentions }),
+      });
+      if (!response.ok) throw new Error('Failed to create comment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
+      setNewComment("");
+      toast({
+        title: "Success",
+        description: "Comment added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit comment mutation
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ commentId, content, mentions }: { commentId: string; content: string; mentions: string[] }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, mentions }),
+      });
+      if (!response.ok) throw new Error('Failed to update comment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
+      setEditingComment(null);
+      setEditCommentContent("");
+      toast({
+        title: "Success",
+        description: "Comment updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete comment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
+      toast({
+        title: "Success",
+        description: "Comment deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle @mention logic
+  const handleInputChange = (value: string, isEdit = false) => {
+    if (isEdit) {
+      setEditCommentContent(value);
+    } else {
+      setNewComment(value);
+    }
+
+    // Check for @ mentions
+    const lastAtIndex = value.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const searchTerm = value.substring(lastAtIndex + 1);
+      if (searchTerm.length >= 0) {
+        setMentionSearch(searchTerm);
+        setShowMentions(true);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  // Filter staff for mentions
+  const filteredStaff = staffData.filter((staff: any) => 
+    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(mentionSearch.toLowerCase()) ||
+    staff.email?.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
+  // Insert mention
+  const insertMention = (staff: any, isEdit = false) => {
+    const currentValue = isEdit ? editCommentContent : newComment;
+    const lastAtIndex = currentValue.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const beforeMention = currentValue.substring(0, lastAtIndex);
+      const afterMention = currentValue.substring(lastAtIndex + mentionSearch.length + 1);
+      const newValue = `${beforeMention}@${staff.firstName} ${staff.lastName} ${afterMention}`;
+      
+      if (isEdit) {
+        setEditCommentContent(newValue);
+      } else {
+        setNewComment(newValue);
+      }
+    }
+    
+    setShowMentions(false);
+    setMentionSearch("");
+  };
+
+  // Extract mentions from text
+  const extractMentions = (text: string) => {
+    const mentionRegex = /@(\w+\s+\w+)/g;
+    const mentions: string[] = [];
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionedName = match[1];
+      const staff = staffData.find((s: any) => 
+        `${s.firstName} ${s.lastName}` === mentionedName
+      );
+      if (staff) {
+        mentions.push(staff.id);
+      }
+    }
+    
+    return mentions;
+  };
+
+  // Submit comment
+  const submitComment = () => {
+    if (!newComment.trim()) return;
+    
+    const mentions = extractMentions(newComment);
+    createCommentMutation.mutate({
+      content: newComment,
+      mentions
+    });
+  };
+
+  // Submit edit
+  const submitEdit = (commentId: string) => {
+    if (!editCommentContent.trim()) return;
+    
+    const mentions = extractMentions(editCommentContent);
+    editCommentMutation.mutate({
+      commentId,
+      content: editCommentContent,
+      mentions
+    });
+  };
+
+  // Render mention in text
+  const renderCommentContent = (content: string) => {
+    const mentionRegex = /@(\w+\s+\w+)/g;
+    const parts = content.split(mentionRegex);
+    
+    return parts.map((part, index) => {
+      if (index % 2 === 1) { // This is a mention
+        return (
+          <span key={index} className="bg-blue-100 text-blue-800 px-1 rounded">
+            @{part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  return (
+    <div className="mt-3 border-t pt-3 space-y-3">
+      {commentsLoading ? (
+        <div className="text-center py-4 text-gray-500">
+          <div className="text-sm">Loading comments...</div>
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="text-center py-4 text-gray-500">
+          <MessageSquare className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm">No comments yet</p>
+          <p className="text-xs text-gray-400">Be the first to comment</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {comments.map((comment: any) => (
+            <div key={comment.id} className="bg-white p-3 rounded border border-gray-200">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                    {comment.author?.firstName?.charAt(0)}{comment.author?.lastName?.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">
+                      {comment.author?.firstName} {comment.author?.lastName}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingComment(comment.id);
+                      setEditCommentContent(comment.content);
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteCommentMutation.mutate(comment.id)}
+                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              
+              {editingComment === comment.id ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Textarea
+                      value={editCommentContent}
+                      onChange={(e) => handleInputChange(e.target.value, true)}
+                      placeholder="Edit your comment..."
+                      className="text-sm"
+                      rows={2}
+                    />
+                    
+                    {showMentions && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-32 overflow-y-auto">
+                        {filteredStaff.map((staff: any) => (
+                          <button
+                            key={staff.id}
+                            onClick={() => insertMention(staff, true)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <AtSign className="h-3 w-3 text-blue-600" />
+                            <div>
+                              <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                              <div className="text-xs text-gray-500">{staff.email}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingComment(null);
+                        setEditCommentContent("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => submitEdit(comment.id)}
+                      disabled={editCommentMutation.isPending}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-700">
+                  {renderCommentContent(comment.content)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add comment form */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Textarea
+            value={newComment}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="Add a comment... Use @ to mention someone"
+            className="text-sm"
+            rows={2}
+          />
+          
+          {showMentions && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-32 overflow-y-auto">
+              {filteredStaff.map((staff: any) => (
+                <button
+                  key={staff.id}
+                  onClick={() => insertMention(staff)}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <AtSign className="h-3 w-3 text-blue-600" />
+                  <div>
+                    <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                    <div className="text-xs text-gray-500">{staff.email}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={submitComment}
+            disabled={!newComment.trim() || createCommentMutation.isPending}
+            className="flex items-center gap-1"
+          >
+            <Send className="h-3 w-3" />
+            {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

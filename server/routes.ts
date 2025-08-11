@@ -3624,6 +3624,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deletedTask = global.clientTasks[clientId][taskIndex];
       global.clientTasks[clientId].splice(taskIndex, 1);
 
+      // Also delete associated comments
+      if (global.taskComments?.[taskId]) {
+        delete global.taskComments[taskId];
+      }
+
       // Log the deletion
       await createAuditLog(
         "deleted",
@@ -3641,6 +3646,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting client task:", error);
       res.status(500).json({ error: "Failed to delete task" });
+    }
+  });
+
+  // Task Comments endpoints
+  app.get("/api/tasks/:taskId/comments", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      
+      if (!global.taskComments) {
+        global.taskComments = {};
+      }
+      
+      const comments = global.taskComments[taskId] || [];
+      
+      // Enrich comments with author information
+      const enrichedComments = await Promise.all(
+        comments.map(async (comment: any) => {
+          try {
+            const authorData = await db.select().from(staff).where(eq(staff.id, comment.authorId)).limit(1);
+            return {
+              ...comment,
+              author: authorData.length > 0 ? {
+                firstName: authorData[0].firstName,
+                lastName: authorData[0].lastName,
+                email: authorData[0].email
+              } : { firstName: "Unknown", lastName: "User", email: "" }
+            };
+          } catch (error) {
+            return {
+              ...comment,
+              author: { firstName: "Unknown", lastName: "User", email: "" }
+            };
+          }
+        })
+      );
+      
+      res.json(enrichedComments);
+    } catch (error) {
+      console.error("Error fetching task comments:", error);
+      res.status(500).json({ error: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/comments", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      const { content, mentions } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!content?.trim()) {
+        return res.status(400).json({ error: "Comment content is required" });
+      }
+
+      if (!global.taskComments) {
+        global.taskComments = {};
+      }
+      
+      if (!global.taskComments[taskId]) {
+        global.taskComments[taskId] = [];
+      }
+
+      // Get author information
+      const authorData = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const author = authorData.length > 0 ? {
+        firstName: authorData[0].firstName,
+        lastName: authorData[0].lastName,
+        email: authorData[0].email
+      } : { firstName: "Unknown", lastName: "User", email: "" };
+
+      const newComment = {
+        id: nanoid(),
+        taskId: taskId,
+        content: content.trim(),
+        authorId: userId,
+        author: author,
+        mentions: mentions || [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      global.taskComments[taskId].push(newComment);
+
+      // Log the comment creation
+      await createAuditLog(
+        "created",
+        "task_comment",
+        newComment.id,
+        `Comment on task`,
+        userId,
+        `Added comment to task: ${content.substring(0, 50)}...`,
+        null,
+        newComment,
+        req
+      );
+
+      res.status(201).json(newComment);
+    } catch (error) {
+      console.error("Error creating task comment:", error);
+      res.status(500).json({ error: "Failed to create comment" });
+    }
+  });
+
+  app.put("/api/tasks/:taskId/comments/:commentId", async (req, res) => {
+    try {
+      const { taskId, commentId } = req.params;
+      const { content, mentions } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!content?.trim()) {
+        return res.status(400).json({ error: "Comment content is required" });
+      }
+
+      if (!global.taskComments?.[taskId]) {
+        return res.status(404).json({ error: "Task comments not found" });
+      }
+
+      const commentIndex = global.taskComments[taskId].findIndex((c: any) => c.id === commentId);
+      if (commentIndex === -1) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+
+      const oldComment = { ...global.taskComments[taskId][commentIndex] };
+      
+      // Check if user is author or admin
+      if (oldComment.authorId !== userId) {
+        // Here you could add role-based permission check
+        const currentUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+        if (currentUser.length === 0 || currentUser[0].role !== 'Admin') {
+          return res.status(403).json({ error: "Not authorized to edit this comment" });
+        }
+      }
+
+      const updatedComment = {
+        ...oldComment,
+        content: content.trim(),
+        mentions: mentions || [],
+        updatedAt: new Date()
+      };
+
+      global.taskComments[taskId][commentIndex] = updatedComment;
+
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "task_comment",
+        commentId,
+        `Comment update`,
+        userId,
+        `Updated comment: ${content.substring(0, 50)}...`,
+        oldComment,
+        updatedComment,
+        req
+      );
+
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Error updating task comment:", error);
+      res.status(500).json({ error: "Failed to update comment" });
+    }
+  });
+
+  app.delete("/api/tasks/:taskId/comments/:commentId", async (req, res) => {
+    try {
+      const { taskId, commentId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!global.taskComments?.[taskId]) {
+        return res.status(404).json({ error: "Task comments not found" });
+      }
+
+      const commentIndex = global.taskComments[taskId].findIndex((c: any) => c.id === commentId);
+      if (commentIndex === -1) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+
+      const comment = global.taskComments[taskId][commentIndex];
+      
+      // Check if user is author or admin
+      if (comment.authorId !== userId) {
+        const currentUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+        if (currentUser.length === 0 || currentUser[0].role !== 'Admin') {
+          return res.status(403).json({ error: "Not authorized to delete this comment" });
+        }
+      }
+
+      global.taskComments[taskId].splice(commentIndex, 1);
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "task_comment",
+        commentId,
+        `Comment deletion`,
+        userId,
+        `Deleted comment: ${comment.content.substring(0, 50)}...`,
+        comment,
+        null,
+        req
+      );
+
+      res.json({ message: "Comment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting task comment:", error);
+      res.status(500).json({ error: "Failed to delete comment" });
     }
   });
 
