@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2 } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff } from "lucide-react";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -761,6 +761,42 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Update DND settings mutation
+  const updateDNDMutation = useMutation({
+    mutationFn: async (dndSettings: { dndAll?: boolean; dndEmail?: boolean; dndSms?: boolean; dndCalls?: boolean }) => {
+      console.log('Updating DND settings for client:', clientId, 'to:', dndSettings);
+      const response = await fetch(`/api/clients/${clientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dndSettings),
+      });
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Update DND error response:', response.status, errorData);
+        throw new Error(`Failed to update DND settings: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('DND settings update successful:', result);
+      return result;
+    },
+    onSuccess: (data) => {
+      console.log('DND mutation success, invalidating queries');
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      toast({
+        title: "Communication preferences updated",
+        description: "DND settings have been updated successfully",
+      });
+    },
+    onError: (error) => {
+      console.error('DND update mutation error:', error);
+      toast({
+        title: "Error",
+        description: `Failed to update DND settings: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Update sections when custom field folders are loaded
   useEffect(() => {
     if (customFieldFoldersData && customFieldsData) {
@@ -841,6 +877,17 @@ export default function EnhancedClientDetail() {
 
   const sendSMS = () => {
     if (!smsMessage.trim()) return;
+    
+    // Check DND settings before sending
+    if (client?.dndAll || client?.dndSms) {
+      toast({
+        title: "Cannot Send SMS",
+        description: `${client?.name} has SMS communications disabled (DND active)`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "SMS Sent",
       description: `Message sent to ${client?.name}`,
@@ -850,6 +897,17 @@ export default function EnhancedClientDetail() {
 
   const sendEmail = () => {
     if (!emailMessage.trim()) return;
+    
+    // Check DND settings before sending
+    if (client?.dndAll || client?.dndEmail) {
+      toast({
+        title: "Cannot Send Email",
+        description: `${client?.name} has email communications disabled (DND active)`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "Email Sent",
       description: `Email sent to ${client?.name}`,
@@ -1712,6 +1770,115 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* DND (Do Not Disturb) Section */}
+            <Card className="mt-6">
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <ShieldOff className="h-5 w-5 text-red-500" />
+                  DND (Do Not Disturb)
+                </h2>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* DND All Channels */}
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div className="flex items-center gap-3">
+                    <ShieldOff className="h-5 w-5 text-red-500" />
+                    <div>
+                      <span className="font-medium text-gray-900">DND All Channels</span>
+                      <p className="text-sm text-gray-600">Block all communications (emails, texts, calls)</p>
+                    </div>
+                  </div>
+                  <Checkbox
+                    checked={client?.dndAll || false}
+                    onCheckedChange={(checked) => {
+                      updateDNDMutation.mutate({ dndAll: !!checked });
+                    }}
+                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                  />
+                </div>
+
+                {/* OR Separator */}
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-gray-200"></div>
+                  <span className="text-sm font-medium text-gray-500 px-3">OR</span>
+                  <div className="flex-1 h-px bg-gray-200"></div>
+                </div>
+
+                {/* Individual Channel Settings */}
+                <div className="space-y-3">
+                  {/* Emails */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-gray-900">Emails</span>
+                    </div>
+                    <Checkbox
+                      checked={client?.dndEmail || false}
+                      onCheckedChange={(checked) => {
+                        updateDNDMutation.mutate({ dndEmail: !!checked });
+                      }}
+                      disabled={client?.dndAll || false}
+                      className="disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Text Messages */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className="h-4 w-4 text-green-500" />
+                      <span className="font-medium text-gray-900">Text Messages</span>
+                    </div>
+                    <Checkbox
+                      checked={client?.dndSms || false}
+                      onCheckedChange={(checked) => {
+                        updateDNDMutation.mutate({ dndSms: !!checked });
+                      }}
+                      disabled={client?.dndAll || false}
+                      className="disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Calls & Voicemails */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-purple-500" />
+                      <span className="font-medium text-gray-900">Calls & Voicemails</span>
+                    </div>
+                    <Checkbox
+                      checked={client?.dndCalls || false}
+                      onCheckedChange={(checked) => {
+                        updateDNDMutation.mutate({ dndCalls: !!checked });
+                      }}
+                      disabled={client?.dndAll || false}
+                      className="disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Warning Message */}
+                {(client?.dndAll || client?.dndEmail || client?.dndSms || client?.dndCalls) && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <ShieldOff className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-amber-800">Communication Restrictions Active</p>
+                        <p className="text-amber-700 mt-1">
+                          {client?.dndAll 
+                            ? "All communications are blocked for this client."
+                            : `${[
+                                client?.dndEmail && "emails",
+                                client?.dndSms && "text messages", 
+                                client?.dndCalls && "calls"
+                              ].filter(Boolean).join(", ")} are blocked for this client.`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Middle Column - Activity & Quick Actions */}
@@ -1786,36 +1953,65 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Send SMS</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-gray-700">Send SMS</Label>
+                    {(client?.dndAll || client?.dndSms) && (
+                      <Badge variant="destructive" className="text-xs">
+                        <ShieldOff className="h-3 w-3 mr-1" />
+                        DND Active
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="SMS message..."
+                      placeholder={
+                        (client?.dndAll || client?.dndSms) 
+                          ? "SMS blocked by DND settings..." 
+                          : "SMS message..."
+                      }
                       value={smsMessage}
                       onChange={(e) => setSmsMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendSMS()}
+                      disabled={client?.dndAll || client?.dndSms}
+                      className={`${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
                     />
                     <Button 
                       onClick={sendSMS}
-                      disabled={!smsMessage.trim()}
-                      className="bg-primary hover:bg-primary/90"
+                      disabled={!smsMessage.trim() || client?.dndAll || client?.dndSms}
+                      className="bg-primary hover:bg-primary/90 disabled:opacity-50"
                     >
                       Send
                     </Button>
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Send Email</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-gray-700">Send Email</Label>
+                    {(client?.dndAll || client?.dndEmail) && (
+                      <Badge variant="destructive" className="text-xs">
+                        <ShieldOff className="h-3 w-3 mr-1" />
+                        DND Active
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Email message..."
+                      placeholder={
+                        (client?.dndAll || client?.dndEmail) 
+                          ? "Email blocked by DND settings..." 
+                          : "Email message..."
+                      }
                       value={emailMessage}
                       onChange={(e) => setEmailMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendEmail()}
+                      disabled={client?.dndAll || client?.dndEmail}
+                      className={`${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
                     />
                     <Button 
                       onClick={sendEmail}
-                      disabled={!emailMessage.trim()}
+                      disabled={!emailMessage.trim() || client?.dndAll || client?.dndEmail}
                       variant="outline"
+                      className="disabled:opacity-50"
                     >
                       Send
                     </Button>
