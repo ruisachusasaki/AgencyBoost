@@ -1953,7 +1953,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: products.id,
         name: products.name,
         description: products.description,
-        price: products.price,
         cost: products.cost,
         type: products.type,
         categoryId: products.categoryId,
@@ -1983,7 +1982,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: products.id,
         name: products.name,
         description: products.description,
-        price: products.price,
         cost: products.cost,
         type: products.type,
         categoryId: products.categoryId,
@@ -2023,7 +2021,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: clientProducts.createdAt,
           productName: products.name,
           productDescription: products.description,
-          productPrice: products.price,
           productCost: products.cost,
           productType: products.type,
           itemType: sql<string>`'product'`
@@ -2044,7 +2041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cb.created_at as "createdAt",
             pb.name as "productName",
             pb.description as "productDescription",
-            NULL as "productPrice",
+            NULL as "productPrice", -- Kept for compatibility but not used
             COALESCE(
               (SELECT SUM(
                 p.cost * COALESCE(
@@ -2218,7 +2215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productId: bundleProducts.productId,
           productName: products.name,
           productDescription: products.description,
-          productPrice: products.price,
           productCost: products.cost,
           productType: products.type
         })
@@ -2272,32 +2268,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({
           productId: bundleProducts.productId,
           baseQuantity: sql<number>`1`, // Base bundle always has 1 unit of each product
-          productCost: products.cost,
-          productPrice: products.price
+          productCost: products.cost
         })
         .from(bundleProducts)
         .leftJoin(products, eq(bundleProducts.productId, products.id))
         .where(eq(bundleProducts.bundleId, bundleId));
 
-      // Calculate new total cost based on custom quantities
+      // Calculate new total cost based on custom quantities (price removed)
       let totalCost = 0;
-      let totalPrice = 0;
 
       bundleProductsList.forEach(product => {
         const quantity = customQuantities[product.productId] || product.baseQuantity || 0;
         const cost = parseFloat(product.productCost || '0');
-        const price = parseFloat(product.productPrice || '0');
         
         totalCost += cost * quantity;
-        totalPrice += price * quantity;
       });
 
-      // Update the client bundle with custom quantities and recalculated price
+      // Update the client bundle with custom quantities (price field removed)
       await db
         .update(clientBundles)
         .set({
-          customQuantities: customQuantities,
-          price: totalPrice.toString() // Store the recalculated price
+          customQuantities: customQuantities
         })
         .where(
           and(
@@ -2308,7 +2299,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        newPrice: totalPrice,
         newCost: totalCost
       });
     } catch (error) {
@@ -2560,7 +2550,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // quantity field removed - stored in clientBundles.customQuantities
           productName: products.name,
           productDescription: products.description,
-          productPrice: products.price,
           productCost: products.cost,
           productType: products.type,
           productStatus: products.status

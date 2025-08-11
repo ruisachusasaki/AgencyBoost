@@ -87,12 +87,11 @@ export const productCategories = pgTable("product_categories", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Products/Services
+// Products/Services - Cost-focused for agency profitability tracking
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   cost: decimal("cost", { precision: 10, scale: 2 }),
   type: text("type").notNull(), // one_time, recurring
   categoryId: varchar("category_id").references(() => productCategories.id),

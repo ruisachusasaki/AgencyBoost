@@ -488,15 +488,9 @@ export default function ProductsSettings() {
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" name="description" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="price">Price</Label>
-                      <Input id="price" name="price" type="number" step="0.01" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="cost">Cost</Label>
-                      <Input id="cost" name="cost" type="number" step="0.01" />
-                    </div>
+                  <div>
+                    <Label htmlFor="cost">Cost (per unit)</Label>
+                    <Input id="cost" name="cost" type="number" step="0.01" placeholder="0.00" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -580,28 +574,16 @@ export default function ProductsSettings() {
                       defaultValue={editingProduct.description || ""}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="edit-price">Price</Label>
-                      <Input 
-                        id="edit-price" 
-                        name="price" 
-                        type="number" 
-                        step="0.01" 
-                        defaultValue={editingProduct.price}
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="edit-cost">Cost</Label>
-                      <Input 
-                        id="edit-cost" 
-                        name="cost" 
-                        type="number" 
-                        step="0.01" 
-                        defaultValue={editingProduct.cost || ""}
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="edit-cost">Cost (per unit)</Label>
+                    <Input 
+                      id="edit-cost" 
+                      name="cost" 
+                      type="number" 
+                      step="0.01" 
+                      defaultValue={editingProduct.cost || ""}
+                      placeholder="0.00"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -721,7 +703,7 @@ export default function ProductsSettings() {
                             <SelectContent>
                               {products.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>
-                                  {product.name} - ${product.price}
+                                  {product.name} - ${product.cost || '0.00'} cost
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -783,7 +765,6 @@ export default function ProductsSettings() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Price</TableHead>
                       <TableHead>Cost</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
@@ -805,19 +786,13 @@ export default function ProductsSettings() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center">
-                            <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
-                            {product.price}
-                          </div>
-                        </TableCell>
-                        <TableCell>
                           {product.cost ? (
                             <div className="flex items-center">
                               <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
                               {product.cost}
                             </div>
                           ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className="text-gray-400">No cost set</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -1087,7 +1062,7 @@ export default function ProductsSettings() {
                         <SelectContent>
                           {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
-                              {product.name} - ${product.price}
+                              {product.name} - ${product.cost || '0.00'} cost
                             </SelectItem>
                           ))}
                         </SelectContent>
