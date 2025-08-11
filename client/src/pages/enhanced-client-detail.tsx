@@ -2401,12 +2401,12 @@ export default function EnhancedClientDetail() {
                       value={smsMessage}
                       onChange={(e) => setSmsMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendSMS()}
-                      disabled={client?.dndAll || client?.dndSms}
+                      disabled={!!client?.dndAll || !!client?.dndSms}
                       className={`${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
                     />
                     <Button 
                       onClick={sendSMS}
-                      disabled={!smsMessage.trim() || client?.dndAll || client?.dndSms}
+                      disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
                       className="bg-primary hover:bg-primary/90 disabled:opacity-50"
                     >
                       Send
@@ -2433,12 +2433,12 @@ export default function EnhancedClientDetail() {
                       value={emailMessage}
                       onChange={(e) => setEmailMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendEmail()}
-                      disabled={client?.dndAll || client?.dndEmail}
+                      disabled={!!client?.dndAll || !!client?.dndEmail}
                       className={`${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
                     />
                     <Button 
                       onClick={sendEmail}
-                      disabled={!emailMessage.trim() || client?.dndAll || client?.dndEmail}
+                      disabled={!emailMessage.trim() || !!client?.dndAll || !!client?.dndEmail}
                       variant="outline"
                       className="disabled:opacity-50"
                     >
