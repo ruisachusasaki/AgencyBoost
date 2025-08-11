@@ -26,6 +26,7 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
 import { permissionAuditService } from "./permissionAuditService";
+import { nanoid } from "nanoid";
 
 // Helper function to create audit logs
 async function createAuditLog(
