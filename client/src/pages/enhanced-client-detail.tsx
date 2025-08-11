@@ -2454,7 +2454,7 @@ export default function EnhancedClientDetail() {
           </div>
 
           {/* Right Column - Client Activity Hub */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader className="pb-4">
                 {/* Horizontal Icons Navigation */}
