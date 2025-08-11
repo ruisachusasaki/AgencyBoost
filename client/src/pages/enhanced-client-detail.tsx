@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -412,6 +412,11 @@ export default function EnhancedClientDetail() {
   // Extract client ID from URL
   const clientId = window.location.pathname.split('/').pop();
   
+  // Refs for measuring column heights
+  const leftColumnRef = useRef<HTMLDivElement>(null);
+  const rightColumnRef = useRef<HTMLDivElement>(null);
+  const [leftColumnHeight, setLeftColumnHeight] = useState<number>(0);
+
   // State management
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
@@ -760,6 +765,39 @@ export default function EnhancedClientDetail() {
     },
     enabled: expandedBundles.size > 0 && !!clientId,
   });
+
+  // Height measurement for responsive right column
+  useEffect(() => {
+    const measureHeight = () => {
+      if (leftColumnRef.current) {
+        const height = leftColumnRef.current.offsetHeight;
+        setLeftColumnHeight(height);
+      }
+    };
+
+    // Measure height on mount and when content changes
+    measureHeight();
+    
+    // Set up a resize observer to measure height when content changes
+    const resizeObserver = new ResizeObserver(measureHeight);
+    if (leftColumnRef.current) {
+      resizeObserver.observe(leftColumnRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [client, customFieldFoldersData, customFieldsData, sections]);
+
+  // Calculate dynamic height for notes section
+  const calculateNotesMaxHeight = () => {
+    if (!leftColumnHeight) return undefined;
+    
+    // Account for the right column header, form inputs, and padding
+    // Subtract approximately 200px for the header, search, and add note form
+    const availableHeight = leftColumnHeight - 200;
+    return availableHeight > 400 ? `${availableHeight}px` : undefined;
+  };
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
   const canDeleteProducts = currentUser && ['Admin', 'Accounting', 'Manager'].includes(currentUser.role);
@@ -1818,7 +1856,7 @@ export default function EnhancedClientDetail() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
           {/* Left Column - Contact Details */}
-          <div className="lg:col-span-2">
+          <div ref={leftColumnRef} className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -2637,7 +2675,13 @@ export default function EnhancedClientDetail() {
                       </Button>
                     </div>
 
-                    <div className="space-y-3">
+                    <div 
+                      className="space-y-3 overflow-y-auto"
+                      style={{ 
+                        maxHeight: calculateNotesMaxHeight(),
+                        ...(calculateNotesMaxHeight() && { paddingRight: '8px' })
+                      }}
+                    >
                       {notesLoading ? (
                         <div className="text-center py-8 text-gray-500">
                           <div className="text-sm">Loading notes...</div>
