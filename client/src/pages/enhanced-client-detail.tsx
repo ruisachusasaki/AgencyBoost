@@ -452,6 +452,8 @@ export default function EnhancedClientDetail() {
   const [filteredBundles, setFilteredBundles] = useState<any[]>([]);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
+  const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
+  const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
   
   // Actions section accordion state
   const [actionsExpanded, setActionsExpanded] = useState({
@@ -582,14 +584,14 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId,
   });
 
-  // Fetch bundle details for expanded bundles
+  // Fetch bundle details for expanded bundles with client-specific quantities
   const { data: bundleDetailsData = {} } = useQuery({
-    queryKey: ['/api/bundle-details', Array.from(expandedBundles)],
+    queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId],
     queryFn: async () => {
       const bundleDetails = {};
       for (const bundleId of expandedBundles) {
         try {
-          const response = await fetch(`/api/product-bundles/${bundleId}/products`);
+          const response = await fetch(`/api/product-bundles/${bundleId}/products?clientId=${clientId}`);
           if (response.ok) {
             bundleDetails[bundleId] = await response.json();
           }
@@ -599,7 +601,7 @@ export default function EnhancedClientDetail() {
       }
       return bundleDetails;
     },
-    enabled: expandedBundles.size > 0,
+    enabled: expandedBundles.size > 0 && !!clientId,
   });
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
@@ -628,6 +630,35 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Error",
         description: "Failed to remove product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update bundle quantities mutation
+  const updateBundleQuantitiesMutation = useMutation({
+    mutationFn: async ({ bundleId, customQuantities }: { bundleId: string; customQuantities: Record<string, number> }) => {
+      const response = await fetch(`/api/clients/${clientId}/bundles/${bundleId}/quantities`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customQuantities }),
+      });
+      if (!response.ok) throw new Error('Failed to update bundle quantities');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId] });
+      setEditingBundleQuantities(null);
+      setTempQuantities({});
+      toast({
+        title: "Bundle customized",
+        description: "Bundle quantities have been updated for this client.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update bundle quantities.",
         variant: "destructive",
       });
     },
@@ -1334,6 +1365,26 @@ export default function EnhancedClientDetail() {
                                       Cost: ${clientProduct.productCost}
                                     </Badge>
                                   )}
+                                  {clientProduct.itemType === 'bundle' && canDeleteProducts && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingBundleQuantities(clientProduct.productId);
+                                        // Initialize temp quantities with current bundle data
+                                        const currentBundle = bundleDetailsData[clientProduct.productId] || [];
+                                        const initialQuantities = {};
+                                        currentBundle.forEach((product: any) => {
+                                          initialQuantities[product.productId] = product.quantity;
+                                        });
+                                        setTempQuantities(initialQuantities);
+                                      }}
+                                      className="h-6 w-6 p-0 text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                                      title="Customize bundle quantities for this client"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                   {canDeleteProducts && (
                                     <Button
                                       variant="ghost"
@@ -1351,24 +1402,83 @@ export default function EnhancedClientDetail() {
                               {/* Expanded Bundle Contents */}
                               {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId) && (
                                 <div className="ml-6 space-y-1">
-                                  {bundleDetailsData[clientProduct.productId] ? (
-                                    bundleDetailsData[clientProduct.productId].map((bundleProduct: any, bundleIndex: number) => (
-                                      <div
-                                        key={bundleIndex}
-                                        className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
-                                      >
-                                        <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
-                                        <ShoppingCart className="h-3 w-3 text-gray-400" />
-                                        <span className="text-gray-600">{bundleProduct.productName}</span>
-                                        <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
-                                          Qty: {bundleProduct.quantity}
-                                        </Badge>
+                                  {editingBundleQuantities === clientProduct.productId ? (
+                                    // Edit mode for bundle quantities
+                                    <div className="space-y-2 p-3 bg-blue-50 rounded border border-blue-200">
+                                      <div className="flex items-center justify-between text-sm font-medium text-blue-700">
+                                        <span>Customize Bundle Quantities</span>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              updateBundleQuantitiesMutation.mutate({
+                                                bundleId: clientProduct.productId,
+                                                customQuantities: tempQuantities
+                                              });
+                                            }}
+                                            disabled={updateBundleQuantitiesMutation.isPending}
+                                            className="h-6 text-xs"
+                                          >
+                                            Save
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setEditingBundleQuantities(null);
+                                              setTempQuantities({});
+                                            }}
+                                            className="h-6 text-xs"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
                                       </div>
-                                    ))
-                                  ) : (
-                                    <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm text-gray-500">
-                                      Loading bundle details...
+                                      {bundleDetailsData[clientProduct.productId]?.map((bundleProduct: any, bundleIndex: number) => (
+                                        <div
+                                          key={bundleIndex}
+                                          className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
+                                        >
+                                          <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+                                          <ShoppingCart className="h-3 w-3 text-gray-400" />
+                                          <span className="text-gray-600 flex-1">{bundleProduct.productName}</span>
+                                          <span className="text-xs text-gray-500 mr-2">Qty:</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            value={tempQuantities[bundleProduct.productId] || 0}
+                                            onChange={(e) => {
+                                              setTempQuantities(prev => ({
+                                                ...prev,
+                                                [bundleProduct.productId]: parseInt(e.target.value) || 0
+                                              }));
+                                            }}
+                                            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          />
+                                        </div>
+                                      ))}
                                     </div>
+                                  ) : (
+                                    // View mode for bundle contents
+                                    bundleDetailsData[clientProduct.productId] ? (
+                                      bundleDetailsData[clientProduct.productId].map((bundleProduct: any, bundleIndex: number) => (
+                                        <div
+                                          key={bundleIndex}
+                                          className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
+                                        >
+                                          <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+                                          <ShoppingCart className="h-3 w-3 text-gray-400" />
+                                          <span className="text-gray-600">{bundleProduct.productName}</span>
+                                          <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
+                                            Qty: {bundleProduct.quantity}
+                                          </Badge>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm text-gray-500">
+                                        Loading bundle details...
+                                      </div>
+                                    )
                                   )}
                                 </div>
                               )}

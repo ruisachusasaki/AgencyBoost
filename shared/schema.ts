@@ -138,6 +138,7 @@ export const clientBundles = pgTable("client_bundles", {
   bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
   price: decimal("price", { precision: 10, scale: 2 }),
   status: text("status").default("active"),
+  customQuantities: jsonb("custom_quantities"), // Override quantities: { "product_id": quantity }
   createdAt: timestamp("created_at").defaultNow(),
 });
 

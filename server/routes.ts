@@ -2202,10 +2202,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get bundle products details
+  // Get bundle products details with client-specific overrides
   app.get("/api/product-bundles/:bundleId/products", async (req, res) => {
     try {
       const { bundleId } = req.params;
+      const { clientId } = req.query;
       
       const bundleProductsList = await db
         .select({
@@ -2219,12 +2220,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(products, eq(bundleProducts.productId, products.id))
         .where(eq(bundleProducts.bundleId, bundleId));
 
-      res.json(bundleProductsList);
+      // If clientId is provided, get custom quantities
+      let customQuantities = {};
+      if (clientId) {
+        const clientBundle = await db
+          .select({
+            customQuantities: clientBundles.customQuantities
+          })
+          .from(clientBundles)
+          .where(
+            and(
+              eq(clientBundles.clientId, clientId as string),
+              eq(clientBundles.bundleId, bundleId)
+            )
+          )
+          .limit(1);
 
+        if (clientBundle.length > 0 && clientBundle[0].customQuantities) {
+          customQuantities = clientBundle[0].customQuantities as Record<string, number>;
+        }
+      }
 
+      // Apply custom quantities to the products
+      const productsWithCustomQuantities = bundleProductsList.map(product => ({
+        ...product,
+        quantity: customQuantities[product.productId] || product.quantity
+      }));
+
+      res.json(productsWithCustomQuantities);
     } catch (error) {
       console.error('Error fetching bundle products:', error);
       res.status(500).json({ message: "Failed to fetch bundle products" });
+    }
+  });
+
+  // Update client bundle custom quantities
+  app.patch("/api/clients/:clientId/bundles/:bundleId/quantities", async (req, res) => {
+    try {
+      const { clientId, bundleId } = req.params;
+      const { customQuantities } = req.body;
+
+      await db
+        .update(clientBundles)
+        .set({
+          customQuantities: customQuantities
+        })
+        .where(
+          and(
+            eq(clientBundles.clientId, clientId),
+            eq(clientBundles.bundleId, bundleId)
+          )
+        );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating bundle quantities:', error);
+      res.status(500).json({ message: "Failed to update bundle quantities" });
     }
   });
 
