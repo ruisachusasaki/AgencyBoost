@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, Calendar, CheckCircle } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
@@ -374,25 +375,11 @@ export default function Tasks() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Dialog 
-                        open={editingTask?.id === task.id} 
-                        onOpenChange={(open) => setEditingTask(open ? task : null)}
-                      >
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Edit Task</DialogTitle>
-                          </DialogHeader>
-                          <TaskForm
-                            task={editingTask}
-                            onSuccess={() => setEditingTask(null)}
-                          />
-                        </DialogContent>
-                      </Dialog>
+                      <Link href={`/tasks/${task.id}`}>
+                        <Button variant="ghost" size="sm" title="Edit task">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
                       
                       <Button 
                         variant="ghost" 
