@@ -262,7 +262,13 @@ export default function Clients() {
 
   // Apply filter to clients
   const applyClientFilter = (clients: Client[], filter: ClientFilter): Client[] => {
-    if (filter.conditions.length === 0) return clients;
+    console.log('Applying filter with conditions:', filter.conditions);
+    console.log('Filter logic:', filter.logic);
+    
+    if (filter.conditions.length === 0) {
+      console.log('No filter conditions, returning all clients');
+      return clients;
+    }
 
     return clients.filter(client => {
       const results = filter.conditions.map(condition => {
@@ -325,6 +331,9 @@ export default function Clients() {
   // Apply filtering and sorting to clients
   const filteredAndSortedClients = useMemo(() => {
     if (!clients || clients.length === 0) return clients;
+
+    console.log('Current filter state:', currentFilter);
+    console.log('Active Smart List:', activeSmartList);
 
     // First apply filters
     const filtered = applyClientFilter(clients, currentFilter);
@@ -663,6 +672,9 @@ export default function Clients() {
   // Save Smart List
   const handleSaveSmartList = async () => {
     try {
+      console.log('Saving Smart List with currentFilter:', currentFilter);
+      console.log('Current filter conditions:', currentFilter.conditions);
+      
       const smartList: SmartList = {
         id: `smart-list-${Date.now()}`,
         name: smartListName,
