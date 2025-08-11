@@ -131,6 +131,16 @@ export const clientProducts = pgTable("client_products", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client bundle assignments
+export const clientBundles = pgTable("client_bundles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Notes
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -538,6 +548,11 @@ export const insertClientProductSchema = createInsertSchema(clientProducts).omit
   createdAt: true,
 });
 
+export const insertClientBundleSchema = createInsertSchema(clientBundles).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertNoteSchema = createInsertSchema(notes).omit({
   id: true,
   createdAt: true,
@@ -656,6 +671,9 @@ export type InsertClientGroup = z.infer<typeof insertClientGroupSchema>;
 
 export type ClientProduct = typeof clientProducts.$inferSelect;
 export type InsertClientProduct = z.infer<typeof insertClientProductSchema>;
+
+export type ClientBundle = typeof clientBundles.$inferSelect;
+export type InsertClientBundle = z.infer<typeof insertClientBundleSchema>;
 
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = z.infer<typeof insertNoteSchema>;

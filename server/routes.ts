@@ -16,7 +16,7 @@ import {
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, notificationSettings, clientProducts, productBundles, bundleProducts
+  roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2013,6 +2013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId } = req.params;
       
+      // Get client products
       const clientProductsList = await db
         .select({
           id: clientProducts.id,
@@ -2023,53 +2024,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productName: products.name,
           productDescription: products.description,
           productPrice: products.price,
-          productType: products.type
+          productType: products.type,
+          itemType: sql<string>`'product'`.as('itemType')
         })
         .from(clientProducts)
         .leftJoin(products, eq(clientProducts.productId, products.id))
-        .where(eq(clientProducts.clientId, clientId))
-        .orderBy(asc(products.name));
+        .where(eq(clientProducts.clientId, clientId));
+
+      // Get client bundles
+      const clientBundlesList = await db
+        .select({
+          id: clientBundles.id,
+          productId: clientBundles.bundleId,
+          price: clientBundles.price,
+          status: clientBundles.status,
+          createdAt: clientBundles.createdAt,
+          productName: productBundles.name,
+          productDescription: productBundles.description,
+          productPrice: productBundles.revenue,
+          productType: sql<string>`'bundle'`.as('productType'),
+          itemType: sql<string>`'bundle'`.as('itemType')
+        })
+        .from(clientBundles)
+        .leftJoin(productBundles, eq(clientBundles.bundleId, productBundles.id))
+        .where(eq(clientBundles.clientId, clientId));
+
+      // Combine and sort the results
+      const allItems = [...clientProductsList, ...clientBundlesList].sort((a, b) => 
+        a.productName?.localeCompare(b.productName || '') || 0
+      );
       
-      res.json(clientProductsList);
+      res.json(allItems);
     } catch (error) {
       console.error('Error fetching client products:', error);
       res.status(500).json({ message: "Failed to fetch client products" });
     }
   });
 
-  // Add product to client
+  // Add product or bundle to client
   app.post("/api/clients/:clientId/products", async (req, res) => {
     try {
       const { clientId } = req.params;
       const { productId, price } = req.body;
 
-      // Check if the client-product relationship already exists
-      const existing = await db
+      // First, check if this is a product or bundle by looking in both tables
+      const isProduct = await db
         .select()
-        .from(clientProducts)
-        .where(
-          and(
-            eq(clientProducts.clientId, clientId),
-            eq(clientProducts.productId, productId)
-          )
-        )
+        .from(products)
+        .where(eq(products.id, productId))
         .limit(1);
 
-      if (existing.length > 0) {
-        return res.status(400).json({ message: "Product already assigned to client" });
+      const isBundle = await db
+        .select()
+        .from(productBundles)
+        .where(eq(productBundles.id, productId))
+        .limit(1);
+
+      if (isProduct.length > 0) {
+        // Handle product assignment
+        const existing = await db
+          .select()
+          .from(clientProducts)
+          .where(
+            and(
+              eq(clientProducts.clientId, clientId),
+              eq(clientProducts.productId, productId)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          return res.status(400).json({ message: "Product already assigned to client" });
+        }
+
+        const [newClientProduct] = await db
+          .insert(clientProducts)
+          .values({
+            clientId,
+            productId,
+            price: price || null,
+            status: "active"
+          })
+          .returning();
+
+        res.status(201).json(newClientProduct);
+      } else if (isBundle.length > 0) {
+        // Handle bundle assignment
+        const existing = await db
+          .select()
+          .from(clientBundles)
+          .where(
+            and(
+              eq(clientBundles.clientId, clientId),
+              eq(clientBundles.bundleId, productId)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          return res.status(400).json({ message: "Bundle already assigned to client" });
+        }
+
+        const [newClientBundle] = await db
+          .insert(clientBundles)
+          .values({
+            clientId,
+            bundleId: productId,
+            price: price || null,
+            status: "active"
+          })
+          .returning();
+
+        res.status(201).json(newClientBundle);
+      } else {
+        return res.status(404).json({ message: "Product or bundle not found" });
       }
-
-      const [newClientProduct] = await db
-        .insert(clientProducts)
-        .values({
-          clientId,
-          productId,
-          price: price || null,
-          status: "active"
-        })
-        .returning();
-
-      res.status(201).json(newClientProduct);
     } catch (error) {
       console.error('Error adding product to client:', error);
       res.status(500).json({ message: "Failed to add product to client" });
