@@ -7,8 +7,7 @@ import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, Message
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
-// TaskComments component will be added later
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import TaskComments from "@/components/task-comments";
 import { useState } from "react";
 
 export default function TaskDetail() {
@@ -16,7 +15,7 @@ export default function TaskDetail() {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -205,26 +204,14 @@ export default function TaskDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Task</DialogTitle>
-              </DialogHeader>
-              <TaskForm
-                task={task}
-                onSuccess={() => {
-                  setIsEditDialogOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            {isEditing ? "Cancel Edit" : "Edit Task"}
+          </Button>
           
           {userPermissions?.tasks?.canDelete && (
             <Button 
@@ -244,65 +231,85 @@ export default function TaskDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Task Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FolderOpen className="h-5 w-5" />
-                Task Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {task.description && (
-                <div>
-                  <h4 className="font-medium text-slate-900 mb-2">Description</h4>
-                  <p className="text-slate-600 whitespace-pre-wrap">{task.description}</p>
+          {/* Task Details or Edit Form */}
+          {isEditing ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Edit className="h-5 w-5" />
+                  Edit Task
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TaskForm
+                  task={task}
+                  onSuccess={() => {
+                    setIsEditing(false);
+                    queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
+                  }}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Task Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {task.description && (
+                  <div>
+                    <h4 className="font-medium text-slate-900 mb-2">Description</h4>
+                    <p className="text-slate-600 whitespace-pre-wrap">{task.description}</p>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {task.dueDate && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm">{formatDate(task.dueDate)}</span>
+                    </div>
+                  )}
+                  
+                  {task.assignedTo && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm">{task.assignedTo}</span>
+                    </div>
+                  )}
+                  
+                  {getClientName(task.clientId) && (
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm">{getClientName(task.clientId)}</span>
+                    </div>
+                  )}
+                  
+                  {getProjectName(task.projectId) && (
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm">{getProjectName(task.projectId)}</span>
+                    </div>
+                  )}
+                  
+                  {getCampaignName(task.campaignId) && (
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm">{getCampaignName(task.campaignId)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm">Created {new Date(task.createdAt || '').toLocaleDateString()}</span>
+                  </div>
                 </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {task.dueDate && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm">{formatDate(task.dueDate)}</span>
-                  </div>
-                )}
-                
-                {task.assignedTo && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm">{task.assignedTo}</span>
-                  </div>
-                )}
-                
-                {getClientName(task.clientId) && (
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm">{getClientName(task.clientId)}</span>
-                  </div>
-                )}
-                
-                {getProjectName(task.projectId) && (
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm">{getProjectName(task.projectId)}</span>
-                  </div>
-                )}
-                
-                {getCampaignName(task.campaignId) && (
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm">{getCampaignName(task.campaignId)}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm">Created {new Date(task.createdAt || '').toLocaleDateString()}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Comments */}
           <Card>
@@ -313,10 +320,7 @@ export default function TaskDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-slate-500">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2" />
-                <p>Comments functionality coming soon</p>
-              </div>
+              <TaskComments taskId={task.id} />
             </CardContent>
           </Card>
         </div>
