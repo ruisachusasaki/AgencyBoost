@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle } from "lucide-react";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -442,6 +442,14 @@ export default function EnhancedClientDetail() {
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // Actions section accordion state
+  const [actionsExpanded, setActionsExpanded] = useState({
+    tags: true,
+    campaigns: false,
+    workflows: false,
+    opportunities: false
+  });
 
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = () => {
@@ -577,6 +585,75 @@ export default function EnhancedClientDetail() {
       description: `Email sent to ${client?.name}`,
     });
     setEmailMessage("");
+  };
+
+  // Tag management functions
+  const addTagToClient = async (tagName: string) => {
+    if (!client || !tagName.trim()) return;
+    
+    try {
+      const currentTags = client.tags || [];
+      if (currentTags.includes(tagName)) {
+        toast({
+          title: "Tag already exists",
+          description: `"${tagName}" is already assigned to this client`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const updatedTags = [...currentTags, tagName];
+      await apiRequest('PUT', `/api/clients/${clientId}`, {
+        tags: updatedTags
+      });
+
+      toast({
+        title: "Tag added",
+        description: `"${tagName}" has been added to ${client.name}`,
+      });
+
+      // Refresh client data
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+    } catch (error) {
+      toast({
+        title: "Error adding tag",
+        description: "Failed to add tag to client",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createNewTag = async () => {
+    if (!newTagName.trim()) return;
+
+    try {
+      // Create the tag in the database
+      await apiRequest('POST', '/api/tags', {
+        name: newTagName,
+        color: '#3B82F6', // Default blue color
+      });
+
+      // Add the tag to the client
+      await addTagToClient(newTagName);
+
+      // Refresh tags data
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+
+      // Reset form
+      setNewTagName("");
+      setIsAddingTag(false);
+
+      toast({
+        title: "Tag created",
+        description: `"${newTagName}" has been created and added to ${client?.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error creating tag",
+        description: "Failed to create new tag",
+        variant: "destructive"
+      });
+    }
   };
 
   // Field update mutation (handles both custom and standard fields)
@@ -746,7 +823,10 @@ export default function EnhancedClientDetail() {
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900">Contact Information</h2>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <UserCircle className="h-5 w-5 text-primary" />
+                  Contact Information
+                </h2>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Dynamic Sections - Custom Field Folders */}
@@ -816,83 +896,115 @@ export default function EnhancedClientDetail() {
                   Actions
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Tags */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-900">Tags</h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsAddingTag(true)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {client.tags && client.tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {client.tags.map((tagName, index) => {
-                          const tag = tagsData.find((t: Tag) => t.name === tagName);
-                          return (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="text-xs"
-                              style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined, borderColor: tag?.color }}
-                            >
-                              {tagName}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No tags assigned</p>
-                    )}
-                  </div>
+              <CardContent className="space-y-4">
+                {/* Tags Accordion */}
+                <div className="border-b border-gray-200 pb-4">
+                  <button
+                    onClick={() => setActionsExpanded(prev => ({ ...prev, tags: !prev.tags }))}
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                  >
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Tags
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsAddingTag(true);
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      {actionsExpanded.tags ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </button>
+                  {actionsExpanded.tags && (
+                    <div className="mt-3 space-y-2">
+                      {client.tags && client.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {client.tags.map((tagName, index) => {
+                            const tag = tagsData.find((t: Tag) => t.name === tagName);
+                            return (
+                              <Badge
+                                key={index}
+                                variant="secondary"
+                                className="text-xs"
+                                style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined, borderColor: tag?.color }}
+                              >
+                                {tagName}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No tags assigned</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Campaigns */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
+                {/* Campaigns Accordion */}
+                <div className="border-b border-gray-200 pb-4">
+                  <button
+                    onClick={() => setActionsExpanded(prev => ({ ...prev, campaigns: !prev.campaigns }))}
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                  >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
                       Campaigns
                     </h4>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-500">No campaigns associated</p>
-                    <p className="text-xs text-gray-400">Campaigns will appear when the client is added to marketing campaigns</p>
-                  </div>
+                    {actionsExpanded.campaigns ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                  {actionsExpanded.campaigns && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-sm text-gray-500">No campaigns associated</p>
+                      <p className="text-xs text-gray-400">Campaigns will appear when the client is added to marketing campaigns</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Workflows */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
+                {/* Workflows Accordion */}
+                <div className="border-b border-gray-200 pb-4">
+                  <button
+                    onClick={() => setActionsExpanded(prev => ({ ...prev, workflows: !prev.workflows }))}
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                  >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Workflow className="h-4 w-4" />
                       Workflows
                     </h4>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-500">No workflows active</p>
-                    <p className="text-xs text-gray-400">Automated workflows will appear when triggered for this client</p>
-                  </div>
+                    {actionsExpanded.workflows ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                  {actionsExpanded.workflows && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-sm text-gray-500">No workflows active</p>
+                      <p className="text-xs text-gray-400">Automated workflows will appear when triggered for this client</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Opportunities */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
+                {/* Opportunities Accordion */}
+                <div className="pb-2">
+                  <button
+                    onClick={() => setActionsExpanded(prev => ({ ...prev, opportunities: !prev.opportunities }))}
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                  >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Target className="h-4 w-4" />
                       Opportunities
                     </h4>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-500">No opportunities tracked</p>
-                    <p className="text-xs text-gray-400">Sales opportunities will appear when pipeline functionality is added</p>
-                  </div>
+                    {actionsExpanded.opportunities ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                  {actionsExpanded.opportunities && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-sm text-gray-500">No opportunities tracked</p>
+                      <p className="text-xs text-gray-400">Sales opportunities will appear when pipeline functionality is added</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1249,6 +1361,67 @@ export default function EnhancedClientDetail() {
             </Card>
           </div>
         </div>
+
+        {/* Add Tag Dialog */}
+        <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Tag</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Tag Name</Label>
+                <Input
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="Enter tag name"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      createNewTag();
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700">Or select existing tag:</Label>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {tagsData.length > 0 ? (
+                    tagsData.map((tag: Tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => {
+                          addTagToClient(tag.name);
+                          setIsAddingTag(false);
+                        }}
+                        className="w-full text-left p-2 hover:bg-gray-50 rounded flex items-center gap-2"
+                      >
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: tag.color || '#3B82F6' }}
+                        />
+                        <span className="text-sm">{tag.name}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">No existing tags found</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsAddingTag(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={createNewTag}
+                  disabled={!newTagName.trim()}
+                >
+                  Create & Add Tag
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }
