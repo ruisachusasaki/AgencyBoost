@@ -454,6 +454,16 @@ export default function EnhancedClientDetail() {
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
+
+  // Owner and followers state
+  const [isAssigningOwner, setIsAssigningOwner] = useState(false);
+  const [ownerSearchTerm, setOwnerSearchTerm] = useState("");
+  const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
+  const [showOwnerSuggestions, setShowOwnerSuggestions] = useState(false);
+  const [isAddingFollowers, setIsAddingFollowers] = useState(false);
+  const [followerSearchTerm, setFollowerSearchTerm] = useState("");
+  const [filteredFollowers, setFilteredFollowers] = useState<any[]>([]);
+  const [showFollowerSuggestions, setShowFollowerSuggestions] = useState(false);
   
   // Actions section accordion state
   const [actionsExpanded, setActionsExpanded] = useState({
@@ -563,6 +573,16 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Fetch staff data
+  const { data: staffData = [], isLoading: staffLoading } = useQuery({
+    queryKey: ['/api/staff'],
+    queryFn: async () => {
+      const response = await fetch('/api/staff');
+      if (!response.ok) throw new Error('Failed to fetch staff');
+      return response.json();
+    },
+  });
+
   // Fetch current user data
   const { data: currentUser } = useQuery({
     queryKey: ['/api/auth/current-user'],
@@ -665,6 +685,64 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Update contact owner mutation
+  const updateOwnerMutation = useMutation({
+    mutationFn: async (ownerId: string) => {
+      const response = await fetch(`/api/clients/${clientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactOwner: ownerId }),
+      });
+      if (!response.ok) throw new Error('Failed to update contact owner');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      setIsAssigningOwner(false);
+      setOwnerSearchTerm("");
+      toast({
+        title: "Owner assigned",
+        description: "Contact owner has been updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to assign contact owner",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update followers mutation
+  const updateFollowersMutation = useMutation({
+    mutationFn: async (followers: string[]) => {
+      const response = await fetch(`/api/clients/${clientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followers }),
+      });
+      if (!response.ok) throw new Error('Failed to update followers');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      setIsAddingFollowers(false);
+      setFollowerSearchTerm("");
+      toast({
+        title: "Followers updated",
+        description: "Client followers have been updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update followers",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Update sections when custom field folders are loaded
   useEffect(() => {
     if (customFieldFoldersData && customFieldsData) {
@@ -688,6 +766,39 @@ export default function EnhancedClientDetail() {
       setSections(newSections);
     }
   }, [customFieldFoldersData, customFieldsData]);
+
+  // Filter staff for owner assignment
+  useEffect(() => {
+    if (ownerSearchTerm && staffData) {
+      const filtered = staffData.filter(staff => 
+        `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(ownerSearchTerm.toLowerCase()) ||
+        staff.email?.toLowerCase().includes(ownerSearchTerm.toLowerCase())
+      );
+      setFilteredStaff(filtered);
+      setShowOwnerSuggestions(filtered.length > 0);
+    } else {
+      setFilteredStaff([]);
+      setShowOwnerSuggestions(false);
+    }
+  }, [ownerSearchTerm, staffData]);
+
+  // Filter staff for followers
+  useEffect(() => {
+    if (followerSearchTerm && staffData) {
+      const currentFollowers = client?.followers || [];
+      const filtered = staffData.filter(staff => 
+        !currentFollowers.includes(staff.id) && // Exclude already following staff
+        staff.id !== client?.contactOwner && // Exclude current owner
+        (`${staff.firstName} ${staff.lastName}`.toLowerCase().includes(followerSearchTerm.toLowerCase()) ||
+         staff.email?.toLowerCase().includes(followerSearchTerm.toLowerCase()))
+      );
+      setFilteredFollowers(filtered);
+      setShowFollowerSuggestions(filtered.length > 0);
+    } else {
+      setFilteredFollowers([]);
+      setShowFollowerSuggestions(false);
+    }
+  }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
@@ -1078,13 +1189,82 @@ export default function EnhancedClientDetail() {
               <p className="text-muted-foreground">{getBusinessDisplayName()}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-primary border-primary">
-              {client.status}
-            </Badge>
-            <Badge variant="outline">
-              {client.contactType}
-            </Badge>
+          <div className="flex items-center gap-4">
+            {/* Owner and Followers Section */}
+            <div className="flex items-center gap-3">
+              {/* Contact Owner */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Owner:</span>
+                {client.contactOwner ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <UserCircle className="h-3 w-3" />
+                      {staffData.find(staff => staff.id === client.contactOwner)?.firstName} {staffData.find(staff => staff.id === client.contactOwner)?.lastName}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsAssigningOwner(true)}
+                      className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAssigningOwner(true)}
+                    className="h-8 text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Assign Owner
+                  </Button>
+                )}
+              </div>
+
+              {/* Followers */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Followers:</span>
+                <div className="flex items-center gap-1">
+                  {client.followers && client.followers.length > 0 ? (
+                    <>
+                      <Badge variant="outline" className="text-xs">
+                        {client.followers.length} following
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsAddingFollowers(true)}
+                        className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddingFollowers(true)}
+                      className="h-8 text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Followers
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status Badges */}
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-primary border-primary">
+                {client.status}
+              </Badge>
+              <Badge variant="outline">
+                {client.contactType}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
@@ -2114,6 +2294,181 @@ export default function EnhancedClientDetail() {
                     )}
                   </>
                 )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Owner Assignment Dialog */}
+        <Dialog open={isAssigningOwner} onOpenChange={setIsAssigningOwner}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Contact Owner</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="relative">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Search Staff Members</Label>
+                <Input
+                  value={ownerSearchTerm}
+                  onChange={(e) => setOwnerSearchTerm(e.target.value)}
+                  placeholder="Type to search staff members..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && filteredStaff.length > 0) {
+                      e.preventDefault();
+                      updateOwnerMutation.mutate(filteredStaff[0].id);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (ownerSearchTerm.trim()) {
+                      setShowOwnerSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowOwnerSuggestions(false), 200);
+                  }}
+                />
+                
+                {/* Staff Suggestions */}
+                {showOwnerSuggestions && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {filteredStaff.length > 0 ? (
+                      filteredStaff.map((staff) => (
+                        <button
+                          key={staff.id}
+                          onClick={() => updateOwnerMutation.mutate(staff.id)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                        >
+                          <UserCircle className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <div>
+                            <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                            <div className="text-xs text-gray-500">{staff.email}</div>
+                          </div>
+                        </button>
+                      ))
+                    ) : ownerSearchTerm.trim() ? (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No staff members found
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => {
+                  setIsAssigningOwner(false);
+                  setOwnerSearchTerm("");
+                  setShowOwnerSuggestions(false);
+                }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Followers Management Dialog */}
+        <Dialog open={isAddingFollowers} onOpenChange={setIsAddingFollowers}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Manage Followers</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Current Followers */}
+              {client?.followers && client.followers.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Current Followers</Label>
+                  <div className="space-y-2">
+                    {client.followers.map((followerId) => {
+                      const follower = staffData.find(staff => staff.id === followerId);
+                      if (!follower) return null;
+                      return (
+                        <div key={followerId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center gap-2">
+                            <UserCircle className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm">{follower.firstName} {follower.lastName}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updatedFollowers = client.followers!.filter(id => id !== followerId);
+                              updateFollowersMutation.mutate(updatedFollowers);
+                            }}
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Add New Followers */}
+              <div className="relative">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Add Followers</Label>
+                <Input
+                  value={followerSearchTerm}
+                  onChange={(e) => setFollowerSearchTerm(e.target.value)}
+                  placeholder="Type to search staff members..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && filteredFollowers.length > 0) {
+                      e.preventDefault();
+                      const currentFollowers = client?.followers || [];
+                      const updatedFollowers = [...currentFollowers, filteredFollowers[0].id];
+                      updateFollowersMutation.mutate(updatedFollowers);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (followerSearchTerm.trim()) {
+                      setShowFollowerSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowFollowerSuggestions(false), 200);
+                  }}
+                />
+                
+                {/* Staff Suggestions */}
+                {showFollowerSuggestions && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {filteredFollowers.length > 0 ? (
+                      filteredFollowers.map((staff) => (
+                        <button
+                          key={staff.id}
+                          onClick={() => {
+                            const currentFollowers = client?.followers || [];
+                            const updatedFollowers = [...currentFollowers, staff.id];
+                            updateFollowersMutation.mutate(updatedFollowers);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                        >
+                          <UserCircle className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <div>
+                            <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                            <div className="text-xs text-gray-500">{staff.email}</div>
+                          </div>
+                        </button>
+                      ))
+                    ) : followerSearchTerm.trim() ? (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No available staff members found
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => {
+                  setIsAddingFollowers(false);
+                  setFollowerSearchTerm("");
+                  setShowFollowerSuggestions(false);
+                }}>
+                  Close
+                </Button>
               </div>
             </div>
           </DialogContent>
