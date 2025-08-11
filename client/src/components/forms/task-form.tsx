@@ -33,7 +33,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/campaigns"],
   });
 
-  const { data: staff = [] } = useQuery({
+  const { data: staff = [] } = useQuery<any[]>({
     queryKey: ["/api/staff"],
   });
 
@@ -44,7 +44,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       description: typeof task?.description === 'string' ? task.description : "",
       status: task?.status || "pending",
       priority: task?.priority || "medium",
-      assignedTo: task?.assignedTo ? String(task.assignedTo) : "",
+      assignedTo: task?.assignedTo ? String(task.assignedTo) : "none",
       clientId: typeof task?.clientId === 'string' ? task.clientId : "",
       projectId: typeof task?.projectId === 'string' ? task.projectId : "",
       campaignId: typeof task?.campaignId === 'string' ? task.campaignId : "",
@@ -201,7 +201,12 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select 
+                  onValueChange={(value) => {
+                    field.onChange(value === "none" ? "" : value);
+                  }}
+                  value={field.value || "none"}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select team member" />
@@ -211,7 +216,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     <SelectItem value="none">No Assignment</SelectItem>
                     {staff.map((member: any) => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.firstName} {member.lastName}
+                        {String(member.firstName)} {String(member.lastName)}
                       </SelectItem>
                     ))}
                   </SelectContent>
