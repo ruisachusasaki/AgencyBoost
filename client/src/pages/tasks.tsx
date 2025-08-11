@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, Calendar, CheckCircle } from "lucide-react";
-import BasicTaskForm from "@/components/forms/basic-task-form";
+import TaskForm from "@/components/forms/task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Client, Project, Campaign } from "@shared/schema";
@@ -37,16 +37,6 @@ export default function Tasks() {
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
-  });
-
-  // Fetch current user for role checking
-  const { data: currentUser } = useQuery({
-    queryKey: ['/api/auth/me'],
-    queryFn: async () => {
-      const response = await fetch('/api/auth/me');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
-    },
   });
 
   const deleteTaskMutation = useMutation({
@@ -219,7 +209,7 @@ export default function Tasks() {
             <DialogHeader>
               <DialogTitle>Add New Task</DialogTitle>
             </DialogHeader>
-            <BasicTaskForm
+            <TaskForm
               onSuccess={() => setIsCreateDialogOpen(false)}
             />
           </DialogContent>
@@ -310,7 +300,7 @@ export default function Tasks() {
                     <DialogHeader>
                       <DialogTitle>Add New Task</DialogTitle>
                     </DialogHeader>
-                    <BasicTaskForm
+                    <TaskForm
                       onSuccess={() => setIsCreateDialogOpen(false)}
                     />
                   </DialogContent>
@@ -386,22 +376,19 @@ export default function Tasks() {
 
                     <div className="flex items-center gap-2">
                       <Link href={`/tasks/${task.id}`}>
-                        <Button variant="ghost" size="sm" title="View task">
+                        <Button variant="ghost" size="sm" title="Edit task">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
                       
-                      {currentUser?.role === 'Admin' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeleteTask(task.id)}
-                          disabled={deleteTaskMutation.isPending}
-                          title="Delete task (Admin only)"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteTask(task.id)}
+                        disabled={deleteTaskMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </div>
                 </div>

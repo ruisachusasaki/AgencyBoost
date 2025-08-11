@@ -33,21 +33,17 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/campaigns"],
   });
 
-  const { data: staff = [] } = useQuery<any[]>({
-    queryKey: ["/api/staff"],
-  });
-
   const form = useForm<InsertTask>({
     resolver: zodResolver(insertTaskSchema),
     defaultValues: {
-      title: typeof task?.title === 'string' ? task.title : "",
-      description: typeof task?.description === 'string' ? task.description : "",
+      title: task?.title || "",
+      description: task?.description || "",
       status: task?.status || "pending",
       priority: task?.priority || "medium",
-      assignedTo: task?.assignedTo ? String(task.assignedTo) : "none",
-      clientId: typeof task?.clientId === 'string' ? task.clientId : "",
-      projectId: typeof task?.projectId === 'string' ? task.projectId : "",
-      campaignId: typeof task?.campaignId === 'string' ? task.campaignId : "",
+      assignedTo: task?.assignedTo || "",
+      clientId: task?.clientId || "",
+      projectId: task?.projectId || "",
+      campaignId: task?.campaignId || "",
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
     },
   });
@@ -201,26 +197,9 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <Select 
-                  onValueChange={(value) => {
-                    field.onChange(value === "none" ? "" : value);
-                  }}
-                  value={field.value || "none"}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select team member" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Assignment</SelectItem>
-                    {staff.map((member: any) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {String(member.firstName)} {String(member.lastName)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <Input {...field} placeholder="Team member name" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
