@@ -43,12 +43,12 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, asc, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
   getClients(): Promise<Client[]>;
-  getClientsWithPagination(limit: number, offset: number): Promise<{ clients: Client[]; total: number }>;
+  getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }>;
   getClient(id: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
@@ -972,8 +972,35 @@ export class MemStorage implements IStorage {
     return Array.from(this.clients.values());
   }
 
-  async getClientsWithPagination(limit: number, offset: number): Promise<{ clients: Client[]; total: number }> {
+  async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
     const allClients = Array.from(this.clients.values());
+    
+    // Sort clients if sortBy is specified
+    if (sortBy) {
+      allClients.sort((a, b) => {
+        let aValue: any = a[sortBy as keyof Client];
+        let bValue: any = b[sortBy as keyof Client];
+        
+        // Handle date sorting
+        if (sortBy === 'createdAt') {
+          aValue = new Date(aValue || 0);
+          bValue = new Date(bValue || 0);
+        }
+        
+        // Handle string sorting
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+        
+        if (sortOrder === 'desc') {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        } else {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        }
+      });
+    }
+    
     return {
       clients: allClients.slice(offset, offset + limit),
       total: allClients.length
@@ -2379,9 +2406,29 @@ class DbStorage implements IStorage {
     return await db.select().from(clients);
   }
 
-  async getClientsWithPagination(limit: number, offset: number): Promise<{ clients: Client[]; total: number }> {
+  async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
+    // Build the query with proper sorting
+    let query = db.select().from(clients);
+    
+    // Apply sorting
+    if (sortBy && sortOrder) {
+      if (sortBy === 'createdAt') {
+        query = sortOrder === 'desc' ? query.orderBy(desc(clients.createdAt)) : query.orderBy(asc(clients.createdAt));
+      } else if (sortBy === 'name') {
+        query = sortOrder === 'desc' ? query.orderBy(desc(clients.name)) : query.orderBy(asc(clients.name));
+      } else if (sortBy === 'email') {
+        query = sortOrder === 'desc' ? query.orderBy(desc(clients.email)) : query.orderBy(asc(clients.email));
+      } else {
+        // Default fallback to name if invalid sortBy
+        query = query.orderBy(asc(clients.name));
+      }
+    } else {
+      // Default sorting by name
+      query = query.orderBy(asc(clients.name));
+    }
+    
     const [clientsResult, totalResult] = await Promise.all([
-      db.select().from(clients).limit(limit).offset(offset),
+      query.limit(limit).offset(offset),
       db.select({ count: sql<number>`count(*)` }).from(clients)
     ]);
     

@@ -15,14 +15,12 @@ interface PaginatedClientsResponse {
 
 export default function RecentClients() {
   const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
-    queryKey: ["/api/clients", 1, 10], // Get first 10 clients for recent display
-    queryFn: () => apiRequest("GET", "/api/clients?page=1&limit=10"),
+    queryKey: ["/api/clients", 1, 3, "createdAt", "desc"], // Get 3 most recent clients
+    queryFn: () => apiRequest("GET", "/api/clients?page=1&limit=3&sortBy=createdAt&sortOrder=desc"),
   });
 
   const clients = clientsData?.clients || [];
-  const recentClients = Array.isArray(clients) ? clients
-    .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
-    .slice(0, 3) : [];
+  const recentClients = Array.isArray(clients) ? clients : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

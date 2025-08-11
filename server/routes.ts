@@ -94,8 +94,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = (page - 1) * limit;
+      const sortBy = req.query.sortBy as string || "name"; // default sort by name
+      const sortOrder = req.query.sortOrder as string || "asc"; // default ascending
       
-      const result = await storage.getClientsWithPagination(limit, offset);
+      const result = await storage.getClientsWithPagination(limit, offset, sortBy, sortOrder);
       
       res.json({
         clients: result.clients,
@@ -109,7 +111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch clients" });
+      console.error("Error fetching clients:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
+      res.status(500).json({ message: "Failed to fetch clients", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
