@@ -24,7 +24,7 @@ export default function Tasks() {
     queryKey: ["/api/tasks"],
   });
 
-  const { data: clientsData } = useQuery({
+  const { data: clientsData } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
   
@@ -81,7 +81,7 @@ export default function Tasks() {
 
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find((c: Client) => c.id === clientId);
     return client?.name || "Unknown Client";
   };
 

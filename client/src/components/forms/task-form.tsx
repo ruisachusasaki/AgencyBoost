@@ -19,7 +19,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: clientsData } = useQuery({
+  const { data: clientsData } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
   
@@ -238,7 +238,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="">No Client</SelectItem>
-                    {clients.map((client) => (
+                    {clients.map((client: Client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
                       </SelectItem>
