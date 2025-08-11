@@ -111,6 +111,33 @@ export default function Clients() {
   const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
   const [shareVisibility, setShareVisibility] = useState<'personal' | 'shared' | 'universal'>('personal');
 
+  // Get unique values for dropdown fields from actual client data
+  const getFieldOptions = (fieldName: string): string[] => {
+    if (!clients || clients.length === 0) return [];
+    
+    const values = clients
+      .map(client => {
+        switch (fieldName) {
+          case 'clientVertical': return client.clientVertical;
+          case 'status': return client.status;
+          case 'state': return client.state;
+          case 'city': return client.city;
+          case 'contactOwner': return getContactOwnerName(client.contactOwner);
+          default: return null;
+        }
+      })
+      .filter((value): value is string => Boolean(value) && value !== '-')
+      .filter((value, index, array) => array.indexOf(value) === index) // Remove duplicates
+      .sort();
+    
+    return values;
+  };
+
+  // Check if a field should use dropdown for value selection
+  const isDropdownField = (fieldName: string): boolean => {
+    return ['clientVertical', 'status', 'state', 'city', 'contactOwner'].includes(fieldName);
+  };
+
 
   
   const queryClient = useQueryClient();
@@ -1295,13 +1322,32 @@ export default function Clients() {
                       </SelectContent>
                     </Select>
 
-                    <Input
-                      placeholder="Value"
-                      value={condition.value}
-                      onChange={(e) => updateFilterCondition(index, 'value', e.target.value)}
-                      className="flex-1"
-                      disabled={condition.operator === 'is_empty' || condition.operator === 'is_not_empty'}
-                    />
+                    {isDropdownField(condition.field) ? (
+                      <Select
+                        value={condition.value}
+                        onValueChange={(value) => updateFilterCondition(index, 'value', value)}
+                        disabled={condition.operator === 'is_empty' || condition.operator === 'is_not_empty'}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select value" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFieldOptions(condition.field).map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        placeholder="Value"
+                        value={condition.value}
+                        onChange={(e) => updateFilterCondition(index, 'value', e.target.value)}
+                        className="flex-1"
+                        disabled={condition.operator === 'is_empty' || condition.operator === 'is_not_empty'}
+                      />
+                    )}
 
                     <Button
                       variant="ghost"
