@@ -33,6 +33,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/campaigns"],
   });
 
+  const { data: staff = [] } = useQuery({
+    queryKey: ["/api/staff"],
+  });
+
   const form = useForm<InsertTask>({
     resolver: zodResolver(insertTaskSchema),
     defaultValues: {
@@ -197,9 +201,21 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Team member name" />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team member" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">No Assignment</SelectItem>
+                    {staff.map((member: any) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
