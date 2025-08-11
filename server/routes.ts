@@ -2031,25 +2031,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(products, eq(clientProducts.productId, products.id))
         .where(eq(clientProducts.clientId, clientId));
 
-      // Get client bundles (handle potential errors if table doesn't exist)
+      // Get client bundles using raw SQL to avoid schema issues
       let clientBundlesList = [];
       try {
-        clientBundlesList = await db
-          .select({
-            id: clientBundles.id,
-            productId: clientBundles.bundleId,
-            price: clientBundles.price,
-            status: clientBundles.status,
-            createdAt: clientBundles.createdAt,
-            productName: productBundles.name,
-            productDescription: productBundles.description,
-            productPrice: productBundles.revenue,
-            productType: sql<string>`'bundle'`,
-            itemType: sql<string>`'bundle'`
-          })
-          .from(clientBundles)
-          .leftJoin(productBundles, eq(clientBundles.bundleId, productBundles.id))
-          .where(eq(clientBundles.clientId, clientId));
+        const bundleQuery = `
+          SELECT 
+            cb.id,
+            cb.bundle_id as "productId",
+            cb.price,
+            cb.status,
+            cb.created_at as "createdAt",
+            pb.name as "productName",
+            pb.description as "productDescription",
+            pb.revenue as "productPrice",
+            'bundle' as "productType",
+            'bundle' as "itemType"
+          FROM client_bundles cb
+          LEFT JOIN product_bundles pb ON cb.bundle_id = pb.id
+          WHERE cb.client_id = $1
+        `;
+        const result = await db.execute(sql.raw(bundleQuery, [clientId]));
+        clientBundlesList = result.rows;
       } catch (error) {
         console.log('Error fetching client bundles:', error);
         clientBundlesList = [];
