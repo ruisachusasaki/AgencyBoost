@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download } from "lucide-react";
+import { DocumentUploader } from "@/components/DocumentUploader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
@@ -788,6 +789,33 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Error",
         description: "Failed to remove product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete document mutation (Admin only)
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (documentId: string) => {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete document');
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully removed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -3468,9 +3496,17 @@ export default function EnhancedClientDetail() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Documents</h3>
-                      <Button size="sm" variant="outline">
-                        <Upload className="h-4 w-4" />
-                      </Button>
+                      <DocumentUploader
+                        clientId={clientId!}
+                        onUploadComplete={() => {
+                          queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
+                        }}
+                        maxNumberOfFiles={5}
+                        buttonClassName="text-sm"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Documents
+                      </DocumentUploader>
                     </div>
                     
                     <div className="space-y-3">
@@ -3527,7 +3563,7 @@ export default function EnhancedClientDetail() {
                             };
                             
                             return (
-                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer">
+                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
                                 <div className="flex items-start gap-3">
                                   <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
                                     <FileText className="h-4 w-4" />
@@ -3541,9 +3577,46 @@ export default function EnhancedClientDetail() {
                                       by {doc.uploadedByUser?.firstName} {doc.uploadedByUser?.lastName}
                                     </p>
                                   </div>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View document">
-                                    <ExternalLink className="h-3 w-3" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                                            onClick={() => window.open(doc.downloadUrl, '_blank')}
+                                          >
+                                            <Download className="h-3 w-3" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Download document</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    
+                                    {currentUser?.role === 'Admin' && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" 
+                                              onClick={() => {
+                                                if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                                                  deleteDocumentMutation.mutate(doc.id);
+                                                }
+                                              }}
+                                              disabled={deleteDocumentMutation.isPending}
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete document (Admin only)</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );

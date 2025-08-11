@@ -4257,41 +4257,301 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Documents endpoints
+  // ===== SECURE DOCUMENT MANAGEMENT SYSTEM =====
+  
+  // Allowed file types for security validation
+  const ALLOWED_FILE_TYPES = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'rtf', 'pages', 'numbers',
+    'jpeg', 'jpg', 'png', 'gif', 'tiff', 'ppt', 'pptx', 'key'
+  ];
+
+  // Forbidden file types for security
+  const FORBIDDEN_FILE_TYPES = [
+    'exe', 'bat', 'sh', 'msi', 'js', 'php', 'html', 'css', 'zip'
+  ];
+
+  // File name sanitization function
+  function sanitizeFileName(fileName: string): string {
+    // Remove path information and dangerous characters
+    let sanitized = fileName.replace(/[\/\\:*?"<>|]/g, '_');
+    
+    // Remove spaces with underscores
+    sanitized = sanitized.replace(/\s+/g, '_');
+    
+    // Remove any remaining special characters except dots, dashes, and underscores
+    sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, '');
+    
+    // Ensure it doesn't start with a dot or dash
+    sanitized = sanitized.replace(/^[.-]+/, '');
+    
+    // Limit length to 255 characters
+    if (sanitized.length > 255) {
+      const ext = sanitized.split('.').pop();
+      const nameWithoutExt = sanitized.substring(0, 255 - (ext?.length || 0) - 1);
+      sanitized = `${nameWithoutExt}.${ext}`;
+    }
+    
+    return sanitized || 'unnamed_file';
+  }
+
+  // Validate file type function
+  function validateFileType(fileName: string, mimeType?: string): { isValid: boolean; error?: string } {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    if (!extension) {
+      return { isValid: false, error: 'File must have an extension' };
+    }
+
+    if (FORBIDDEN_FILE_TYPES.includes(extension)) {
+      return { isValid: false, error: `File type .${extension} is not allowed for security reasons` };
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(extension)) {
+      return { isValid: false, error: `File type .${extension} is not supported. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}` };
+    }
+
+    return { isValid: true };
+  }
+
+  // Get upload URL for document
+  app.post("/api/documents/upload-url", async (req, res) => {
+    try {
+      const { fileName, fileType, fileSize, clientId } = req.body;
+
+      // Basic validation
+      if (!fileName || !clientId) {
+        return res.status(400).json({ message: "fileName and clientId are required" });
+      }
+
+      // File size validation (250MB limit)
+      if (fileSize > 250 * 1024 * 1024) {
+        return res.status(400).json({ message: "File size exceeds 250MB limit" });
+      }
+
+      // Sanitize file name
+      const sanitizedFileName = sanitizeFileName(fileName);
+
+      // Validate file type
+      const validation = validateFileType(sanitizedFileName, fileType);
+      if (!validation.isValid) {
+        return res.status(400).json({ message: validation.error });
+      }
+
+      // Verify client exists
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Generate upload URL using object storage
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error generating upload URL:', error);
+      res.status(500).json({ message: "Failed to generate upload URL" });
+    }
+  });
+
+  // Register uploaded document in database
+  app.post("/api/documents", async (req, res) => {
+    try {
+      const { fileName, fileType, fileSize, fileUrl, clientId } = req.body;
+
+      // Validate required fields
+      if (!fileName || !fileType || !fileSize || !fileUrl || !clientId) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Sanitize file name
+      const sanitizedFileName = sanitizeFileName(fileName);
+
+      // Validate file type again
+      const validation = validateFileType(sanitizedFileName, fileType);
+      if (!validation.isValid) {
+        return res.status(400).json({ message: validation.error });
+      }
+
+      // File size validation
+      if (fileSize > 250 * 1024 * 1024) {
+        return res.status(400).json({ message: "File size exceeds 250MB limit" });
+      }
+
+      // Verify client exists
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Get current user (defaulting to admin for demo)
+      const uploadedBy = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      // Normalize object path from upload URL
+      const objectStorageService = new ObjectStorageService();
+      const normalizedPath = objectStorageService.normalizeObjectEntityPath(fileUrl);
+
+      // Create document record
+      const documentData = {
+        clientId: clientId,
+        fileName: sanitizedFileName,
+        fileType: sanitizedFileName.split('.').pop()?.toLowerCase() || 'unknown',
+        fileSize: fileSize,
+        fileUrl: normalizedPath,
+        uploadedBy: uploadedBy,
+      };
+
+      const validatedData = insertClientDocumentSchema.parse(documentData);
+      const [document] = await db.insert(clientDocuments).values(validatedData).returning();
+
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "document",
+        document.id,
+        sanitizedFileName,
+        uploadedBy,
+        `Uploaded document: ${sanitizedFileName} for client: ${client.name}`,
+        null,
+        document,
+        req
+      );
+
+      res.status(201).json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error registering document:', error);
+      res.status(500).json({ message: "Failed to register document" });
+    }
+  });
+
+  // Get client documents with uploader information
   app.get("/api/clients/:clientId/documents", async (req, res) => {
     try {
-      const clientId = req.params.clientId;
+      const { clientId } = req.params;
       
-      // For now, return mock data until we fix database schema
-      const mockDocuments = [
-        {
-          id: "1",
-          clientId: clientId,
-          fileName: "Campaign_Proposal_Q4.pdf",
-          fileType: "pdf",
-          fileSize: 2400000, // 2.4 MB
-          fileUrl: "/documents/campaign_proposal_q4.pdf",
-          uploadedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          uploadedByUser: { firstName: "Michael", lastName: "Brown" },
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      // Verify client exists
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Get documents with uploader information
+      const documents = await db
+        .select({
+          id: clientDocuments.id,
+          clientId: clientDocuments.clientId,
+          fileName: clientDocuments.fileName,
+          fileType: clientDocuments.fileType,
+          fileSize: clientDocuments.fileSize,
+          fileUrl: clientDocuments.fileUrl,
+          uploadedBy: clientDocuments.uploadedBy,
+          createdAt: clientDocuments.createdAt,
+          uploaderFirstName: users.firstName,
+          uploaderLastName: users.lastName,
+        })
+        .from(clientDocuments)
+        .leftJoin(users, eq(clientDocuments.uploadedBy, users.id))
+        .where(eq(clientDocuments.clientId, clientId))
+        .orderBy(desc(clientDocuments.createdAt));
+
+      // Format response with uploader info
+      const formattedDocuments = documents.map(doc => ({
+        id: doc.id,
+        clientId: doc.clientId,
+        fileName: doc.fileName,
+        fileType: doc.fileType,
+        fileSize: doc.fileSize,
+        fileUrl: doc.fileUrl,
+        uploadedBy: doc.uploadedBy,
+        uploadedByUser: {
+          firstName: doc.uploaderFirstName || "Unknown",
+          lastName: doc.uploaderLastName || "User"
         },
-        {
-          id: "2",
-          clientId: clientId,
-          fileName: "Brand_Guidelines.docx",
-          fileType: "docx",
-          fileSize: 5100000, // 5.1 MB
-          fileUrl: "/documents/brand_guidelines.docx",
-          uploadedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-          uploadedByUser: { firstName: "Sarah", lastName: "Johnson" },
-          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-        }
-      ];
-      
-      res.json(mockDocuments);
+        createdAt: doc.createdAt,
+      }));
+
+      res.json(formattedDocuments);
     } catch (error) {
       console.error("Error fetching client documents:", error);
       res.status(500).json({ error: "Failed to fetch client documents" });
+    }
+  });
+
+  // Delete document (Admin only)
+  app.delete("/api/documents/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get current user (defaulting to admin for demo)
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      // Check if user has permission to delete documents (Admin only)
+      const hasDeletePermission = await hasPermission(currentUserId, 'documents', 'canDelete');
+      if (!hasDeletePermission) {
+        return res.status(403).json({ message: "Only administrators can delete documents" });
+      }
+
+      // Get document info before deletion
+      const document = await db
+        .select()
+        .from(clientDocuments)
+        .where(eq(clientDocuments.id, id))
+        .limit(1);
+
+      if (document.length === 0) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      const docRecord = document[0];
+
+      // Get client info for audit log
+      const client = await storage.getClient(docRecord.clientId);
+
+      // Delete from database
+      await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
+
+      // Create audit log
+      await createAuditLog(
+        "deleted",
+        "document",
+        id,
+        docRecord.fileName,
+        currentUserId,
+        `Deleted document: ${docRecord.fileName} from client: ${client?.name || 'Unknown'}`,
+        docRecord,
+        null,
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Serve documents securely
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      
+      // In a real implementation with user authentication, you would:
+      // 1. Check if user is authenticated
+      // 2. Verify user has access to the client associated with this document
+      // 3. Check document permissions
+      
+      // For now, allow access (in production, implement proper access control)
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving document:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      return res.status(500).json({ message: "Failed to serve document" });
     }
   });
 
