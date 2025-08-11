@@ -646,13 +646,14 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to update bundle quantities');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
       setEditingBundleQuantities(null);
       setTempQuantities({});
       toast({
         title: "Bundle customized",
-        description: "Bundle quantities have been updated for this client.",
+        description: `Bundle quantities updated. New price: $${data.newPrice?.toFixed(2)}`,
       });
     },
     onError: () => {
@@ -1419,7 +1420,7 @@ export default function EnhancedClientDetail() {
                                             disabled={updateBundleQuantitiesMutation.isPending}
                                             className="h-6 text-xs"
                                           >
-                                            Save
+                                            {updateBundleQuantitiesMutation.isPending ? 'Saving...' : 'Save'}
                                           </Button>
                                           <Button
                                             variant="outline"
@@ -1433,6 +1434,9 @@ export default function EnhancedClientDetail() {
                                             Cancel
                                           </Button>
                                         </div>
+                                      </div>
+                                      <div className="text-xs text-blue-600 mb-2">
+                                        Costs will be automatically recalculated based on new quantities
                                       </div>
                                       {bundleDetailsData[clientProduct.productId]?.map((bundleProduct: any, bundleIndex: number) => (
                                         <div

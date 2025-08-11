@@ -2254,16 +2254,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update client bundle custom quantities
+  // Update client bundle custom quantities with cost recalculation
   app.patch("/api/clients/:clientId/bundles/:bundleId/quantities", async (req, res) => {
     try {
       const { clientId, bundleId } = req.params;
       const { customQuantities } = req.body;
 
+      // Get bundle products with their costs to recalculate total
+      const bundleProductsList = await db
+        .select({
+          productId: bundleProducts.productId,
+          baseQuantity: bundleProducts.quantity,
+          productCost: products.cost,
+          productPrice: products.price
+        })
+        .from(bundleProducts)
+        .leftJoin(products, eq(bundleProducts.productId, products.id))
+        .where(eq(bundleProducts.bundleId, bundleId));
+
+      // Calculate new total cost based on custom quantities
+      let totalCost = 0;
+      let totalPrice = 0;
+
+      bundleProductsList.forEach(product => {
+        const quantity = customQuantities[product.productId] || product.baseQuantity || 0;
+        const cost = parseFloat(product.productCost || '0');
+        const price = parseFloat(product.productPrice || '0');
+        
+        totalCost += cost * quantity;
+        totalPrice += price * quantity;
+      });
+
+      // Update the client bundle with custom quantities and recalculated price
       await db
         .update(clientBundles)
         .set({
-          customQuantities: customQuantities
+          customQuantities: customQuantities,
+          price: totalPrice.toString() // Store the recalculated price
         })
         .where(
           and(
@@ -2272,7 +2299,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
-      res.json({ success: true });
+      res.json({ 
+        success: true, 
+        newPrice: totalPrice,
+        newCost: totalCost
+      });
     } catch (error) {
       console.error('Error updating bundle quantities:', error);
       res.status(500).json({ message: "Failed to update bundle quantities" });
