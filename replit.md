@@ -11,6 +11,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Bundle architecture preference: Collection-based bundles (confirmed working - user feedback: "LOVE how this functions!!!")
 
 ## System Architecture
 
@@ -72,6 +73,7 @@ Preferred communication style: Simple, everyday language.
 - **Campaign Template Management**: WYSIWYG editor for email and SMS templates, with folder organization and dynamic merge tags.
 - **Smart Lists System**: Advanced filtering with tab-based interface similar to Custom Fields page, featuring comprehensive permission system (personal, shared, universal visibility), multi-user collaboration with staff selection, visual indicators for list types, and automatic migration of legacy data.
 - **Enhanced Client Product Display**: Complete product and bundle management in client detail pages with cost visibility, role-based deletion controls, visual distinction between products and bundles (Package icons, teal styling), automatic calculation of bundle costs from component products with quantities, and accordion-style bundle expansion showing detailed product breakdown for account manager visibility.
+- **Bundle Architecture Success**: Successfully implemented and deployed collection-based bundle system (August 2025) with positive user feedback. Base bundles now cleanly define product collections while client-specific quantities provide maximum customization flexibility.
 
 ## External Dependencies
 
