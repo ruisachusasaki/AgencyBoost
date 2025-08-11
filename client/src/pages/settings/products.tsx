@@ -24,8 +24,10 @@ import {
   Calculator,
   Package2,
   ShoppingCart,
-  X
+  X,
+  ArrowLeft
 } from "lucide-react";
+import { Link } from "wouter";
 
 interface Product {
   id: string;
@@ -122,7 +124,15 @@ export default function ProductsSettings() {
 
   // Create bundle mutation
   const createBundleMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/product-bundles", "POST", data),
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/product-bundles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to create bundle');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
       setIsCreateBundleOpen(false);
@@ -143,7 +153,15 @@ export default function ProductsSettings() {
 
   // Update bundle mutation
   const updateBundleMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/product-bundles/${id}`, "PUT", data),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/product-bundles/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update bundle');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
       setIsEditBundleOpen(false);
@@ -165,7 +183,13 @@ export default function ProductsSettings() {
 
   // Delete bundle mutation
   const deleteBundleMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/product-bundles/${id}`, "DELETE"),
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/product-bundles/${id}`, {
+        method: "DELETE"
+      });
+      if (!response.ok) throw new Error('Failed to delete bundle');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
       toast({
@@ -277,40 +301,67 @@ export default function ProductsSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products & Services</h1>
-          <p className="text-gray-600">Manage your products, services, and bundles</p>
-        </div>
+      {/* Back to Settings Button */}
+      <div className="flex items-center space-x-2">
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="products" className="flex items-center gap-2">
-            <Package className="w-4 h-4" />
-            Products
-          </TabsTrigger>
-          <TabsTrigger value="bundles" className="flex items-center gap-2">
-            <Package2 className="w-4 h-4" />
-            Bundles
-          </TabsTrigger>
-        </TabsList>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
+          <Package className="h-8 w-8 text-[#46a1a0]" />
+          <span>Products & Services</span>
+        </h1>
+        <p className="text-muted-foreground">
+          Manage your products, services, and bundles with cost analysis
+        </p>
+      </div>
 
-        <div className="flex justify-between items-center">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "products", name: "Products", icon: Package, count: products.length },
+            { id: "bundles", name: "Bundles", icon: Package2, count: bundles.length }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} ({tab.count})
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+        <div className="flex justify-between items-center mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-9 w-80"
             />
           </div>
           
           {activeTab === "products" && (
             <Dialog open={isCreateProductOpen} onOpenChange={setIsCreateProductOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Product
                 </Button>
@@ -398,7 +449,7 @@ export default function ProductsSettings() {
           {activeTab === "bundles" && (
             <Dialog open={isCreateBundleOpen} onOpenChange={setIsCreateBundleOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Bundle
                 </Button>
@@ -499,7 +550,8 @@ export default function ProductsSettings() {
           )}
         </div>
 
-        <TabsContent value="products" className="space-y-4">
+        {/* Products Tab */}
+        {activeTab === "products" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -589,9 +641,10 @@ export default function ProductsSettings() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        <TabsContent value="bundles" className="space-y-4">
+        {/* Bundles Tab */}
+        {activeTab === "bundles" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -738,8 +791,7 @@ export default function ProductsSettings() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
 
       {/* Edit Bundle Dialog */}
       <Dialog open={isEditBundleOpen} onOpenChange={setIsEditBundleOpen}>
