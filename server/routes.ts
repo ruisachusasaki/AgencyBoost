@@ -2152,12 +2152,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Remove product from client
+  // Remove product or bundle from client
   app.delete("/api/clients/:clientId/products/:productId", async (req, res) => {
     try {
       const { clientId, productId } = req.params;
 
-      const [deleted] = await db
+      // First try to delete from clientProducts
+      const [deletedProduct] = await db
         .delete(clientProducts)
         .where(
           and(
@@ -2167,11 +2168,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .returning();
 
-      if (!deleted) {
-        return res.status(404).json({ message: "Client product relationship not found" });
+      if (deletedProduct) {
+        return res.status(204).send();
       }
 
-      res.status(204).send();
+      // If not found in products, try bundles
+      const [deletedBundle] = await db
+        .delete(clientBundles)
+        .where(
+          and(
+            eq(clientBundles.clientId, clientId),
+            eq(clientBundles.bundleId, productId)
+          )
+        )
+        .returning();
+
+      if (deletedBundle) {
+        return res.status(204).send();
+      }
+
+      return res.status(404).json({ message: "Client product/bundle relationship not found" });
     } catch (error) {
       console.error('Error removing product from client:', error);
       res.status(500).json({ message: "Failed to remove product from client" });

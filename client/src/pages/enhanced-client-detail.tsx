@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2 } from "lucide-react";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -465,6 +465,8 @@ export default function EnhancedClientDetail() {
     services: true
   });
 
+
+
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = () => {
     if (!client || !customFieldsData) return client?.name || "";
@@ -558,6 +560,16 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Fetch current user data
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/current-user');
+      if (!response.ok) throw new Error('Failed to fetch current user');
+      return response.json();
+    },
+  });
+
   // Fetch client products data
   const { data: clientProductsData = [], isLoading: clientProductsLoading } = useQuery({
     queryKey: ['/api/clients', clientId, 'products'],
@@ -567,6 +579,37 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!clientId,
+  });
+
+  // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
+  const canDeleteProducts = currentUser && ['Admin', 'Accounting', 'Manager'].includes(currentUser.role);
+
+  // Delete product/bundle mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const response = await fetch(`/api/clients/${clientId}/products/${productId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+      return productId;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch client products
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+      toast({
+        title: "Success",
+        description: "Product removed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove product",
+        variant: "destructive",
+      });
+    },
   });
 
   // Update sections when custom field folders are loaded
@@ -1229,14 +1272,36 @@ export default function EnhancedClientDetail() {
                               className="flex items-center justify-between p-2 bg-gray-50 rounded border"
                             >
                               <div className="flex items-center gap-2">
-                                <ShoppingCart className="h-4 w-4 text-gray-500" />
+                                {clientProduct.itemType === 'bundle' ? (
+                                  <Package className="h-4 w-4 text-teal-600" />
+                                ) : (
+                                  <ShoppingCart className="h-4 w-4 text-gray-500" />
+                                )}
                                 <span className="text-sm font-medium">{clientProduct.productName}</span>
+                                {clientProduct.itemType === 'bundle' && (
+                                  <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
+                                    Bundle
+                                  </Badge>
+                                )}
                               </div>
-                              {clientProduct.productPrice && (
-                                <Badge variant="outline" className="text-xs">
-                                  ${clientProduct.productPrice}
-                                </Badge>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {clientProduct.productPrice && (
+                                  <Badge variant="outline" className="text-xs">
+                                    ${clientProduct.productPrice}
+                                  </Badge>
+                                )}
+                                {canDeleteProducts && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteProductMutation.mutate(clientProduct.productId)}
+                                    disabled={deleteProductMutation.isPending}
+                                    className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
