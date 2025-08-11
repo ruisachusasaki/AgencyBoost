@@ -377,22 +377,15 @@ export default function ProductsSettings() {
 
   const calculateBundleMetrics = (bundle: ProductBundle) => {
     if (!bundle.products || bundle.products.length === 0) {
-      return { totalRevenue: 0, totalCost: 0, profit: 0, margin: 0 };
+      return { totalCost: 0 };
     }
 
-    // Each product is 1 unit in base bundle
-    const totalRevenue = bundle.products.reduce((sum, product) => {
-      return sum + parseFloat(product.productPrice || "0");
-    }, 0);
-
+    // Each product is 1 unit in base bundle - only calculate cost now
     const totalCost = bundle.products.reduce((sum, product) => {
       return sum + parseFloat(product.productCost || "0");
     }, 0);
 
-    const profit = totalRevenue - totalCost;
-    const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
-    return { totalRevenue, totalCost, profit, margin };
+    return { totalCost };
   };
 
   const filteredProducts = products.filter((product) =>
@@ -923,42 +916,15 @@ export default function ProductsSettings() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
-                            {/* Bundle Metrics */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                              <div className="bg-gray-50 p-3 rounded-lg">
+                            {/* Bundle Metrics - Cost Only */}
+                            <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
+                              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                                 <div className="flex items-center gap-2">
-                                  <DollarSign className="w-4 h-4 text-green-600" />
-                                  <span className="text-sm font-medium text-gray-600">Revenue</span>
-                                </div>
-                                <div className="text-lg font-bold text-green-600">
-                                  ${metrics.totalRevenue.toFixed(2)}
-                                </div>
-                              </div>
-                              <div className="bg-gray-50 p-3 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                  <Calculator className="w-4 h-4 text-red-600" />
-                                  <span className="text-sm font-medium text-gray-600">Cost</span>
-                                </div>
-                                <div className="text-lg font-bold text-red-600">
-                                  ${metrics.totalCost.toFixed(2)}
-                                </div>
-                              </div>
-                              <div className="bg-gray-50 p-3 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                                  <span className="text-sm font-medium text-gray-600">Profit</span>
+                                  <DollarSign className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-gray-600">Total Bundle Cost</span>
                                 </div>
                                 <div className="text-lg font-bold text-blue-600">
-                                  ${metrics.profit.toFixed(2)}
-                                </div>
-                              </div>
-                              <div className="bg-gray-50 p-3 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                  <TrendingUp className="w-4 h-4 text-purple-600" />
-                                  <span className="text-sm font-medium text-gray-600">Margin</span>
-                                </div>
-                                <div className="text-lg font-bold text-purple-600">
-                                  {metrics.margin.toFixed(1)}%
+                                  ${metrics.totalCost.toFixed(2)}
                                 </div>
                               </div>
                             </div>
@@ -979,8 +945,8 @@ export default function ProductsSettings() {
                                           </span>
                                         </div>
                                       </div>
-                                      <div className="text-sm font-medium">
-                                        ${parseFloat(product.productPrice).toFixed(2)} each
+                                      <div className="text-sm font-medium text-blue-600">
+                                        ${parseFloat(product.productCost || '0').toFixed(2)} cost each
                                       </div>
                                     </div>
                                   ))}
