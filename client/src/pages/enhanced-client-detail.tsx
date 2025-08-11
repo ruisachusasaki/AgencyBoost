@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X } from "lucide-react";
-import type { Client } from "@shared/schema";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target } from "lucide-react";
+import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -30,6 +30,7 @@ interface Activity {
   user: string;
   timestamp: string;
   content: string;
+  type: 'general' | 'email' | 'call' | 'meeting' | 'task' | 'note' | 'campaign' | 'workflow';
 }
 
 interface Task {
@@ -56,14 +57,64 @@ const mockActivities: Activity[] = [
     description: "Contact updated",
     user: "Michael Brown",
     timestamp: "4 minutes ago",
-    content: "Changed contact status from Lead to Customer and updated billing information."
+    content: "Changed contact status from Lead to Customer and updated billing information.",
+    type: "general"
   },
   {
     id: "2", 
     description: "Email sent",
     user: "Sarah Johnson",
     timestamp: "2 hours ago",
-    content: "Welcome email template sent successfully to client."
+    content: "Welcome email template sent successfully to client.",
+    type: "email"
+  },
+  {
+    id: "3",
+    description: "Phone call completed",
+    user: "Michael Brown",
+    timestamp: "1 day ago",
+    content: "Discussed project requirements and budget approval.",
+    type: "call"
+  },
+  {
+    id: "4",
+    description: "Meeting scheduled",
+    user: "Sarah Johnson", 
+    timestamp: "2 days ago",
+    content: "Initial consultation meeting scheduled for next week.",
+    type: "meeting"
+  },
+  {
+    id: "5",
+    description: "Task assigned",
+    user: "David Wilson",
+    timestamp: "3 days ago", 
+    content: "Follow-up call task assigned to team member.",
+    type: "task"
+  },
+  {
+    id: "6",
+    description: "Note added",
+    user: "Michael Brown",
+    timestamp: "4 days ago",
+    content: "Client expressed interest in premium package options.",
+    type: "note"
+  },
+  {
+    id: "7",
+    description: "Campaign enrolled",
+    user: "Sarah Johnson",
+    timestamp: "1 week ago",
+    content: "Added to Q1 Email Marketing Campaign.",
+    type: "campaign"
+  },
+  {
+    id: "8",
+    description: "Workflow triggered",
+    user: "System",
+    timestamp: "1 week ago",
+    content: "New Lead Welcome Workflow initiated automatically.",
+    type: "workflow"
   }
 ];
 
@@ -383,6 +434,14 @@ export default function EnhancedClientDetail() {
   // Field editing state (works for both custom and standard fields)
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
+  
+  // Activity filtering
+  const [activityFilter, setActivityFilter] = useState<'all' | 'general' | 'email' | 'call' | 'meeting' | 'task' | 'note' | 'campaign' | 'workflow'>('all');
+  
+  // Tags state
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = () => {
@@ -445,6 +504,16 @@ export default function EnhancedClientDetail() {
   // Fetch custom fields
   const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
     queryKey: ['/api/custom-fields'],
+  });
+
+  // Fetch tags data
+  const { data: tagsData = [], isLoading: tagsLoading } = useQuery({
+    queryKey: ['/api/tags'],
+    queryFn: async () => {
+      const response = await fetch('/api/tags');
+      if (!response.ok) throw new Error('Failed to fetch tags');
+      return response.json();
+    },
   });
 
   // Update sections when custom field folders are loaded
@@ -738,12 +807,164 @@ export default function EnhancedClientDetail() {
                 ))}
               </CardContent>
             </Card>
+
+            {/* Actions Section */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Hash className="h-5 w-5 text-primary" />
+                  Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Tags */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-900">Tags</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsAddingTag(true)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {client.tags && client.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {client.tags.map((tagName, index) => {
+                          const tag = tagsData.find((t: Tag) => t.name === tagName);
+                          return (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="text-xs"
+                              style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined, borderColor: tag?.color }}
+                            >
+                              {tagName}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No tags assigned</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Campaigns */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Campaigns
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-500">No campaigns associated</p>
+                    <p className="text-xs text-gray-400">Campaigns will appear when the client is added to marketing campaigns</p>
+                  </div>
+                </div>
+
+                {/* Workflows */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Workflow className="h-4 w-4" />
+                      Workflows
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-500">No workflows active</p>
+                    <p className="text-xs text-gray-400">Automated workflows will appear when triggered for this client</p>
+                  </div>
+                </div>
+
+                {/* Opportunities */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Opportunities
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-500">No opportunities tracked</p>
+                    <p className="text-xs text-gray-400">Sales opportunities will appear when pipeline functionality is added</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Middle Column - Activity & Quick Actions */}
           <div className="lg:col-span-1">
-            {/* Quick Actions */}
+            {/* Recent Activity - Moved to Top */}
             <Card className="mb-6">
+              <CardHeader>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <Select value={activityFilter} onValueChange={(value) => setActivityFilter(value as any)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Activity</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="call">Calls</SelectItem>
+                        <SelectItem value="meeting">Meetings</SelectItem>
+                        <SelectItem value="task">Tasks</SelectItem>
+                        <SelectItem value="note">Notes</SelectItem>
+                        <SelectItem value="campaign">Campaigns</SelectItem>
+                        <SelectItem value="workflow">Workflows</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockActivities
+                    .filter(activity => activityFilter === 'all' || activity.type === activityFilter)
+                    .map((activity) => (
+                    <div key={activity.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{activity.description}</p>
+                            <p className="text-sm text-gray-500">by {activity.user}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {activity.type}
+                          </Badge>
+                          <span className="text-sm text-gray-500">{activity.timestamp}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 text-sm ml-10">{activity.content}</p>
+                    </div>
+                  ))}
+                  {mockActivities.filter(activity => activityFilter === 'all' || activity.type === activityFilter).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
+                      <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions - Moved Below Activity */}
+            <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
               </CardHeader>
@@ -783,34 +1004,6 @@ export default function EnhancedClientDetail() {
                       Send
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Activity Feed */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockActivities.map((activity) => (
-                    <div key={activity.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{activity.description}</p>
-                            <p className="text-sm text-gray-500">by {activity.user}</p>
-                          </div>
-                        </div>
-                        <span className="text-sm text-gray-500">{activity.timestamp}</span>
-                      </div>
-                      <p className="text-gray-700 text-sm ml-10">{activity.content}</p>
-                    </div>
-                  ))}
                 </div>
               </CardContent>
             </Card>
