@@ -2046,7 +2046,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pb.description as "productDescription",
             NULL as "productPrice",
             COALESCE(
-              (SELECT SUM(p.cost * bp.quantity) 
+              (SELECT SUM(
+                p.cost * COALESCE(
+                  (cb.custom_quantities->>(bp.product_id))::integer, 
+                  1
+                )
+              )
                FROM bundle_products bp 
                LEFT JOIN products p ON bp.product_id = p.id 
                WHERE bp.bundle_id = cb.bundle_id), 
@@ -2266,7 +2271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bundleProductsList = await db
         .select({
           productId: bundleProducts.productId,
-          baseQuantity: bundleProducts.quantity,
+          baseQuantity: sql<number>`1`, // Base bundle always has 1 unit of each product
           productCost: products.cost,
           productPrice: products.price
         })
@@ -2552,7 +2557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: bundleProducts.id,
           bundleId: bundleProducts.bundleId,
           productId: bundleProducts.productId,
-          quantity: bundleProducts.quantity,
+          // quantity field removed - stored in clientBundles.customQuantities
           productName: products.name,
           productDescription: products.description,
           productPrice: products.price,
@@ -2588,8 +2593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (bundleProductsData && bundleProductsData.length > 0) {
         const bundleProductsInserts = bundleProductsData.map((product: any) => ({
           bundleId: newBundle.id,
-          productId: product.productId,
-          quantity: product.quantity || 1
+          productId: product.productId
+          // No quantity field - each product is 1 unit by default
         }));
         
         await db.insert(bundleProducts).values(bundleProductsInserts);
@@ -2632,8 +2637,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (bundleProductsData.length > 0) {
           const bundleProductsInserts = bundleProductsData.map((product: any) => ({
             bundleId: id,
-            productId: product.productId,
-            quantity: product.quantity || 1
+            productId: product.productId
+            // No quantity field - each product is 1 unit by default
           }));
           
           await db.insert(bundleProducts).values(bundleProductsInserts);
@@ -2654,7 +2659,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      // Remove bundle products first
+      // First, remove client bundles that reference this bundle
+      await db.delete(clientBundles).where(eq(clientBundles.bundleId, id));
+      
+      // Remove bundle products
       await db.delete(bundleProducts).where(eq(bundleProducts.bundleId, id));
       
       // Remove the bundle
