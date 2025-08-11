@@ -150,7 +150,14 @@ export default function ProductsSettings() {
   const updateProductMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/products/${id}`, data),
     onSuccess: () => {
+      // Invalidate all related queries to ensure real-time updates everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      // Also invalidate any specific bundle product queries
+      queryClient.invalidateQueries({ predicate: (query) => 
+        query.queryKey.some(key => typeof key === 'string' && key.includes('/products'))
+      });
       setIsEditProductOpen(false);
       setEditingProduct(null);
       toast({
