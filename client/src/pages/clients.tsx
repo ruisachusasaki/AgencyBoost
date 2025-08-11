@@ -280,7 +280,18 @@ export default function Clients() {
             case 'clientVertical': return client.clientVertical || '';
             case 'contactOwner': return getContactOwnerName(client.contactOwner) || '';
             case 'createdAt': return client.createdAt ? format(new Date(client.createdAt), 'yyyy-MM-dd') : '';
-            default: return '';
+            default: {
+              // Check if this is a custom field by name
+              if (!customFieldsData || !client.customFieldValues) return '';
+              
+              const customField = customFieldsData.find(cf => cf.name === field);
+              if (customField && client.customFieldValues) {
+                const customFieldValues = client.customFieldValues as Record<string, any>;
+                return customFieldValues[customField.id] || '';
+              }
+              
+              return '';
+            }
           }
         };
 
