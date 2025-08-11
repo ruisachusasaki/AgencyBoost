@@ -442,6 +442,8 @@ export default function EnhancedClientDetail() {
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [filteredTags, setFilteredTags] = useState<Tag[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   // Actions section accordion state
   const [actionsExpanded, setActionsExpanded] = useState({
@@ -642,6 +644,7 @@ export default function EnhancedClientDetail() {
       // Reset form
       setNewTagName("");
       setIsAddingTag(false);
+      setShowSuggestions(false);
 
       toast({
         title: "Tag created",
@@ -654,6 +657,30 @@ export default function EnhancedClientDetail() {
         variant: "destructive"
       });
     }
+  };
+
+  // Filter tags based on input
+  const handleTagInputChange = (value: string) => {
+    setNewTagName(value);
+    
+    if (value.trim()) {
+      const filtered = tagsData.filter((tag: Tag) => 
+        tag.name.toLowerCase().includes(value.toLowerCase()) &&
+        !(client.tags || []).includes(tag.name)
+      );
+      setFilteredTags(filtered);
+      setShowSuggestions(true);
+    } else {
+      setFilteredTags([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const selectExistingTag = (tagName: string) => {
+    addTagToClient(tagName);
+    setNewTagName("");
+    setIsAddingTag(false);
+    setShowSuggestions(false);
   };
 
   // Field update mutation (handles both custom and standard fields)
@@ -1369,55 +1396,91 @@ export default function EnhancedClientDetail() {
               <DialogTitle>Add New Tag</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">Tag Name</Label>
+              <div className="relative">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Search or Create Tag</Label>
                 <Input
                   value={newTagName}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  placeholder="Enter tag name"
+                  onChange={(e) => handleTagInputChange(e.target.value)}
+                  placeholder="Type to search existing tags or create new..."
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      createNewTag();
+                      if (filteredTags.length > 0 && filteredTags[0].name.toLowerCase() === newTagName.toLowerCase()) {
+                        selectExistingTag(filteredTags[0].name);
+                      } else {
+                        createNewTag();
+                      }
                     }
                   }}
+                  onFocus={() => {
+                    if (newTagName.trim()) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay hiding suggestions to allow clicking
+                    setTimeout(() => setShowSuggestions(false), 200);
+                  }}
                 />
+                
+                {/* Autocomplete Suggestions */}
+                {showSuggestions && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {filteredTags.length > 0 ? (
+                      <>
+                        <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b">
+                          Existing Tags
+                        </div>
+                        {filteredTags.map((tag: Tag) => (
+                          <button
+                            key={tag.id}
+                            onClick={() => selectExistingTag(tag.name)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                          >
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: tag.color || '#3B82F6' }}
+                            />
+                            <span className="text-sm truncate">{tag.name}</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : newTagName.trim() ? (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No existing tags found. Press Enter to create "{newTagName}"
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-gray-700">Or select existing tag:</Label>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {tagsData.length > 0 ? (
-                    tagsData.map((tag: Tag) => (
-                      <button
-                        key={tag.id}
-                        onClick={() => {
-                          addTagToClient(tag.name);
-                          setIsAddingTag(false);
-                        }}
-                        className="w-full text-left p-2 hover:bg-gray-50 rounded flex items-center gap-2"
-                      >
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.color || '#3B82F6' }}
-                        />
-                        <span className="text-sm">{tag.name}</span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">No existing tags found</p>
-                  )}
-                </div>
-              </div>
+              
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddingTag(false)}>
+                <Button variant="outline" onClick={() => {
+                  setIsAddingTag(false);
+                  setNewTagName("");
+                  setShowSuggestions(false);
+                }}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={createNewTag}
-                  disabled={!newTagName.trim()}
-                >
-                  Create & Add Tag
-                </Button>
+                {newTagName.trim() && (
+                  <>
+                    {filteredTags.length > 0 && filteredTags[0].name.toLowerCase() === newTagName.toLowerCase() ? (
+                      <Button 
+                        onClick={() => selectExistingTag(filteredTags[0].name)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        Add Existing Tag
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={createNewTag}
+                        disabled={!newTagName.trim()}
+                      >
+                        Create & Add Tag
+                      </Button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </DialogContent>
