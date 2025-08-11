@@ -24,7 +24,7 @@ import {
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { db } from "./db";
-import { eq, like, or, and, asc, desc, sql } from "drizzle-orm";
+import { eq, like, or, and, asc, desc, sql, inArray } from "drizzle-orm";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
 
@@ -4438,26 +4438,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      // Get documents with uploader information
+      // Get documents first
       const documents = await db
-        .select({
-          id: clientDocuments.id,
-          clientId: clientDocuments.clientId,
-          fileName: clientDocuments.fileName,
-          fileType: clientDocuments.fileType,
-          fileSize: clientDocuments.fileSize,
-          fileUrl: clientDocuments.fileUrl,
-          uploadedBy: clientDocuments.uploadedBy,
-          createdAt: clientDocuments.createdAt,
-          uploaderFirstName: users.firstName,
-          uploaderLastName: users.lastName,
-        })
+        .select()
         .from(clientDocuments)
-        .leftJoin(users, eq(clientDocuments.uploadedBy, users.id))
         .where(eq(clientDocuments.clientId, clientId))
         .orderBy(desc(clientDocuments.createdAt));
 
-      // Format response with uploader info
+      // Format response with basic uploader info (we'll fetch staff info separately if needed)
       const formattedDocuments = documents.map(doc => ({
         id: doc.id,
         clientId: doc.clientId,
@@ -4465,10 +4453,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileType: doc.fileType,
         fileSize: doc.fileSize,
         fileUrl: doc.fileUrl,
+        downloadUrl: doc.fileUrl, // Frontend expects downloadUrl
         uploadedBy: doc.uploadedBy,
         uploadedByUser: {
-          firstName: doc.uploaderFirstName || "Unknown",
-          lastName: doc.uploaderLastName || "User"
+          firstName: "Staff",
+          lastName: "Member"
         },
         createdAt: doc.createdAt,
       }));
