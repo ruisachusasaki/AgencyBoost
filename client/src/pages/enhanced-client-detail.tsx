@@ -451,6 +451,7 @@ export default function EnhancedClientDetail() {
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [filteredBundles, setFilteredBundles] = useState<any[]>([]);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
+  const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
   
   // Actions section accordion state
   const [actionsExpanded, setActionsExpanded] = useState({
@@ -579,6 +580,26 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!clientId,
+  });
+
+  // Fetch bundle details for expanded bundles
+  const { data: bundleDetailsData = {} } = useQuery({
+    queryKey: ['/api/bundle-details', Array.from(expandedBundles)],
+    queryFn: async () => {
+      const bundleDetails = {};
+      for (const bundleId of expandedBundles) {
+        try {
+          const response = await fetch(`/api/product-bundles/${bundleId}/products`);
+          if (response.ok) {
+            bundleDetails[bundleId] = await response.json();
+          }
+        } catch (error) {
+          console.error(`Failed to fetch bundle details for ${bundleId}:`, error);
+        }
+      }
+      return bundleDetails;
+    },
+    enabled: expandedBundles.size > 0,
   });
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
@@ -1267,46 +1288,90 @@ export default function EnhancedClientDetail() {
                       {clientProductsData && clientProductsData.length > 0 ? (
                         <div className="space-y-2">
                           {clientProductsData.map((clientProduct: any, index: number) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-2 bg-gray-50 rounded border"
-                            >
-                              <div className="flex items-center gap-2">
-                                {clientProduct.itemType === 'bundle' ? (
-                                  <Package className="h-4 w-4 text-teal-600" />
-                                ) : (
-                                  <ShoppingCart className="h-4 w-4 text-gray-500" />
-                                )}
-                                <span className="text-sm font-medium">{clientProduct.productName}</span>
-                                {clientProduct.itemType === 'bundle' && (
-                                  <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
-                                    Bundle
-                                  </Badge>
-                                )}
+                            <div key={index} className="space-y-2">
+                              {/* Main Product/Bundle Item */}
+                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                <div className="flex items-center gap-2 flex-1">
+                                  {clientProduct.itemType === 'bundle' ? (
+                                    <button
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedBundles);
+                                        if (newExpanded.has(clientProduct.productId)) {
+                                          newExpanded.delete(clientProduct.productId);
+                                        } else {
+                                          newExpanded.add(clientProduct.productId);
+                                        }
+                                        setExpandedBundles(newExpanded);
+                                      }}
+                                      className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors"
+                                    >
+                                      <Package className="h-4 w-4 text-teal-600" />
+                                      <span className="text-sm font-medium">{clientProduct.productName}</span>
+                                      <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
+                                        Bundle
+                                      </Badge>
+                                      {expandedBundles.has(clientProduct.productId) ? (
+                                        <ChevronDown className="h-3 w-3 text-gray-400" />
+                                      ) : (
+                                        <ChevronRight className="h-3 w-3 text-gray-400" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <ShoppingCart className="h-4 w-4 text-gray-500" />
+                                      <span className="text-sm font-medium">{clientProduct.productName}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {clientProduct.productPrice && (
+                                    <Badge variant="outline" className="text-xs">
+                                      ${clientProduct.productPrice}
+                                    </Badge>
+                                  )}
+                                  {clientProduct.productCost && (
+                                    <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                      Cost: ${clientProduct.productCost}
+                                    </Badge>
+                                  )}
+                                  {canDeleteProducts && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteProductMutation.mutate(clientProduct.productId)}
+                                      disabled={deleteProductMutation.isPending}
+                                      className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {clientProduct.productPrice && (
-                                  <Badge variant="outline" className="text-xs">
-                                    ${clientProduct.productPrice}
-                                  </Badge>
-                                )}
-                                {clientProduct.productCost && (
-                                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                                    Cost: ${clientProduct.productCost}
-                                  </Badge>
-                                )}
-                                {canDeleteProducts && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteProductMutation.mutate(clientProduct.productId)}
-                                    disabled={deleteProductMutation.isPending}
-                                    className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
+
+                              {/* Expanded Bundle Contents */}
+                              {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId) && (
+                                <div className="ml-6 space-y-1">
+                                  {bundleDetailsData[clientProduct.productId] ? (
+                                    bundleDetailsData[clientProduct.productId].map((bundleProduct: any, bundleIndex: number) => (
+                                      <div
+                                        key={bundleIndex}
+                                        className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
+                                      >
+                                        <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+                                        <ShoppingCart className="h-3 w-3 text-gray-400" />
+                                        <span className="text-gray-600">{bundleProduct.productName}</span>
+                                        <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
+                                          Qty: {bundleProduct.quantity}
+                                        </Badge>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm text-gray-500">
+                                      Loading bundle details...
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

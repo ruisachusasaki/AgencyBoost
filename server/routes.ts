@@ -2202,6 +2202,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get bundle products details
+  app.get("/api/product-bundles/:bundleId/products", async (req, res) => {
+    try {
+      const { bundleId } = req.params;
+      
+      const bundleProductsList = await db
+        .select({
+          productId: bundleProducts.productId,
+          productName: products.name,
+          productDescription: products.description,
+          quantity: bundleProducts.quantity,
+          productType: products.type
+        })
+        .from(bundleProducts)
+        .leftJoin(products, eq(bundleProducts.productId, products.id))
+        .where(eq(bundleProducts.bundleId, bundleId));
+
+      res.json(bundleProductsList);
+
+
+    } catch (error) {
+      console.error('Error fetching bundle products:', error);
+      res.status(500).json({ message: "Failed to fetch bundle products" });
+    }
+  });
+
   app.post("/api/products", async (req, res) => {
     try {
       const validatedData = insertProductSchema.parse(req.body);
