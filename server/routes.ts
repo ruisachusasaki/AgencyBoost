@@ -657,7 +657,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tasks", async (req, res) => {
     try {
       const tasks = await storage.getTasks();
-      res.json(tasks);
+      
+      // Also include client tasks from global storage
+      let allTasks = [...tasks];
+      if (global.tasks) {
+        allTasks = [...allTasks, ...global.tasks];
+      }
+      
+      // Remove duplicates by ID
+      const uniqueTasks = allTasks.filter((task, index, self) => 
+        index === self.findIndex(t => t.id === task.id)
+      );
+      
+      res.json(uniqueTasks);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch tasks" });
     }
@@ -3538,10 +3550,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date()
       };
 
-      // Store in memory
+      // Store in client-specific memory
       if (!global.clientTasks) global.clientTasks = {};
       if (!global.clientTasks[clientId]) global.clientTasks[clientId] = [];
       global.clientTasks[clientId].push(newTask);
+
+      // Also store in global tasks storage for the main Tasks section
+      if (!global.tasks) global.tasks = [];
+      global.tasks.push(newTask);
 
       // Log the creation
       await createAuditLog(
@@ -3586,6 +3602,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       global.clientTasks[clientId][taskIndex] = updatedTask;
+
+      // Also update in global tasks storage
+      if (global.tasks) {
+        const globalTaskIndex = global.tasks.findIndex(t => t.id === taskId);
+        if (globalTaskIndex !== -1) {
+          global.tasks[globalTaskIndex] = updatedTask;
+        }
+      }
 
       // Log the update
       await createAuditLog(
@@ -3658,6 +3682,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       global.clientTasks[clientId][taskIndex] = updatedTask;
+
+      // Also update in global tasks storage
+      if (global.tasks) {
+        const globalTaskIndex = global.tasks.findIndex(t => t.id === taskId);
+        if (globalTaskIndex !== -1) {
+          global.tasks[globalTaskIndex] = updatedTask;
+        }
+      }
 
       // Create detailed audit log entry
       const changes = [];
