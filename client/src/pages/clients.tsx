@@ -110,6 +110,10 @@ export default function Clients() {
   const [shareListId, setShareListId] = useState<string | null>(null);
   const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
   const [shareVisibility, setShareVisibility] = useState<'personal' | 'shared' | 'universal'>('personal');
+  
+  // Smart list overflow handling
+  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
+  const maxVisibleTabs = 4; // Show "All Clients" + up to 3 smart lists, then "More"
 
   // Get unique values for dropdown fields from actual client data or custom field options
   const getFieldOptions = (fieldName: string): string[] => {
@@ -939,64 +943,143 @@ export default function Clients() {
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8 overflow-x-auto">
-          {[
-            { id: "all-clients", name: "All Clients", icon: Database, count: clients.length },
-            ...getVisibleSmartLists().map(smartList => ({
-              id: smartList.id,
-              name: smartList.name,
-              icon: smartList.visibility === 'personal' ? Lock : 
-                    smartList.visibility === 'shared' ? Share2 : Globe,
-              count: getSmartListCount(smartList),
-              smartList: smartList
-            }))
-          ].map((tab) => {
-            const Icon = tab.icon;
+          {(() => {
+            const allTabs = [
+              { id: "all-clients", name: "All Clients", icon: Database, count: clients.length },
+              ...getVisibleSmartLists().map(smartList => ({
+                id: smartList.id,
+                name: smartList.name,
+                icon: smartList.visibility === 'personal' ? Lock : 
+                      smartList.visibility === 'shared' ? Share2 : Globe,
+                count: getSmartListCount(smartList),
+                smartList: smartList
+              }))
+            ];
+
+            const needsMoreDropdown = allTabs.length > maxVisibleTabs;
+            const visibleTabs = needsMoreDropdown ? allTabs.slice(0, maxVisibleTabs - 1) : allTabs;
+            const hiddenTabs = needsMoreDropdown ? allTabs.slice(maxVisibleTabs - 1) : [];
+
+            const renderTab = (tab: any) => {
+              const Icon = tab.icon;
+              return (
+                <div key={tab.id} className="flex items-center">
+                  <button
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "border-[#46a1a0] text-[#46a1a0]"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.name} ({tab.count})
+                  </button>
+                  {'smartList' in tab && (
+                    !tab.smartList.createdBy || 
+                    tab.smartList.createdBy === (currentUser?.id || 'current-user') || 
+                    tab.smartList.createdBy === 'current-user'
+                  ) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => 'smartList' in tab && handleShareSmartList(tab.smartList.id)}>
+                          <Share2 className="mr-2 h-4 w-4" />
+                          Share Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            if ('smartList' in tab && confirm(`Delete "${tab.smartList.name}"?`)) {
+                              handleDeleteSmartList(tab.smartList.id);
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              );
+            };
+
             return (
-              <div key={tab.id} className="flex items-center">
-                <button
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-[#46a1a0] text-[#46a1a0]"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.name} ({tab.count})
-                </button>
-                {'smartList' in tab && (
-                  !tab.smartList.createdBy || 
-                  tab.smartList.createdBy === (currentUser?.id || 'current-user') || 
-                  tab.smartList.createdBy === 'current-user'
-                ) && (
-                  <DropdownMenu>
+              <>
+                {visibleTabs.map(renderTab)}
+                {needsMoreDropdown && (
+                  <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
-                        <MoreHorizontal className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => 'smartList' in tab && handleShareSmartList(tab.smartList.id)}>
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Share Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          if ('smartList' in tab && confirm(`Delete "${tab.smartList.name}"?`)) {
-                            handleDeleteSmartList(tab.smartList.id);
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      <button
+                        className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+                          hiddenTabs.some(tab => activeTab === tab.id)
+                            ? "border-[#46a1a0] text-[#46a1a0]"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
+                        <MoreHorizontal className="h-4 w-4" />
+                        More ({hiddenTabs.length})
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      {hiddenTabs.map((tab) => {
+                        const Icon = tab.icon;
+                        return (
+                          <div key={tab.id} className="flex items-center justify-between">
+                            <DropdownMenuItem
+                              onClick={() => handleTabChange(tab.id)}
+                              className={`flex-1 ${
+                                activeTab === tab.id ? "bg-[#46a1a0]/10 text-[#46a1a0]" : ""
+                              }`}
+                            >
+                              <Icon className="mr-2 h-4 w-4" />
+                              {tab.name} ({tab.count})
+                            </DropdownMenuItem>
+                            {'smartList' in tab && (
+                              !tab.smartList.createdBy || 
+                              tab.smartList.createdBy === (currentUser?.id || 'current-user') || 
+                              tab.smartList.createdBy === 'current-user'
+                            ) && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                                    <MoreHorizontal className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuItem onClick={() => 'smartList' in tab && handleShareSmartList(tab.smartList.id)}>
+                                    <Share2 className="mr-2 h-4 w-4" />
+                                    Share Settings
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      if ('smartList' in tab && confirm(`Delete "${tab.smartList.name}"?`)) {
+                                        handleDeleteSmartList(tab.smartList.id);
+                                      }
+                                    }}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                        );
+                      })}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-              </div>
+              </>
             );
-          })}
+          })()}
         </nav>
       </div>
 
