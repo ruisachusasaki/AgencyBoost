@@ -94,8 +94,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = (page - 1) * limit;
-      const sortBy = req.query.sortBy as string || "name"; // default sort by name
-      const sortOrder = req.query.sortOrder as string || "asc"; // default ascending
+      const sortBy = req.query.sortBy as string || "createdAt"; // default sort by creation date
+      const sortOrder = req.query.sortOrder as string || "desc"; // default descending (newest first)
       
       // Add cache-busting headers for fresh data
       res.set({

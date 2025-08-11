@@ -84,8 +84,8 @@ interface PaginatedClientsResponse {
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
   );
