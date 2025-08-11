@@ -1,1007 +1,585 @@
-import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { 
-  ArrowLeft, 
-  Phone, 
-  Mail, 
-  MessageSquare, 
-  ShieldOff,
-  StickyNote,
-  Calendar,
-  Upload,
-  CreditCard,
-  Search,
-  Plus,
-  Edit2,
-  Trash2,
-  Users,
-  Clock,
-  UserCircle,
-  UserPlus,
-  FileText,
-  Settings,
-  Tag,
-  Folder,
-  User,
-  MapPin,
-  Building,
-  Globe,
-  Hash,
-  DollarSign,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  Save,
-  X
-} from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink } from "lucide-react";
+import type { Client } from "@shared/schema";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
-// Enhanced Client Detail Page with complete functionality
+// Types
+interface Section {
+  id: string;
+  name: string;
+  isOpen: boolean;
+}
+
+interface Activity {
+  id: string;
+  description: string;
+  user: string;
+  timestamp: string;
+  content: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  status: "pending" | "completed";
+}
+
+interface NewTask {
+  title: string;
+  description: string;
+  dueDate: string;
+  dueTime: string;
+  assignee: string;
+  recurring: boolean;
+}
+
+// Mock data
+const mockActivities: Activity[] = [
+  {
+    id: "1",
+    description: "Contact updated",
+    user: "Michael Brown",
+    timestamp: "4 minutes ago",
+    content: "Changed contact status from Lead to Customer and updated billing information."
+  },
+  {
+    id: "2", 
+    description: "Email sent",
+    user: "Sarah Johnson",
+    timestamp: "2 hours ago",
+    content: "Welcome email template sent successfully to client."
+  }
+];
+
+const mockUsers = [
+  { id: "1", name: "Michael Brown" },
+  { id: "2", name: "Sarah Johnson" },
+  { id: "3", name: "David Wilson" }
+];
+
 export default function EnhancedClientDetail() {
-  const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
-  // State management for right sidebar
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "appointments" | "documents" | "payments">("notes");
+  // Extract client ID from URL
+  const clientId = window.location.pathname.split('/').pop();
+  
+  // State management
+  const [sections, setSections] = useState<Section[]>([
+    { id: "contact-details", name: "Contact Details", isOpen: true }
+  ]);
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
-  const [editingNote, setEditingNote] = useState<string | null>(null);
-  const [editNoteContent, setEditNoteContent] = useState("");
-
-  // State for client editing
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [clientData, setClientData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    company: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "",
-    website: "",
-    status: "active"
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [clientTasks, setClientTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState<NewTask>({
+    title: "",
+    description: "",
+    dueDate: "",
+    dueTime: "",
+    assignee: "",
+    recurring: false
   });
 
   // Fetch client data
-  const { data: client, isLoading: clientLoading } = useQuery({
-    queryKey: ['/api/clients', id],
-    queryFn: async () => {
-      const response = await fetch(`/api/clients/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch client');
-      return response.json();
-    },
-    enabled: !!id,
-  });
-
-  // Fetch current user
-  const { data: currentUser } = useQuery({
-    queryKey: ['/api/auth/me'],
-    queryFn: async () => {
-      const response = await fetch('/api/auth/me');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
-    },
-  });
-
-  // Fetch custom fields
-  const { data: customFields = [] } = useQuery({
-    queryKey: ['/api/custom-fields'],
-    queryFn: async () => {
-      const response = await fetch('/api/custom-fields');
-      if (!response.ok) throw new Error('Failed to fetch custom fields');
-      return response.json();
-    },
+  const { data: client, isLoading, error } = useQuery<Client>({
+    queryKey: ['/api/clients', clientId],
+    enabled: !!clientId,
   });
 
   // Fetch custom field folders
-  const { data: customFieldFolders = [] } = useQuery({
+  const { data: customFieldFolders } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ['/api/custom-field-folders'],
-    queryFn: async () => {
-      const response = await fetch('/api/custom-field-folders');
-      if (!response.ok) throw new Error('Failed to fetch folders');
-      return response.json();
-    },
   });
 
-  // Fetch client notes
-  const { data: clientNotes = [], isLoading: notesLoading } = useQuery({
-    queryKey: ['/api/notes', 'client', id],
-    queryFn: async () => {
-      const response = await fetch(`/api/notes?clientId=${id}`);
-      if (!response.ok) throw new Error('Failed to fetch notes');
-      return response.json();
-    },
-    enabled: !!id,
-  });
-
-  // Initialize client data when loaded
+  // Update sections when custom field folders are loaded
   useEffect(() => {
-    if (client) {
-      setClientData({
-        firstName: client.firstName || "",
-        lastName: client.lastName || "",
-        email: client.email || "",
-        phone: client.phone || "",
-        company: client.company || "",
-        address: client.address || "",
-        city: client.city || "",
-        state: client.state || "",
-        zipCode: client.zipCode || "",
-        country: client.country || "",
-        website: client.website || "",
-        status: client.status || "active"
+    if (customFieldFolders) {
+      const newSections: Section[] = [
+        { id: "contact-details", name: "Contact Details", isOpen: true }
+      ];
+      
+      // Add custom field folders as sections
+      customFieldFolders.forEach(folder => {
+        newSections.push({
+          id: folder.name.toLowerCase().replace(/\s+/g, '-'),
+          name: folder.name,
+          isOpen: false
+        });
       });
+      
+      setSections(newSections);
     }
-  }, [client]);
+  }, [customFieldFolders]);
 
-  // Update client mutation
-  const updateClientMutation = useMutation({
-    mutationFn: async (updates: any) => {
-      await apiRequest("PUT", `/api/clients/${id}`, updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', id] });
-      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-      setIsEditing(false);
-      setEditingField(null);
-      toast({
-        title: "Success",
-        description: "Client updated successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update client",
-        variant: "destructive",
-      });
-    },
-  });
+  // Utility functions
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
 
-  // Create note mutation
-  const createNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const response = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          content, 
-          clientId: id,
-          type: 'note'
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to create note');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notes', 'client', id] });
-      setNewNote("");
-      toast({
-        title: "Success",
-        description: "Note added successfully",
-      });
-    },
-  });
+  const toggleSection = (sectionId: string) => {
+    setSections(prev => prev.map(section => 
+      section.id === sectionId 
+        ? { ...section, isOpen: !section.isOpen }
+        : section
+    ));
+  };
 
-  if (!id) {
-    return <div>Invalid client ID</div>;
-  }
+  const isSectionOpen = (sectionId: string) => {
+    return sections.find(s => s.id === sectionId)?.isOpen || false;
+  };
 
-  if (clientLoading) {
+  const sendSMS = () => {
+    if (!smsMessage.trim()) return;
+    toast({
+      title: "SMS Sent",
+      description: `Message sent to ${client?.name}`,
+    });
+    setSmsMessage("");
+  };
+
+  const sendEmail = () => {
+    if (!emailMessage.trim()) return;
+    toast({
+      title: "Email Sent",
+      description: `Email sent to ${client?.name}`,
+    });
+    setEmailMessage("");
+  };
+
+  // Loading state
+  if (isLoading || !clientId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading client details...</div>
+      <div className="flex h-screen bg-gray-50">
+        <div className="w-80 bg-white border-r border-gray-200 animate-pulse">
+          <div className="p-4 space-y-4">
+            <div className="h-6 bg-gray-200 rounded w-20"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col">
+          <div className="p-6 border-b border-gray-200 bg-white animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-40 mb-4"></div>
+            <div className="h-10 bg-gray-200 rounded w-80"></div>
+          </div>
+        </div>
+        <div className="w-80 bg-white border-l border-gray-200 animate-pulse">
+          <div className="p-4 space-y-4">
+            <div className="h-6 bg-gray-200 rounded w-20"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!client) {
-    return <div>Client not found</div>;
-  }
-
-  const handleSendSMS = () => {
-    if (!smsMessage.trim()) return;
-    
-    if (client?.dndAll || client?.dndSms) {
-      toast({
-        title: "Message Blocked",
-        description: "SMS sending is blocked by DND settings",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // SMS sending logic would go here
-    toast({
-      title: "SMS Sent",
-      description: "Text message sent successfully",
-    });
-    setSmsMessage("");
-  };
-
-  const handleSendEmail = () => {
-    if (!emailMessage.trim()) return;
-    
-    if (client?.dndAll || client?.dndEmail) {
-      toast({
-        title: "Message Blocked", 
-        description: "Email sending is blocked by DND settings",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Email sending logic would go here
-    toast({
-      title: "Email Sent",
-      description: "Email sent successfully",
-    });
-    setEmailMessage("");
-  };
-
-  const handleFieldSave = (fieldName: string, value: string) => {
-    updateClientMutation.mutate({ [fieldName]: value });
-    setEditingField(null);
-  };
-
-  const handleClientSave = () => {
-    updateClientMutation.mutate(clientData);
-  };
-
-  const renderCustomFieldValue = (field: any, value: any) => {
-    const { type, options } = field;
-    const className = "text-sm text-gray-900 dark:text-white";
-
-    if (editingField === field.id) {
-      return (
-        <div className="space-y-2">
-          {type === 'text' || type === 'email' || type === 'phone' || type === 'url' ? (
-            <Input
-              type={type === 'email' ? 'email' : type === 'phone' ? 'tel' : type === 'url' ? 'url' : 'text'}
-              defaultValue={value || ''}
-              onBlur={(e) => handleFieldSave(field.id, e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleFieldSave(field.id, e.currentTarget.value)}
-              autoFocus
-            />
-          ) : type === 'multiline' ? (
-            <Textarea
-              defaultValue={value || ''}
-              onBlur={(e) => handleFieldSave(field.id, e.target.value)}
-              autoFocus
-            />
-          ) : type === 'dropdown' ? (
-            <Select defaultValue={value || ''} onValueChange={(val) => handleFieldSave(field.id, val)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select option" />
-              </SelectTrigger>
-              <SelectContent>
-                {options?.map((option: string) => (
-                  <SelectItem key={option} value={option}>{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              defaultValue={value || ''}
-              onBlur={(e) => handleFieldSave(field.id, e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleFieldSave(field.id, e.currentTarget.value)}
-              autoFocus
-            />
-          )}
-        </div>
-      );
-    }
-
-    // Display mode
-    if (!value) {
-      return <span className="text-gray-400 italic text-sm">Not specified</span>;
-    }
-
-    if (type === 'dropdown_multiple' && Array.isArray(value)) {
-      return (
-        <div className="flex flex-wrap gap-1">
-          {value.map((item, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {item}
-            </Badge>
-          ))}
-        </div>
-      );
-    }
-
-    if (type === 'checkbox' && typeof value === 'string') {
-      return (
-        <div className="flex flex-wrap gap-1">
-          {value.split(',').map((item, index) => {
-            const trimmedItem = item.trim();
-            return trimmedItem ? (
-              <Badge key={index} variant="secondary" className="text-xs">
-                {trimmedItem}
-              </Badge>
-            ) : null;
-          })}
-        </div>
-      );
-    }
-
-    if (type === 'radio' && value) {
-      return <Badge variant="outline" className="text-xs">{value}</Badge>;
-    }
-
     return (
-      <p className={`${className} group-hover:bg-gray-50 p-1 rounded cursor-pointer`}>
-        {value}
-      </p>
-    );
-  };
-
-  // Group custom fields by folder
-  const groupedFields = customFieldFolders.reduce((acc: any, folder: any) => {
-    acc[folder.id] = {
-      ...folder,
-      fields: customFields.filter((field: any) => field.folderId === folder.id)
-    };
-    return acc;
-  }, {});
-
-  // Fields without folder
-  const fieldsWithoutFolder = customFields.filter((field: any) => !field.folderId);
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation('/clients')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
+      <div className="flex h-screen bg-gray-50 items-center justify-center">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Client Not Found</h2>
+            <p className="text-gray-600 mb-4">The client you're looking for doesn't exist or has been deleted.</p>
+            <Button variant="ghost" onClick={() => setLocation("/clients")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Clients
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Left Sidebar - Contact Details */}
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200">
+          <Button variant="ghost" onClick={() => setLocation("/clients")} className="mb-3 p-0 h-auto font-normal text-sm text-[#46a1a0]">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Clients
+          </Button>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-[#46a1a0]/10 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-[#46a1a0]" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {client.firstName} {client.lastName}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
-                  {client.status}
-                </Badge>
-                {client.company && (
-                  <Badge variant="outline">
-                    <Building className="h-3 w-3 mr-1" />
-                    {client.company}
-                  </Badge>
-                )}
-              </div>
+              <h1 className="text-lg font-semibold text-gray-900">{client.name}</h1>
+              <p className="text-sm text-gray-600">{client.company}</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit2 className="h-4 w-4 mr-2" />}
-              {isEditing ? "Cancel" : "Edit Client"}
-            </Button>
-            
-            {isEditing && (
-              <Button 
-                size="sm"
-                onClick={handleClientSave}
-                disabled={updateClientMutation.isPending}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
-              </Button>
-            )}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Owner Changed: today</span>
+            <span>•</span>
+            <span>Followers: 1</span>
           </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Dynamic Sections - Contact Details + Custom Field Folders */}
+          {sections.map((section) => (
+            <div key={section.id} className="border-b border-gray-200">
+              <button
+                onClick={() => toggleSection(section.id)}
+                className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50"
+              >
+                <span className="font-medium text-gray-900">{section.name}</span>
+                {isSectionOpen(section.id) ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              
+              {isSectionOpen(section.id) && (
+                <div className="px-4 pb-4">
+                  {section.id === "contact-details" ? (
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <label className="block text-gray-500 mb-1">Position</label>
+                        <p className="text-gray-900">{client.position || "Not specified"}</p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 mb-1">Email</label>
+                        <p className="text-[#46a1a0]">{client.email}</p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 mb-1">Phone</label>
+                        <p className="text-[#46a1a0]">{client.phone ? formatPhoneNumber(client.phone) : "Not provided"}</p>
+                      </div>
+                      {(client.address || client.city || client.state) && (
+                        <div>
+                          <label className="block text-gray-500 mb-1">Address</label>
+                          <div className="text-gray-900">
+                            {client.address && <p>{client.address}</p>}
+                            {client.address2 && <p>{client.address2}</p>}
+                            {(client.city || client.state || client.zipCode) && (
+                              <p>{[client.city, client.state, client.zipCode].filter(Boolean).join(", ")}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-gray-500 mb-1">Client Vertical</label>
+                        <p className="text-gray-900">{client.clientVertical || "Not specified"}</p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 mb-1">Contact Status</label>
+                        <p className="text-gray-900">{client.status}</p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 mb-1">Contact Source</label>
+                        <p className="text-gray-900">{client.contactSource || "Not specified"}</p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 mb-1">Contact Type</label>
+                        <p className="text-gray-900">{client.contactType || "Client"}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    // Custom Field Folder Content
+                    <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
+                      <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">Custom Fields Coming Soon</h3>
+                      <p className="text-slate-600 mb-4">
+                        Custom fields for "{section.name}" will appear here once they're created.
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        Admins can add custom fields to this folder in Settings → Custom Fields.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Main Content - Recent Activities */}
+      <div className="flex-1 flex flex-col">
+        <div className="p-6 border-b border-gray-200 bg-white">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>
+          <div className="flex items-center gap-2 mt-2">
+            <Input 
+              placeholder="Search activities..." 
+              className="max-w-sm"
+            />
+            <Button variant="outline" size="sm">
+              Collapse all
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {mockActivities.map((activity) => (
+            <div key={activity.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-gray-600">{activity.description}</span>
+                    <span className="text-xs text-gray-400">{activity.user}</span>
+                  </div>
+                  <p className="text-sm font-medium mb-1">Action • {activity.timestamp}</p>
+                  <p className="text-sm text-gray-600">{activity.content}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" className="text-[#46a1a0]">
+                    Add comment
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-[#46a1a0]">
+                    1 association
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* SMS/Email Composer */}
+        <div className="p-4 bg-white border-t border-gray-200">
+          <div className="flex gap-2 mb-3">
+            <Button 
+              variant={smsMessage ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSmsMessage(smsMessage ? "" : " ")}
+              className={`px-4 ${smsMessage ? 'bg-[#46a1a0] hover:bg-[#3a8685]' : ''}`}
+            >
+              SMS
+            </Button>
+            <Button 
+              variant={emailMessage ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setEmailMessage(emailMessage ? "" : " ")}
+              className={`px-4 ${emailMessage ? 'bg-[#46a1a0] hover:bg-[#3a8685]' : ''}`}
+            >
+              Email
+            </Button>
+          </div>
           
-          {/* Left Column - Custom Fields & Actions */}
-          <div className="lg:col-span-1 space-y-6">
-            
-            {/* Basic Client Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Client Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  {/* Basic Fields */}
-                  <div className="group">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">First Name</Label>
-                    {isEditing ? (
-                      <Input
-                        value={clientData.firstName}
-                        onChange={(e) => setClientData(prev => ({ ...prev, firstName: e.target.value }))}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.firstName}</p>
-                    )}
-                  </div>
-                  
-                  <div className="group">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</Label>
-                    {isEditing ? (
-                      <Input
-                        value={clientData.lastName}
-                        onChange={(e) => setClientData(prev => ({ ...prev, lastName: e.target.value }))}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.lastName}</p>
-                    )}
-                  </div>
-                  
-                  <div className="group">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
-                    {isEditing ? (
-                      <Input
-                        type="email"
-                        value={clientData.email}
-                        onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.email}</p>
-                    )}
-                  </div>
-                  
-                  <div className="group">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone</Label>
-                    {isEditing ? (
-                      <Input
-                        type="tel"
-                        value={clientData.phone}
-                        onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.phone}</p>
-                    )}
-                  </div>
-                  
-                  <div className="group">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Company</Label>
-                    {isEditing ? (
-                      <Input
-                        value={clientData.company}
-                        onChange={(e) => setClientData(prev => ({ ...prev, company: e.target.value }))}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.company || "Not specified"}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {smsMessage && (
+            <div className="space-y-2">
+              <Textarea 
+                placeholder="Type your SMS message..."
+                value={smsMessage}
+                onChange={(e) => setSmsMessage(e.target.value)}
+                className="min-h-[80px]"
+              />
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">{smsMessage.length}/160 characters</span>
+                <Button onClick={sendSMS} size="sm" className="bg-[#46a1a0] hover:bg-[#3a8685]">
+                  Send SMS
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {emailMessage && (
+            <div className="space-y-2">
+              <Input 
+                placeholder="Subject"
+                className="mb-2"
+              />
+              <Textarea 
+                placeholder="Type your email message..."
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <div className="flex justify-end">
+                <Button onClick={sendEmail} size="sm" className="bg-[#46a1a0] hover:bg-[#3a8685]">
+                  Send Email
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Custom Fields by Folder */}
-            {Object.values(groupedFields).map((folder: any) => (
-              <Card key={folder.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Folder className="h-5 w-5" />
-                    {folder.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {folder.fields.map((field: any) => (
-                    <div key={field.id} className="group">
-                      <div className="flex items-center justify-between mb-1">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {field.name}
-                        </Label>
-                        {!isEditing && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => setEditingField(field.id)}
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      {renderCustomFieldValue(field, client.customFieldValues?.[field.id])}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Fields without folder */}
-            {fieldsWithoutFolder.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Additional Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {fieldsWithoutFolder.map((field: any) => (
-                    <div key={field.id} className="group">
-                      <div className="flex items-center justify-between mb-1">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {field.name}
-                        </Label>
-                        {!isEditing && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => setEditingField(field.id)}
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      {renderCustomFieldValue(field, client.customFieldValues?.[field.id])}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call Client
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Schedule Meeting
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Project
-                </Button>
-              </CardContent>
-            </Card>
+      {/* Right Sidebar - Notes and Tasks */}
+      <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex gap-2 mb-4">
+            <Button 
+              variant={activeRightSection === "notes" ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => setActiveRightSection("notes")}
+              className={activeRightSection === "notes" ? "bg-[#46a1a0] hover:bg-[#3a8685]" : ""}
+            >
+              Notes
+            </Button>
+            <Button 
+              variant={activeRightSection === "tasks" ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => setActiveRightSection("tasks")}
+              className={activeRightSection === "tasks" ? "bg-[#46a1a0] hover:bg-[#3a8685]" : ""}
+            >
+              Tasks
+            </Button>
           </div>
-
-          {/* Middle Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Communication Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Quick Communication
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Send SMS
-                    </Label>
-                    {(client?.dndAll || client?.dndSms) && (
-                      <Badge variant="destructive" className="text-xs">
-                        <ShieldOff className="h-3 w-3 mr-1" />
-                        DND Active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={
-                        (client?.dndAll || client?.dndSms) 
-                          ? "SMS blocked by DND settings..." 
-                          : "SMS message..."
-                      }
-                      value={smsMessage}
-                      onChange={(e) => setSmsMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendSMS()}
-                      disabled={!!client?.dndAll || !!client?.dndSms}
-                      className={`${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                    />
-                    <Button 
-                      onClick={handleSendSMS}
-                      disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
-                      className="bg-primary hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      Send
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Send Email
-                    </Label>
-                    {(client?.dndAll || client?.dndEmail) && (
-                      <Badge variant="destructive" className="text-xs">
-                        <ShieldOff className="h-3 w-3 mr-1" />
-                        DND Active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={
-                        (client?.dndAll || client?.dndEmail) 
-                          ? "Email blocked by DND settings..." 
-                          : "Email message..."
-                      }
-                      value={emailMessage}
-                      onChange={(e) => setEmailMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendEmail()}
-                      disabled={!!client?.dndAll || !!client?.dndEmail}
-                      className={`${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                    />
-                    <Button 
-                      onClick={handleSendEmail}
-                      disabled={!emailMessage.trim() || !!client?.dndAll || !!client?.dndEmail}
-                      variant="outline"
-                      className="disabled:opacity-50"
-                    >
-                      Send
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Address Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Address Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
-                  {isEditing ? (
-                    <Input
-                      value={clientData.address}
-                      onChange={(e) => setClientData(prev => ({ ...prev, address: e.target.value }))}
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.address || "Not specified"}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">City</Label>
-                  {isEditing ? (
-                    <Input
-                      value={clientData.city}
-                      onChange={(e) => setClientData(prev => ({ ...prev, city: e.target.value }))}
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.city || "Not specified"}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">State</Label>
-                  {isEditing ? (
-                    <Input
-                      value={clientData.state}
-                      onChange={(e) => setClientData(prev => ({ ...prev, state: e.target.value }))}
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.state || "Not specified"}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Zip Code</Label>
-                  {isEditing ? (
-                    <Input
-                      value={clientData.zipCode}
-                      onChange={(e) => setClientData(prev => ({ ...prev, zipCode: e.target.value }))}
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.zipCode || "Not specified"}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Client Activity Hub */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader className="pb-4">
-                {/* Horizontal Icons Navigation */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Client Hub</h2>
-                </div>
-                <TooltipProvider>
-                  <div className="flex items-center gap-1 p-1 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("notes")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "notes"
-                              ? "bg-white dark:bg-gray-700 text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                        >
-                          <StickyNote className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Notes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("appointments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
-                            activeRightSection === "appointments"
-                              ? "bg-white dark:bg-gray-700 text-primary shadow-sm"
-                              : "text-gray-400 dark:text-gray-500"
-                          }`}
-                          disabled
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Meetings (Coming Soon)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("documents")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "documents"
-                              ? "bg-white dark:bg-gray-700 text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                        >
-                          <Upload className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Files</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("payments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
-                            activeRightSection === "payments"
-                              ? "bg-white dark:bg-gray-700 text-primary shadow-sm"
-                              : "text-gray-400 dark:text-gray-500"
-                          }`}
-                          disabled
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Billing (Coming Soon)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TooltipProvider>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {/* Notes Section */}
-                {activeRightSection === "notes" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Notes</h3>
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4">
+          {activeRightSection === "notes" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Textarea 
+                  placeholder="Add a note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <Button size="sm" className="w-full bg-[#46a1a0] hover:bg-[#3a8685]">
+                  Add Note
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <Input 
+                  placeholder="Search notes..."
+                  value={searchNotes}
+                  onChange={(e) => setSearchNotes(e.target.value)}
+                />
+              </div>
+              
+              <div className="text-center text-gray-500 text-sm py-8">
+                No notes yet. Add your first note above.
+              </div>
+            </div>
+          )}
+          
+          {activeRightSection === "tasks" && (
+            <div className="space-y-4">
+              <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="w-full bg-[#46a1a0] hover:bg-[#3a8685]">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Task Title</label>
+                      <Input 
+                        placeholder="Enter task title..."
+                        value={newTask.title}
+                        onChange={(e) => setNewTask(prev => ({...prev, title: e.target.value}))}
+                      />
                     </div>
-                    
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Search notes..."
-                          value={searchNotes}
-                          onChange={(e) => setSearchNotes(e.target.value)}
-                          className="pl-10 text-sm"
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Description</label>
+                      <Textarea 
+                        placeholder="Enter task description..."
+                        value={newTask.description}
+                        onChange={(e) => setNewTask(prev => ({...prev, description: e.target.value}))}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-sm font-medium mb-2 block">Due Date</label>
+                        <Input 
+                          type="date"
+                          value={newTask.dueDate}
+                          onChange={(e) => setNewTask(prev => ({...prev, dueDate: e.target.value}))}
                         />
                       </div>
-                      <Textarea
-                        placeholder="Add a note..."
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                        className="min-h-[80px] text-sm"
+                      <div className="flex-1">
+                        <label className="text-sm font-medium mb-2 block">Due Time</label>
+                        <Input 
+                          type="time"
+                          value={newTask.dueTime}
+                          onChange={(e) => setNewTask(prev => ({...prev, dueTime: e.target.value}))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Assignee</label>
+                      <Select value={newTask.assignee} onValueChange={(value) => setNewTask(prev => ({...prev, assignee: value}))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mockUsers.map(user => (
+                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="recurring" 
+                        checked={newTask.recurring}
+                        onCheckedChange={(checked) => setNewTask(prev => ({...prev, recurring: !!checked}))}
                       />
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-primary hover:bg-primary/90"
-                        disabled={!newNote.trim() || createNoteMutation.isPending}
-                        onClick={() => createNoteMutation.mutate(newNote)}
-                      >
-                        {createNoteMutation.isPending ? "Adding..." : "Add Note"}
+                      <label htmlFor="recurring" className="text-sm">Make this a recurring task</label>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button className="bg-[#46a1a0] hover:bg-[#3a8685]">
+                        Create Task
                       </Button>
                     </div>
-
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {notesLoading ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <div className="text-sm">Loading notes...</div>
-                        </div>
-                      ) : clientNotes.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm">No notes yet</p>
-                          <p className="text-xs text-gray-400">Add a note to get started</p>
-                        </div>
-                      ) : (
-                        clientNotes
-                          .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
-                          .map((note: any) => (
-                            <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">Note</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500">
-                                    {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  {currentUser?.role === 'Admin' && (
-                                    <div className="flex gap-1">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
-                                        onClick={() => {
-                                          setEditingNote(note.id);
-                                          setEditNoteContent(note.content);
-                                        }}
-                                        title="Edit note"
-                                      >
-                                        <Edit2 className="h-3 w-3" />
-                                      </Button>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
-                                        onClick={() => {
-                                          if (confirm('Are you sure you want to delete this note?')) {
-                                            // Delete note logic would go here
-                                          }
-                                        }}
-                                        title="Delete note"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {editingNote === note.id ? (
-                                <div className="space-y-2">
-                                  <Textarea
-                                    value={editNoteContent}
-                                    onChange={(e) => setEditNoteContent(e.target.value)}
-                                    className="min-h-[60px] text-sm"
-                                  />
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      onClick={() => {
-                                        // Save edit logic would go here
-                                        setEditingNote(null);
-                                        setEditNoteContent("");
-                                      }}
-                                      disabled={!editNoteContent.trim()}
-                                      className="h-7"
-                                    >
-                                      Save
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setEditingNote(null);
-                                        setEditNoteContent("");
-                                      }}
-                                      className="h-7"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-sm text-gray-600 dark:text-gray-300">{note.content}</p>
-                              )}
-                              
-                              <div className="mt-2 flex justify-between items-center">
-                                <div className="text-xs text-gray-400">
-                                  by {note.createdBy?.firstName} {note.createdBy?.lastName}
-                                </div>
-                                {note.editedBy && (
-                                  <div className="text-xs text-gray-400">
-                                    edited by {note.editedBy?.firstName} {note.editedBy?.lastName}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))
+                  </div>
+                </DialogContent>
+              </Dialog>
+              
+              <div className="space-y-2">
+                {clientTasks.length === 0 ? (
+                  <div className="text-center text-gray-500 text-sm py-8">
+                    No tasks yet. Create your first task above.
+                  </div>
+                ) : (
+                  clientTasks.map((task: Task) => (
+                    <div key={task.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">{task.title}</h4>
+                        <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                          {task.status}
+                        </Badge>
+                      </div>
+                      {task.description && (
+                        <p className="text-xs text-gray-600">{task.description}</p>
+                      )}
+                      {task.dueDate && (
+                        <p className="text-xs text-gray-500">
+                          Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
+                        </p>
                       )}
                     </div>
-                  </div>
+                  ))
                 )}
-
-                {/* Other sections would be similar stubs */}
-                {activeRightSection === "documents" && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Upload className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm">Documents feature coming soon</p>
-                  </div>
-                )}
-                
-                {activeRightSection === "appointments" && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm">Appointments feature coming soon</p>
-                  </div>
-                )}
-                
-                {activeRightSection === "payments" && (
-                  <div className="text-center py-8 text-gray-500">
-                    <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm">Payments feature coming soon</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
