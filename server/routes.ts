@@ -2031,10 +2031,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(products, eq(clientProducts.productId, products.id))
         .where(eq(clientProducts.clientId, clientId));
 
-      // Get client bundles using raw SQL to avoid schema issues
+      // Get client bundles using parameterized query
       let clientBundlesList = [];
       try {
-        const bundleQuery = `
+        const result = await db.execute(sql`
           SELECT 
             cb.id,
             cb.bundle_id as "productId",
@@ -2048,9 +2048,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             'bundle' as "itemType"
           FROM client_bundles cb
           LEFT JOIN product_bundles pb ON cb.bundle_id = pb.id
-          WHERE cb.client_id = $1
-        `;
-        const result = await db.execute(sql.raw(bundleQuery, [clientId]));
+          WHERE cb.client_id = ${clientId}
+        `);
         clientBundlesList = result.rows;
       } catch (error) {
         console.log('Error fetching client bundles:', error);
