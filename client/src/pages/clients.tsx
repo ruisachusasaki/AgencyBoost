@@ -287,9 +287,12 @@ export default function Clients() {
               const customField = customFieldsData.find(cf => cf.name === field);
               if (customField && client.customFieldValues) {
                 const customFieldValues = client.customFieldValues as Record<string, any>;
-                return customFieldValues[customField.id] || '';
+                const value = customFieldValues[customField.id] || '';
+                console.log(`Custom field lookup for '${field}' (${customField.id}): '${value}' in client:`, client.name);
+                return value;
               }
               
+              console.log(`Custom field '${field}' not found in`, customFieldsData?.map(cf => cf.name));
               return '';
             }
           }
@@ -297,6 +300,9 @@ export default function Clients() {
 
         const fieldValue = getValue(condition.field).toLowerCase();
         const searchValue = condition.value.toLowerCase();
+        
+        console.log(`Filter condition: ${condition.field} ${condition.operator} ${condition.value}`);
+        console.log(`Field value: "${fieldValue}", Search value: "${searchValue}"`);
 
         switch (condition.operator) {
           case 'contains': return fieldValue.includes(searchValue);
