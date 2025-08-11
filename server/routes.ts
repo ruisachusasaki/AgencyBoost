@@ -2025,29 +2025,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productDescription: products.description,
           productPrice: products.price,
           productType: products.type,
-          itemType: sql<string>`'product'`.as('itemType')
+          itemType: sql<string>`'product'`
         })
         .from(clientProducts)
         .leftJoin(products, eq(clientProducts.productId, products.id))
         .where(eq(clientProducts.clientId, clientId));
 
-      // Get client bundles
-      const clientBundlesList = await db
-        .select({
-          id: clientBundles.id,
-          productId: clientBundles.bundleId,
-          price: clientBundles.price,
-          status: clientBundles.status,
-          createdAt: clientBundles.createdAt,
-          productName: productBundles.name,
-          productDescription: productBundles.description,
-          productPrice: productBundles.revenue,
-          productType: sql<string>`'bundle'`.as('productType'),
-          itemType: sql<string>`'bundle'`.as('itemType')
-        })
-        .from(clientBundles)
-        .leftJoin(productBundles, eq(clientBundles.bundleId, productBundles.id))
-        .where(eq(clientBundles.clientId, clientId));
+      // Get client bundles (handle potential errors if table doesn't exist)
+      let clientBundlesList = [];
+      try {
+        clientBundlesList = await db
+          .select({
+            id: clientBundles.id,
+            productId: clientBundles.bundleId,
+            price: clientBundles.price,
+            status: clientBundles.status,
+            createdAt: clientBundles.createdAt,
+            productName: productBundles.name,
+            productDescription: productBundles.description,
+            productPrice: productBundles.revenue,
+            productType: sql<string>`'bundle'`,
+            itemType: sql<string>`'bundle'`
+          })
+          .from(clientBundles)
+          .leftJoin(productBundles, eq(clientBundles.bundleId, productBundles.id))
+          .where(eq(clientBundles.clientId, clientId));
+      } catch (error) {
+        console.log('Error fetching client bundles:', error);
+        clientBundlesList = [];
+      }
 
       // Combine and sort the results
       const allItems = [...clientProductsList, ...clientBundlesList].sort((a, b) => 
