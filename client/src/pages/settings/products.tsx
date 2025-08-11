@@ -112,7 +112,11 @@ export default function ProductsSettings() {
           try {
             const detailResponse = await fetch(`/api/product-bundles/${bundle.id}`);
             if (detailResponse.ok) {
-              return await detailResponse.json();
+              const detailData = await detailResponse.json();
+              return {
+                ...detailData,
+                usageCount: bundle.usageCount // Preserve usage count from main API
+              };
             }
             return bundle;
           } catch (error) {
