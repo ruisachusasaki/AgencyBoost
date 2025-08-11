@@ -20,8 +20,7 @@ import {
   Edit2, 
   Trash2, 
   DollarSign, 
-  TrendingUp,
-  Calculator,
+
   Package2,
   ShoppingCart,
   X,
