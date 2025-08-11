@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign } from "@shared/schema";
-import TaskForm from "@/components/forms/task-form";
+import TaskFormClean from "@/components/forms/task-form-clean";
 import TaskComments from "@/components/task-comments";
 import { useState } from "react";
 
@@ -241,7 +241,7 @@ export default function TaskDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TaskForm
+                <TaskFormClean
                   task={task}
                   onSuccess={() => {
                     setIsEditing(false);
