@@ -9,14 +9,28 @@ import { apiRequest } from "@/lib/queryClient";
 interface PaginatedClientsResponse {
   clients: Client[];
   pagination: {
-    total: number;
+    page: number;
+    limit: number;
+    total: number | string;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
   };
 }
 
 export default function RecentClients() {
-  const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
-    queryKey: ["/api/clients", 1, 3, "createdAt", "desc"], // Get 3 most recent clients
-    queryFn: () => apiRequest("GET", "/api/clients?page=1&limit=3&sortBy=createdAt&sortOrder=desc"),
+  const { data: clientsData, isLoading, error } = useQuery<PaginatedClientsResponse>({
+    queryKey: ["/api/clients", "recent", "v4"],
+    queryFn: async () => {
+      const response = await fetch("/api/clients?page=1&limit=3&sortBy=createdAt&sortOrder=desc");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      return result;
+    },
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const clients = clientsData?.clients || [];
