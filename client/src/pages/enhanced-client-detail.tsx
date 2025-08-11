@@ -1,8 +1,8 @@
 import { useParams, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { 
   ArrowLeft, 
   Phone, 
@@ -27,16 +29,35 @@ import {
   Users,
   Clock,
   UserCircle,
-  UserPlus
+  UserPlus,
+  FileText,
+  Settings,
+  Tag,
+  Folder,
+  User,
+  MapPin,
+  Building,
+  Globe,
+  Hash,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Save,
+  X
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
-// Enhanced Client Detail Page (Task functionality removed)
+// Enhanced Client Detail Page with complete functionality
 export default function EnhancedClientDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
-  // State management
+  // State management for right sidebar
   const [activeRightSection, setActiveRightSection] = useState<"notes" | "appointments" | "documents" | "payments">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -44,6 +65,24 @@ export default function EnhancedClientDetail() {
   const [searchNotes, setSearchNotes] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
+
+  // State for client editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [clientData, setClientData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    company: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
+    website: "",
+    status: "active"
+  });
 
   // Fetch client data
   const { data: client, isLoading: clientLoading } = useQuery({
@@ -66,6 +105,26 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Fetch custom fields
+  const { data: customFields = [] } = useQuery({
+    queryKey: ['/api/custom-fields'],
+    queryFn: async () => {
+      const response = await fetch('/api/custom-fields');
+      if (!response.ok) throw new Error('Failed to fetch custom fields');
+      return response.json();
+    },
+  });
+
+  // Fetch custom field folders
+  const { data: customFieldFolders = [] } = useQuery({
+    queryKey: ['/api/custom-field-folders'],
+    queryFn: async () => {
+      const response = await fetch('/api/custom-field-folders');
+      if (!response.ok) throw new Error('Failed to fetch folders');
+      return response.json();
+    },
+  });
+
   // Fetch client notes
   const { data: clientNotes = [], isLoading: notesLoading } = useQuery({
     queryKey: ['/api/notes', 'client', id],
@@ -75,6 +134,50 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!id,
+  });
+
+  // Initialize client data when loaded
+  useEffect(() => {
+    if (client) {
+      setClientData({
+        firstName: client.firstName || "",
+        lastName: client.lastName || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        company: client.company || "",
+        address: client.address || "",
+        city: client.city || "",
+        state: client.state || "",
+        zipCode: client.zipCode || "",
+        country: client.country || "",
+        website: client.website || "",
+        status: client.status || "active"
+      });
+    }
+  }, [client]);
+
+  // Update client mutation
+  const updateClientMutation = useMutation({
+    mutationFn: async (updates: any) => {
+      await apiRequest("PUT", `/api/clients/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      setIsEditing(false);
+      setEditingField(null);
+      toast({
+        title: "Success",
+        description: "Client updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update client",
+        variant: "destructive",
+      });
+    },
   });
 
   // Create note mutation
@@ -93,7 +196,6 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     onSuccess: () => {
-      const queryClient = useQueryClient();
       queryClient.invalidateQueries({ queryKey: ['/api/notes', 'client', id] });
       setNewNote("");
       toast({
@@ -159,6 +261,114 @@ export default function EnhancedClientDetail() {
     setEmailMessage("");
   };
 
+  const handleFieldSave = (fieldName: string, value: string) => {
+    updateClientMutation.mutate({ [fieldName]: value });
+    setEditingField(null);
+  };
+
+  const handleClientSave = () => {
+    updateClientMutation.mutate(clientData);
+  };
+
+  const renderCustomFieldValue = (field: any, value: any) => {
+    const { type, options } = field;
+    const className = "text-sm text-gray-900 dark:text-white";
+
+    if (editingField === field.id) {
+      return (
+        <div className="space-y-2">
+          {type === 'text' || type === 'email' || type === 'phone' || type === 'url' ? (
+            <Input
+              type={type === 'email' ? 'email' : type === 'phone' ? 'tel' : type === 'url' ? 'url' : 'text'}
+              defaultValue={value || ''}
+              onBlur={(e) => handleFieldSave(field.id, e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleFieldSave(field.id, e.currentTarget.value)}
+              autoFocus
+            />
+          ) : type === 'multiline' ? (
+            <Textarea
+              defaultValue={value || ''}
+              onBlur={(e) => handleFieldSave(field.id, e.target.value)}
+              autoFocus
+            />
+          ) : type === 'dropdown' ? (
+            <Select defaultValue={value || ''} onValueChange={(val) => handleFieldSave(field.id, val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                {options?.map((option: string) => (
+                  <SelectItem key={option} value={option}>{option}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              defaultValue={value || ''}
+              onBlur={(e) => handleFieldSave(field.id, e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleFieldSave(field.id, e.currentTarget.value)}
+              autoFocus
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Display mode
+    if (!value) {
+      return <span className="text-gray-400 italic text-sm">Not specified</span>;
+    }
+
+    if (type === 'dropdown_multiple' && Array.isArray(value)) {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {value.map((item, index) => (
+            <Badge key={index} variant="secondary" className="text-xs">
+              {item}
+            </Badge>
+          ))}
+        </div>
+      );
+    }
+
+    if (type === 'checkbox' && typeof value === 'string') {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {value.split(',').map((item, index) => {
+            const trimmedItem = item.trim();
+            return trimmedItem ? (
+              <Badge key={index} variant="secondary" className="text-xs">
+                {trimmedItem}
+              </Badge>
+            ) : null;
+          })}
+        </div>
+      );
+    }
+
+    if (type === 'radio' && value) {
+      return <Badge variant="outline" className="text-xs">{value}</Badge>;
+    }
+
+    return (
+      <p className={`${className} group-hover:bg-gray-50 p-1 rounded cursor-pointer`}>
+        {value}
+      </p>
+    );
+  };
+
+  // Group custom fields by folder
+  const groupedFields = customFieldFolders.reduce((acc: any, folder: any) => {
+    acc[folder.id] = {
+      ...folder,
+      fields: customFields.filter((field: any) => field.folderId === folder.id)
+    };
+    return acc;
+  }, {});
+
+  // Fields without folder
+  const fieldsWithoutFolder = customFields.filter((field: any) => !field.folderId);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -178,72 +388,234 @@ export default function EnhancedClientDetail() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {client.firstName} {client.lastName}
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Client Details
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                  {client.status}
+                </Badge>
+                {client.company && (
+                  <Badge variant="outline">
+                    <Building className="h-3 w-3 mr-1" />
+                    {client.company}
+                  </Badge>
+                )}
+              </div>
             </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsEditing(!isEditing)}
+            >
+              {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit2 className="h-4 w-4 mr-2" />}
+              {isEditing ? "Cancel" : "Edit Client"}
+            </Button>
+            
+            {isEditing && (
+              <Button 
+                size="sm"
+                onClick={handleClientSave}
+                disabled={updateClientMutation.isPending}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
-          {/* Left Column - Client Information */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left Column - Custom Fields & Actions */}
+          <div className="lg:col-span-1 space-y-6">
             
-            {/* Contact Information Card */}
+            {/* Basic Client Information */}
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Contact Information
-                </h2>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Client Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      First Name
-                    </Label>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
-                      {client.firstName}
-                    </p>
+                <div className="space-y-3">
+                  {/* Basic Fields */}
+                  <div className="group">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">First Name</Label>
+                    {isEditing ? (
+                      <Input
+                        value={clientData.firstName}
+                        onChange={(e) => setClientData(prev => ({ ...prev, firstName: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.firstName}</p>
+                    )}
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Last Name
-                    </Label>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
-                      {client.lastName}
-                    </p>
+                  
+                  <div className="group">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</Label>
+                    {isEditing ? (
+                      <Input
+                        value={clientData.lastName}
+                        onChange={(e) => setClientData(prev => ({ ...prev, lastName: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.lastName}</p>
+                    )}
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Email
-                    </Label>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
-                      {client.email}
-                    </p>
+                  
+                  <div className="group">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                    {isEditing ? (
+                      <Input
+                        type="email"
+                        value={clientData.email}
+                        onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.email}</p>
+                    )}
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Phone
-                    </Label>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
-                      {client.phone}
-                    </p>
+                  
+                  <div className="group">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone</Label>
+                    {isEditing ? (
+                      <Input
+                        type="tel"
+                        value={clientData.phone}
+                        onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.phone}</p>
+                    )}
+                  </div>
+                  
+                  <div className="group">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Company</Label>
+                    {isEditing ? (
+                      <Input
+                        value={clientData.company}
+                        onChange={(e) => setClientData(prev => ({ ...prev, company: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{client.company || "Not specified"}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Actions Card */}
+            {/* Custom Fields by Folder */}
+            {Object.values(groupedFields).map((folder: any) => (
+              <Card key={folder.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Folder className="h-5 w-5" />
+                    {folder.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {folder.fields.map((field: any) => (
+                    <div key={field.id} className="group">
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {field.name}
+                        </Label>
+                        {!isEditing && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setEditingField(field.id)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {renderCustomFieldValue(field, client.customFieldValues?.[field.id])}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Fields without folder */}
+            {fieldsWithoutFolder.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Additional Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {fieldsWithoutFolder.map((field: any) => (
+                    <div key={field.id} className="group">
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {field.name}
+                        </Label>
+                        {!isEditing && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setEditingField(field.id)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {renderCustomFieldValue(field, client.customFieldValues?.[field.id])}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
                   Quick Actions
-                </h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" size="sm" className="w-full justify-start">
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call Client
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Schedule Meeting
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Project
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Middle Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Communication Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Quick Communication
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -314,6 +686,62 @@ export default function EnhancedClientDetail() {
                       Send
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Address Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Address Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
+                  {isEditing ? (
+                    <Input
+                      value={clientData.address}
+                      onChange={(e) => setClientData(prev => ({ ...prev, address: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.address || "Not specified"}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">City</Label>
+                  {isEditing ? (
+                    <Input
+                      value={clientData.city}
+                      onChange={(e) => setClientData(prev => ({ ...prev, city: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.city || "Not specified"}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">State</Label>
+                  {isEditing ? (
+                    <Input
+                      value={clientData.state}
+                      onChange={(e) => setClientData(prev => ({ ...prev, state: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.state || "Not specified"}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Zip Code</Label>
+                  {isEditing ? (
+                    <Input
+                      value={clientData.zipCode}
+                      onChange={(e) => setClientData(prev => ({ ...prev, zipCode: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 dark:text-white mt-1">{client.zipCode || "Not specified"}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
