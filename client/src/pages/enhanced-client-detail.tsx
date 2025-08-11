@@ -461,6 +461,29 @@ export default function EnhancedClientDetail() {
   const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
   const [filteredAssignees, setFilteredAssignees] = useState<any[]>([]);
 
+  // Edit task state
+  const [editTask, setEditTask] = useState<NewTask>({
+    title: "",
+    description: "",
+    dueDate: "",
+    dueTime: "",
+    assignee: "",
+    recurring: false
+  });
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editRecurringConfig, setEditRecurringConfig] = useState({
+    interval: 1,
+    unit: "days" as "hours" | "days" | "weeks" | "months" | "years",
+    endType: "never" as "never" | "on" | "after",
+    endDate: "",
+    endAfter: 1,
+    createIfOverdue: false
+  });
+  const [editAssigneeSearchTerm, setEditAssigneeSearchTerm] = useState("");
+  const [showEditAssigneeSuggestions, setShowEditAssigneeSuggestions] = useState(false);
+  const [editFilteredAssignees, setEditFilteredAssignees] = useState<any[]>([]);
+
   // Comments state
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [newComment, setNewComment] = useState("");
@@ -868,6 +891,54 @@ export default function EnhancedClientDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit task mutation
+  const editTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      const response = await fetch(`/api/clients/${clientId}/tasks/${editingTaskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      });
+      if (!response.ok) throw new Error('Failed to update task');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
+      setIsEditTaskDialogOpen(false);
+      setEditingTaskId(null);
+      setEditTask({
+        title: "",
+        description: "",
+        dueDate: "",
+        dueTime: "",
+        assignee: "",
+        recurring: false
+      });
+      setEditRecurringConfig({
+        interval: 1,
+        unit: "days",
+        endType: "never",
+        endDate: "",
+        endAfter: 1,
+        createIfOverdue: false
+      });
+      setEditAssigneeSearchTerm("");
+      setShowEditAssigneeSuggestions(false);
+      setEditFilteredAssignees([]);
       toast({
         title: "Success",
         description: "Task updated successfully",
@@ -2848,6 +2919,250 @@ export default function EnhancedClientDetail() {
                           </div>
                         </DialogContent>
                       </Dialog>
+
+                      {/* Edit Task Dialog */}
+                      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Task</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
+                              <Input
+                                value={editTask.title}
+                                onChange={(e) => setEditTask(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="Enter task title"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
+                              <Textarea
+                                value={editTask.description}
+                                onChange={(e) => setEditTask(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Enter task description"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
+                                <Input
+                                  type="date"
+                                  value={editTask.dueDate}
+                                  onChange={(e) => setEditTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
+                                <Input
+                                  type="time"
+                                  value={editTask.dueTime}
+                                  onChange={(e) => setEditTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                            <div className="relative">
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
+                              <Input
+                                value={editAssigneeSearchTerm}
+                                onChange={(e) => {
+                                  setEditAssigneeSearchTerm(e.target.value);
+                                  if (e.target.value.trim() && staffData) {
+                                    const filtered = staffData.filter((staff: any) => 
+                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
+                                    );
+                                    setEditFilteredAssignees(filtered);
+                                    setShowEditAssigneeSuggestions(filtered.length > 0);
+                                  } else {
+                                    setEditFilteredAssignees([]);
+                                    setShowEditAssigneeSuggestions(false);
+                                  }
+                                }}
+                                placeholder="Search staff members..."
+                                onFocus={() => {
+                                  if (editAssigneeSearchTerm.trim() && staffData) {
+                                    const filtered = staffData.filter((staff: any) => 
+                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(editAssigneeSearchTerm.toLowerCase()) ||
+                                      staff.email?.toLowerCase().includes(editAssigneeSearchTerm.toLowerCase())
+                                    );
+                                    setEditFilteredAssignees(filtered);
+                                    setShowEditAssigneeSuggestions(filtered.length > 0);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => setShowEditAssigneeSuggestions(false), 200);
+                                }}
+                              />
+                              
+                              {showEditAssigneeSuggestions && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                  {editFilteredAssignees.map((staff: any) => (
+                                    <button
+                                      key={staff.id}
+                                      onClick={() => {
+                                        setEditTask(prev => ({ ...prev, assignee: staff.id }));
+                                        setEditAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
+                                        setShowEditAssigneeSuggestions(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                                    >
+                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                                        <div className="text-xs text-gray-500">{staff.email}</div>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="edit-recurring"
+                                  checked={editTask.recurring}
+                                  onCheckedChange={(checked) => setEditTask(prev => ({ ...prev, recurring: !!checked }))}
+                                />
+                                <Label htmlFor="edit-recurring" className="text-sm font-medium text-gray-700">
+                                  Recurring Task
+                                </Label>
+                              </div>
+
+                              {editTask.recurring && (
+                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Repeats every</Label>
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={editRecurringConfig.interval}
+                                      onChange={(e) => setEditRecurringConfig(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
+                                      className="w-20"
+                                    />
+                                    <Select
+                                      value={editRecurringConfig.unit}
+                                      onValueChange={(value: any) => setEditRecurringConfig(prev => ({ ...prev, unit: value }))}
+                                    >
+                                      <SelectTrigger className="w-32">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="hours">Hours</SelectItem>
+                                        <SelectItem value="days">Days</SelectItem>
+                                        <SelectItem value="weeks">Weeks</SelectItem>
+                                        <SelectItem value="months">Months</SelectItem>
+                                        <SelectItem value="years">Years</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-gray-700">Ends</Label>
+                                    <RadioGroup
+                                      value={editRecurringConfig.endType}
+                                      onValueChange={(value: any) => setEditRecurringConfig(prev => ({ ...prev, endType: value }))}
+                                      className="space-y-2"
+                                    >
+                                      <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="never" id="edit-never" />
+                                        <Label htmlFor="edit-never" className="text-sm text-gray-700">Never</Label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="on" id="edit-on" />
+                                        <Label htmlFor="edit-on" className="text-sm text-gray-700">On</Label>
+                                        {editRecurringConfig.endType === "on" && (
+                                          <Input
+                                            type="date"
+                                            value={editRecurringConfig.endDate}
+                                            onChange={(e) => setEditRecurringConfig(prev => ({ ...prev, endDate: e.target.value }))}
+                                            className="w-40 ml-2"
+                                          />
+                                        )}
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="after" id="edit-after" />
+                                        <Label htmlFor="edit-after" className="text-sm text-gray-700">After</Label>
+                                        {editRecurringConfig.endType === "after" && (
+                                          <>
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              value={editRecurringConfig.endAfter}
+                                              onChange={(e) => setEditRecurringConfig(prev => ({ ...prev, endAfter: parseInt(e.target.value) || 1 }))}
+                                              className="w-20 ml-2"
+                                            />
+                                            <span className="text-sm text-gray-600">occurrences</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </RadioGroup>
+                                  </div>
+
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="edit-create-if-overdue"
+                                      checked={editRecurringConfig.createIfOverdue}
+                                      onCheckedChange={(checked) => setEditRecurringConfig(prev => ({ ...prev, createIfOverdue: !!checked }))}
+                                    />
+                                    <Label htmlFor="edit-create-if-overdue" className="text-sm text-gray-700">
+                                      Create a new task even if previous task is overdue
+                                    </Label>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" onClick={() => {
+                                setIsEditTaskDialogOpen(false);
+                                setEditingTaskId(null);
+                                setEditTask({
+                                  title: "",
+                                  description: "",
+                                  dueDate: "",
+                                  dueTime: "",
+                                  assignee: "",
+                                  recurring: false
+                                });
+                                setEditRecurringConfig({
+                                  interval: 1,
+                                  unit: "days",
+                                  endType: "never",
+                                  endDate: "",
+                                  endAfter: 1,
+                                  createIfOverdue: false
+                                });
+                                setEditAssigneeSearchTerm("");
+                                setShowEditAssigneeSuggestions(false);
+                                setEditFilteredAssignees([]);
+                              }}>
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  if (editTask.title.trim()) {
+                                    const taskData = {
+                                      title: editTask.title,
+                                      description: editTask.description,
+                                      dueDate: editTask.dueDate ? `${editTask.dueDate}${editTask.dueTime ? ` ${editTask.dueTime}` : ''}` : undefined,
+                                      assignedTo: editTask.assignee || undefined,
+                                      isRecurring: editTask.recurring,
+                                      recurringConfig: editTask.recurring ? editRecurringConfig : undefined
+                                    };
+                                    editTaskMutation.mutate(taskData);
+                                  }
+                                }}
+                                disabled={!editTask.title.trim() || editTaskMutation.isPending}
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                {editTaskMutation.isPending ? "Updating..." : "Update Task"}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
 
                     <div className="space-y-3">
@@ -2913,6 +3228,39 @@ export default function EnhancedClientDetail() {
                                       {isOverdue ? 'Overdue' : `Due ${dueDate.toLocaleDateString()}`}
                                     </span>
                                   )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Populate edit form with current task data
+                                      setEditingTaskId(task.id);
+                                      const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+                                      setEditTask({
+                                        title: task.title,
+                                        description: task.description || "",
+                                        dueDate: taskDueDate ? taskDueDate.toISOString().split('T')[0] : "",
+                                        dueTime: taskDueDate ? taskDueDate.toTimeString().slice(0, 5) : "",
+                                        assignee: task.assignedTo || "",
+                                        recurring: task.isRecurring || false
+                                      });
+                                      if (task.isRecurring) {
+                                        setEditRecurringConfig({
+                                          interval: task.recurringInterval || 1,
+                                          unit: task.recurringUnit || "days",
+                                          endType: task.recurringEndType || "never",
+                                          endDate: task.recurringEndDate ? new Date(task.recurringEndDate).toISOString().split('T')[0] : "",
+                                          endAfter: task.recurringEndOccurrences || 1,
+                                          createIfOverdue: task.createIfOverdue || false
+                                        });
+                                      }
+                                      setEditAssigneeSearchTerm(task.assignedToUser ? `${task.assignedToUser.firstName} ${task.assignedToUser.lastName}` : "");
+                                      setIsEditTaskDialogOpen(true);
+                                    }}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    <Edit2 className="h-3 w-3 mr-1" />
+                                    Edit
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -3799,7 +4147,7 @@ function TaskComments({ taskId }: { taskId: string }) {
             </a>
           );
         }
-        return urlPart;
+        return <span key={`${index}-${urlIndex}`}>{urlPart}</span>;
       });
     });
     

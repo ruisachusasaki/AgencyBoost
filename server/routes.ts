@@ -3607,6 +3607,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Full task update endpoint with detailed audit logging
+  app.put("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
+    try {
+      const { clientId, taskId } = req.params;
+      const { title, description, dueDate, assignedTo, isRecurring, recurringConfig } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!title?.trim()) {
+        return res.status(400).json({ error: "Task title is required" });
+      }
+
+      if (!global.clientTasks?.[clientId]) {
+        return res.status(404).json({ error: "Client not found or has no tasks" });
+      }
+
+      const taskIndex = global.clientTasks[clientId].findIndex(t => t.id === taskId);
+      if (taskIndex === -1) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      // Get assignee details if provided
+      let assignedToUser = null;
+      if (assignedTo) {
+        const staffInfo = await db.select().from(staff).where(eq(staff.id, assignedTo)).limit(1);
+        assignedToUser = staffInfo[0] ? {
+          id: staffInfo[0].id,
+          firstName: staffInfo[0].firstName,
+          lastName: staffInfo[0].lastName
+        } : null;
+      }
+
+      const oldTask = { ...global.clientTasks[clientId][taskIndex] };
+      const updatedTask = {
+        ...oldTask,
+        title: title.trim(),
+        description: description?.trim() || "",
+        dueDate: dueDate ? new Date(dueDate) : null,
+        assignedTo: assignedTo || oldTask.assignedTo,
+        assignedToUser: assignedToUser || oldTask.assignedToUser,
+        isRecurring: !!isRecurring,
+        // Map recurringConfig fields to schema fields
+        recurringInterval: isRecurring ? (recurringConfig?.interval || 1) : null,
+        recurringUnit: isRecurring ? (recurringConfig?.unit || "days") : null,
+        recurringEndType: isRecurring ? (recurringConfig?.endType || "never") : null,
+        recurringEndDate: isRecurring && recurringConfig?.endType === "on" && recurringConfig?.endDate ? new Date(recurringConfig.endDate) : null,
+        recurringEndOccurrences: isRecurring && recurringConfig?.endType === "after" ? (recurringConfig?.endAfter || 1) : null,
+        createIfOverdue: isRecurring ? !!recurringConfig?.createIfOverdue : false,
+        updatedAt: new Date()
+      };
+
+      global.clientTasks[clientId][taskIndex] = updatedTask;
+
+      // Create detailed audit log entry
+      const changes = [];
+      if (oldTask.title !== updatedTask.title) changes.push(`title from "${oldTask.title}" to "${updatedTask.title}"`);
+      if (oldTask.description !== updatedTask.description) changes.push(`description from "${oldTask.description || 'none'}" to "${updatedTask.description || 'none'}"`);
+      if (oldTask.dueDate?.toString() !== updatedTask.dueDate?.toString()) {
+        const oldDate = oldTask.dueDate ? new Date(oldTask.dueDate).toLocaleDateString() : 'none';
+        const newDate = updatedTask.dueDate ? new Date(updatedTask.dueDate).toLocaleDateString() : 'none';
+        changes.push(`due date from ${oldDate} to ${newDate}`);
+      }
+      if (oldTask.assignedTo !== updatedTask.assignedTo) {
+        const oldAssignee = oldTask.assignedToUser ? `${oldTask.assignedToUser.firstName} ${oldTask.assignedToUser.lastName}` : 'none';
+        const newAssignee = assignedToUser ? `${assignedToUser.firstName} ${assignedToUser.lastName}` : 'none';
+        changes.push(`assignee from ${oldAssignee} to ${newAssignee}`);
+      }
+      if (oldTask.isRecurring !== updatedTask.isRecurring) changes.push(`recurring setting from ${oldTask.isRecurring} to ${updatedTask.isRecurring}`);
+
+      await createAuditLog(
+        "updated",
+        "task",
+        taskId,
+        `Task for client ${clientId}`,
+        userId,
+        changes.length > 0 ? `Task updated: ${changes.join(', ')}` : 'Task updated',
+        oldTask,
+        updatedTask,
+        req
+      );
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
   app.delete("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
     try {
       const { clientId, taskId } = req.params;
