@@ -5,6 +5,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 
 ## Recent Changes (August 2025)
 - **Smart Lists Enhancement**: Implemented comprehensive tab-based Smart Lists interface with advanced permission system, supporting personal, shared, and universal visibility levels with multi-user collaboration capabilities.
+- **Product Bundles System**: Complete product bundles functionality with automatic financial calculations (revenue, costs, profit, margin %), multi-product selection, and tab-based interface matching Custom Fields page styling.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

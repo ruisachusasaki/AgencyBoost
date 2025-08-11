@@ -85,19 +85,19 @@ export default function ProductsSettings() {
   const [bundleProducts, setBundleProducts] = useState<Array<{productId: string, quantity: number}>>([]);
 
   // Fetch products
-  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ["/api/products"],
     refetchOnWindowFocus: false,
   });
 
   // Fetch product bundles
-  const { data: bundles = [], isLoading: isLoadingBundles } = useQuery({
+  const { data: bundles = [], isLoading: isLoadingBundles } = useQuery<ProductBundle[]>({
     queryKey: ["/api/product-bundles"],
     refetchOnWindowFocus: false,
   });
 
   // Fetch categories
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<ProductCategory[]>({
     queryKey: ["/api/product-categories"],
     refetchOnWindowFocus: false,
   });
@@ -289,12 +289,12 @@ export default function ProductsSettings() {
     return { totalRevenue, totalCost, profit, margin };
   };
 
-  const filteredProducts = products.filter((product: Product) =>
+  const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredBundles = bundles.filter((bundle: ProductBundle) =>
+  const filteredBundles = bundles.filter((bundle) =>
     bundle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (bundle.description && bundle.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -425,7 +425,7 @@ export default function ProductsSettings() {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map((category: ProductCategory) => (
+                        {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
                           </SelectItem>
@@ -504,7 +504,7 @@ export default function ProductsSettings() {
                               <SelectValue placeholder="Select product" />
                             </SelectTrigger>
                             <SelectContent>
-                              {products.map((product: Product) => (
+                              {products.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>
                                   {product.name} - ${product.price}
                                 </SelectItem>
@@ -855,7 +855,7 @@ export default function ProductsSettings() {
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                         <SelectContent>
-                          {products.map((product: Product) => (
+                          {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
                               {product.name} - ${product.price}
                             </SelectItem>
