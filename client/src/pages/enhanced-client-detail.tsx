@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package } from "lucide-react";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -445,10 +445,11 @@ export default function EnhancedClientDetail() {
   const [filteredTags, setFilteredTags] = useState<Tag[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
-  // Services state
+  // Products & Bundles state
   const [isAddingService, setIsAddingService] = useState(false);
   const [newServiceName, setNewServiceName] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [filteredBundles, setFilteredBundles] = useState<any[]>([]);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
   
   // Actions section accordion state
@@ -543,6 +544,16 @@ export default function EnhancedClientDetail() {
     queryFn: async () => {
       const response = await fetch('/api/products');
       if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    },
+  });
+
+  // Fetch bundles data
+  const { data: bundlesData = [], isLoading: bundlesLoading } = useQuery({
+    queryKey: ['/api/product-bundles'],
+    queryFn: async () => {
+      const response = await fetch('/api/product-bundles');
+      if (!response.ok) throw new Error('Failed to fetch bundles');
       return response.json();
     },
   });
@@ -715,16 +726,16 @@ export default function EnhancedClientDetail() {
     setShowSuggestions(false);
   };
 
-  // Service management functions
+  // Product/Bundle management functions
   const addServiceToClient = async (productId: string, productName: string) => {
     if (!client || !productId) return;
     
     try {
-      // Check if product already assigned
+      // Check if product/bundle already assigned
       const isAlreadyAssigned = clientProductsData.some((cp: any) => cp.productId === productId);
       if (isAlreadyAssigned) {
         toast({
-          title: "Service already exists",
+          title: "Product already exists",
           description: `"${productName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -736,7 +747,7 @@ export default function EnhancedClientDetail() {
       });
 
       toast({
-        title: "Service added",
+        title: "Product added",
         description: `"${productName}" has been added to ${client.name}`,
       });
 
@@ -744,8 +755,8 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
     } catch (error) {
       toast({
-        title: "Error adding service",
-        description: "Failed to add service to client",
+        title: "Error adding product",
+        description: "Failed to add product to client",
         variant: "destructive"
       });
     }
@@ -775,31 +786,41 @@ export default function EnhancedClientDetail() {
       setShowServiceSuggestions(false);
 
       toast({
-        title: "Service created",
+        title: "Product created",
         description: `"${newServiceName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
       toast({
-        title: "Error creating service",
-        description: "Failed to create new service",
+        title: "Error creating product",
+        description: "Failed to create new product",
         variant: "destructive"
       });
     }
   };
 
-  // Filter products based on input
+  // Filter products and bundles based on input
   const handleServiceInputChange = (value: string) => {
     setNewServiceName(value);
     
     if (value.trim()) {
-      const filtered = productsData.filter((product: any) => 
+      // Filter products
+      const filteredProducts = productsData.filter((product: any) => 
         product.name.toLowerCase().includes(value.toLowerCase()) &&
         !clientProductsData.some((cp: any) => cp.productId === product.id)
       );
-      setFilteredProducts(filtered);
+      
+      // Filter bundles
+      const filteredBundles = bundlesData.filter((bundle: any) => 
+        bundle.name.toLowerCase().includes(value.toLowerCase()) &&
+        !clientProductsData.some((cp: any) => cp.productId === bundle.id)
+      );
+      
+      setFilteredProducts(filteredProducts);
+      setFilteredBundles(filteredBundles);
       setShowServiceSuggestions(true);
     } else {
       setFilteredProducts([]);
+      setFilteredBundles([]);
       setShowServiceSuggestions(false);
     }
   };
@@ -1169,7 +1190,7 @@ export default function EnhancedClientDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5 text-primary" />
-                  Services
+                  Products
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1181,7 +1202,7 @@ export default function EnhancedClientDetail() {
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <ShoppingCart className="h-4 w-4" />
-                      Products & Services
+                      Products
                     </h4>
                     <div className="flex items-center gap-2">
                       <Button
@@ -1220,7 +1241,7 @@ export default function EnhancedClientDetail() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">No services assigned</p>
+                        <p className="text-sm text-gray-500">No products assigned</p>
                       )}
                     </div>
                   )}
@@ -1682,26 +1703,36 @@ export default function EnhancedClientDetail() {
         <Dialog open={isAddingService} onOpenChange={setIsAddingService}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Service</DialogTitle>
+              <DialogTitle>Add Product</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="relative">
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">Search or Create Service</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Search Products or Bundles</Label>
                 <Input
                   value={newServiceName}
                   onChange={(e) => handleServiceInputChange(e.target.value)}
-                  placeholder="Type to search existing services or create new..."
+                  placeholder="Type to search existing products/bundles or create new..."
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
+                      // Check products first
                       if (filteredProducts.length > 0) {
-                        // If there's an exact match, use it, otherwise use the first filtered result
                         const exactMatch = filteredProducts.find((p: any) => 
                           p.name.toLowerCase() === newServiceName.toLowerCase()
                         );
                         const productToSelect = exactMatch || filteredProducts[0];
                         selectExistingService(productToSelect.id, productToSelect.name);
-                      } else if (newServiceName.trim()) {
+                      } 
+                      // Then check bundles
+                      else if (filteredBundles.length > 0) {
+                        const exactMatch = filteredBundles.find((b: any) => 
+                          b.name.toLowerCase() === newServiceName.toLowerCase()
+                        );
+                        const bundleToSelect = exactMatch || filteredBundles[0];
+                        selectExistingService(bundleToSelect.id, bundleToSelect.name);
+                      } 
+                      // Create new product if no matches
+                      else if (newServiceName.trim()) {
                         createNewProduct();
                       }
                     }
@@ -1719,11 +1750,11 @@ export default function EnhancedClientDetail() {
                 
                 {/* Autocomplete Suggestions */}
                 {showServiceSuggestions && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                    {filteredProducts.length > 0 ? (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredProducts.length > 0 && (
                       <>
                         <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b">
-                          Existing Services
+                          Products
                         </div>
                         {filteredProducts.map((product: any) => (
                           <button
@@ -1743,11 +1774,36 @@ export default function EnhancedClientDetail() {
                           </button>
                         ))}
                       </>
-                    ) : newServiceName.trim() ? (
+                    )}
+                    
+                    {filteredBundles.length > 0 && (
+                      <>
+                        <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b">
+                          Bundles
+                        </div>
+                        {filteredBundles.map((bundle: any) => (
+                          <button
+                            key={bundle.id}
+                            onClick={() => selectExistingService(bundle.id, bundle.name)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between border-b last:border-b-0"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Package className="w-3 h-3 text-teal-600 flex-shrink-0" />
+                              <span className="text-sm truncate">{bundle.name}</span>
+                            </div>
+                            <Badge variant="outline" className="text-xs text-teal-600">
+                              Bundle
+                            </Badge>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    
+                    {filteredProducts.length === 0 && filteredBundles.length === 0 && newServiceName.trim() && (
                       <div className="px-3 py-2 text-sm text-gray-500">
-                        No existing services found. Press Enter to create "{newServiceName}"
+                        No existing products or bundles found. Press Enter to create "{newServiceName}"
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 )}
               </div>
@@ -1762,19 +1818,27 @@ export default function EnhancedClientDetail() {
                 </Button>
                 {newServiceName.trim() && (
                   <>
-                    {filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase() ? (
+                    {/* Check if there's an exact match in products or bundles */}
+                    {(filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase()) || 
+                     (filteredBundles.length > 0 && filteredBundles[0].name.toLowerCase() === newServiceName.toLowerCase()) ? (
                       <Button 
-                        onClick={() => selectExistingService(filteredProducts[0].id, filteredProducts[0].name)}
+                        onClick={() => {
+                          if (filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase()) {
+                            selectExistingService(filteredProducts[0].id, filteredProducts[0].name);
+                          } else if (filteredBundles.length > 0 && filteredBundles[0].name.toLowerCase() === newServiceName.toLowerCase()) {
+                            selectExistingService(filteredBundles[0].id, filteredBundles[0].name);
+                          }
+                        }}
                         className="bg-green-600 hover:bg-green-700"
                       >
-                        Add Existing Service
+                        Add Existing {filteredProducts.length > 0 && filteredProducts[0].name.toLowerCase() === newServiceName.toLowerCase() ? 'Product' : 'Bundle'}
                       </Button>
                     ) : (
                       <Button 
                         onClick={createNewProduct}
                         disabled={!newServiceName.trim()}
                       >
-                        Create & Add Service
+                        Create & Add Product
                       </Button>
                     )}
                   </>
