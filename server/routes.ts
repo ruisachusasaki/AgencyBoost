@@ -2516,11 +2516,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let baseQuery = db.select().from(productBundles);
       
-      const result = conditions.length > 0 
+      const bundles = conditions.length > 0 
         ? await baseQuery.where(and(...conditions)).orderBy(asc(productBundles.name))
         : await baseQuery.orderBy(asc(productBundles.name));
       
-      res.json(result);
+      // Calculate usage count for each bundle
+      const bundlesWithUsage = await Promise.all(
+        bundles.map(async (bundle) => {
+          const usageCountResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(clientBundles)
+            .where(and(
+              eq(clientBundles.bundleId, bundle.id),
+              eq(clientBundles.status, 'active')
+            ));
+          
+          return {
+            ...bundle,
+            usageCount: Number(usageCountResult[0]?.count || 0)
+          };
+        })
+      );
+      
+      res.json(bundlesWithUsage);
     } catch (error) {
       console.error('Error fetching product bundles:', error);
       res.status(500).json({ message: "Failed to fetch product bundles" });

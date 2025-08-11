@@ -38,7 +38,6 @@ interface Product {
   type: string;
   categoryId?: string;
   status: string;
-  usageCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +50,7 @@ interface ProductBundle {
   createdAt: string;
   updatedAt: string;
   products?: BundleProduct[];
+  usageCount?: number;
 }
 
 interface BundleProduct {
@@ -864,7 +864,6 @@ export default function ProductsSettings() {
                       <TableHead>Cost</TableHead>
                       <SortableTableHead field="type">Type</SortableTableHead>
                       <SortableTableHead field="status">Status</SortableTableHead>
-                      <TableHead>Usage</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -900,9 +899,6 @@ export default function ProductsSettings() {
                           <Badge variant={product.status === "active" ? "default" : "secondary"}>
                             {product.status}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-600">{product.usageCount} clients</span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -1054,6 +1050,9 @@ export default function ProductsSettings() {
                             <div className="flex items-center gap-2">
                               <Badge variant={bundle.status === "active" ? "default" : "secondary"}>
                                 {bundle.status}
+                              </Badge>
+                              <Badge variant="outline" className="text-sm">
+                                {bundle.usageCount || 0} clients
                               </Badge>
                               <Button
                                 variant="ghost"
