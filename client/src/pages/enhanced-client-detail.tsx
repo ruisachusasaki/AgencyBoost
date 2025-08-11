@@ -359,7 +359,7 @@ const EditableField = ({
             </a>
           ) : type === 'currency' && value ? (
             <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
-              ${Number(value).toFixed(2)}
+              ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           ) : type === 'multiline' && value ? (
             <div className={`${className} group-hover:bg-gray-50 p-1 rounded whitespace-pre-wrap`}>
