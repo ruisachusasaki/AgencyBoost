@@ -2485,17 +2485,18 @@ export default function EnhancedClientDetail() {
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setActiveRightSection("tasks")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
                             activeRightSection === "tasks"
                               ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              : "text-gray-400"
                           }`}
+                          disabled
                         >
                           <CheckCircle className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Tasks</p>
+                        <p>Tasks (Coming Soon - Being Rebuilt)</p>
                       </TooltipContent>
                     </Tooltip>
                     
