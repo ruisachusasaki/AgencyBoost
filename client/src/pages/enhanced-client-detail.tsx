@@ -412,10 +412,8 @@ export default function EnhancedClientDetail() {
   // Extract client ID from URL
   const clientId = window.location.pathname.split('/').pop();
   
-  // Refs for measuring column heights
-  const leftColumnRef = useRef<HTMLDivElement>(null);
+  // Ref for right column (left column height tracking removed)
   const rightColumnRef = useRef<HTMLDivElement>(null);
-  const [leftColumnHeight, setLeftColumnHeight] = useState<number>(0);
 
   // State management
   const [sections, setSections] = useState<Section[]>([
@@ -766,52 +764,11 @@ export default function EnhancedClientDetail() {
     enabled: expandedBundles.size > 0 && !!clientId,
   });
 
-  // Height measurement for responsive right column
-  useEffect(() => {
-    const measureHeight = () => {
-      if (leftColumnRef.current) {
-        const height = leftColumnRef.current.offsetHeight;
-        setLeftColumnHeight(height);
-      }
-    };
-
-    // Measure height on mount and when content changes
-    measureHeight();
-    
-    // Set up a resize observer to measure height when content changes
-    const resizeObserver = new ResizeObserver(() => {
-      // Add a small delay to ensure DOM has updated after animations
-      setTimeout(measureHeight, 100);
-    });
-    
-    if (leftColumnRef.current) {
-      resizeObserver.observe(leftColumnRef.current);
-    }
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [client, customFieldFoldersData, customFieldsData, sections]);
-
-  // Calculate dynamic height for notes section
+  // Fixed height for notes section to enable consistent scrolling
   const calculateNotesMaxHeight = () => {
-    if (!leftColumnHeight) return undefined;
-    
-    // Account for the right column header, form inputs, and padding
-    // Subtract approximately 160px for the header, search, and add note form
-    const availableHeight = leftColumnHeight - 160;
-    
-    // Debug logging (you can remove this later)
-    console.log('Left column height:', leftColumnHeight);
-    console.log('Available height for notes:', availableHeight);
-    console.log('Constraint applied:', availableHeight > 150);
-    
-    // Apply constraint when we have reasonable space, otherwise use a minimum
-    if (availableHeight > 150) {
-      return `${availableHeight}px`;
-    } else {
-      return '300px'; // Minimum height to ensure some scrolling occurs
-    }
+    // Use a fixed height that works well for most screen sizes
+    // This ensures the right column never grows taller than intended
+    return '600px';
   };
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
@@ -1871,7 +1828,7 @@ export default function EnhancedClientDetail() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
           {/* Left Column - Contact Details */}
-          <div ref={leftColumnRef} className="lg:col-span-2">
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
