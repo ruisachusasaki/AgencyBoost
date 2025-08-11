@@ -1773,9 +1773,9 @@ export default function EnhancedClientDetail() {
       </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Left Column - Contact Details */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -2314,7 +2314,7 @@ export default function EnhancedClientDetail() {
           </div>
 
           {/* Middle Column - Activity & Quick Actions */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2">
             {/* Recent Activity - Moved to Top */}
             <Card className="mb-6">
               <CardHeader>
