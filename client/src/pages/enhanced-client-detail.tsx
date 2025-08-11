@@ -866,7 +866,7 @@ export default function EnhancedClientDetail() {
       const createdProduct = await apiRequest('POST', '/api/products', {
         name: newServiceName,
         description: '',
-        price: 0,
+        cost: 0,
         type: 'one_time'
       });
 
@@ -1356,13 +1356,8 @@ export default function EnhancedClientDetail() {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {clientProduct.productPrice && (
-                                    <Badge variant="outline" className="text-xs">
-                                      ${clientProduct.productPrice}
-                                    </Badge>
-                                  )}
                                   {clientProduct.productCost && (
-                                    <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                    <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                                       Cost: ${clientProduct.productCost}
                                     </Badge>
                                   )}
@@ -1488,10 +1483,15 @@ export default function EnhancedClientDetail() {
                                           >
                                             <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
                                             <ShoppingCart className="h-3 w-3 text-gray-400" />
-                                            <span className="text-gray-600">{bundleProduct.productName}</span>
+                                            <span className="text-gray-600 flex-1">{bundleProduct.productName}</span>
                                             <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
                                               Qty: {bundleProduct.quantity}
                                             </Badge>
+                                            {bundleProduct.productCost && (
+                                              <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                                                ${bundleProduct.productCost} each
+                                              </Badge>
+                                            )}
                                             {bundleProduct.quantity !== bundleProduct.baseQuantity && (
                                               <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">
                                                 Custom
@@ -2037,9 +2037,9 @@ export default function EnhancedClientDetail() {
                               <ShoppingCart className="w-3 h-3 text-gray-500 flex-shrink-0" />
                               <span className="text-sm truncate">{product.name}</span>
                             </div>
-                            {product.price && (
+                            {product.cost && (
                               <Badge variant="outline" className="text-xs">
-                                ${product.price}
+                                Cost: ${product.cost}
                               </Badge>
                             )}
                           </button>
