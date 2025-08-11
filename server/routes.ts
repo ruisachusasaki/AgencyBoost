@@ -3491,11 +3491,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Note content is required" });
       }
 
-      // Check if user is admin
-      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
-      const user = userInfo[0];
+      // Check if user is admin - get role from roles table
+      const userWithRole = await db.select({
+        id: staff.id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        roleName: roles.name
+      })
+      .from(staff)
+      .leftJoin(roles, eq(staff.roleId, roles.id))
+      .where(eq(staff.id, userId))
+      .limit(1);
       
-      if (!user || user.role !== 'Admin') {
+      const user = userWithRole[0];
+      
+      if (!user || user.roleName !== 'Admin') {
         return res.status(403).json({ error: "Only admins can edit notes" });
       }
 
@@ -3562,11 +3572,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { clientId, noteId } = req.params;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
-      // Check if user is admin
-      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
-      const user = userInfo[0];
+      // Check if user is admin - get role from roles table
+      const userWithRole = await db.select({
+        id: staff.id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        roleName: roles.name
+      })
+      .from(staff)
+      .leftJoin(roles, eq(staff.roleId, roles.id))
+      .where(eq(staff.id, userId))
+      .limit(1);
       
-      if (!user || user.role !== 'Admin') {
+      const user = userWithRole[0];
+      
+      if (!user || user.roleName !== 'Admin') {
         return res.status(403).json({ error: "Only admins can delete notes" });
       }
 
