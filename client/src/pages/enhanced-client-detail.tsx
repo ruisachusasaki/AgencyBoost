@@ -3298,10 +3298,10 @@ export default function EnhancedClientDetail() {
                                       setEditAssigneeSearchTerm(task.assignedToUser ? `${task.assignedToUser.firstName} ${task.assignedToUser.lastName}` : "");
                                       setIsEditTaskDialogOpen(true);
                                     }}
-                                    className="h-6 px-2 text-xs"
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                                    title="Edit task"
                                   >
-                                    <Edit2 className="h-3 w-3 mr-1" />
-                                    Edit
+                                    <Edit2 className="h-3 w-3" />
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -3315,15 +3315,10 @@ export default function EnhancedClientDetail() {
                                       }
                                       setExpandedTasks(newExpanded);
                                     }}
-                                    className="h-6 px-2 text-xs"
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                                    title={`${expandedTasks.has(task.id) ? 'Hide' : 'Show'} comments`}
                                   >
-                                    <MessageSquare className="h-3 w-3 mr-1" />
-                                    Comments
-                                    {expandedTasks.has(task.id) ? (
-                                      <ChevronDown className="h-3 w-3 ml-1" />
-                                    ) : (
-                                      <ChevronRight className="h-3 w-3 ml-1" />
-                                    )}
+                                    <MessageSquare className="h-3 w-3" />
                                   </Button>
                                   {/* Delete button - Admin only */}
                                   {userPermissions?.tasks?.canDelete && (
@@ -3335,12 +3330,11 @@ export default function EnhancedClientDetail() {
                                           deleteTaskMutation.mutate(task.id);
                                         }
                                       }}
-                                      className="h-6 px-2 text-xs text-gray-400 hover:text-red-600"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
                                       disabled={deleteTaskMutation.isPending}
                                       title="Delete task (Admin only)"
                                     >
-                                      <Trash2 className="h-3 w-3 mr-1" />
-                                      Delete
+                                      <Trash2 className="h-3 w-3" />
                                     </Button>
                                   )}
                                 </div>
