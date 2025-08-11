@@ -277,7 +277,12 @@ export default function TaskDetail() {
                   {task.assignedTo && (
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{task.assignedTo}</span>
+                      <span className="text-sm">
+                        {(task as any).assignedToUser 
+                          ? `${(task as any).assignedToUser.firstName} ${(task as any).assignedToUser.lastName}` 
+                          : task.assignedTo
+                        }
+                      </span>
                     </div>
                   )}
                   

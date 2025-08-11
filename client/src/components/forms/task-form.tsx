@@ -36,14 +36,14 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   const form = useForm<InsertTask>({
     resolver: zodResolver(insertTaskSchema),
     defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
+      title: typeof task?.title === 'string' ? task.title : "",
+      description: typeof task?.description === 'string' ? task.description : "",
       status: task?.status || "pending",
       priority: task?.priority || "medium",
-      assignedTo: task?.assignedTo || "",
-      clientId: task?.clientId || "",
-      projectId: task?.projectId || "",
-      campaignId: task?.campaignId || "",
+      assignedTo: task?.assignedTo ? String(task.assignedTo) : "",
+      clientId: typeof task?.clientId === 'string' ? task.clientId : "",
+      projectId: typeof task?.projectId === 'string' ? task.projectId : "",
+      campaignId: typeof task?.campaignId === 'string' ? task.campaignId : "",
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
     },
   });
