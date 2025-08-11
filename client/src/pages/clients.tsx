@@ -159,6 +159,12 @@ export default function Clients() {
     return ['status', 'state', 'city', 'contactOwner'].includes(fieldName);
   };
 
+  // Get count for a specific smart list (independent of current active filter)
+  const getSmartListCount = (smartList: SmartList): number => {
+    if (!clients || clients.length === 0) return 0;
+    return applyClientFilter(clients, smartList.filters).length;
+  };
+
 
   
   const queryClient = useQueryClient();
@@ -940,7 +946,7 @@ export default function Clients() {
               name: smartList.name,
               icon: smartList.visibility === 'personal' ? Lock : 
                     smartList.visibility === 'shared' ? Share2 : Globe,
-              count: filteredAndSortedClients.length,
+              count: getSmartListCount(smartList),
               smartList: smartList
             }))
           ].map((tab) => {
