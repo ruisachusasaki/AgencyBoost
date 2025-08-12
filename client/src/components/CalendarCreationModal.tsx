@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Users, Settings, Clock, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar, Users, Settings, Clock, ArrowLeft, ArrowRight, Check, X, Tag, ChevronDown, Search } from "lucide-react";
 
 interface CalendarCreationModalProps {
   isOpen: boolean;
@@ -76,11 +77,35 @@ const defaultFormData: CalendarFormData = {
 export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff }: CalendarCreationModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<CalendarFormData>(defaultFormData);
+  const [staffSearch, setStaffSearch] = useState("");
+
+  const mergeTags = [
+    { tag: "{CONTACT_FIRST_NAME}", label: "Contact First Name" },
+    { tag: "{CONTACT_LAST_NAME}", label: "Contact Last Name" },
+    { tag: "{CONTACT_EMAIL}", label: "Contact Email" },
+    { tag: "{CONTACT_PHONE}", label: "Contact Phone" },
+    { tag: "{COMPANY_NAME}", label: "Company Name" },
+    { tag: "{CALENDAR_NAME}", label: "Calendar Name" },
+    { tag: "{MEETING_DATE}", label: "Meeting Date" },
+    { tag: "{MEETING_TIME}", label: "Meeting Time" }
+  ];
+
+  const filteredStaff = staff.filter(member => 
+    `${member.firstName} ${member.lastName} ${member.email}`.toLowerCase().includes(staffSearch.toLowerCase())
+  );
 
   const handleClose = () => {
     setCurrentStep(1);
     setFormData(defaultFormData);
+    setStaffSearch("");
     onClose();
+  };
+
+  const insertMergeTag = (tag: string) => {
+    const currentTitle = formData.meetingInviteTitle;
+    const cursorPos = currentTitle.length; // Insert at end for simplicity
+    const newTitle = currentTitle.slice(0, cursorPos) + tag + currentTitle.slice(cursorPos);
+    updateFormData({ meetingInviteTitle: newTitle });
   };
 
   const handleNext = () => {
@@ -236,41 +261,127 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
 
         <div className="grid gap-2">
           <Label htmlFor="meeting-title">Meeting Invite Title</Label>
-          <Input
-            id="meeting-title"
-            value={formData.meetingInviteTitle}
-            onChange={(e) => updateFormData({ meetingInviteTitle: e.target.value })}
-            placeholder="Meeting with {CONTACT_NAME}"
-          />
-          <p className="text-xs text-gray-500">Supports merge tags like {"{CONTACT_NAME}"}, {"{CONTACT_EMAIL}"}</p>
+          <div className="relative">
+            <Input
+              id="meeting-title"
+              value={formData.meetingInviteTitle}
+              onChange={(e) => updateFormData({ meetingInviteTitle: e.target.value })}
+              placeholder="Meeting with {CONTACT_FIRST_NAME}"
+              className="pr-10"
+            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                >
+                  <Tag className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Insert Merge Tags</h4>
+                  <div className="grid gap-1">
+                    {mergeTags.map((mergeTag) => (
+                      <Button
+                        key={mergeTag.tag}
+                        variant="ghost"
+                        size="sm"
+                        className="justify-start text-xs"
+                        onClick={() => insertMergeTag(mergeTag.tag)}
+                      >
+                        {mergeTag.tag} - {mergeTag.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <p className="text-xs text-gray-500">Supports merge tags like {"{CONTACT_FIRST_NAME}"}, {"{CONTACT_EMAIL}"}</p>
         </div>
 
         <div className="grid gap-2">
           <Label>Assign Staff Members *</Label>
-          <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
-            {staff.map((member) => (
-              <div key={member.id} className="flex items-center space-x-2 py-1">
-                <Checkbox
-                  checked={formData.assignedStaff.includes(member.id)}
-                  onCheckedChange={(checked) => {
-                    if (formData.type === "personal") {
-                      // Personal booking: only one staff member
-                      updateFormData({ assignedStaff: checked ? [member.id] : [] });
-                    } else {
-                      // Round robin: multiple staff members
-                      const newStaff = checked 
-                        ? [...formData.assignedStaff, member.id]
-                        : formData.assignedStaff.filter(id => id !== member.id);
-                      updateFormData({ assignedStaff: newStaff });
-                    }
-                  }}
-                />
-                <Label className="text-sm">
-                  {member.firstName} {member.lastName} ({member.email})
-                </Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between h-auto min-h-[40px] p-3"
+              >
+                <div className="flex flex-wrap gap-1">
+                  {formData.assignedStaff.length === 0 ? (
+                    <span className="text-gray-500">
+                      {formData.type === "personal" ? "Select a team member" : "Select team members"}
+                    </span>
+                  ) : (
+                    formData.assignedStaff.map((staffId) => {
+                      const member = staff.find(s => s.id === staffId);
+                      return member ? (
+                        <Badge key={staffId} variant="secondary" className="text-xs">
+                          {member.firstName} {member.lastName}
+                        </Badge>
+                      ) : null;
+                    })
+                  )}
+                </div>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0">
+              <div className="p-3 space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search staff members..."
+                    className="pl-8"
+                    value={staffSearch}
+                    onChange={(e) => setStaffSearch(e.target.value)}
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {filteredStaff.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-pointer"
+                      onClick={() => {
+                        if (formData.type === "personal") {
+                          // Personal booking: only one staff member
+                          const isSelected = formData.assignedStaff.includes(member.id);
+                          updateFormData({ assignedStaff: isSelected ? [] : [member.id] });
+                        } else {
+                          // Round robin: multiple staff members
+                          const newStaff = formData.assignedStaff.includes(member.id)
+                            ? formData.assignedStaff.filter(id => id !== member.id)
+                            : [...formData.assignedStaff, member.id];
+                          updateFormData({ assignedStaff: newStaff });
+                        }
+                      }}
+                    >
+                      <Checkbox
+                        checked={formData.assignedStaff.includes(member.id)}
+                        readOnly
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium">
+                          {member.firstName} {member.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {member.email}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredStaff.length === 0 && (
+                    <div className="p-2 text-sm text-gray-500 text-center">
+                      No staff members found
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
+            </PopoverContent>
+          </Popover>
           <p className="text-xs text-gray-500">
             {formData.type === "personal" 
               ? "Select one team member for personal bookings"
@@ -320,7 +431,7 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
   );
 
   const renderStep3 = () => (
-    <div className="space-y-6 max-h-96 overflow-y-auto">
+    <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold mb-2">Availability Settings</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -333,7 +444,7 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
         <Label className="text-sm font-medium">Weekly Available Hours</Label>
         <div className="grid gap-2">
           {Object.entries(formData.weeklyHours).map(([day, hours]) => (
-            <div key={day} className="flex items-center gap-3 p-2 border rounded-lg">
+            <div key={day} className="flex items-center gap-3 p-3 border rounded-lg">
               <Checkbox
                 checked={hours.enabled}
                 onCheckedChange={(checked) => 
@@ -345,9 +456,9 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
                   })
                 }
               />
-              <div className="w-20 text-sm capitalize">{day}</div>
+              <div className="w-20 text-sm capitalize font-medium">{day}</div>
               {hours.enabled && (
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-3 items-center flex-1">
                   <Input
                     type="time"
                     value={hours.startTime}
@@ -359,9 +470,9 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
                         }
                       })
                     }
-                    className="w-24"
+                    className="w-28 text-sm"
                   />
-                  <span className="text-xs text-gray-500">to</span>
+                  <span className="text-xs text-gray-500 px-1">to</span>
                   <Input
                     type="time"
                     value={hours.endTime}
@@ -373,9 +484,12 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
                         }
                       })
                     }
-                    className="w-24"
+                    className="w-28 text-sm"
                   />
                 </div>
+              )}
+              {!hours.enabled && (
+                <div className="flex-1 text-sm text-gray-400">Unavailable</div>
               )}
             </div>
           ))}
@@ -633,8 +747,8 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Create New Calendar
@@ -645,7 +759,7 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
         </DialogHeader>
 
         {/* Progress indicator */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 flex-shrink-0">
           {[1, 2, 3].map((step) => (
             <div key={step} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -666,15 +780,15 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
           ))}
         </div>
 
-        {/* Step content */}
-        <div className="min-h-[400px]">
+        {/* Step content - scrollable */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-1">
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between pt-4 border-t">
+        {/* Navigation - fixed at bottom */}
+        <div className="flex justify-between pt-4 border-t flex-shrink-0 mt-4">
           <Button variant="outline" onClick={handleClose}>
             <X className="h-4 w-4 mr-2" />
             Cancel
