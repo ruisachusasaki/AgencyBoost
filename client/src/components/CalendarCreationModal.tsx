@@ -16,7 +16,7 @@ interface CalendarCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateCalendar: (calendarData: any) => void;
-  staff: Array<{ id: string; firstName: string; lastName: string; email: string }>;
+  staff?: Array<{ id: string; firstName: string; lastName: string; email: string }>;
 }
 
 interface CalendarFormData {
@@ -90,9 +90,9 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
     { tag: "{MEETING_TIME}", label: "Meeting Time" }
   ];
 
-  const filteredStaff = staff.filter(member => 
+  const filteredStaff = staff ? staff.filter(member => 
     `${member.firstName} ${member.lastName} ${member.email}`.toLowerCase().includes(staffSearch.toLowerCase())
-  );
+  ) : [];
 
   const handleClose = () => {
     setCurrentStep(1);
@@ -158,8 +158,7 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
   };
 
   const canProceedFromStep1 = formData.type !== "";
-  const canProceedFromStep2 = formData.name.trim() !== "" && formData.customUrl.trim() !== "" && 
-    (formData.type === "personal" ? formData.assignedStaff.length === 1 : formData.assignedStaff.length > 0);
+  const canProceedFromStep2 = formData.name.trim() !== "" && formData.customUrl.trim() !== "";
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -317,7 +316,7 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
                     </span>
                   ) : (
                     formData.assignedStaff.map((staffId) => {
-                      const member = staff.find(s => s.id === staffId);
+                      const member = staff?.find(s => s.id === staffId);
                       return member ? (
                         <Badge key={staffId} variant="secondary" className="text-xs">
                           {member.firstName} {member.lastName}
@@ -361,7 +360,6 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
                     >
                       <Checkbox
                         checked={formData.assignedStaff.includes(member.id)}
-                        readOnly
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium">
