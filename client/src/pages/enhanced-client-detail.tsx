@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle } from "lucide-react";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Client, Tag, InsertTag } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -568,6 +569,9 @@ export default function EnhancedClientDetail() {
   const [servicesExpanded, setServicesExpanded] = useState({
     services: true
   });
+
+  // Communication tabs state
+  const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
 
 
 
@@ -1305,26 +1309,15 @@ export default function EnhancedClientDetail() {
     return newSections;
   }, [customFieldFoldersData, customFieldsData]);
 
-  // Update sections only when calculated sections structure changes
-  const calculatedSectionsStr = useMemo(() => 
-    JSON.stringify(calculatedSections.map(s => ({ id: s.id, name: s.name }))), 
-    [calculatedSections]
-  );
-  
+  // Initialize sections with calculatedSections when they're first available
   useEffect(() => {
-    if (calculatedSections.length === 0) return;
-    
-    setSections(prev => {
-      const prevStr = JSON.stringify(prev.map(s => ({ id: s.id, name: s.name })));
-      if (prevStr !== calculatedSectionsStr) {
-        return calculatedSections.map(section => ({
-          ...section,
-          isOpen: prev.find(p => p.id === section.id)?.isOpen || false
-        }));
-      }
-      return prev;
-    });
-  }, [calculatedSectionsStr]);
+    if (calculatedSections.length > 0 && sections.length === 0) {
+      setSections(calculatedSections.map(section => ({
+        ...section,
+        isOpen: false  // All sections closed by default
+      })));
+    }
+  }, [calculatedSections.length, sections.length]);
 
   // Owner search filtering
   useEffect(() => {
@@ -2452,72 +2445,90 @@ export default function EnhancedClientDetail() {
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900">Communication</h2>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-gray-700">Send SMS</Label>
-                    {(client?.dndAll || client?.dndSms) && (
-                      <Badge variant="destructive" className="text-xs">
-                        <ShieldOff className="h-3 w-3 mr-1" />
-                        DND Active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={
-                        (client?.dndAll || client?.dndSms) 
-                          ? "SMS blocked by DND settings..." 
-                          : "SMS message..."
-                      }
-                      value={smsMessage}
-                      onChange={(e) => setSmsMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendSMS()}
-                      disabled={!!client?.dndAll || !!client?.dndSms}
-                      className={`${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                    />
-                    <Button 
-                      onClick={sendSMS}
-                      disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
-                      className="bg-primary hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      Send
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-gray-700">Send Email</Label>
-                    {(client?.dndAll || client?.dndEmail) && (
-                      <Badge variant="destructive" className="text-xs">
-                        <ShieldOff className="h-3 w-3 mr-1" />
-                        DND Active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={
-                        (client?.dndAll || client?.dndEmail) 
-                          ? "Email blocked by DND settings..." 
-                          : "Email message..."
-                      }
-                      value={emailMessage}
-                      onChange={(e) => setEmailMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendEmail()}
-                      disabled={!!client?.dndAll || !!client?.dndEmail}
-                      className={`${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                    />
-                    <Button 
-                      onClick={sendEmail}
-                      disabled={!emailMessage.trim() || !!client?.dndAll || !!client?.dndEmail}
-                      variant="outline"
-                      className="disabled:opacity-50"
-                    >
-                      Send
-                    </Button>
-                  </div>
-                </div>
+              <CardContent>
+                <Tabs value={communicationTab} onValueChange={(value) => setCommunicationTab(value as 'sms' | 'email')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="sms" className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      SMS
+                    </TabsTrigger>
+                    <TabsTrigger value="email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="sms" className="mt-0">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium text-gray-700">Send SMS</Label>
+                        {(client?.dndAll || client?.dndSms) && (
+                          <Badge variant="destructive" className="text-xs">
+                            <ShieldOff className="h-3 w-3 mr-1" />
+                            DND Active
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder={
+                            (client?.dndAll || client?.dndSms) 
+                              ? "SMS blocked by DND settings..." 
+                              : "SMS message..."
+                          }
+                          value={smsMessage}
+                          onChange={(e) => setSmsMessage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && sendSMS()}
+                          disabled={!!client?.dndAll || !!client?.dndSms}
+                          className={`${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                        />
+                        <Button 
+                          onClick={sendSMS}
+                          disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
+                          className="bg-primary hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          Send
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="email" className="mt-0">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium text-gray-700">Send Email</Label>
+                        {(client?.dndAll || client?.dndEmail) && (
+                          <Badge variant="destructive" className="text-xs">
+                            <ShieldOff className="h-3 w-3 mr-1" />
+                            DND Active
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder={
+                            (client?.dndAll || client?.dndEmail) 
+                              ? "Email blocked by DND settings..." 
+                              : "Email message..."
+                          }
+                          value={emailMessage}
+                          onChange={(e) => setEmailMessage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && sendEmail()}
+                          disabled={!!client?.dndAll || !!client?.dndEmail}
+                          className={`${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                        />
+                        <Button 
+                          onClick={sendEmail}
+                          disabled={!emailMessage.trim() || !!client?.dndAll || !!client?.dndEmail}
+                          variant="outline"
+                          className="disabled:opacity-50"
+                        >
+                          Send
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
