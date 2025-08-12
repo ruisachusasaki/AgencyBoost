@@ -583,6 +583,8 @@ export default function EnhancedClientDetail() {
     subject: '',
     message: ''
   });
+  const [showCC, setShowCC] = useState(false);
+  const [showBCC, setShowBCC] = useState(false);
   const [showWysiwyg, setShowWysiwyg] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showMergeTagsModal, setShowMergeTagsModal] = useState(false);
@@ -1331,15 +1333,19 @@ export default function EnhancedClientDetail() {
     return newSections;
   }, [customFieldFoldersData, customFieldsData]);
 
+  // Track if sections have been initialized
+  const sectionsInitialized = useRef(false);
+
   // Initialize sections with calculatedSections when they're first available
   useEffect(() => {
-    if (calculatedSections.length > 0 && sections.length === 0) {
+    if (calculatedSections.length > 0 && !sectionsInitialized.current) {
       setSections(calculatedSections.map(section => ({
         ...section,
         isOpen: false  // All sections closed by default
       })));
+      sectionsInitialized.current = true;
     }
-  }, [calculatedSections.length, sections.length]);
+  }, [calculatedSections]);
 
   // Owner search filtering
   useEffect(() => {
@@ -1378,12 +1384,22 @@ export default function EnhancedClientDetail() {
   // Auto-populate email fields when user and client data are available
   useEffect(() => {
     if (currentUser && client) {
-      setEmailData(prev => ({
-        ...prev,
-        fromName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
-        fromEmail: currentUser.email || '',
-        to: client.email || ''
-      }));
+      const fromName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+      const fromEmail = currentUser.email || '';
+      const to = client.email || '';
+      
+      // Only update if values are different to prevent infinite re-renders
+      setEmailData(prev => {
+        if (prev.fromName !== fromName || prev.fromEmail !== fromEmail || prev.to !== to) {
+          return {
+            ...prev,
+            fromName,
+            fromEmail,
+            to
+          };
+        }
+        return prev;
+      });
     }
   }, [currentUser, client]);
 
@@ -2606,40 +2622,72 @@ export default function EnhancedClientDetail() {
                           </div>
                         </div>
 
-                        {/* To Field */}
+                        {/* To Field with CC/BCC Toggle Buttons */}
                         <div>
                           <Label className="text-sm font-medium text-gray-700">To</Label>
-                          <Input
-                            value={emailData.to}
-                            onChange={(e) => handleEmailFieldChange('to', e.target.value)}
-                            disabled={!!client?.dndAll || !!client?.dndEmail}
-                            className="mt-1"
-                          />
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              value={emailData.to}
+                              onChange={(e) => handleEmailFieldChange('to', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="flex-1"
+                            />
+                            <div className="flex items-center gap-2">
+                              {/* Vertical Separator */}
+                              <div className="w-px h-6 bg-gray-300"></div>
+                              
+                              {/* CC Toggle Button */}
+                              <Button
+                                variant={showCC ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setShowCC(!showCC)}
+                                disabled={!!client?.dndAll || !!client?.dndEmail}
+                                className="text-xs px-3"
+                              >
+                                CC
+                              </Button>
+                              
+                              {/* BCC Toggle Button */}
+                              <Button
+                                variant={showBCC ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setShowBCC(!showBCC)}
+                                disabled={!!client?.dndAll || !!client?.dndEmail}
+                                className="text-xs px-3"
+                              >
+                                BCC
+                              </Button>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* CC Field */}
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700">CC</Label>
-                          <Input
-                            placeholder="Additional email addresses (comma separated)"
-                            value={emailData.cc}
-                            onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
-                            disabled={!!client?.dndAll || !!client?.dndEmail}
-                            className="mt-1"
-                          />
-                        </div>
+                        {/* CC Field - conditionally shown */}
+                        {showCC && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">CC</Label>
+                            <Input
+                              placeholder="Additional email addresses (comma separated)"
+                              value={emailData.cc}
+                              onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                        )}
 
-                        {/* BCC Field */}
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700">BCC</Label>
-                          <Input
-                            placeholder="Blind carbon copy (comma separated)"
-                            value={emailData.bcc}
-                            onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
-                            disabled={!!client?.dndAll || !!client?.dndEmail}
-                            className="mt-1"
-                          />
-                        </div>
+                        {/* BCC Field - conditionally shown */}
+                        {showBCC && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">BCC</Label>
+                            <Input
+                              placeholder="Blind carbon copy (comma separated)"
+                              value={emailData.bcc}
+                              onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                        )}
 
                         {/* Subject Field */}
                         <div>
