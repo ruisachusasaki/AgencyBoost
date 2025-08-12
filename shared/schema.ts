@@ -632,15 +632,16 @@ export const insertClientBundleSchema = createInsertSchema(clientBundles).omit({
   createdAt: true,
 });
 
-export const insertNoteSchema = createInsertSchema(notes).omit({
+export const insertClientAppointmentSchema = createInsertSchema(clientAppointments).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+export const insertNoteSchema = createInsertSchema(notes).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
@@ -757,8 +758,8 @@ export type InsertClientBundle = z.infer<typeof insertClientBundleSchema>;
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 
-export type Appointment = typeof appointments.$inferSelect;
-export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
+export type ClientAppointment = typeof clientAppointments.$inferSelect;
+export type InsertClientAppointment = z.infer<typeof insertClientAppointmentSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
@@ -1138,12 +1139,6 @@ export const insertClientTaskSchema = createInsertSchema(clientTasks).omit({
   updatedAt: true,
 });
 
-export const insertClientAppointmentSchema = createInsertSchema(clientAppointments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({
   id: true,
   createdAt: true,
@@ -1396,5 +1391,205 @@ export const insertNotificationSettingsSchema = createInsertSchema(notificationS
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
+
+// Calendar System Tables
+
+// Calendar definitions (Personal Booking or Round Robin)
+export const calendars = pgTable("calendars", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'personal' or 'round_robin'
+  customUrl: text("custom_url").notNull().unique(), // URL slug for public booking
+  duration: integer("duration").notNull(), // meeting duration in minutes
+  durationUnit: text("duration_unit").notNull().default("minutes"), // 'minutes' or 'hours'
+  location: text("location"), // 'google_meet', 'zoom', 'phone', 'in_person', 'custom'
+  locationDetails: text("location_details"), // Custom location text or meeting link template
+  bufferTime: integer("buffer_time").default(15), // minutes between meetings
+  scheduleWindowStart: integer("schedule_window_start").default(24), // hours ahead minimum
+  scheduleWindowEnd: integer("schedule_window_end").default(1440), // hours ahead maximum (60 days)
+  isActive: boolean("is_active").default(true),
+  customFieldIds: text("custom_field_ids").array(), // Array of custom field IDs to show on booking form
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Calendar staff assignments (for Personal Booking: 1 user, for Round Robin: multiple users)
+export const calendarStaff = pgTable("calendar_staff", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  isActive: boolean("is_active").default(true),
+  roundRobinOrder: integer("round_robin_order"), // For round robin scheduling order
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Calendar availability settings (per user per calendar)
+export const calendarAvailability = pgTable("calendar_availability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime: text("start_time").notNull(), // HH:MM format (24-hour)
+  endTime: text("end_time").notNull(), // HH:MM format (24-hour)
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Calendar date-specific overrides (holidays, vacation, extra hours)
+export const calendarDateOverrides = pgTable("calendar_date_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  type: text("type").notNull(), // 'blocked', 'custom_hours'
+  startTime: text("start_time"), // For custom hours (HH:MM format)
+  endTime: text("end_time"), // For custom hours (HH:MM format)
+  reason: text("reason"), // Optional reason for blocking/override
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Calendar integrations (Google Calendar, Outlook, etc.)
+export const calendarIntegrations = pgTable("calendar_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(), // 'google', 'outlook', 'apple'
+  externalCalendarId: text("external_calendar_id").notNull(),
+  accessToken: text("access_token").notNull(), // Encrypted OAuth token
+  refreshToken: text("refresh_token"), // Encrypted OAuth refresh token
+  tokenExpiresAt: timestamp("token_expires_at"),
+  isActive: boolean("is_active").default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncErrors: text("sync_errors"), // Latest sync error messages
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Calendar appointments/bookings (different from clientAppointments)
+export const calendarAppointments = pgTable("calendar_appointments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  calendarId: varchar("calendar_id").notNull().references(() => calendars.id),
+  clientId: varchar("client_id").references(() => clients.id), // Can be null for external bookings
+  assignedTo: varchar("assigned_to").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  status: text("status").notNull().default("confirmed"), // 'confirmed', 'showed', 'no_show', 'cancelled'
+  location: text("location"),
+  locationDetails: text("location_details"),
+  meetingLink: text("meeting_link"), // Generated meeting link for virtual meetings
+  timezone: text("timezone").notNull(),
+  // Booking form data
+  bookerName: text("booker_name"),
+  bookerEmail: text("booker_email").notNull(),
+  bookerPhone: text("booker_phone"),
+  customFieldData: jsonb("custom_field_data"), // Responses to custom fields
+  // External calendar integration
+  externalEventId: text("external_event_id"), // ID from external calendar (Google, Outlook)
+  // Metadata
+  bookingSource: text("booking_source").notNull().default("public"), // 'public', 'admin', 'api'
+  bookingIp: text("booking_ip"),
+  bookingUserAgent: text("booking_user_agent"),
+  // Cancellation details
+  cancelledAt: timestamp("cancelled_at"),
+  cancelledBy: varchar("cancelled_by").references(() => users.id),
+  cancellationReason: text("cancellation_reason"),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Appointment reminders
+export const appointmentReminders = pgTable("appointment_reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  appointmentId: varchar("appointment_id").notNull().references(() => calendarAppointments.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // 'email', 'sms'
+  sendAt: timestamp("send_at").notNull(),
+  message: text("message"),
+  status: text("status").notNull().default("pending"), // 'pending', 'sent', 'failed'
+  sentAt: timestamp("sent_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Round robin tracking for fair distribution
+export const roundRobinTracking = pgTable("round_robin_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
+  lastAssignedUserId: varchar("last_assigned_user_id").references(() => users.id),
+  assignmentCount: jsonb("assignment_count"), // {userId: count} for tracking assignments
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Calendar schemas and types
+export const insertCalendarSchema = createInsertSchema(calendars).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCalendarStaffSchema = createInsertSchema(calendarStaff).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCalendarAvailabilitySchema = createInsertSchema(calendarAvailability).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCalendarDateOverrideSchema = createInsertSchema(calendarDateOverrides).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCalendarIntegrationSchema = createInsertSchema(calendarIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCalendarAppointmentSchema = createInsertSchema(calendarAppointments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAppointmentReminderSchema = createInsertSchema(appointmentReminders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRoundRobinTrackingSchema = createInsertSchema(roundRobinTracking).omit({
+  id: true,
+  updatedAt: true,
+});
+
+// Export types
+export type Calendar = typeof calendars.$inferSelect;
+export type InsertCalendar = z.infer<typeof insertCalendarSchema>;
+
+export type CalendarStaff = typeof calendarStaff.$inferSelect;
+export type InsertCalendarStaff = z.infer<typeof insertCalendarStaffSchema>;
+
+export type CalendarAvailability = typeof calendarAvailability.$inferSelect;
+export type InsertCalendarAvailability = z.infer<typeof insertCalendarAvailabilitySchema>;
+
+export type CalendarDateOverride = typeof calendarDateOverrides.$inferSelect;
+export type InsertCalendarDateOverride = z.infer<typeof insertCalendarDateOverrideSchema>;
+
+export type CalendarIntegration = typeof calendarIntegrations.$inferSelect;
+export type InsertCalendarIntegration = z.infer<typeof insertCalendarIntegrationSchema>;
+
+export type CalendarAppointment = typeof calendarAppointments.$inferSelect;
+export type InsertCalendarAppointment = z.infer<typeof insertCalendarAppointmentSchema>;
+
+export type AppointmentReminder = typeof appointmentReminders.$inferSelect;
+export type InsertAppointmentReminder = z.infer<typeof insertAppointmentReminderSchema>;
+
+export type RoundRobinTracking = typeof roundRobinTracking.$inferSelect;
+export type InsertRoundRobinTracking = z.infer<typeof insertRoundRobinTrackingSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one

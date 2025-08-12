@@ -17,9 +17,11 @@ import {
   insertProductBundleSchema, insertBundleProductSchema,
   insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
   insertClientDocumentSchema, insertClientTransactionSchema,
+  insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
-  clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions
+  clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
+  calendars, calendarStaff, calendarAvailability
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -4569,6 +4571,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(mockUser);
     } catch (error) {
       res.status(500).json({ message: "Failed to get current user" });
+    }
+  });
+
+  // ===== CALENDAR SYSTEM API ROUTES =====
+
+  // Calendar Management Routes
+  app.get("/api/calendars", async (req, res) => {
+    try {
+      const calendarsData = await db
+        .select()
+        .from(calendars)
+        .orderBy(asc(calendars.name));
+
+      res.json(calendarsData);
+    } catch (error) {
+      console.error('Error fetching calendars:', error);
+      res.status(500).json({ message: "Failed to fetch calendars" });
+    }
+  });
+
+  app.post("/api/calendars", async (req, res) => {
+    try {
+      const validatedData = insertCalendarSchema.parse(req.body);
+      
+      // Generate a public URL for the calendar
+      const publicUrl = `https://${req.get('host')}/book/${nanoid(12)}`;
+      
+      const [newCalendar] = await db
+        .insert(calendars)
+        .values({
+          ...validatedData,
+          publicUrl,
+        })
+        .returning();
+
+      await createAuditLog(
+        "created",
+        "calendar",
+        newCalendar.id,
+        newCalendar.name,
+        undefined,
+        `Created calendar: ${newCalendar.name}`,
+        null,
+        newCalendar,
+        req
+      );
+
+      res.status(201).json(newCalendar);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating calendar:', error);
+      res.status(500).json({ message: "Failed to create calendar" });
+    }
+  });
+
+  app.get("/api/calendars/:id", async (req, res) => {
+    try {
+      const [calendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.id, req.params.id));
+
+      if (!calendar) {
+        return res.status(404).json({ message: "Calendar not found" });
+      }
+
+      res.json(calendar);
+    } catch (error) {
+      console.error('Error fetching calendar:', error);
+      res.status(500).json({ message: "Failed to fetch calendar" });
+    }
+  });
+
+  app.put("/api/calendars/:id", async (req, res) => {
+    try {
+      const [existingCalendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.id, req.params.id));
+
+      if (!existingCalendar) {
+        return res.status(404).json({ message: "Calendar not found" });
+      }
+
+      const validatedData = insertCalendarSchema.parse(req.body);
+      
+      const [updatedCalendar] = await db
+        .update(calendars)
+        .set(validatedData)
+        .where(eq(calendars.id, req.params.id))
+        .returning();
+
+      await createAuditLog(
+        "updated",
+        "calendar",
+        updatedCalendar.id,
+        updatedCalendar.name,
+        undefined,
+        `Updated calendar: ${updatedCalendar.name}`,
+        existingCalendar,
+        updatedCalendar,
+        req
+      );
+
+      res.json(updatedCalendar);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating calendar:', error);
+      res.status(500).json({ message: "Failed to update calendar" });
+    }
+  });
+
+  app.delete("/api/calendars/:id", async (req, res) => {
+    try {
+      const [existingCalendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.id, req.params.id));
+
+      if (!existingCalendar) {
+        return res.status(404).json({ message: "Calendar not found" });
+      }
+
+      await db.delete(calendars).where(eq(calendars.id, req.params.id));
+
+      await createAuditLog(
+        "deleted",
+        "calendar",
+        existingCalendar.id,
+        existingCalendar.name,
+        undefined,
+        `Deleted calendar: ${existingCalendar.name}`,
+        existingCalendar,
+        null,
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting calendar:', error);
+      res.status(500).json({ message: "Failed to delete calendar" });
+    }
+  });
+
+  // Calendar Appointments Routes
+  app.get("/api/appointments", async (req, res) => {
+    try {
+      const calendarId = req.query.calendarId as string;
+      const staffId = req.query.staffId as string;
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+
+      let query = db
+        .select({
+          id: calendarAppointments.id,
+          title: calendarAppointments.title,
+          description: calendarAppointments.description,
+          startTime: calendarAppointments.startTime,
+          endTime: calendarAppointments.endTime,
+          status: calendarAppointments.status,
+          location: calendarAppointments.location,
+          calendarId: calendarAppointments.calendarId,
+          customFields: calendarAppointments.customFields,
+          createdAt: calendarAppointments.createdAt,
+        })
+        .from(calendarAppointments);
+
+      if (calendarId) {
+        query = query.where(eq(calendarAppointments.calendarId, calendarId));
+      }
+
+      const appointments = await query.orderBy(asc(calendarAppointments.startTime));
+
+      res.json(appointments);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      res.status(500).json({ message: "Failed to fetch appointments" });
+    }
+  });
+
+  app.post("/api/appointments", async (req, res) => {
+    try {
+      const validatedData = insertCalendarAppointmentSchema.parse(req.body);
+      
+      const [newAppointment] = await db
+        .insert(calendarAppointments)
+        .values(validatedData)
+        .returning();
+
+      await createAuditLog(
+        "created",
+        "appointment",
+        newAppointment.id,
+        newAppointment.title,
+        undefined,
+        `Created appointment: ${newAppointment.title}`,
+        null,
+        newAppointment,
+        req
+      );
+
+      res.status(201).json(newAppointment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating appointment:', error);
+      res.status(500).json({ message: "Failed to create appointment" });
     }
   });
 

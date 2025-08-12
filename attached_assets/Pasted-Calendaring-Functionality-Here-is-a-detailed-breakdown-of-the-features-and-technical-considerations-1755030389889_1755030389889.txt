@@ -1,0 +1,68 @@
+Calendaring Functionality
+
+Here is a detailed breakdown of the features and technical considerations for the calendaring functionality I would like to integrate into AgencyFlow.
+
+Settings Section: Admin Configuration
+
+We need to add a “Calendar” section to the Settings area called “Calendars”. 
+This is the control center where admins Create, Edit/Update, and Delete Calendars.  Functionality:
+
+* Add/Create Calendars
+    * The TYPES of Calendars I would like the Admin to be able to create are:
+        * Personal Booking - Schedules one-on-one meetings with a specific team member. (E.g.: Client meetings, private consultations)
+        * Round Robin - Distributes appointments among team members in a rotating order. (E.g.: Sales calls, onboarding sessions.)
+    * WHAT Fields when Creating/Editing a Calendar: A user should be able to define:
+        * Calendar Name & Description: e.g., "Discovery Call," "Project Kick-off," "30-Minute Check-in."
+        * Assign Staff Members / User(s):
+            * IF Personal Booking - Only assign to ONE user
+            * IF Round Robin - Dropdown multi-pick list of Staff Members/Users
+        * Custom URL: input field for the END of the calendar URL
+        * Meeting Duration: One Field split in two: Input ANY number, second part is a drop down with the options of Minutes & Hours
+        * Availability Settings: Users must be able to set their working hours.
+            * Weekly Hours: Define standard availability (e.g., Monday-Friday, 9 AM to 5 PM).
+            * Date-Specific Overrides: The ability to block out specific dates for holidays or vacations, or to add extra hours on a particular day.
+            * Buffer Time: Add a configurable buffer time between meetings to prevent back-to-back bookings (e.g., 15 minutes).
+            * Scheduling Window: Set a limit on how far in advance or how soon a meeting can be booked (e.g., no bookings within 24 hours and no more than 60 days out).
+        * Location: e.g., "Google Meet," "Zoom," or "Phone Call." This should dynamically generate unique links for each meeting.
+        * Custom Questions: Ability to add Fields from the CUSTOM FIELDS
+    * Calendar Integrations (Most Complex Part): The system must connect to the user's primary calendar to check for conflicts.
+        * Authentication: Securely connect to external calendars like Google Calendar or Outlook Calendar using OAuth 2.0. This is a critical security step.
+        * Conflict Checks: When a client tries to book, the system must check the user's connected calendar for any existing events and show those times as "unavailable."
+        * Two-Way Sync: Ideally, a booking created in your CRM should automatically create an event on the user's external calendar, and an event created on the external calendar should block out time in your CRM's availability.
+
+Calendar Section in the MAIN LEFT Navigation
+* When clicked, goes to a Calendars page with the following
+    * Should have a Title with Icon
+    * 3 Tabs
+        * First Tab - Calendar View (visible to EVERY User)
+            * Should have an actual Calendar Interface
+                * Day View
+                * Week View
+                * Month View
+            * Should have the ability to filter by User and Calendar
+        * Second Tab - Appointment List View (visible to EVERY User)
+            * This should be a table view of ALL appointments that have been created using the built in Calendaring Functionality
+            * Should also have tabs:
+                * Upcoming, Cancelled, All
+            * The table of the active tab should include:
+                * Title of Appointment
+                * Invitees - Contact record the appointment is with
+                * Status - Use THESE options - (1. Confirmed, 2. Showed, 3. No Show, 4. Cancelled)
+                * Appointment Time - Date and Time
+                * Calendar - Which calendar is the appointment booked on
+                * Appointment Owner - Which User is the appointment assigned to
+            * The active tab should have sorting functions and Filtering
+                * Filter by: Status, Calendar, User, Client
+        * Third Tab - Calendar Settings (visible to ONLY ADMINS)
+            * When clicked takes you to Settings > Calendars
+
+Client-Side Booking Page (The Public View)
+
+This is the public-facing component that clients use to book a meeting.
+* Public Link: Each meeting type should have a unique, shareable URL (e.g., yourcrm.com/book/johndoe/discovery-call).
+* UI/UX: A clean, intuitive calendar interface.
+    * Month/Day View: The client should be able to easily navigate through days and months.
+    * Time Zone Support: The calendar should automatically detect the client's time zone and display available slots accordingly. This prevents confusion and double-bookings.
+    * Booking Form: Pulled from the Custom Fields added to the particular calendar.
+* Confirmation & Notifications:
+    * Confirmation Page: After booking, the client is shown a confirmation page with the meeting details.

@@ -16,6 +16,8 @@ import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import SocialMedia from "@/pages/social-media";
 import Workflows from "@/pages/workflows";
+import Calendar from "@/pages/calendar";
+import CalendarSettings from "@/pages/calendar-settings";
 import Settings from "@/pages/settings";
 import BusinessProfile from "@/pages/settings/business-profile";
 import MyProfile from "@/pages/settings/my-profile";
@@ -47,6 +49,8 @@ function Router() {
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
       <Route path="/workflows" component={Workflows} />
+      <Route path="/calendar" component={Calendar} />
+      <Route path="/calendar/settings" component={CalendarSettings} />
       <Route path="/settings" component={Settings} />
       <Route path="/settings/business-profile" component={BusinessProfile} />
       <Route path="/settings/my-profile" component={MyProfile} />
