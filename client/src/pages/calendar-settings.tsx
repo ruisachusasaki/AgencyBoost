@@ -62,7 +62,7 @@ export default function CalendarSettings() {
   // Create calendar mutation
   const createCalendarMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/calendars", "POST", data);
+      return await apiRequest("POST", "/api/calendars", data);
     },
     onSuccess: () => {
       toast({
