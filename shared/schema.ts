@@ -758,9 +758,6 @@ export type InsertClientBundle = z.infer<typeof insertClientBundleSchema>;
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 
-export type ClientAppointment = typeof clientAppointments.$inferSelect;
-export type InsertClientAppointment = z.infer<typeof insertClientAppointmentSchema>;
-
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 
