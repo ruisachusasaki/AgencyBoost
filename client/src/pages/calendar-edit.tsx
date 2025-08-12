@@ -21,7 +21,11 @@ import {
   Save,
   Trash2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Info,
+  Clock,
+  Share2,
+  Check
 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -76,6 +80,8 @@ export default function CalendarEdit() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/settings/calendar/:id/edit");
+  const [activeTab, setActiveTab] = useState("details");
+  const [embedCopied, setEmbedCopied] = useState(false);
   
   const calendarId = params?.id;
 
@@ -203,6 +209,13 @@ export default function CalendarEdit() {
     }
   };
 
+  const copyEmbedCode = () => {
+    const embedCode = `<iframe src="${window.location.origin}/book/${calendar?.customUrl}" width="100%" height="600" frameborder="0"></iframe>`;
+    navigator.clipboard.writeText(embedCode);
+    setEmbedCopied(true);
+    setTimeout(() => setEmbedCopied(false), 2000);
+  };
+
   if (!match) {
     return null;
   }
@@ -274,16 +287,46 @@ export default function CalendarEdit() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Basic Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Main Form with Tabs */}
+        <div className="lg:col-span-2">
+          {/* Tabs Navigation */}
+          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: "details", name: "Calendar Details", icon: Info },
+                { id: "availability", name: "Availability & Booking Settings", icon: Clock },
+                { id: "sharing", name: "Sharing", icon: Share2 }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Details Tab */}
+              {activeTab === "details" && (
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Calendar Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                   {/* Calendar Type (Read-Only) */}
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center gap-3">
