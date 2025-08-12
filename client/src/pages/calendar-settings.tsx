@@ -13,8 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Calendar, 
-  Clock, 
-  Users, 
   Settings, 
   Plus,
   Edit,
@@ -39,13 +37,6 @@ interface CalendarData {
   createdAt: string;
 }
 
-interface StaffData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-}
-
 export default function CalendarSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -55,11 +46,6 @@ export default function CalendarSettings() {
   // Fetch calendars
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
     queryKey: ["/api/calendars"],
-  });
-
-  // Fetch staff
-  const { data: staff = [] } = useQuery<StaffData[]>({
-    queryKey: ["/api/staff"],
   });
 
   // Create calendar mutation
@@ -123,7 +109,7 @@ export default function CalendarSettings() {
           <span>Calendar Settings</span>
         </h1>
         <p className="text-muted-foreground">
-          Manage calendars, staff assignments, and booking availability
+          Manage calendars and calendar integrations
         </p>
       </div>
 
@@ -132,8 +118,6 @@ export default function CalendarSettings() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "calendars", name: "Calendars", icon: Calendar, count: calendars.length },
-            { id: "staff", name: "Staff Assignment", icon: Users, count: staff.length },
-            { id: "availability", name: "Availability", icon: Clock, count: 0 },
             { id: "integrations", name: "Integrations", icon: Settings, count: 0 }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -247,38 +231,6 @@ export default function CalendarSettings() {
         </div>
       )}
 
-      {activeTab === "staff" && (
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Staff Assignment
-          </h2>
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-gray-600 dark:text-gray-400">
-                Staff assignment functionality will be implemented here.
-                This will allow assigning staff members to calendars with different assignment types.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === "availability" && (
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Availability Management
-          </h2>
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-gray-600 dark:text-gray-400">
-                Availability management functionality will be implemented here.
-                This will allow setting up working hours, breaks, and date overrides.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {activeTab === "integrations" && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -300,7 +252,6 @@ export default function CalendarSettings() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateCalendar={(calendarData) => createCalendarMutation.mutate(calendarData)}
-        staff={staff}
       />
     </div>
   );
