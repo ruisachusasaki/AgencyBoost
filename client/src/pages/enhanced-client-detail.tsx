@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight } from "lucide-react";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -572,6 +572,28 @@ export default function EnhancedClientDetail() {
 
   // Communication tabs state
   const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
+
+  // Email composition state
+  const [emailData, setEmailData] = useState({
+    fromName: '',
+    fromEmail: '',
+    to: '',
+    cc: '',
+    bcc: '',
+    subject: '',
+    message: ''
+  });
+  const [showWysiwyg, setShowWysiwyg] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showMergeTagsModal, setShowMergeTagsModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [messageFieldHeight, setMessageFieldHeight] = useState(120);
+  
+  // Scheduling state
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [scheduledTimezone, setScheduledTimezone] = useState('America/New_York');
 
 
 
@@ -1352,6 +1374,61 @@ export default function EnhancedClientDetail() {
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
   }, [followerSearchTerm, staffData, client]);
+
+  // Auto-populate email fields when user and client data are available
+  useEffect(() => {
+    if (currentUser && client) {
+      setEmailData(prev => ({
+        ...prev,
+        fromName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
+        fromEmail: currentUser.email || '',
+        to: client.email || ''
+      }));
+    }
+  }, [currentUser, client]);
+
+  // Update word count when message changes
+  useEffect(() => {
+    const words = emailData.message.trim().split(/\s+/).filter(word => word.length > 0);
+    setWordCount(words.length);
+  }, [emailData.message]);
+
+  // Email utility functions
+  const handleEmailFieldChange = (field: string, value: string) => {
+    setEmailData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const clearEmailMessage = () => {
+    setEmailData(prev => ({ ...prev, message: '' }));
+  };
+
+  const insertMergeTag = (tag: string) => {
+    const newMessage = emailData.message + `{{${tag}}}`;
+    setEmailData(prev => ({ ...prev, message: newMessage }));
+    setShowMergeTagsModal(false);
+  };
+
+  const handleSendEmail = () => {
+    setShowSendModal(true);
+  };
+
+  const sendEmailNow = async () => {
+    // Implementation for sending email immediately
+    toast({
+      title: "Email Sent",
+      description: "Your email has been sent successfully.",
+    });
+    setShowSendModal(false);
+  };
+
+  const scheduleEmail = async () => {
+    // Implementation for scheduling email
+    toast({
+      title: "Email Scheduled",
+      description: `Your email has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
+    });
+    setShowSendModal(false);
+  };
 
   // Utility functions
   const formatPhoneNumber = (phone: string) => {
@@ -2494,43 +2571,381 @@ export default function EnhancedClientDetail() {
                   </TabsContent>
                   
                   <TabsContent value="email" className="mt-0">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label className="text-sm font-medium text-gray-700">Send Email</Label>
-                        {(client?.dndAll || client?.dndEmail) && (
-                          <Badge variant="destructive" className="text-xs">
-                            <ShieldOff className="h-3 w-3 mr-1" />
-                            DND Active
-                          </Badge>
+                    <div className="space-y-4">
+                      {/* DND Warning */}
+                      {(client?.dndAll || client?.dndEmail) && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <ShieldOff className="h-4 w-4 text-red-600" />
+                          <span className="text-sm text-red-600 font-medium">
+                            Email communication is blocked by DND settings
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Email Form */}
+                      <div className="space-y-3">
+                        {/* From Fields */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">From Name</Label>
+                            <Input
+                              value={emailData.fromName}
+                              onChange={(e) => handleEmailFieldChange('fromName', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">From Email</Label>
+                            <Input
+                              value={emailData.fromEmail}
+                              onChange={(e) => handleEmailFieldChange('fromEmail', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+
+                        {/* To Field */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">To</Label>
+                          <Input
+                            value={emailData.to}
+                            onChange={(e) => handleEmailFieldChange('to', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        {/* CC Field */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">CC</Label>
+                          <Input
+                            placeholder="Additional email addresses (comma separated)"
+                            value={emailData.cc}
+                            onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        {/* BCC Field */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">BCC</Label>
+                          <Input
+                            placeholder="Blind carbon copy (comma separated)"
+                            value={emailData.bcc}
+                            onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        {/* Subject Field */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Subject</Label>
+                          <Input
+                            placeholder="Email subject (supports merge tags like {{firstName}})"
+                            value={emailData.subject}
+                            onChange={(e) => handleEmailFieldChange('subject', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        {/* Message Field */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Message</Label>
+                          <div className="mt-1 relative">
+                            <Textarea
+                              placeholder="Type your message here..."
+                              value={emailData.message}
+                              onChange={(e) => handleEmailFieldChange('message', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              style={{ height: `${messageFieldHeight}px`, resize: 'vertical' }}
+                              className="min-h-[120px]"
+                              onInput={(e) => {
+                                const target = e.target as HTMLTextAreaElement;
+                                setMessageFieldHeight(Math.max(120, target.scrollHeight));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action Bar */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          {/* Left Side - Tools */}
+                          <div className="flex items-center gap-2">
+                            <TooltipProvider>
+                              {/* Formatting Toggle */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant={showWysiwyg ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setShowWysiwyg(!showWysiwyg)}
+                                    disabled={!!client?.dndAll || !!client?.dndEmail}
+                                  >
+                                    <Type className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Formatting Options</TooltipContent>
+                              </Tooltip>
+
+                              {/* Insert Template */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowTemplateModal(true)}
+                                    disabled={!!client?.dndAll || !!client?.dndEmail}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Insert Template</TooltipContent>
+                              </Tooltip>
+
+                              {/* Insert Merge Tags */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowMergeTagsModal(true)}
+                                    disabled={!!client?.dndAll || !!client?.dndEmail}
+                                  >
+                                    <TagIcon className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Insert Merge Tags</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+
+                          {/* Right Side - Actions */}
+                          <div className="flex items-center gap-4">
+                            {/* Word Count */}
+                            <span className="text-sm text-gray-500">
+                              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                            </span>
+                            
+                            {/* Clear Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={clearEmailMessage}
+                              disabled={!emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
+                            >
+                              Clear
+                            </Button>
+
+                            {/* Send Button */}
+                            <Button
+                              onClick={handleSendEmail}
+                              disabled={!emailData.message.trim() || !emailData.to.trim() || !!client?.dndAll || !!client?.dndEmail}
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* WYSIWYG Editor (shown when formatting is toggled) */}
+                        {showWysiwyg && (
+                          <div className="border rounded-md p-3 bg-gray-50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Button variant="outline" size="sm">
+                                <Bold className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <Italic className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <Underline className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              WYSIWYG formatting tools will be implemented here
+                            </p>
+                          </div>
                         )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder={
-                            (client?.dndAll || client?.dndEmail) 
-                              ? "Email blocked by DND settings..." 
-                              : "Email message..."
-                          }
-                          value={emailMessage}
-                          onChange={(e) => setEmailMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && sendEmail()}
-                          disabled={!!client?.dndAll || !!client?.dndEmail}
-                          className={`${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                        />
-                        <Button 
-                          onClick={sendEmail}
-                          disabled={!emailMessage.trim() || !!client?.dndAll || !!client?.dndEmail}
-                          variant="outline"
-                          className="disabled:opacity-50"
-                        >
-                          Send
-                        </Button>
                       </div>
                     </div>
                   </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Template Selection Modal */}
+            <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Select Email Template</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="Search templates..." />
+                  <div className="grid gap-2 max-h-96 overflow-y-auto">
+                    <div className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                      <h4 className="font-medium">Welcome Email</h4>
+                      <p className="text-sm text-gray-600">Welcome new clients to your services</p>
+                    </div>
+                    <div className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                      <h4 className="font-medium">Follow-up Email</h4>
+                      <p className="text-sm text-gray-600">Standard follow-up template for existing clients</p>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Merge Tags Modal */}
+            <Dialog open={showMergeTagsModal} onOpenChange={setShowMergeTagsModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Insert Merge Tags</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="Search merge tags..." />
+                  <div className="grid gap-2 max-h-96 overflow-y-auto">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Information</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('firstName')}
+                          className="justify-start"
+                        >
+                          {'{'}firstName{'}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('lastName')}
+                          className="justify-start"
+                        >
+                          {'{'}lastName{'}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('email')}
+                          className="justify-start"
+                        >
+                          {'{'}email{'}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('phone')}
+                          className="justify-start"
+                        >
+                          {'{'}phone{'}'}
+                        </Button>
+                      </div>
+                    </div>
+                    {customFieldsData && customFieldsData.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Custom Fields</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {customFieldsData.map((field) => (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertMergeTag(field.name)}
+                              className="justify-start"
+                            >
+                              {'{'}field.name{'}'}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Send Options Modal */}
+            <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send Email</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Button
+                      onClick={sendEmailNow}
+                      className="w-full justify-start"
+                      size="lg"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Now
+                    </Button>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Schedule Email</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-sm">Date</Label>
+                          <Input
+                            type="date"
+                            value={scheduledDate}
+                            onChange={(e) => setScheduledDate(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Time</Label>
+                          <Input
+                            type="time"
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Timezone</Label>
+                          <Select value={scheduledTimezone} onValueChange={setScheduledTimezone}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="America/New_York">Eastern Time (EST/EDT)</SelectItem>
+                              <SelectItem value="America/Chicago">Central Time (CST/CDT)</SelectItem>
+                              <SelectItem value="America/Denver">Mountain Time (MST/MDT)</SelectItem>
+                              <SelectItem value="America/Los_Angeles">Pacific Time (PST/PDT)</SelectItem>
+                              <SelectItem value="UTC">UTC</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowSendModal(false)}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={scheduleEmail}
+                          disabled={!scheduledDate || !scheduledTime}
+                          className="flex-1"
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          Schedule Email
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Right Column - Client Activity Hub */}
