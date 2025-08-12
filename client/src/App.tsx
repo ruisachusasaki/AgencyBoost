@@ -51,6 +51,7 @@ function Router() {
       <Route path="/workflows" component={Workflows} />
       <Route path="/calendar" component={Calendar} />
       <Route path="/calendar/settings" component={CalendarSettings} />
+      <Route path="/calendar-settings" component={CalendarSettings} />
       <Route path="/settings" component={Settings} />
       <Route path="/settings/business-profile" component={BusinessProfile} />
       <Route path="/settings/my-profile" component={MyProfile} />
