@@ -1364,6 +1364,9 @@ export default function EnhancedClientDetail() {
   }, [ownerSearchTerm, staffData]);
 
   // Follower search filtering
+  const clientFollowers = client?.followers;
+  const clientContactOwner = client?.contactOwner;
+
   useEffect(() => {
     if (!followerSearchTerm || !staffData || !client) {
       setFilteredFollowers([]);
@@ -1371,23 +1374,29 @@ export default function EnhancedClientDetail() {
       return;
     }
 
-    const currentFollowers = client.followers || [];
+    const currentFollowers = clientFollowers || [];
     const filtered = staffData.filter((staff: any) => 
       !currentFollowers.includes(staff.id) && // Exclude already following staff
-      staff.id !== client.contactOwner && // Exclude current owner
+      staff.id !== clientContactOwner && // Exclude current owner
       (`${staff.firstName} ${staff.lastName}`.toLowerCase().includes(followerSearchTerm.toLowerCase()) ||
        staff.email?.toLowerCase().includes(followerSearchTerm.toLowerCase()))
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData, client]);
+  }, [followerSearchTerm, staffData, clientFollowers, clientContactOwner]);
 
   // Auto-populate email fields when user and client data are available
+  const currentUserId = currentUser?.id;
+  const currentUserFirstName = currentUser?.firstName;
+  const currentUserLastName = currentUser?.lastName;
+  const currentUserEmail = currentUser?.email;
+  const clientEmail = client?.email;
+
   useEffect(() => {
-    if (currentUser && client) {
-      const fromName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-      const fromEmail = currentUser.email || '';
-      const to = client.email || '';
+    if (currentUserId && clientEmail) {
+      const fromName = `${currentUserFirstName || ''} ${currentUserLastName || ''}`.trim();
+      const fromEmail = currentUserEmail || '';
+      const to = clientEmail || '';
       
       // Only update if values are different to prevent infinite re-renders
       setEmailData(prev => {
@@ -1402,7 +1411,7 @@ export default function EnhancedClientDetail() {
         return prev;
       });
     }
-  }, [currentUser, client]);
+  }, [currentUserId, currentUserFirstName, currentUserLastName, currentUserEmail, clientEmail]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
@@ -3001,6 +3010,13 @@ export default function EnhancedClientDetail() {
                       <Send className="h-4 w-4 mr-2" />
                       Send Now
                     </Button>
+                    
+                    {/* OR Divider */}
+                    <div className="flex items-center my-4">
+                      <div className="flex-1 h-px bg-gray-300"></div>
+                      <span className="px-3 text-sm text-gray-500 font-medium">OR</span>
+                      <div className="flex-1 h-px bg-gray-300"></div>
+                    </div>
                     
                     <div className="space-y-3">
                       <h4 className="font-medium">Schedule Email</h4>
