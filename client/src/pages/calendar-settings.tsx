@@ -175,7 +175,7 @@ export default function CalendarSettings() {
                   scheduleWindowEnd: 1440, // hours ahead maximum (60 days)
                   isActive: true,
                   customFieldIds: [],
-                  createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb" // Required: user ID
+                  createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390" // Required: user ID (John Doe)
                 };
                 createCalendarMutation.mutate(newCalendar);
               }}
