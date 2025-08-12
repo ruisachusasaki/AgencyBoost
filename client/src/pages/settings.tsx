@@ -11,7 +11,8 @@ import {
   Tag,
   Package,
   ScrollText,
-  ShieldCheck
+  ShieldCheck,
+  Calendar
 } from "lucide-react";
 
 const settingsNavigation = [
@@ -21,6 +22,7 @@ const settingsNavigation = [
   { name: "Support", href: "/settings/support", icon: HeadphonesIcon },
   { name: "Roles & Permissions", href: "/settings/roles-permissions", icon: Shield },
   { name: "Permission Audit", href: "/settings/permission-audit", icon: ShieldCheck },
+  { name: "Calendar Settings", href: "/calendar-settings", icon: Calendar },
   { name: "Integrations", href: "/settings/integrations", icon: Plug },
   { name: "Custom Fields", href: "/settings/custom-fields", icon: Database },
   { name: "Tags", href: "/settings/tags", icon: Tag },
@@ -72,6 +74,7 @@ function getSettingDescription(name: string): string {
     "Support": "Configure support departments and ticketing",
     "Roles & Permissions": "Create custom roles and set permissions",
     "Permission Audit": "Track permission changes and role assignments",
+    "Calendar Settings": "Configure calendar availability and booking pages",
     "Integrations": "Connect external services and tools",
     "Custom Fields": "Create and manage custom contact fields",
     "Tags": "Organize and manage system tags",
