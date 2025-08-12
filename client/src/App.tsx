@@ -18,6 +18,7 @@ import SocialMedia from "@/pages/social-media";
 import Workflows from "@/pages/workflows";
 import Calendar from "@/pages/calendar";
 import CalendarSettings from "@/pages/calendar-settings";
+import CalendarEdit from "@/pages/calendar-edit";
 import Settings from "@/pages/settings";
 import BusinessProfile from "@/pages/settings/business-profile";
 import MyProfile from "@/pages/settings/my-profile";
@@ -52,6 +53,8 @@ function Router() {
       <Route path="/calendar" component={Calendar} />
       <Route path="/calendar/settings" component={CalendarSettings} />
       <Route path="/calendar-settings" component={CalendarSettings} />
+      <Route path="/settings/calendar-settings" component={CalendarSettings} />
+      <Route path="/settings/calendar/:id/edit" component={CalendarEdit} />
       <Route path="/settings" component={Settings} />
       <Route path="/settings/business-profile" component={BusinessProfile} />
       <Route path="/settings/my-profile" component={MyProfile} />

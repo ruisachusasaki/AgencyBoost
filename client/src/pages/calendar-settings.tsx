@@ -178,9 +178,11 @@ export default function CalendarSettings() {
                       <Badge variant={calendar.isActive ? "default" : "secondary"}>
                         {calendar.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <Link href={`/settings/calendar/${calendar.id}/edit`}>
+                        <Button variant="ghost" size="sm" data-testid={`button-edit-${calendar.id}`}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </CardHeader>
