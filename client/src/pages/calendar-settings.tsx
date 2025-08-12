@@ -23,6 +23,7 @@ import {
   Copy,
   ArrowLeft
 } from "lucide-react";
+import { CalendarCreationModal } from "@/components/CalendarCreationModal";
 
 // Types for calendar data
 interface CalendarData {
@@ -40,7 +41,8 @@ interface CalendarData {
 
 interface StaffData {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
 }
 
@@ -48,6 +50,7 @@ export default function CalendarSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("calendars");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Fetch calendars
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
@@ -160,25 +163,7 @@ export default function CalendarSettings() {
               Calendar Management
             </h2>
             <Button 
-              onClick={() => {
-                const newCalendar = {
-                  name: "New Calendar",
-                  description: "",
-                  type: "personal", // Required: 'personal' or 'round_robin'
-                  customUrl: `calendar-${Date.now()}`, // Required: unique URL slug
-                  duration: 30, // Required: meeting duration in minutes
-                  durationUnit: "minutes",
-                  location: "google_meet",
-                  locationDetails: "",
-                  bufferTime: 15,
-                  scheduleWindowStart: 24, // hours ahead minimum
-                  scheduleWindowEnd: 1440, // hours ahead maximum (60 days)
-                  isActive: true,
-                  customFieldIds: [],
-                  createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390" // Required: user ID (John Doe)
-                };
-                createCalendarMutation.mutate(newCalendar);
-              }}
+              onClick={() => setIsCreateModalOpen(true)}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -309,6 +294,14 @@ export default function CalendarSettings() {
           </Card>
         </div>
       )}
+
+      {/* Calendar Creation Modal */}
+      <CalendarCreationModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreateCalendar={(calendarData) => createCalendarMutation.mutate(calendarData)}
+        staff={staff}
+      />
     </div>
   );
 }

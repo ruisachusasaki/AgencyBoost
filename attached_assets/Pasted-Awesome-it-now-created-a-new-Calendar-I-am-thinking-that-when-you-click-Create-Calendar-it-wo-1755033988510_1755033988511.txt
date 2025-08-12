@@ -1,0 +1,29 @@
+Awesome, it now created a new Calendar...
+
+I am thinking that when you click "Create Calendar" it would be in a popup modal that takes you through the process of creating a calendar.
+
+Here would be the Steps and functionality:
+
+Step 1: Pick the Calendar Type (Personal Booking Calendar - Schedules one-on-one meetings with a specific team member. [E.g.: Client meetings, private consultations] OR Round Robin Calendar - Distributes appointments among team members in a rotating order. [E.g.: Sales calls, onboarding sessions.])
+
+Step 2: Calendar Settings
+
+1. Calendar Name & Description
+2. Meeting Invite Title - This is the title for the calendar meeting that shows in your Appointments List View, Calendar View and third party calendars (Allow MERGE TAGS)
+3. Assign Staff Members / User(s): (IF Personal Booking - Only assign to ONE user [pick from the list of App Users]. IF Round Robin - Dropdown multi-pick list of Staff Members/Users)
+4. Custom URL: input field for the END of the calendar URL
+5. Meeting Location: Custom, Google Meet, Zoom (we will add integrations later)
+
+Step 3: Availability Settings - Users must be able to set their working hours.
+
+1. Weekly Available Hours: Let the user check WHICH days during the week they are available and WHICH Hours (Start Time and End time
+2. Slot Interval: Set the gap between the start times of consecutive available slots. For example, if your meeting duration is 30 minutes and you set the interval to 60 minutes, a user can book at 9:00 AM, then 10:00 AM, and so on — even though each meeting lasts only 30 minutes
+3. Meeting Duration: This sets the length of your meeting,
+determining how long it will last (One Field split in two: Input ANY number, second part is a drop down with the options of Minutes & Hours)
+4. Minimum Scheduling Notice: Require users to book meetings at least this much time in advance (One Field split in two: Input ANY number, second part is a drop down with the options of Hours, Days, Weeks)
+5. Date Range: Set how far into the future bookings can be made from today’s date (One Field split in two: Input ANY number, second part is a drop down with the options of Days, Weeks)
+6. Maximum Bookings Per Day: Maximum number of meetings permitted per day on this calendar (one numeric field with + - options)
+7. Maximum Bookers Per Slot: Limit how many meetings can be scheduled for the same time slot (one numeric field with + - options. IF They choose Personal Booking Calendar this HAS to be 1)
+8. Pre-Buffer Time: Time to block before each meeting, allowing for extra time to prepare (One Field split in two: Input ANY number, second part is a drop down with the options of Minutes, Hours)
+9. Post-Buffer Time: Time to block after each meeting, allowing
+for extra time to wrap up (One Field split in two: Input ANY number, second part is a drop down with the options of Minutes, Hours)
