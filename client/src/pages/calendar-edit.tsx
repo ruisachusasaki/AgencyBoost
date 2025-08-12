@@ -521,236 +521,247 @@ export default function CalendarEdit() {
                       </FormItem>
                     )}
                   />
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
-          {/* Booking Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
+              {/* Availability & Booking Settings Tab */}
+              {activeTab === "availability" && (
                 <div className="space-y-6">
-                  {/* Duration and Interval */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Meeting Duration (minutes)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="5" 
-                              max="480"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-duration"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="slotInterval"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Slot Interval (minutes)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="5" 
-                              max="240"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-slot-interval"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Buffer Times */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="bufferTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Buffer Time (minutes)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="0" 
-                              max="120"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-buffer-time"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="scheduleWindowStart"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Minimum Notice (hours)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="1" 
-                              max="8760"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-schedule-start"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="scheduleWindowEnd"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Max Advance Booking (hours)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="24" 
-                              max="8760"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-schedule-end"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Booking Limits */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="maxBookingsPerDay"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Max Bookings Per Day</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="1" 
-                              max="50"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-max-bookings-day"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="maxBookersPerSlot"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Max Bookers Per Slot</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="1" 
-                              max="20"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-max-bookers-slot"
-                              disabled={calendar?.type === "personal"}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                          {calendar?.type === "personal" && (
-                            <p className="text-xs text-muted-foreground">Fixed at 1 for personal bookings</p>
+                  {/* Booking Settings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Booking Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Duration and Interval */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="duration"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Meeting Duration (minutes)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="5" 
+                                  max="480"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-duration"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
                           )}
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="timezone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Timezone</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-timezone">
-                              <SelectValue placeholder="Select timezone" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                            <SelectItem value="America/Chicago">Central Time</SelectItem>
-                            <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                            <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                            <SelectItem value="UTC">UTC</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </Form>
-            </CardContent>
-          </Card>
+                        <FormField
+                          control={form.control}
+                          name="slotInterval"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Slot Interval (minutes)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="5" 
+                                  max="240"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-slot-interval"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-          {/* Action Buttons */}
-          <Card>
-            <CardContent className="pt-6">
-              <Form {...form}>
-                <div className="flex justify-between">
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    onClick={handleDelete}
-                    disabled={deleteCalendarMutation.isPending}
-                    data-testid="button-delete"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Calendar
-                  </Button>
-                  
-                  <Button 
-                    onClick={form.handleSubmit(onSubmit)}
-                    disabled={updateCalendarMutation.isPending}
-                    data-testid="button-save"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {updateCalendarMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
+                      {/* Buffer Times */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="bufferTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Buffer Time (minutes)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="120"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-buffer-time"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="scheduleWindowStart"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Minimum Notice (hours)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="1" 
+                                  max="8760"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-schedule-start"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="scheduleWindowEnd"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Max Advance Booking (hours)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="24" 
+                                  max="8760"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-schedule-end"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Booking Limits */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="maxBookingsPerDay"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Max Bookings Per Day</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="1" 
+                                  max="50"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-max-bookings-day"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="maxBookersPerSlot"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Max Bookers Per Slot</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="1" 
+                                  max="20"
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  data-testid="input-max-bookers-slot"
+                                  disabled={calendar?.type === "personal"}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                              {calendar?.type === "personal" && (
+                                <p className="text-xs text-muted-foreground">Fixed at 1 for personal bookings</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="timezone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Timezone</FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-timezone">
+                                  <SelectValue placeholder="Select timezone" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                                <SelectItem value="America/Chicago">Central Time</SelectItem>
+                                <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                                <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                                <SelectItem value="UTC">UTC</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
                 </div>
-              </Form>
-            </CardContent>
-          </Card>
+              )}
+
+              {/* Sharing Tab */}
+              {activeTab === "sharing" && (
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sharing Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">Sharing settings will be implemented in future updates.</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-6">
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={handleDelete}
+                  disabled={deleteCalendarMutation.isPending}
+                  data-testid="button-delete"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Calendar
+                </Button>
+                
+                <Button 
+                  type="submit"
+                  disabled={updateCalendarMutation.isPending}
+                  data-testid="button-save"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateCalendarMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </div>
 
         {/* Sidebar */}
