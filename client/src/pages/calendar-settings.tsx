@@ -164,11 +164,18 @@ export default function CalendarSettings() {
                 const newCalendar = {
                   name: "New Calendar",
                   description: "",
-                  isActive: true,
-                  color: "#3b82f6",
+                  type: "personal", // Required: 'personal' or 'round_robin'
+                  customUrl: `calendar-${Date.now()}`, // Required: unique URL slug
+                  duration: 30, // Required: meeting duration in minutes
+                  durationUnit: "minutes",
+                  location: "google_meet",
+                  locationDetails: "",
                   bufferTime: 15,
-                  maxAdvanceBooking: 30,
-                  timezone: "America/New_York"
+                  scheduleWindowStart: 24, // hours ahead minimum
+                  scheduleWindowEnd: 1440, // hours ahead maximum (60 days)
+                  isActive: true,
+                  customFieldIds: [],
+                  createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb" // Required: user ID
                 };
                 createCalendarMutation.mutate(newCalendar);
               }}
