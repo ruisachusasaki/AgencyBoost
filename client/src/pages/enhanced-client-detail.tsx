@@ -575,6 +575,17 @@ export default function EnhancedClientDetail() {
   // Communication tabs state
   const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
 
+  // SMS composition state
+  const [smsData, setSmsData] = useState({
+    fromNumber: '',
+    to: '',
+    message: ''
+  });
+  const [characterCount, setCharacterCount] = useState(0);
+  const [showSmsTemplateModal, setShowSmsTemplateModal] = useState(false);
+  const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
+  const [showSmsSendModal, setShowSmsSendModal] = useState(false);
+
   // Email composition state
   const [emailData, setEmailData] = useState({
     fromName: '',
@@ -1391,6 +1402,7 @@ export default function EnhancedClientDetail() {
   const currentUserLastName = currentUser?.lastName;
   const currentUserEmail = currentUser?.email;
   const clientEmail = client?.email;
+  const clientPhone = client?.phone;
 
   useEffect(() => {
     if (currentUserId && clientEmail) {
@@ -1421,6 +1433,23 @@ export default function EnhancedClientDetail() {
     setWordCount(words.length);
   }, [emailData.message]);
 
+  // SMS character count effect
+  useEffect(() => {
+    setCharacterCount(smsData.message.length);
+  }, [smsData.message]);
+
+  // Auto-populate SMS fields when client data is available
+  useEffect(() => {
+    if (clientPhone) {
+      setSmsData(prev => {
+        if (prev.to !== clientPhone) {
+          return { ...prev, to: clientPhone };
+        }
+        return prev;
+      });
+    }
+  }, [clientPhone]);
+
   // Email utility functions
   const handleEmailFieldChange = useCallback((field: string, value: string) => {
     setEmailData(prev => ({ ...prev, [field]: value }));
@@ -1433,6 +1462,35 @@ export default function EnhancedClientDetail() {
   const handleQuillChange = useCallback((value: string) => {
     handleEmailFieldChange('message', value);
   }, [handleEmailFieldChange]);
+
+  // SMS utility functions
+  const handleSmsFieldChange = useCallback((field: string, value: string) => {
+    setSmsData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const clearSmsMessage = useCallback(() => {
+    setSmsData(prev => ({ ...prev, message: '' }));
+  }, []);
+
+  const insertSmsTag = (tag: string) => {
+    const newMessage = smsData.message + `{{${tag}}}`;
+    setSmsData(prev => ({ ...prev, message: newMessage }));
+  };
+
+  const selectSmsTemplate = (content: string, templateName: string) => {
+    setSmsData(prev => ({ ...prev, message: content }));
+    setShowSmsTemplateModal(false);
+  };
+
+  const handleSendSms = () => {
+    setShowSmsSendModal(true);
+  };
+
+  const sendSmsNow = () => {
+    console.log('Sending SMS now:', smsData);
+    setShowSmsSendModal(false);
+    // Add actual SMS sending logic here
+  };
 
   const insertMergeTag = (tag: string) => {
     const newMessage = emailData.message + `{{${tag}}}`;
@@ -2577,7 +2635,7 @@ export default function EnhancedClientDetail() {
                   </TabsList>
                   
                   <TabsContent value="sms" className="mt-0">
-                    <div>
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between mb-2">
                         <Label className="text-sm font-medium text-gray-700">Send SMS</Label>
                         {(client?.dndAll || client?.dndSms) && (
@@ -2587,26 +2645,121 @@ export default function EnhancedClientDetail() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <Input
+
+                      {/* First Row: From and To fields */}
+                      <div className="flex items-center gap-4">
+                        {/* From Field - Left Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">From</Label>
+                          <Select
+                            value={smsData.fromNumber}
+                            onValueChange={(value) => handleSmsFieldChange('fromNumber', value)}
+                            disabled={!!client?.dndAll || !!client?.dndSms}
+                          >
+                            <SelectTrigger className={`mt-1 ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600' : ''}`}>
+                              <SelectValue placeholder="Select phone number..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="+1234567890">+1 (234) 567-8900 - Main</SelectItem>
+                              <SelectItem value="+1234567891">+1 (234) 567-8901 - Sales</SelectItem>
+                              <SelectItem value="+1234567892">+1 (234) 567-8902 - Support</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* To Field - Right Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">To</Label>
+                          <Input
+                            value={smsData.to}
+                            onChange={(e) => handleSmsFieldChange('to', e.target.value)}
+                            placeholder="Phone number..."
+                            disabled={!!client?.dndAll || !!client?.dndSms}
+                            className={`mt-1 ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Message Input Field */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Message</Label>
+                        <Textarea
+                          value={smsData.message}
+                          onChange={(e) => handleSmsFieldChange('message', e.target.value)}
                           placeholder={
                             (client?.dndAll || client?.dndSms) 
                               ? "SMS blocked by DND settings..." 
-                              : "SMS message..."
+                              : "Type your SMS message here..."
                           }
-                          value={smsMessage}
-                          onChange={(e) => setSmsMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && sendSMS()}
                           disabled={!!client?.dndAll || !!client?.dndSms}
-                          className={`${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          className={`mt-1 min-h-[120px] resize-y ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
                         />
-                        <Button 
-                          onClick={sendSMS}
-                          disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
-                          className="bg-primary hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          Send
-                        </Button>
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        {/* Left Side - Tools */}
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            {/* Insert Template */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsTemplateModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndSms}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Template</TooltipContent>
+                            </Tooltip>
+
+                            {/* Insert Merge Tags */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsMergeTagsModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndSms}
+                                >
+                                  <TagIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Merge Tags</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+
+                        {/* Right Side - Actions */}
+                        <div className="flex items-center gap-4">
+                          {/* Character Count */}
+                          <span className={`text-sm ${characterCount > 160 ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                            {characterCount} {characterCount > 160 ? '(Multiple messages)' : 'characters'}
+                          </span>
+                          
+                          {/* Clear Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearSmsMessage}
+                            disabled={!smsData.message.trim() || !!client?.dndAll || !!client?.dndSms}
+                          >
+                            Clear
+                          </Button>
+
+                          {/* Send Button */}
+                          <Button
+                            onClick={handleSendSms}
+                            disabled={!smsData.message.trim() || !smsData.to.trim() || !!client?.dndAll || !!client?.dndSms}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </TabsContent>
@@ -3070,6 +3223,241 @@ export default function EnhancedClientDetail() {
                         >
                           <Clock className="h-4 w-4 mr-2" />
                           Schedule Email
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* SMS Template Selection Modal */}
+            <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Select SMS Template</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="Search templates..." />
+                  <div className="grid gap-2 max-h-96 overflow-y-auto">
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectSmsTemplate(`Hi {{firstName}}, this is {{assignedUserFirstName}} from your account team. Just wanted to check in and see how things are going!`, "Check-in SMS")}
+                    >
+                      <h4 className="font-medium">Check-in SMS</h4>
+                      <p className="text-sm text-gray-600">Quick check-in message for clients</p>
+                    </div>
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectSmsTemplate(`Hi {{firstName}}, your appointment with {{assignedUserFirstName}} is scheduled for tomorrow at {{appointmentTime}}. Reply YES to confirm.`, "Appointment Reminder")}
+                    >
+                      <h4 className="font-medium">Appointment Reminder</h4>
+                      <p className="text-sm text-gray-600">Remind clients about upcoming appointments</p>
+                    </div>
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectSmsTemplate(`Thanks for your payment, {{firstName}}! Your invoice has been marked as paid. Contact us if you have any questions.`, "Payment Confirmation")}
+                    >
+                      <h4 className="font-medium">Payment Confirmation</h4>
+                      <p className="text-sm text-gray-600">Confirm payment receipt</p>
+                    </div>
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectSmsTemplate(`Hi {{firstName}}, we wanted to follow up on our recent conversation. Please give us a call when you have a moment.`, "Follow-up SMS")}
+                    >
+                      <h4 className="font-medium">Follow-up SMS</h4>
+                      <p className="text-sm text-gray-600">General follow-up message</p>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* SMS Merge Tags Modal */}
+            <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Insert Merge Tags</DialogTitle>
+                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
+                </DialogHeader>
+                <div className="space-y-6 max-h-96 overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Client Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Information</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('firstName')}
+                          className="justify-start"
+                        >
+                          {'{{firstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('lastName')}
+                          className="justify-start"
+                        >
+                          {'{{lastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('phone')}
+                          className="justify-start"
+                        >
+                          {'{{phone}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('companyName')}
+                          className="justify-start"
+                        >
+                          {'{{companyName}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Assigned User Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Assigned User</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserFirstName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserFirstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserLastName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserLastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserPhone')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserPhone}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* All Custom Fields */}
+                    {customFieldsData && customFieldsData.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Custom Fields</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {customFieldsData.map((field) => (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertSmsTag(field.name)}
+                              className="justify-start text-left overflow-hidden"
+                              title={field.name}
+                            >
+                              <span className="truncate">
+                                {'{{' + field.name + '}}'}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* SMS Send Options Modal */}
+            <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send SMS</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Button
+                      onClick={sendSmsNow}
+                      className="w-full justify-start"
+                      size="lg"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Now
+                    </Button>
+                    
+                    {/* OR Divider */}
+                    <div className="flex items-center my-4">
+                      <div className="flex-1 h-px bg-gray-300"></div>
+                      <span className="px-3 text-sm text-gray-500 font-medium">OR</span>
+                      <div className="flex-1 h-px bg-gray-300"></div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Schedule SMS</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-sm">Date</Label>
+                          <Input
+                            type="date"
+                            value={scheduledDate}
+                            onChange={(e) => setScheduledDate(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Time</Label>
+                          <Input
+                            type="time"
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Timezone</Label>
+                          <Select value={scheduledTimezone} onValueChange={setScheduledTimezone}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="America/New_York">Eastern Time (EST/EDT)</SelectItem>
+                              <SelectItem value="America/Chicago">Central Time (CST/CDT)</SelectItem>
+                              <SelectItem value="America/Denver">Mountain Time (MST/MDT)</SelectItem>
+                              <SelectItem value="America/Los_Angeles">Pacific Time (PST/PDT)</SelectItem>
+                              <SelectItem value="UTC">UTC</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowSmsSendModal(false)}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            console.log('Scheduling SMS:', { ...smsData, scheduledDate, scheduledTime, scheduledTimezone });
+                            setShowSmsSendModal(false);
+                          }}
+                          disabled={!scheduledDate || !scheduledTime}
+                          className="flex-1"
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          Schedule SMS
                         </Button>
                       </div>
                     </div>
