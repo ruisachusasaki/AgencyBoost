@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight } from "lucide-react";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -590,7 +592,6 @@ export default function EnhancedClientDetail() {
   const [showMergeTagsModal, setShowMergeTagsModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [wordCount, setWordCount] = useState(0);
-  const [messageFieldHeight, setMessageFieldHeight] = useState(120);
   
   // Scheduling state
   const [scheduledDate, setScheduledDate] = useState('');
@@ -1403,25 +1404,40 @@ export default function EnhancedClientDetail() {
     }
   }, [currentUser, client]);
 
-  // Update word count when message changes
+  // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
-    const words = emailData.message.trim().split(/\s+/).filter(word => word.length > 0);
+    // Strip HTML tags to get plain text for word count
+    const plainText = emailData.message.replace(/<[^>]*>/g, '').trim();
+    const words = plainText.split(/\s+/).filter(word => word.length > 0);
     setWordCount(words.length);
   }, [emailData.message]);
 
   // Email utility functions
-  const handleEmailFieldChange = (field: string, value: string) => {
+  const handleEmailFieldChange = useCallback((field: string, value: string) => {
     setEmailData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const clearEmailMessage = () => {
+  const clearEmailMessage = useCallback(() => {
     setEmailData(prev => ({ ...prev, message: '' }));
-  };
+  }, []);
+
+  const handleQuillChange = useCallback((value: string) => {
+    handleEmailFieldChange('message', value);
+  }, [handleEmailFieldChange]);
 
   const insertMergeTag = (tag: string) => {
     const newMessage = emailData.message + `{{${tag}}}`;
     setEmailData(prev => ({ ...prev, message: newMessage }));
     setShowMergeTagsModal(false);
+  };
+
+  const selectTemplate = (templateContent: string, templateName: string) => {
+    setEmailData(prev => ({ ...prev, message: templateContent, subject: templateName }));
+    setShowTemplateModal(false);
+    toast({
+      title: "Template Applied",
+      description: `"${templateName}" template has been loaded into your email.`,
+    });
   };
 
   const handleSendEmail = () => {
@@ -2701,21 +2717,30 @@ export default function EnhancedClientDetail() {
                           />
                         </div>
 
-                        {/* Message Field */}
+                        {/* Message Field - WYSIWYG Editor */}
                         <div>
                           <Label className="text-sm font-medium text-gray-700">Message</Label>
-                          <div className="mt-1 relative">
-                            <Textarea
-                              placeholder="Type your message here..."
+                          <div className="mt-1 border rounded-md overflow-hidden">
+                            <ReactQuill
+                              theme="snow"
                               value={emailData.message}
-                              onChange={(e) => handleEmailFieldChange('message', e.target.value)}
-                              disabled={!!client?.dndAll || !!client?.dndEmail}
-                              style={{ height: `${messageFieldHeight}px`, resize: 'vertical' }}
-                              className="min-h-[120px]"
-                              onInput={(e) => {
-                                const target = e.target as HTMLTextAreaElement;
-                                setMessageFieldHeight(Math.max(120, target.scrollHeight));
+                              onChange={handleQuillChange}
+                              modules={{
+                                toolbar: [
+                                  [{ 'header': '1' }, { 'header': '2' }, 'bold', 'italic', 'underline'],
+                                  [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                  ['link', 'clean']
+                                ],
                               }}
+                              formats={[
+                                'header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'
+                              ]}
+                              placeholder="Type your message here..."
+                              style={{ 
+                                minHeight: '120px',
+                                border: 'none'
+                              }}
+                              readOnly={!!client?.dndAll || !!client?.dndEmail}
                             />
                           </div>
                         </div>
@@ -2725,21 +2750,6 @@ export default function EnhancedClientDetail() {
                           {/* Left Side - Tools */}
                           <div className="flex items-center gap-2">
                             <TooltipProvider>
-                              {/* Formatting Toggle */}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant={showWysiwyg ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setShowWysiwyg(!showWysiwyg)}
-                                    disabled={!!client?.dndAll || !!client?.dndEmail}
-                                  >
-                                    <Type className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Formatting Options</TooltipContent>
-                              </Tooltip>
-
                               {/* Insert Template */}
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -2801,25 +2811,7 @@ export default function EnhancedClientDetail() {
                           </div>
                         </div>
 
-                        {/* WYSIWYG Editor (shown when formatting is toggled) */}
-                        {showWysiwyg && (
-                          <div className="border rounded-md p-3 bg-gray-50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Button variant="outline" size="sm">
-                                <Bold className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <Italic className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <Underline className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                              WYSIWYG formatting tools will be implemented here
-                            </p>
-                          </div>
-                        )}
+
                       </div>
                     </div>
                   </TabsContent>
@@ -2836,13 +2828,26 @@ export default function EnhancedClientDetail() {
                 <div className="space-y-4">
                   <Input placeholder="Search templates..." />
                   <div className="grid gap-2 max-h-96 overflow-y-auto">
-                    <div className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectTemplate(`<p>Dear {{firstName}},</p><p>Welcome to our services! We're excited to work with you and help you achieve your goals.</p><p>If you have any questions, please don't hesitate to reach out.</p><p>Best regards,<br>{{assignedUserFirstName}} {{assignedUserLastName}}</p>`, "Welcome Email")}
+                    >
                       <h4 className="font-medium">Welcome Email</h4>
                       <p className="text-sm text-gray-600">Welcome new clients to your services</p>
                     </div>
-                    <div className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectTemplate(`<p>Hi {{firstName}},</p><p>I hope this email finds you well. I wanted to follow up on our recent conversation regarding your project.</p><p>Please let me know if you have any questions or if there's anything I can help you with.</p><p>Looking forward to hearing from you!</p><p>Best regards,<br>{{assignedUserFirstName}} {{assignedUserLastName}}</p>`, "Follow-up Email")}
+                    >
                       <h4 className="font-medium">Follow-up Email</h4>
                       <p className="text-sm text-gray-600">Standard follow-up template for existing clients</p>
+                    </div>
+                    <div 
+                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                      onClick={() => selectTemplate(`<p>Dear {{firstName}},</p><p>Thank you for choosing our services. We're thrilled to be working with {{companyName}} and look forward to delivering exceptional results.</p><p>Your account manager, {{assignedUserFirstName}} {{assignedUserLastName}}, will be your primary contact and will reach out to you within 24 hours to discuss next steps.</p><p>Welcome aboard!</p><p>Best regards,<br>The Team</p>`, "Thank You Email")}
+                    >
+                      <h4 className="font-medium">Thank You Email</h4>
+                      <p className="text-sm text-gray-600">Thank clients for choosing your services</p>
                     </div>
                   </div>
                 </div>
@@ -2858,6 +2863,8 @@ export default function EnhancedClientDetail() {
                 <div className="space-y-4">
                   <Input placeholder="Search merge tags..." />
                   <div className="grid gap-2 max-h-96 overflow-y-auto">
+                    
+                    {/* Client Information */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">Client Information</h4>
                       <div className="grid grid-cols-2 gap-2">
@@ -2867,7 +2874,7 @@ export default function EnhancedClientDetail() {
                           onClick={() => insertMergeTag('firstName')}
                           className="justify-start"
                         >
-                          {'{'}firstName{'}'}
+                          {'{{firstName}}'}
                         </Button>
                         <Button
                           variant="outline"
@@ -2875,7 +2882,7 @@ export default function EnhancedClientDetail() {
                           onClick={() => insertMergeTag('lastName')}
                           className="justify-start"
                         >
-                          {'{'}lastName{'}'}
+                          {'{{lastName}}'}
                         </Button>
                         <Button
                           variant="outline"
@@ -2883,7 +2890,7 @@ export default function EnhancedClientDetail() {
                           onClick={() => insertMergeTag('email')}
                           className="justify-start"
                         >
-                          {'{'}email{'}'}
+                          {'{{email}}'}
                         </Button>
                         <Button
                           variant="outline"
@@ -2891,10 +2898,67 @@ export default function EnhancedClientDetail() {
                           onClick={() => insertMergeTag('phone')}
                           className="justify-start"
                         >
-                          {'{'}phone{'}'}
+                          {'{{phone}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('companyName')}
+                          className="justify-start"
+                        >
+                          {'{{companyName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('status')}
+                          className="justify-start"
+                        >
+                          {'{{status}}'}
                         </Button>
                       </div>
                     </div>
+
+                    {/* Assigned User Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Assigned User</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserFirstName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserFirstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserLastName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserLastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserEmail')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserEmail}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserPhone')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserPhone}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* All Custom Fields */}
                     {customFieldsData && customFieldsData.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="font-medium text-sm">Custom Fields</h4>
@@ -2905,9 +2969,12 @@ export default function EnhancedClientDetail() {
                               variant="outline"
                               size="sm"
                               onClick={() => insertMergeTag(field.name)}
-                              className="justify-start"
+                              className="justify-start text-left overflow-hidden"
+                              title={field.name}
                             >
-                              {'{'}field.name{'}'}
+                              <span className="truncate">
+                                {'{{' + field.name + '}}'}
+                              </span>
                             </Button>
                           ))}
                         </div>
