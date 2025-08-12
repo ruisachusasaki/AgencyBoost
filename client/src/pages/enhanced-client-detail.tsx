@@ -1324,7 +1324,7 @@ export default function EnhancedClientDetail() {
       }
       return prev;
     });
-  }, [calculatedSectionsStr, calculatedSections]);
+  }, [calculatedSectionsStr]);
 
   // Owner search filtering
   useEffect(() => {
@@ -2382,7 +2382,7 @@ export default function EnhancedClientDetail() {
             </Card>
           </div>
 
-          {/* Middle Column - Activity & Quick Actions */}
+          {/* Middle Column - Activity & Communication */}
           <div className="lg:col-span-3">
             {/* Recent Activity - Moved to Top */}
             <Card className="mb-6">
@@ -2447,10 +2447,10 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions - Moved Below Activity */}
+            {/* Communication - Moved Below Activity */}
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Communication</h2>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
