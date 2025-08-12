@@ -31,9 +31,18 @@ const calendarEditSchema = z.object({
   description: z.string().optional(),
   isActive: z.boolean(),
   color: z.string().min(1, "Color is required"),
+  customUrl: z.string().min(1, "Custom URL is required"),
+  duration: z.number().min(5).max(480), // 5 minutes to 8 hours
+  location: z.enum(["google_meet", "zoom", "custom"]),
+  locationDetails: z.string().optional(),
   bufferTime: z.number().min(0).max(120),
-  maxAdvanceBooking: z.number().min(1).max(365),
+  scheduleWindowStart: z.number().min(1).max(8760), // 1 hour to 1 year in hours
+  scheduleWindowEnd: z.number().min(24).max(8760), // 24 hours to 1 year in hours
   timezone: z.string().min(1, "Timezone is required"),
+  meetingInviteTitle: z.string().optional(),
+  slotInterval: z.number().min(5).max(240), // 5 minutes to 4 hours
+  maxBookingsPerDay: z.number().min(1).max(50),
+  maxBookersPerSlot: z.number().min(1).max(20),
 });
 
 type CalendarEditForm = z.infer<typeof calendarEditSchema>;
@@ -42,13 +51,24 @@ interface CalendarData {
   id: string;
   name: string;
   description?: string;
+  type: string;
+  customUrl: string;
+  duration: number;
+  durationUnit: string;
+  location?: string;
+  locationDetails?: string;
+  bufferTime: number;
+  scheduleWindowStart: number;
+  scheduleWindowEnd: number;
   isActive: boolean;
   color: string;
-  bufferTime: number;
-  maxAdvanceBooking: number;
-  timezone: string;
   publicUrl: string;
   createdAt: string;
+  // Additional fields not in schema but used for form
+  meetingInviteTitle?: string;
+  slotInterval?: number;
+  maxBookingsPerDay?: number;
+  maxBookersPerSlot?: number;
 }
 
 export default function CalendarEdit() {
@@ -79,9 +99,18 @@ export default function CalendarEdit() {
       description: "",
       isActive: true,
       color: "#46a1a0",
+      customUrl: "",
+      duration: 30,
+      location: "google_meet",
+      locationDetails: "",
       bufferTime: 15,
-      maxAdvanceBooking: 30,
+      scheduleWindowStart: 24,
+      scheduleWindowEnd: 1440,
       timezone: "America/New_York",
+      meetingInviteTitle: "",
+      slotInterval: 30,
+      maxBookingsPerDay: 8,
+      maxBookersPerSlot: 1,
     },
   });
 
@@ -92,10 +121,19 @@ export default function CalendarEdit() {
         name: calendar.name,
         description: calendar.description || "",
         isActive: calendar.isActive,
-        color: calendar.color,
+        color: calendar.color || "#46a1a0",
+        customUrl: calendar.customUrl,
+        duration: calendar.duration,
+        location: (calendar.location as "google_meet" | "zoom" | "custom") || "google_meet",
+        locationDetails: calendar.locationDetails || "",
         bufferTime: calendar.bufferTime,
-        maxAdvanceBooking: calendar.maxAdvanceBooking,
-        timezone: calendar.timezone,
+        scheduleWindowStart: calendar.scheduleWindowStart,
+        scheduleWindowEnd: calendar.scheduleWindowEnd,
+        timezone: "America/New_York", // Default timezone as not stored in schema
+        meetingInviteTitle: calendar.meetingInviteTitle || "",
+        slotInterval: calendar.slotInterval || 30,
+        maxBookingsPerDay: calendar.maxBookingsPerDay || 8,
+        maxBookersPerSlot: calendar.maxBookersPerSlot || 1,
       });
     }
   }, [calendar, form]);
@@ -237,7 +275,8 @@ export default function CalendarEdit() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Basic Details */}
           <Card>
             <CardHeader>
               <CardTitle>Calendar Details</CardTitle>
@@ -245,6 +284,20 @@ export default function CalendarEdit() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Calendar Type (Read-Only) */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      <div>
+                        <h4 className="font-semibold">Calendar Type</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {calendar?.type === "personal" ? "Personal Booking Calendar" : "Round Robin Calendar"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Basic Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -296,7 +349,7 @@ export default function CalendarEdit() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea 
                             placeholder="Calendar description..."
@@ -311,6 +364,179 @@ export default function CalendarEdit() {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="meetingInviteTitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meeting Invite Title</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Meeting with {CONTACT_FIRST_NAME}"
+                            {...field}
+                            data-testid="input-meeting-title"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          Supports merge tags like {"{CONTACT_FIRST_NAME}"}, {"{CONTACT_EMAIL}"}
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* URL Settings */}
+                  <FormField
+                    control={form.control}
+                    name="customUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom URL</FormLabel>
+                        <FormControl>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-3 text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-md">
+                              /book/
+                            </span>
+                            <Input
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                              placeholder="my-calendar"
+                              className="rounded-l-none"
+                              data-testid="input-custom-url"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Location Settings */}
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meeting Location</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-location">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="google_meet">Google Meet</SelectItem>
+                              <SelectItem value="zoom">Zoom</SelectItem>
+                              <SelectItem value="custom">Custom Location</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {form.watch("location") === "custom" && (
+                      <FormField
+                        control={form.control}
+                        name="locationDetails"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Location Details</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter custom location details"
+                                {...field}
+                                data-testid="input-location-details"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Active Calendar</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Enable this calendar for booking
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-active"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+
+          {/* Booking Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Booking Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <div className="space-y-6">
+                  {/* Duration and Interval */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="duration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meeting Duration (minutes)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="5" 
+                              max="480"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-duration"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="slotInterval"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Slot Interval (minutes)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="5" 
+                              max="240"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-slot-interval"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Buffer Times */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -335,18 +561,18 @@ export default function CalendarEdit() {
 
                     <FormField
                       control={form.control}
-                      name="maxAdvanceBooking"
+                      name="scheduleWindowStart"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Max Advance Booking (days)</FormLabel>
+                          <FormLabel>Minimum Notice (hours)</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
                               min="1" 
-                              max="365"
+                              max="8760"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
-                              data-testid="input-max-advance"
+                              data-testid="input-schedule-start"
                             />
                           </FormControl>
                           <FormMessage />
@@ -356,25 +582,70 @@ export default function CalendarEdit() {
 
                     <FormField
                       control={form.control}
-                      name="timezone"
+                      name="scheduleWindowEnd"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Timezone</FormLabel>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-timezone">
-                                <SelectValue placeholder="Select timezone" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                              <SelectItem value="America/Chicago">Central Time</SelectItem>
-                              <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                              <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                              <SelectItem value="UTC">UTC</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Max Advance Booking (hours)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="24" 
+                              max="8760"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-schedule-end"
+                            />
+                          </FormControl>
                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Booking Limits */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="maxBookingsPerDay"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Bookings Per Day</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="50"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-max-bookings-day"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="maxBookersPerSlot"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Bookers Per Slot</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="20"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-max-bookers-slot"
+                              disabled={calendar?.type === "personal"}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          {calendar?.type === "personal" && (
+                            <p className="text-xs text-muted-foreground">Fixed at 1 for personal bookings</p>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -382,48 +653,58 @@ export default function CalendarEdit() {
 
                   <FormField
                     control={form.control}
-                    name="isActive"
+                    name="timezone"
                     render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Active Calendar</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Enable this calendar for booking
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-active"
-                          />
-                        </FormControl>
+                      <FormItem>
+                        <FormLabel>Timezone</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-timezone">
+                              <SelectValue placeholder="Select timezone" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                            <SelectItem value="America/Chicago">Central Time</SelectItem>
+                            <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                            <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                            <SelectItem value="UTC">UTC</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
+              </Form>
+            </CardContent>
+          </Card>
 
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="destructive" 
-                      onClick={handleDelete}
-                      disabled={deleteCalendarMutation.isPending}
-                      data-testid="button-delete"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Calendar
-                    </Button>
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={updateCalendarMutation.isPending}
-                      data-testid="button-save"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {updateCalendarMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </form>
+          {/* Action Buttons */}
+          <Card>
+            <CardContent className="pt-6">
+              <Form {...form}>
+                <div className="flex justify-between">
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    onClick={handleDelete}
+                    disabled={deleteCalendarMutation.isPending}
+                    data-testid="button-delete"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Calendar
+                  </Button>
+                  
+                  <Button 
+                    onClick={form.handleSubmit(onSubmit)}
+                    disabled={updateCalendarMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateCalendarMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
               </Form>
             </CardContent>
           </Card>
