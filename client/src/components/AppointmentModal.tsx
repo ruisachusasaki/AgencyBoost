@@ -15,9 +15,11 @@ import { format } from "date-fns";
 interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  clientId: string;
+  clientId?: string;
   clientName?: string;
   clientEmail?: string;
+  appointmentId?: string;
+  existingAppointment?: any;
   onSuccess?: () => void;
 }
 
@@ -69,7 +71,7 @@ const generateTimeSlots = () => {
   return slots;
 };
 
-export function AppointmentModal({ open, onOpenChange, clientId, clientName, clientEmail, onSuccess }: AppointmentModalProps) {
+export function AppointmentModal({ open, onOpenChange, clientId, clientName, clientEmail, appointmentId, existingAppointment, onSuccess }: AppointmentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -104,6 +106,8 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     recurringEndDate: '',
     recurringOccurrences: 1
   });
+
+  const isEditMode = !!(appointmentId && existingAppointment);
 
   // Fetch calendars
   const { data: calendars = [] } = useQuery({
@@ -162,6 +166,42 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     }
   });
 
+  // Update appointment mutation
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      console.log('Updating appointment:', appointmentId, data);
+      const response = await fetch(`/api/calendar-appointments/${appointmentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update appointment');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Appointment Updated",
+        description: "The appointment has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+      onSuccess?.();
+      onOpenChange(false);
+      resetForm();
+    },
+    onError: (error: any) => {
+      console.error('Full appointment update error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update appointment",
+        variant: "destructive",
+      });
+    }
+  });
+
   const resetForm = () => {
     setAppointmentData({
       calendarId: '',
@@ -186,6 +226,40 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       recurringOccurrences: 1
     });
   };
+
+  // Load existing appointment data when editing
+  useEffect(() => {
+    if (isEditMode && existingAppointment && open) {
+      const startTime = new Date(existingAppointment.startTime);
+      const endTime = new Date(existingAppointment.endTime);
+      const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+      
+      setAppointmentData({
+        calendarId: existingAppointment.calendarId || '',
+        title: existingAppointment.title || '',
+        description: existingAppointment.description || '',
+        assignedTo: existingAppointment.assignedTo || '',
+        status: existingAppointment.status || 'confirmed',
+        date: format(startTime, 'yyyy-MM-dd'),
+        time: format(startTime, 'HH:mm'),
+        duration,
+        timezone: existingAppointment.timezone || 'America/New_York',
+        location: existingAppointment.location || '',
+        locationDetails: existingAppointment.locationDetails || '',
+        meetingLink: existingAppointment.meetingLink || '',
+        bookerName: existingAppointment.bookerName || existingAppointment.attendeeName || '',
+        bookerEmail: existingAppointment.bookerEmail || existingAppointment.attendeeEmail || '',
+        bookerPhone: existingAppointment.bookerPhone || existingAppointment.attendeePhone || '',
+        isRecurring: false,
+        recurringType: 'daily',
+        recurringEnds: 'never',
+        recurringEndDate: '',
+        recurringOccurrences: 1
+      });
+    } else if (!isEditMode && open) {
+      resetForm();
+    }
+  }, [isEditMode, existingAppointment, open, clientName, clientEmail]);
 
   const handleSubmit = () => {
     if (!appointmentData.calendarId || !appointmentData.title || !appointmentData.assignedTo || !appointmentData.date || !appointmentData.time) {
@@ -231,7 +305,11 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       bookingSource: 'admin'
     };
 
-    createAppointmentMutation.mutate(appointmentPayload);
+    if (isEditMode) {
+      updateAppointmentMutation.mutate(appointmentPayload);
+    } else {
+      createAppointmentMutation.mutate(appointmentPayload);
+    }
   };
 
   const timeSlots = generateTimeSlots();
@@ -242,7 +320,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Create New Appointment
+            {isEditMode ? 'Edit Appointment' : 'Create New Appointment'}
           </DialogTitle>
         </DialogHeader>
 

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { AppointmentModal } from "@/components/AppointmentModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +120,10 @@ export default function CalendarMain() {
   
   // Appointments table state
   const [appointmentsTab, setAppointmentsTab] = useState<"upcoming" | "cancelled" | "all">("upcoming");
+  
+  // State for appointment modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<any>(null);
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -137,6 +142,11 @@ export default function CalendarMain() {
 
   const { data: appointments = [], error: appointmentsError } = useQuery<Appointment[]>({
     queryKey: ["/api/calendar-appointments"],
+  });
+
+  // Fetch clients for linking invitees to their profiles  
+  const { data: clients = [] } = useQuery({
+    queryKey: ["/api/clients"],
   });
 
   // Add error handling
@@ -290,6 +300,23 @@ export default function CalendarMain() {
     if (window.confirm(`Are you sure you want to delete the appointment "${appointmentTitle}"?`)) {
       deleteAppointmentMutation.mutate(appointmentId);
     }
+  };
+
+  // Handle edit appointment
+  const handleEditAppointment = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
+    setShowEditModal(true);
+  };
+
+  // Handle edit modal close
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setEditingAppointment(null);
+  };
+
+  // Find client by email
+  const findClientByEmail = (email: string) => {
+    return clients.find((client: any) => client.email === email);
   };
 
   const handleUserToggle = (userId: string) => {
@@ -1198,11 +1225,26 @@ export default function CalendarMain() {
                             </TableCell>
                             <TableCell>
                               <div>
-                                <Link href={`/clients?search=${encodeURIComponent(appointment.bookerEmail || appointment.attendeeEmail || '')}`}>
-                                  <div className="font-medium text-primary hover:underline cursor-pointer">
-                                    {appointment.bookerName || appointment.attendeeName || 'Unknown'}
-                                  </div>
-                                </Link>
+                                {(() => {
+                                  const email = appointment.bookerEmail || appointment.attendeeEmail || '';
+                                  const client = findClientByEmail(email);
+                                  
+                                  if (client) {
+                                    return (
+                                      <Link href={`/clients/${client.id}`}>
+                                        <div className="font-medium text-primary hover:underline cursor-pointer">
+                                          {appointment.bookerName || appointment.attendeeName || 'Unknown'}
+                                        </div>
+                                      </Link>
+                                    );
+                                  } else {
+                                    return (
+                                      <div className="font-medium">
+                                        {appointment.bookerName || appointment.attendeeName || 'Unknown'}
+                                      </div>
+                                    );
+                                  }
+                                })()}
                                 <div className="text-sm text-gray-500 dark:text-gray-400">{appointment.bookerEmail || appointment.attendeeEmail || 'No email'}</div>
                               </div>
                             </TableCell>
@@ -1289,13 +1331,7 @@ export default function CalendarMain() {
                                   size="sm"
                                   variant="ghost"
                                   className="h-8 w-8 p-0"
-                                  onClick={() => {
-                                    // TODO: Implement edit functionality
-                                    toast({
-                                      title: "Edit functionality",
-                                      description: "Edit appointment feature coming soon",
-                                    });
-                                  }}
+                                  onClick={() => handleEditAppointment(appointment)}
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
@@ -1329,6 +1365,20 @@ export default function CalendarMain() {
         </div>
       )}
       </div>
+
+      {/* Edit Appointment Modal */}
+      <AppointmentModal
+        open={showEditModal}
+        onOpenChange={handleEditModalClose}
+        appointmentId={editingAppointment?.id}
+        existingAppointment={editingAppointment}
+        clientId={editingAppointment?.clientId}
+        clientName={editingAppointment?.bookerName || editingAppointment?.attendeeName}
+        clientEmail={editingAppointment?.bookerEmail || editingAppointment?.attendeeEmail}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+        }}
+      />
     </TooltipProvider>
   );
 }

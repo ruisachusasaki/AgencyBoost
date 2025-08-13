@@ -429,6 +429,7 @@ export default function EnhancedClientDetail() {
   
   // Appointments state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<any>(null);
 
   // Helper function to toggle note expansion
   const toggleNoteExpansion = (noteId: string) => {
@@ -4466,6 +4467,40 @@ export default function EnhancedClientDetail() {
                                   )}
                                 </div>
                               </div>
+                              
+                              {/* Action buttons */}
+                              <div className="flex items-center gap-1 ml-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => {
+                                    setEditingAppointment(appointment);
+                                    setShowAppointmentModal(true);
+                                  }}
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
+                                      fetch(`/api/calendar-appointments/${appointment.id}`, { method: 'DELETE' })
+                                        .then(() => {
+                                          queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+                                          toast({ title: "Appointment deleted", description: "Appointment has been deleted successfully" });
+                                        })
+                                        .catch(() => {
+                                          toast({ title: "Error", description: "Failed to delete appointment", variant: "destructive" });
+                                        });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         ))
@@ -5180,12 +5215,20 @@ export default function EnhancedClientDetail() {
         {/* Appointment Modal */}
         <AppointmentModal
           open={showAppointmentModal}
-          onOpenChange={setShowAppointmentModal}
+          onOpenChange={(open) => {
+            setShowAppointmentModal(open);
+            if (!open) {
+              setEditingAppointment(null);
+            }
+          }}
+          existingAppointment={editingAppointment}
+          appointmentId={editingAppointment?.id}
           clientId={clientId!}
           clientName={client?.name || client?.company || 'Client'}
           clientEmail={client?.email || ''}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+            setEditingAppointment(null);
           }}
         />
     </div>
