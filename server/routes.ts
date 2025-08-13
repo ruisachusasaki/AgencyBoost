@@ -5114,7 +5114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/custom-field-files", async (req, res) => {
     try {
       const data = req.body;
-      console.log('Received file upload data:', data);
       
       // Sanitize filename for security
       data.fileName = sanitizeFileName(data.fileName);
@@ -5123,12 +5122,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       data.uploadedBy = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
       const validatedData = insertCustomFieldFileUploadSchema.parse(data);
-      console.log('Validated data:', validatedData);
       
       // Direct database insert to bypass the storage interface issue
       const fileUploadResult = await db.insert(customFieldFileUploads).values(validatedData).returning();
       const fileUpload = fileUploadResult[0];
-      console.log('File upload created:', fileUpload);
       
       await createAuditLog(
         "created",
@@ -5160,7 +5157,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "clientId and customFieldId are required" });
       }
       
-      const fileUploads = await storage.getCustomFieldFileUploads(clientId, customFieldId);
+      const fileUploads = await db.select()
+        .from(customFieldFileUploads)
+        .where(and(
+          eq(customFieldFileUploads.clientId, clientId),
+          eq(customFieldFileUploads.customFieldId, customFieldId)
+        ));
       res.json(fileUploads);
     } catch (error) {
       console.error('Error fetching custom field file uploads:', error);
@@ -5170,7 +5172,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/custom-field-files/:id/download", async (req, res) => {
     try {
-      const fileUpload = await storage.getCustomFieldFileUpload(req.params.id);
+      const fileUploadResult = await db.select()
+        .from(customFieldFileUploads)
+        .where(eq(customFieldFileUploads.id, req.params.id))
+        .limit(1);
+      const fileUpload = fileUploadResult[0];
       
       if (!fileUpload) {
         return res.status(404).json({ message: "File not found" });
@@ -5191,31 +5197,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/custom-field-files/:id", async (req, res) => {
     try {
-      const fileUpload = await storage.getCustomFieldFileUpload(req.params.id);
+      const fileUploadResult = await db.select()
+        .from(customFieldFileUploads)
+        .where(eq(customFieldFileUploads.id, req.params.id))
+        .limit(1);
+      const fileUpload = fileUploadResult[0];
       
       if (!fileUpload) {
         return res.status(404).json({ message: "File not found" });
       }
       
-      const deleted = await storage.deleteCustomFieldFileUpload(req.params.id);
+      await db.delete(customFieldFileUploads).where(eq(customFieldFileUploads.id, req.params.id));
       
-      if (deleted) {
-        await createAuditLog(
-          "deleted",
-          "custom_field_file",
-          fileUpload.id,
-          fileUpload.originalFileName,
-          undefined,
-          `Deleted file: ${fileUpload.originalFileName}`,
-          fileUpload,
-          null,
-          req
-        );
-        
-        res.json({ message: "File deleted successfully" });
-      } else {
-        res.status(500).json({ message: "Failed to delete file" });
-      }
+      await createAuditLog(
+        "deleted",
+        "custom_field_file",
+        fileUpload.id,
+        fileUpload.originalFileName,
+        undefined,
+        `Deleted file: ${fileUpload.originalFileName}`,
+        fileUpload,
+        null,
+        req
+      );
+      
+      res.json({ message: "File deleted successfully" });
     } catch (error) {
       console.error('Error deleting file:', error);
       res.status(500).json({ message: "Failed to delete file" });
