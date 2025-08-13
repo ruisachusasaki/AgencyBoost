@@ -20,6 +20,7 @@ import Calendar from "@/pages/calendar";
 import CalendarSettings from "@/pages/calendar-settings";
 import CalendarEdit from "@/pages/calendar-edit";
 import PublicBooking from "@/pages/public-booking";
+import BookingEmbed from "@/pages/booking-embed";
 import Settings from "@/pages/settings";
 import BusinessProfile from "@/pages/settings/business-profile";
 import MyProfile from "@/pages/settings/my-profile";
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/settings/calendar-settings" component={CalendarSettings} />
       <Route path="/settings/calendar/:id/edit" component={CalendarEdit} />
       <Route path="/book/:customUrl" component={PublicBooking} />
+      <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/settings" component={Settings} />
       <Route path="/settings/business-profile" component={BusinessProfile} />
       <Route path="/settings/my-profile" component={MyProfile} />
