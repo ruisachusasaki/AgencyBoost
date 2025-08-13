@@ -120,17 +120,28 @@ export default function CalendarMain() {
   const [clientFilter, setClientFilter] = useState<string>("all");
 
   // Fetch data
-  const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
+  const { data: calendars = [], isLoading: calendarsLoading, error: calendarsError } = useQuery<CalendarData[]>({
     queryKey: ["/api/calendars"],
   });
 
-  const { data: staff = [] } = useQuery<StaffMember[]>({
+  const { data: staff = [], error: staffError } = useQuery<StaffMember[]>({
     queryKey: ["/api/staff"],
   });
 
-  const { data: appointments = [] } = useQuery<Appointment[]>({
+  const { data: appointments = [], error: appointmentsError } = useQuery<Appointment[]>({
     queryKey: ["/api/calendar-appointments"],
   });
+
+  // Add error handling
+  if (calendarsError || staffError || appointmentsError) {
+    return (
+      <div className="flex-1 p-6">
+        <div className="text-red-500">
+          Error loading calendar data: {calendarsError?.message || staffError?.message || appointmentsError?.message}
+        </div>
+      </div>
+    );
+  }
 
   // Filter staff based on search
   const filteredStaff = useMemo(() => {
@@ -313,8 +324,13 @@ export default function CalendarMain() {
     if (userFilter !== "all") {
       // Find calendar owner from calendars data
       filtered = filtered.filter(apt => {
-        const calendar = calendars.find(cal => cal.id === apt.calendarId);
-        return calendar?.createdBy === userFilter;
+        try {
+          const calendar = calendars.find(cal => cal.id === apt.calendarId);
+          return calendar && calendar.createdBy === userFilter;
+        } catch (error) {
+          console.error('Error filtering by user:', error);
+          return true; // Show appointment if filtering fails
+        }
       });
     }
     if (clientFilter !== "all") {
@@ -1102,7 +1118,7 @@ export default function CalendarMain() {
                     ) : (
                       filteredAndSortedAppointments.map((appointment) => {
                         const calendar = calendars.find(cal => cal.id === appointment.calendarId);
-                        const owner = staff.find(member => member.id === calendar?.createdBy);
+                        const owner = calendar?.createdBy ? staff.find(member => member.id === calendar.createdBy) : null;
                         const startTime = new Date(appointment.startTime);
                         const endTime = new Date(appointment.endTime);
                         
