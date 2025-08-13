@@ -840,7 +840,12 @@ export default function CalendarEdit() {
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" data-testid="button-open-url">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => window.open(`/book/${calendar.customUrl}`, '_blank')}
+                          data-testid="button-open-url"
+                        >
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                       </div>

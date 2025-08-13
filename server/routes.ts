@@ -4624,6 +4624,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/calendars/by-url/:customUrl", async (req, res) => {
+    try {
+      const [calendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.customUrl, req.params.customUrl));
+
+      if (!calendar) {
+        return res.status(404).json({ message: "Calendar not found" });
+      }
+
+      res.json(calendar);
+    } catch (error) {
+      console.error('Error fetching calendar by URL:', error);
+      res.status(500).json({ message: "Failed to fetch calendar" });
+    }
+  });
+
   app.put("/api/calendars/:id", async (req, res) => {
     try {
       const [existingCalendar] = await db
