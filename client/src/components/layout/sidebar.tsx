@@ -119,9 +119,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           )}
         </button>
         
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-white">
           {/* Main navigation */}
-          <nav className={cn("px-4 flex-1", isCollapsed && "px-2")}>
+          <nav className={cn("px-4 flex-1 bg-white", isCollapsed && "px-2")}>
             <ul className="space-y-2">
               {navigation.map((item) => (
                 <li key={item.name}>
@@ -133,7 +133,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           
           {/* Bottom navigation (Settings) */}
           <nav className={cn("px-4 pb-4 bg-white border-t border-r border-slate-200", isCollapsed && "px-2")}>
-            <div className="pt-4">
+            <div className="pt-2">
               <ul className="space-y-2">
                 {bottomNavigation.map((item) => (
                   <li key={item.name}>
@@ -169,9 +169,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             </div>
           </div>
           
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full bg-white">
             {/* Main navigation */}
-            <nav className="p-4 flex-1">
+            <nav className="p-4 flex-1 bg-white">
               <ul className="space-y-2">
                 {navigation.map((item) => {
                   const Icon = item.icon;
@@ -198,8 +198,8 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             </nav>
             
             {/* Bottom navigation (Settings) */}
-            <nav className="p-4 bg-white border-t border-slate-200">
-              <div className="pt-4">
+            <nav className="px-4 pb-4 bg-white border-t border-slate-200">
+              <div className="pt-2">
                 <ul className="space-y-2">
                   {bottomNavigation.map((item) => {
                     const Icon = item.icon;
