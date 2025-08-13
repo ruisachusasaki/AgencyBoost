@@ -345,8 +345,74 @@ export default function CalendarMain() {
                   {/* Week View */}
                   {calendarView === "week" && (
                     <div className="p-4">
-                      <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                        Week view interface will be implemented here
+                      {/* Week header with days */}
+                      <div className="grid grid-cols-8 gap-1 mb-4">
+                        <div className="p-2"></div> {/* Empty cell for time column */}
+                        {(() => {
+                          const startOfWeek = new Date(currentDate);
+                          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+                          return Array.from({ length: 7 }, (_, i) => {
+                            const day = new Date(startOfWeek);
+                            day.setDate(startOfWeek.getDate() + i);
+                            const isToday = day.toDateString() === new Date().toDateString();
+                            
+                            return (
+                              <div key={i} className={`p-2 text-center border-b border-gray-200 ${
+                                isToday ? "bg-primary/10 text-primary font-semibold" : ""
+                              }`}>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                                </div>
+                                <div className={`text-lg ${isToday ? "text-primary" : ""}`}>
+                                  {day.getDate()}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      {/* Week time slots */}
+                      <div className="space-y-0">
+                        {Array.from({ length: 24 }, (_, hour) => {
+                          const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                          const startOfWeek = new Date(currentDate);
+                          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+                          
+                          return (
+                            <div key={hour} className="grid grid-cols-8 gap-1 border-b border-gray-100 dark:border-gray-800">
+                              <div className="p-2 text-xs text-gray-500 dark:text-gray-400 text-right">
+                                {timeSlot}
+                              </div>
+                              {Array.from({ length: 7 }, (_, dayIndex) => {
+                                const day = new Date(startOfWeek);
+                                day.setDate(startOfWeek.getDate() + dayIndex);
+                                day.setHours(hour, 0, 0, 0);
+                                
+                                const dayAppointments = appointments.filter(apt => {
+                                  const aptStart = new Date(apt.startTime);
+                                  return aptStart.toDateString() === day.toDateString() && 
+                                         aptStart.getHours() === hour;
+                                });
+                                
+                                return (
+                                  <div key={dayIndex} className="min-h-[60px] p-1 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    {dayAppointments.map((apt) => (
+                                      <div
+                                        key={apt.id}
+                                        className="text-xs p-2 bg-primary/20 text-primary rounded mb-1 cursor-pointer hover:bg-primary/30"
+                                        title={`${apt.title} - ${apt.attendeeName}`}
+                                      >
+                                        <div className="font-medium truncate">{apt.title}</div>
+                                        <div className="text-xs opacity-75">{apt.attendeeName}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -354,8 +420,87 @@ export default function CalendarMain() {
                   {/* Day View */}
                   {calendarView === "day" && (
                     <div className="p-4">
-                      <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                        Day view interface will be implemented here
+                      {/* Day header */}
+                      <div className="mb-4 pb-2 border-b border-gray-200">
+                        <div className="text-center">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
+                          </div>
+                          <div className="text-2xl font-semibold">
+                            {currentDate.getDate()}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Day time slots */}
+                      <div className="space-y-0">
+                        {Array.from({ length: 24 }, (_, hour) => {
+                          const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                          const currentHour = new Date(currentDate);
+                          currentHour.setHours(hour, 0, 0, 0);
+                          
+                          const hourAppointments = appointments.filter(apt => {
+                            const aptStart = new Date(apt.startTime);
+                            return aptStart.toDateString() === currentDate.toDateString() && 
+                                   aptStart.getHours() === hour;
+                          });
+                          
+                          return (
+                            <div key={hour} className="flex border-b border-gray-100 dark:border-gray-800">
+                              <div className="w-20 p-3 text-sm text-gray-500 dark:text-gray-400 text-right border-r border-gray-100 dark:border-gray-800">
+                                {timeSlot}
+                              </div>
+                              <div className="flex-1 min-h-[80px] p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <div className="space-y-2">
+                                  {hourAppointments.map((apt) => {
+                                    const startTime = new Date(apt.startTime);
+                                    const endTime = new Date(apt.endTime);
+                                    
+                                    return (
+                                      <div
+                                        key={apt.id}
+                                        className="p-3 bg-primary/10 text-primary rounded-lg border-l-4 border-primary cursor-pointer hover:bg-primary/20"
+                                      >
+                                        <div className="flex justify-between items-start">
+                                          <div className="flex-1">
+                                            <div className="font-semibold">{apt.title}</div>
+                                            <div className="text-sm opacity-75 mt-1">
+                                              {apt.attendeeName} ({apt.attendeeEmail})
+                                            </div>
+                                            {apt.description && (
+                                              <div className="text-sm opacity-75 mt-1">
+                                                {apt.description}
+                                              </div>
+                                            )}
+                                            {apt.location && (
+                                              <div className="text-sm opacity-75 mt-1">
+                                                📍 {apt.location}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="text-sm opacity-75 ml-4">
+                                            {startTime.toLocaleTimeString('en-US', { 
+                                              hour: 'numeric', 
+                                              minute: '2-digit',
+                                              hour12: true 
+                                            })} - {endTime.toLocaleTimeString('en-US', { 
+                                              hour: 'numeric', 
+                                              minute: '2-digit',
+                                              hour12: true 
+                                            })}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

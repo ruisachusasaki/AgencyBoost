@@ -4670,42 +4670,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { calendarId, staffId, startDate, endDate } = req.query;
 
-      let query = db
-        .select({
-          id: calendarAppointments.id,
-          calendarId: calendarAppointments.calendarId,
-          title: calendarAppointments.title,
-          description: calendarAppointments.description,
-          startTime: calendarAppointments.startTime,
-          endTime: calendarAppointments.endTime,
-          status: calendarAppointments.status,
-          attendeeEmail: calendarAppointments.attendeeEmail,
-          attendeeName: calendarAppointments.attendeeName,
-          location: calendarAppointments.location,
-          createdAt: calendarAppointments.createdAt
-        })
-        .from(calendarAppointments);
-
-      // Add filters based on query parameters
-      const conditions = [];
-      
-      if (calendarId) {
-        conditions.push(eq(calendarAppointments.calendarId, calendarId as string));
-      }
-      
-      if (startDate) {
-        conditions.push(sql`${calendarAppointments.startTime} >= ${startDate}`);
-      }
-      
-      if (endDate) {
-        conditions.push(sql`${calendarAppointments.startTime} <= ${endDate}`);
-      }
-
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
-
-      const appointments = await query
+      const appointments = await db
+        .select()
+        .from(calendarAppointments)
+        .where(
+          calendarId 
+            ? eq(calendarAppointments.calendarId, calendarId as string)
+            : sql`1=1`
+        )
         .orderBy(asc(calendarAppointments.startTime));
 
       res.json(appointments);
