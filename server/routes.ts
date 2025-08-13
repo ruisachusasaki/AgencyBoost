@@ -3929,6 +3929,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User permissions endpoint for general permission checks
+  app.get("/api/user-permissions", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const permissions = {
+        tasks: {
+          canDelete: await hasPermission(userId, 'tasks', 'canDelete'),
+          canCreate: await hasPermission(userId, 'tasks', 'canCreate'),
+          canEdit: await hasPermission(userId, 'tasks', 'canEdit'),
+          canView: await hasPermission(userId, 'tasks', 'canView')
+        },
+        settings: {
+          canAccess: await hasPermission(userId, 'settings', 'canManage')
+        },
+        clients: {
+          canDelete: await hasPermission(userId, 'clients', 'canDelete'),
+          canCreate: await hasPermission(userId, 'clients', 'canCreate'),
+          canEdit: await hasPermission(userId, 'clients', 'canEdit'),
+          canView: await hasPermission(userId, 'clients', 'canView')
+        }
+      };
+      
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ error: "Failed to fetch user permissions" });
+    }
+  });
+
   // Task Comments endpoints
   app.get("/api/tasks/:taskId/comments", async (req, res) => {
     try {

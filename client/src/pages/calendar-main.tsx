@@ -191,8 +191,13 @@ export default function CalendarMain() {
     return days;
   };
 
-  // Check if user has admin role (placeholder logic)
-  const isAdmin = true; // Replace with actual role check
+  // Fetch user permissions to check admin status
+  const { data: userPermissions } = useQuery<any>({
+    queryKey: ["/api/user-permissions"],
+  });
+
+  // Check if user has admin role or settings access
+  const isAdmin = userPermissions?.settings?.canAccess || false;
 
   const handleUserToggle = (userId: string) => {
     setSelectedUsers(prev => 
@@ -408,8 +413,8 @@ export default function CalendarMain() {
                 key={tab.id}
                 onClick={() => {
                   if (tab.id === "calendar-settings") {
-                    // Navigate to calendar settings
-                    window.location.href = "/settings/calendar";
+                    // Navigate to calendar settings page
+                    window.location.href = "/calendar-settings";
                     return;
                   }
                   setActiveTab(tab.id);
