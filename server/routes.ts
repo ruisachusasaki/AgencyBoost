@@ -5114,6 +5114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/custom-field-files", async (req, res) => {
     try {
       const data = req.body;
+      console.log('Received file upload data:', data);
       
       // Sanitize filename for security
       data.fileName = sanitizeFileName(data.fileName);
@@ -5121,7 +5122,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add default uploadedBy (in a real app, this would come from session)
       data.uploadedBy = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
+      console.log('Processing data:', data);
+      console.log('Storage object methods:', Object.getOwnPropertyNames(storage));
+      console.log('Storage prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(storage)));
+      
       const validatedData = insertCustomFieldFileUploadSchema.parse(data);
+      console.log('Validated data:', validatedData);
+      
+      if (typeof storage.createCustomFieldFileUpload !== 'function') {
+        throw new Error('createCustomFieldFileUpload method is not available on storage');
+      }
+      
       const fileUpload = await storage.createCustomFieldFileUpload(validatedData);
       
       await createAuditLog(
