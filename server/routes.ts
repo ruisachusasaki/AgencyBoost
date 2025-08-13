@@ -4661,8 +4661,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Calendar not found" });
       }
 
-      // Extract assignedStaff from request body before validation
-      const { assignedStaff, ...calendarData } = req.body;
+      // Extract assignedStaff and other non-schema fields from request body before validation
+      const { 
+        assignedStaff, 
+        color, 
+        timezone, 
+        meetingInviteTitle, 
+        slotInterval, 
+        maxBookingsPerDay, 
+        maxBookersPerSlot, 
+        publicUrl,
+        ...calendarData 
+      } = req.body;
+      
+      console.log('Calendar update request body:', req.body);
+      console.log('Calendar data after filtering:', calendarData);
       
       const validatedData = insertCalendarSchema.parse(calendarData);
       
