@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -82,6 +83,15 @@ export default function CalendarEdit() {
   const [match, params] = useRoute("/settings/calendar/:id/edit");
   const [activeTab, setActiveTab] = useState("details");
   const [embedCopied, setEmbedCopied] = useState(false);
+  const [weeklyAvailability, setWeeklyAvailability] = useState<{[key: string]: {enabled: boolean, startTime: string, endTime: string}}>({
+    monday: { enabled: true, startTime: "09:00", endTime: "17:00" },
+    tuesday: { enabled: true, startTime: "09:00", endTime: "17:00" },
+    wednesday: { enabled: true, startTime: "09:00", endTime: "17:00" },
+    thursday: { enabled: true, startTime: "09:00", endTime: "17:00" },
+    friday: { enabled: true, startTime: "09:00", endTime: "17:00" },
+    saturday: { enabled: false, startTime: "09:00", endTime: "17:00" },
+    sunday: { enabled: false, startTime: "09:00", endTime: "17:00" }
+  });
   
   const calendarId = params?.id;
 
@@ -286,9 +296,9 @@ export default function CalendarEdit() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Main Form with Tabs */}
-        <div className="lg:col-span-2">
+        <div>
           {/* Tabs Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
             <nav className="-mb-px flex space-x-8">
@@ -523,6 +533,27 @@ export default function CalendarEdit() {
                   />
                     </CardContent>
                   </Card>
+
+                  {/* Calendar Information */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Calendar Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Created</Label>
+                        <p className="text-sm" data-testid="text-created-date">
+                          {new Date(calendar.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Calendar ID</Label>
+                        <p className="text-sm font-mono text-muted-foreground" data-testid="text-calendar-id">
+                          {calendar.id}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
@@ -721,18 +752,129 @@ export default function CalendarEdit() {
                       />
                     </CardContent>
                   </Card>
+
+                  {/* Weekly Availability */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Weekly Availability</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Available Hours</Label>
+                        <div className="grid gap-3">
+                          {Object.entries(weeklyAvailability).map(([day, hours]) => (
+                            <div key={day} className="flex items-center gap-3 p-3 border rounded-lg">
+                              <Checkbox
+                                checked={hours.enabled}
+                                onCheckedChange={(checked) => 
+                                  setWeeklyAvailability(prev => ({
+                                    ...prev,
+                                    [day]: { ...hours, enabled: !!checked }
+                                  }))
+                                }
+                                data-testid={`checkbox-${day}`}
+                              />
+                              <div className="w-20 text-sm capitalize font-medium">{day}</div>
+                              {hours.enabled && (
+                                <div className="flex gap-3 items-center flex-1">
+                                  <Input
+                                    type="time"
+                                    value={hours.startTime}
+                                    onChange={(e) => 
+                                      setWeeklyAvailability(prev => ({
+                                        ...prev,
+                                        [day]: { ...hours, startTime: e.target.value }
+                                      }))
+                                    }
+                                    className="w-28 text-sm"
+                                    data-testid={`input-${day}-start`}
+                                  />
+                                  <span className="text-xs text-gray-500 px-1">to</span>
+                                  <Input
+                                    type="time"
+                                    value={hours.endTime}
+                                    onChange={(e) => 
+                                      setWeeklyAvailability(prev => ({
+                                        ...prev,
+                                        [day]: { ...hours, endTime: e.target.value }
+                                      }))
+                                    }
+                                    className="w-28 text-sm"
+                                    data-testid={`input-${day}-end`}
+                                  />
+                                </div>
+                              )}
+                              {!hours.enabled && (
+                                <div className="flex-1 text-sm text-gray-400">Unavailable</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
               {/* Sharing Tab */}
               {activeTab === "sharing" && (
                 <div className="space-y-6">
+                  {/* Public Booking URL */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Sharing Settings</CardTitle>
+                      <CardTitle className="text-lg">Public Booking URL</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">Sharing settings will be implemented in future updates.</p>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          value={calendar.publicUrl} 
+                          readOnly 
+                          className="flex-1 bg-gray-50 dark:bg-gray-800"
+                          data-testid="input-public-url"
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={copyPublicUrl}
+                          data-testid="button-copy-url"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" data-testid="button-open-url">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Share this URL with clients to allow them to book appointments directly.
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Embed Code */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Embed Code</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          value={`<iframe src="${window.location.origin}/book/${calendar?.customUrl}" width="100%" height="600" frameborder="0"></iframe>`}
+                          readOnly 
+                          className="flex-1 bg-gray-50 dark:bg-gray-800 font-mono text-xs"
+                          data-testid="input-embed-code"
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={copyEmbedCode}
+                          data-testid="button-copy-embed"
+                        >
+                          {embedCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Embed this calendar directly into your website or blog.
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -762,61 +904,6 @@ export default function CalendarEdit() {
               </div>
             </form>
           </Form>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Public URL Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Public Booking URL</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Input 
-                  value={calendar.publicUrl} 
-                  readOnly 
-                  className="flex-1 bg-gray-50 dark:bg-gray-800"
-                  data-testid="input-public-url"
-                />
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={copyPublicUrl}
-                  data-testid="button-copy-url"
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" data-testid="button-open-url">
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Share this URL with clients to allow them to book appointments directly.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Calendar Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Calendar Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Created</Label>
-                <p className="text-sm" data-testid="text-created-date">
-                  {new Date(calendar.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Calendar ID</Label>
-                <p className="text-sm font-mono text-muted-foreground" data-testid="text-calendar-id">
-                  {calendar.id}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
