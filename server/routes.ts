@@ -5125,7 +5125,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCustomFieldFileUploadSchema.parse(data);
       console.log('Validated data:', validatedData);
       
-      const fileUpload = await storage.createCustomFieldFileUpload(validatedData);
+      // Direct database insert to bypass the storage interface issue
+      const fileUploadResult = await db.insert(customFieldFileUploads).values(validatedData).returning();
+      const fileUpload = fileUploadResult[0];
       console.log('File upload created:', fileUpload);
       
       await createAuditLog(
