@@ -41,9 +41,9 @@ export default function CustomFieldFileUpload({
 
   // Fetch existing files for this custom field and client
   const { data: existingFiles, refetch } = useQuery({
-    queryKey: [`/api/custom-field-files/${customFieldId}/${clientId}`],
+    queryKey: [`/api/custom-field-files`, customFieldId, clientId],
     queryFn: async () => {
-      const response = await fetch(`/api/custom-field-files/${customFieldId}/${clientId}`);
+      const response = await fetch(`/api/custom-field-files?clientId=${clientId}&customFieldId=${customFieldId}`);
       if (!response.ok) {
         if (response.status === 404) return [];
         throw new Error('Failed to fetch files');
