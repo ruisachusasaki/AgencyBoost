@@ -114,7 +114,9 @@ export default function RecentClients() {
                   </span>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">{client.name}</p>
+                  <Link href={`/clients/${client.id}`}>
+                    <p className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors">{client.name}</p>
+                  </Link>
                   <p className="text-sm text-slate-600">{client.email}</p>
                 </div>
                 <Badge className={getStatusColor(client.status)}>
