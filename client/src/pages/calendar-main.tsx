@@ -145,9 +145,12 @@ export default function CalendarMain() {
   });
 
   // Fetch clients for linking invitees to their profiles  
-  const { data: clients = [] } = useQuery({
+  const { data: clientsResponse, isLoading: clientsLoading } = useQuery({
     queryKey: ["/api/clients"],
   });
+  
+  // Extract clients array from response
+  const clients = clientsResponse?.clients || [];
 
   // Add error handling
   if (calendarsError || staffError || appointmentsError) {
@@ -316,6 +319,7 @@ export default function CalendarMain() {
 
   // Find client by email
   const findClientByEmail = (email: string) => {
+    if (!clients || !Array.isArray(clients)) return null;
     return clients.find((client: any) => client.email === email);
   };
 
