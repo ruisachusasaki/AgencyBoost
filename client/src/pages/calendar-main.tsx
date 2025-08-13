@@ -42,9 +42,8 @@ import {
   Mail,
   MapPin,
   Filter,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 
 // Types
@@ -348,11 +347,25 @@ export default function CalendarMain() {
     }
   };
 
-  // Get sort icon
-  const getSortIcon = (field: string) => {
-    if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
-    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
-  };
+  // Get sort icons (matching app design pattern)
+  const getSortIcons = (field: string) => (
+    <div className="flex flex-col ml-2">
+      <ChevronUp 
+        className={`h-3 w-3 ${
+          sortField === field && sortDirection === 'asc' 
+            ? 'text-primary' 
+            : 'text-muted-foreground/40'
+        }`} 
+      />
+      <ChevronDown 
+        className={`h-3 w-3 -mt-1 ${
+          sortField === field && sortDirection === 'desc' 
+            ? 'text-primary' 
+            : 'text-muted-foreground/40'
+        }`} 
+      />
+    </div>
+  );
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -1005,34 +1018,49 @@ export default function CalendarMain() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("title")}>
-                        <div className="flex items-center gap-1">
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 select-none" 
+                        onClick={() => handleSort("title")}
+                      >
+                        <div className="flex items-center justify-between">
                           Title
-                          {getSortIcon("title")}
+                          {getSortIcons("title")}
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("attendee")}>
-                        <div className="flex items-center gap-1">
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 select-none" 
+                        onClick={() => handleSort("attendee")}
+                      >
+                        <div className="flex items-center justify-between">
                           Invitees
-                          {getSortIcon("attendee")}
+                          {getSortIcons("attendee")}
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                        <div className="flex items-center gap-1">
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 select-none" 
+                        onClick={() => handleSort("status")}
+                      >
+                        <div className="flex items-center justify-between">
                           Status
-                          {getSortIcon("status")}
+                          {getSortIcons("status")}
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("startTime")}>
-                        <div className="flex items-center gap-1">
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 select-none" 
+                        onClick={() => handleSort("startTime")}
+                      >
+                        <div className="flex items-center justify-between">
                           Appointment Time
-                          {getSortIcon("startTime")}
+                          {getSortIcons("startTime")}
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("calendar")}>
-                        <div className="flex items-center gap-1">
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 select-none" 
+                        onClick={() => handleSort("calendar")}
+                      >
+                        <div className="flex items-center justify-between">
                           Calendar
-                          {getSortIcon("calendar")}
+                          {getSortIcons("calendar")}
                         </div>
                       </TableHead>
                       <TableHead>Appointment Owner</TableHead>
