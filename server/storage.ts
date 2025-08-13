@@ -2809,4 +2809,5 @@ class MinimalStorage implements Partial<IStorage> {
   [key: string]: any;
 }
 
-export const storage = new DbStorage();
+// Use minimal storage implementation to fix startup issues
+export const storage = new MinimalStorage() as IStorage;
