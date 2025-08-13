@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft,
@@ -15,7 +21,11 @@ import {
   Search,
   Settings,
   List,
-  Eye
+  Eye,
+  Clock,
+  User,
+  Mail,
+  MapPin
 } from "lucide-react";
 
 // Types
@@ -173,15 +183,65 @@ export default function CalendarMain() {
     );
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-3">
-        <CalendarIcon className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Calendars
-        </h1>
+  // Helper component for appointment tooltip content
+  const AppointmentTooltip = ({ appointment }: { appointment: Appointment }) => {
+    const startTime = new Date(appointment.startTime);
+    const endTime = new Date(appointment.endTime);
+    
+    return (
+      <div className="space-y-2 p-1">
+        <div className="font-semibold text-sm">{appointment.title}</div>
+        <div className="flex items-center gap-2 text-xs">
+          <Clock className="h-3 w-3" />
+          <span>
+            {startTime.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit',
+              hour12: true 
+            })} - {endTime.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit',
+              hour12: true 
+            })}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <User className="h-3 w-3" />
+          <span>{appointment.attendeeName}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <Mail className="h-3 w-3" />
+          <span>{appointment.attendeeEmail}</span>
+        </div>
+        {appointment.description && (
+          <div className="text-xs">
+            <div className="font-medium">Description:</div>
+            <div className="text-gray-600 dark:text-gray-400">{appointment.description}</div>
+          </div>
+        )}
+        {appointment.location && (
+          <div className="flex items-center gap-2 text-xs">
+            <MapPin className="h-3 w-3" />
+            <span>{appointment.location}</span>
+          </div>
+        )}
+        <div className="text-xs text-gray-500 dark:text-gray-400 border-t pt-1">
+          Status: <span className="capitalize">{appointment.status}</span>
+        </div>
       </div>
+    );
+  };
+
+  return (
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center space-x-3">
+          <CalendarIcon className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Calendars
+          </h1>
+        </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
@@ -321,18 +381,34 @@ export default function CalendarMain() {
                               </div>
                               <div className="space-y-1">
                                 {dayAppointments.slice(0, 2).map((apt) => (
-                                  <div
-                                    key={apt.id}
-                                    className="text-xs p-1 bg-primary/10 text-primary rounded truncate"
-                                    title={`${apt.title} - ${apt.attendeeName}`}
-                                  >
-                                    {apt.title}
-                                  </div>
+                                  <Tooltip key={apt.id}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        className="text-xs p-1 bg-primary/10 text-primary rounded truncate cursor-pointer hover:bg-primary/20"
+                                      >
+                                        {apt.title}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-80">
+                                      <AppointmentTooltip appointment={apt} />
+                                    </TooltipContent>
+                                  </Tooltip>
                                 ))}
                                 {dayAppointments.length > 2 && (
-                                  <div className="text-xs text-gray-500">
-                                    +{dayAppointments.length - 2} more
-                                  </div>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-xs text-gray-500 cursor-pointer">
+                                        +{dayAppointments.length - 2} more
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-80">
+                                      <div className="space-y-2">
+                                        {dayAppointments.slice(2).map((apt) => (
+                                          <AppointmentTooltip key={apt.id} appointment={apt} />
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
                               </div>
                             </div>
@@ -404,14 +480,17 @@ export default function CalendarMain() {
                                     dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
                                   }`}>
                                     {dayAppointments.map((apt) => (
-                                      <div
-                                        key={apt.id}
-                                        className="text-xs p-2 bg-primary/20 text-primary rounded mb-1 cursor-pointer hover:bg-primary/30"
-                                        title={`${apt.title} - ${apt.attendeeName}`}
-                                      >
-                                        <div className="font-medium truncate">{apt.title}</div>
-                                        <div className="text-xs opacity-75">{apt.attendeeName}</div>
-                                      </div>
+                                      <Tooltip key={apt.id}>
+                                        <TooltipTrigger asChild>
+                                          <div className="text-xs p-2 bg-primary/20 text-primary rounded mb-1 cursor-pointer hover:bg-primary/30">
+                                            <div className="font-medium truncate">{apt.title}</div>
+                                            <div className="text-xs opacity-75">{apt.attendeeName}</div>
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="max-w-80">
+                                          <AppointmentTooltip appointment={apt} />
+                                        </TooltipContent>
+                                      </Tooltip>
                                     ))}
                                   </div>
                                 );
@@ -470,40 +549,44 @@ export default function CalendarMain() {
                                     const endTime = new Date(apt.endTime);
                                     
                                     return (
-                                      <div
-                                        key={apt.id}
-                                        className="p-3 bg-primary/10 text-primary rounded-lg border-l-4 border-primary cursor-pointer hover:bg-primary/20"
-                                      >
-                                        <div className="flex justify-between items-start">
-                                          <div className="flex-1">
-                                            <div className="font-semibold">{apt.title}</div>
-                                            <div className="text-sm opacity-75 mt-1">
-                                              {apt.attendeeName} ({apt.attendeeEmail})
+                                      <Tooltip key={apt.id}>
+                                        <TooltipTrigger asChild>
+                                          <div className="p-3 bg-primary/10 text-primary rounded-lg border-l-4 border-primary cursor-pointer hover:bg-primary/20">
+                                            <div className="flex justify-between items-start">
+                                              <div className="flex-1">
+                                                <div className="font-semibold">{apt.title}</div>
+                                                <div className="text-sm opacity-75 mt-1">
+                                                  {apt.attendeeName} ({apt.attendeeEmail})
+                                                </div>
+                                                {apt.description && (
+                                                  <div className="text-sm opacity-75 mt-1">
+                                                    {apt.description}
+                                                  </div>
+                                                )}
+                                                {apt.location && (
+                                                  <div className="text-sm opacity-75 mt-1">
+                                                    📍 {apt.location}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className="text-sm opacity-75 ml-4">
+                                                {startTime.toLocaleTimeString('en-US', { 
+                                                  hour: 'numeric', 
+                                                  minute: '2-digit',
+                                                  hour12: true 
+                                                })} - {endTime.toLocaleTimeString('en-US', { 
+                                                  hour: 'numeric', 
+                                                  minute: '2-digit',
+                                                  hour12: true 
+                                                })}
+                                              </div>
                                             </div>
-                                            {apt.description && (
-                                              <div className="text-sm opacity-75 mt-1">
-                                                {apt.description}
-                                              </div>
-                                            )}
-                                            {apt.location && (
-                                              <div className="text-sm opacity-75 mt-1">
-                                                📍 {apt.location}
-                                              </div>
-                                            )}
                                           </div>
-                                          <div className="text-sm opacity-75 ml-4">
-                                            {startTime.toLocaleTimeString('en-US', { 
-                                              hour: 'numeric', 
-                                              minute: '2-digit',
-                                              hour12: true 
-                                            })} - {endTime.toLocaleTimeString('en-US', { 
-                                              hour: 'numeric', 
-                                              minute: '2-digit',
-                                              hour12: true 
-                                            })}
-                                          </div>
-                                        </div>
-                                      </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right" className="max-w-80">
+                                          <AppointmentTooltip appointment={apt} />
+                                        </TooltipContent>
+                                      </Tooltip>
                                     );
                                   })}
                                 </div>
@@ -680,6 +763,7 @@ export default function CalendarMain() {
           </Card>
         </div>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
