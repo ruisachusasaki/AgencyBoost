@@ -4617,7 +4617,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Calendar not found" });
       }
 
-      res.json(calendar);
+      // Get assigned staff member for this calendar
+      const [assignedStaffRecord] = await db
+        .select({ userId: calendarStaff.userId })
+        .from(calendarStaff)
+        .where(and(
+          eq(calendarStaff.calendarId, req.params.id),
+          eq(calendarStaff.isActive, true)
+        ));
+
+      const calendarWithStaff = {
+        ...calendar,
+        assignedStaff: assignedStaffRecord?.userId || null
+      };
+
+      res.json(calendarWithStaff);
     } catch (error) {
       console.error('Error fetching calendar:', error);
       res.status(500).json({ message: "Failed to fetch calendar" });
@@ -4653,13 +4667,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Calendar not found" });
       }
 
-      const validatedData = insertCalendarSchema.parse(req.body);
+      // Extract assignedStaff from request body before validation
+      const { assignedStaff, ...calendarData } = req.body;
+      
+      const validatedData = insertCalendarSchema.parse(calendarData);
       
       const [updatedCalendar] = await db
         .update(calendars)
         .set(validatedData)
         .where(eq(calendars.id, req.params.id))
         .returning();
+
+      // Handle staff assignment if provided
+      if (assignedStaff !== undefined) {
+        // First, remove existing staff assignments for this calendar
+        await db
+          .delete(calendarStaff)
+          .where(eq(calendarStaff.calendarId, req.params.id));
+        
+        // If assignedStaff is not empty, add the new assignment
+        if (assignedStaff && assignedStaff.trim() !== "") {
+          await db
+            .insert(calendarStaff)
+            .values({
+              calendarId: req.params.id,
+              userId: assignedStaff,
+              isActive: true,
+            });
+        }
+      }
 
       await createAuditLog(
         "updated",
