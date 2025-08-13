@@ -560,6 +560,67 @@ export default function CalendarEdit() {
               {/* Availability & Booking Settings Tab */}
               {activeTab === "availability" && (
                 <div className="space-y-6">
+                  {/* Weekly Availability */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Weekly Availability</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Available Hours</Label>
+                        <div className="grid gap-3">
+                          {Object.entries(weeklyAvailability).map(([day, hours]) => (
+                            <div key={day} className="flex items-center gap-3 p-3 border rounded-lg">
+                              <Checkbox
+                                checked={hours.enabled}
+                                onCheckedChange={(checked) => 
+                                  setWeeklyAvailability(prev => ({
+                                    ...prev,
+                                    [day]: { ...hours, enabled: !!checked }
+                                  }))
+                                }
+                                data-testid={`checkbox-${day}`}
+                              />
+                              <div className="w-20 text-sm capitalize font-medium">{day}</div>
+                              {hours.enabled && (
+                                <div className="flex gap-3 items-center flex-1">
+                                  <Input
+                                    type="time"
+                                    value={hours.startTime}
+                                    onChange={(e) => 
+                                      setWeeklyAvailability(prev => ({
+                                        ...prev,
+                                        [day]: { ...hours, startTime: e.target.value }
+                                      }))
+                                    }
+                                    className="w-28 text-sm"
+                                    data-testid={`input-${day}-start`}
+                                  />
+                                  <span className="text-xs text-gray-500 px-1">to</span>
+                                  <Input
+                                    type="time"
+                                    value={hours.endTime}
+                                    onChange={(e) => 
+                                      setWeeklyAvailability(prev => ({
+                                        ...prev,
+                                        [day]: { ...hours, endTime: e.target.value }
+                                      }))
+                                    }
+                                    className="w-28 text-sm"
+                                    data-testid={`input-${day}-end`}
+                                  />
+                                </div>
+                              )}
+                              {!hours.enabled && (
+                                <div className="flex-1 text-sm text-gray-400">Unavailable</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   {/* Booking Settings */}
                   <Card>
                     <CardHeader>
@@ -750,67 +811,6 @@ export default function CalendarEdit() {
                           </FormItem>
                         )}
                       />
-                    </CardContent>
-                  </Card>
-
-                  {/* Weekly Availability */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Weekly Availability</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium">Available Hours</Label>
-                        <div className="grid gap-3">
-                          {Object.entries(weeklyAvailability).map(([day, hours]) => (
-                            <div key={day} className="flex items-center gap-3 p-3 border rounded-lg">
-                              <Checkbox
-                                checked={hours.enabled}
-                                onCheckedChange={(checked) => 
-                                  setWeeklyAvailability(prev => ({
-                                    ...prev,
-                                    [day]: { ...hours, enabled: !!checked }
-                                  }))
-                                }
-                                data-testid={`checkbox-${day}`}
-                              />
-                              <div className="w-20 text-sm capitalize font-medium">{day}</div>
-                              {hours.enabled && (
-                                <div className="flex gap-3 items-center flex-1">
-                                  <Input
-                                    type="time"
-                                    value={hours.startTime}
-                                    onChange={(e) => 
-                                      setWeeklyAvailability(prev => ({
-                                        ...prev,
-                                        [day]: { ...hours, startTime: e.target.value }
-                                      }))
-                                    }
-                                    className="w-28 text-sm"
-                                    data-testid={`input-${day}-start`}
-                                  />
-                                  <span className="text-xs text-gray-500 px-1">to</span>
-                                  <Input
-                                    type="time"
-                                    value={hours.endTime}
-                                    onChange={(e) => 
-                                      setWeeklyAvailability(prev => ({
-                                        ...prev,
-                                        [day]: { ...hours, endTime: e.target.value }
-                                      }))
-                                    }
-                                    className="w-28 text-sm"
-                                    data-testid={`input-${day}-end`}
-                                  />
-                                </div>
-                              )}
-                              {!hours.enabled && (
-                                <div className="flex-1 text-sm text-gray-400">Unavailable</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     </CardContent>
                   </Card>
                 </div>
