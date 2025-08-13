@@ -40,6 +40,9 @@ const navigation = [
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Social Media", href: "/social-media", icon: Share2 },
+];
+
+const bottomNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -116,15 +119,29 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           )}
         </button>
         
-        <nav className={cn("px-4 pb-4", isCollapsed && "px-2")}>
-          <ul className="space-y-2">
-            {navigation.map((item) => (
-              <li key={item.name}>
-                <NavItem item={item} showTooltip={isCollapsed} />
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <div className="flex flex-col h-full">
+          {/* Main navigation */}
+          <nav className={cn("px-4 flex-1", isCollapsed && "px-2")}>
+            <ul className="space-y-2">
+              {navigation.map((item) => (
+                <li key={item.name}>
+                  <NavItem item={item} showTooltip={isCollapsed} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+          
+          {/* Bottom navigation (Settings) */}
+          <nav className={cn("px-4 pb-4", isCollapsed && "px-2")}>
+            <ul className="space-y-2 border-t border-slate-200 pt-4">
+              {bottomNavigation.map((item) => (
+                <li key={item.name}>
+                  <NavItem item={item} showTooltip={isCollapsed} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
       </aside>
 
       {/* Mobile sidebar */}
@@ -150,31 +167,61 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             </div>
           </div>
           
-          <nav className="p-4">
-            <ul className="space-y-2">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location === item.href || (item.href === "/settings" && location?.startsWith("/settings/"));
-                
-                return (
-                  <li key={item.name}>
-                    <Link href={item.href}
-                      onClick={onClose}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                        isActive
-                          ? "text-white bg-primary"
-                          : "text-slate-700 hover:bg-slate-100"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.name}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+          <div className="flex flex-col h-full">
+            {/* Main navigation */}
+            <nav className="p-4 flex-1">
+              <ul className="space-y-2">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location === item.href;
+                  
+                  return (
+                    <li key={item.name}>
+                      <Link href={item.href}
+                        onClick={onClose}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                          isActive
+                            ? "text-white bg-primary"
+                            : "text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+            
+            {/* Bottom navigation (Settings) */}
+            <nav className="p-4">
+              <ul className="space-y-2 border-t border-slate-200 pt-4">
+                {bottomNavigation.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location === item.href || (item.href === "/settings" && location?.startsWith("/settings/"));
+                  
+                  return (
+                    <li key={item.name}>
+                      <Link href={item.href}
+                        onClick={onClose}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                          isActive
+                            ? "text-white bg-primary"
+                            : "text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </div>
         </aside>
       )}
     </TooltipProvider>
