@@ -375,14 +375,18 @@ export default function CalendarMain() {
                       {/* Week time slots */}
                       <div className="space-y-0">
                         {Array.from({ length: 24 }, (_, hour) => {
-                          const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                          const timeSlot = new Date().setHours(hour, 0, 0, 0);
+                          const timeDisplay = new Date(timeSlot).toLocaleTimeString('en-US', { 
+                            hour: 'numeric',
+                            hour12: true 
+                          });
                           const startOfWeek = new Date(currentDate);
                           startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
                           
                           return (
                             <div key={hour} className="grid grid-cols-8 gap-1 border-b border-gray-100 dark:border-gray-800">
                               <div className="p-2 text-xs text-gray-500 dark:text-gray-400 text-right">
-                                {timeSlot}
+                                {timeDisplay}
                               </div>
                               {Array.from({ length: 7 }, (_, dayIndex) => {
                                 const day = new Date(startOfWeek);
@@ -438,7 +442,11 @@ export default function CalendarMain() {
                       {/* Day time slots */}
                       <div className="space-y-0">
                         {Array.from({ length: 24 }, (_, hour) => {
-                          const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                          const timeSlot = new Date().setHours(hour, 0, 0, 0);
+                          const timeDisplay = new Date(timeSlot).toLocaleTimeString('en-US', { 
+                            hour: 'numeric',
+                            hour12: true 
+                          });
                           const currentHour = new Date(currentDate);
                           currentHour.setHours(hour, 0, 0, 0);
                           
@@ -451,7 +459,7 @@ export default function CalendarMain() {
                           return (
                             <div key={hour} className="flex border-b border-gray-100 dark:border-gray-800">
                               <div className="w-20 p-3 text-sm text-gray-500 dark:text-gray-400 text-right border-r border-gray-100 dark:border-gray-800">
-                                {timeSlot}
+                                {timeDisplay}
                               </div>
                               <div className="flex-1 min-h-[80px] p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
                                 <div className="space-y-2">
