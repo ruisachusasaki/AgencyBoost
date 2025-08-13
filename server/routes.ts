@@ -4674,10 +4674,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...calendarData 
       } = req.body;
       
-      console.log('Calendar update request body:', req.body);
-      console.log('Calendar data after filtering:', calendarData);
+      // Add required fields that may be missing
+      const calendarUpdateData = {
+        ...calendarData,
+        type: existingCalendar.type, // Keep existing type
+        durationUnit: existingCalendar.durationUnit, // Keep existing duration unit
+        createdBy: existingCalendar.createdBy, // Keep existing creator
+        customFieldIds: existingCalendar.customFieldIds || [], // Keep existing custom fields
+      };
       
-      const validatedData = insertCalendarSchema.parse(calendarData);
+      console.log('Calendar update request body:', req.body);
+      console.log('Calendar data after filtering:', calendarUpdateData);
+      
+      const validatedData = insertCalendarSchema.parse(calendarUpdateData);
       
       const [updatedCalendar] = await db
         .update(calendars)
