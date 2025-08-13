@@ -18,6 +18,7 @@ import {
   insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
+  insertCalendarAppointmentSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
@@ -4799,7 +4800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: calendarAppointments.status,
           location: calendarAppointments.location,
           calendarId: calendarAppointments.calendarId,
-          customFields: calendarAppointments.customFields,
+          customFieldData: calendarAppointments.customFieldData,
           createdAt: calendarAppointments.createdAt,
         })
         .from(calendarAppointments);
@@ -4845,6 +4846,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error('Error creating appointment:', error);
       res.status(500).json({ message: "Failed to create appointment" });
+    }
+  });
+
+  // Public Booking Route - for external bookings via public calendar URLs
+  app.post("/api/calendars/:customUrl/book", async (req, res) => {
+    try {
+      // First, get the calendar by custom URL
+      const [calendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.customUrl, req.params.customUrl));
+
+      if (!calendar) {
+        return res.status(404).json({ message: "Calendar not found" });
+      }
+
+      if (!calendar.isActive) {
+        return res.status(400).json({ message: "Calendar is not accepting bookings" });
+      }
+
+      // Get assigned staff member for this calendar
+      const [assignedStaffRecord] = await db
+        .select({ staffId: calendarStaff.staffId })
+        .from(calendarStaff)
+        .where(and(
+          eq(calendarStaff.calendarId, calendar.id),
+          eq(calendarStaff.isActive, true)
+        ));
+
+      if (!assignedStaffRecord) {
+        return res.status(400).json({ message: "No staff member assigned to this calendar" });
+      }
+
+      const { date, time, name, email, phone, message } = req.body;
+
+      // Parse the date and time to create proper timestamps
+      const startTime = new Date(`${date}T${time}:00`);
+      const endTime = new Date(startTime.getTime() + (calendar.duration * 60000)); // Add duration in milliseconds
+
+      // Create the appointment
+      const appointmentData = {
+        calendarId: calendar.id,
+        assignedTo: assignedStaffRecord.staffId,
+        title: `${name} - ${calendar.name}`,
+        description: message || '',
+        startTime,
+        endTime,
+        status: "confirmed",
+        location: calendar.location || '',
+        locationDetails: calendar.locationDetails || '',
+        timezone: 'UTC', // Default timezone for public bookings
+        bookerName: name,
+        bookerEmail: email,
+        bookerPhone: phone || '',
+        bookingSource: "public",
+        bookingIp: req.ip,
+        bookingUserAgent: req.get('User-Agent') || '',
+      };
+
+      const [newAppointment] = await db
+        .insert(calendarAppointments)
+        .values(appointmentData)
+        .returning();
+
+      await createAuditLog(
+        "created",
+        "appointment",
+        newAppointment.id,
+        newAppointment.title,
+        undefined,
+        `Public booking created: ${newAppointment.title}`,
+        null,
+        newAppointment,
+        req
+      );
+
+      res.status(201).json({
+        success: true,
+        appointment: newAppointment,
+        message: "Booking confirmed successfully"
+      });
+    } catch (error) {
+      console.error('Error creating public booking:', error);
+      res.status(500).json({ message: "Failed to create booking" });
     }
   });
 

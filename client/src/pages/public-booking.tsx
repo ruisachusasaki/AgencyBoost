@@ -99,15 +99,42 @@ export default function PublicBooking() {
     return slots;
   };
 
-  const handleBooking = () => {
-    // In a real app, this would submit to the backend
-    console.log('Booking submitted:', {
-      calendar: calendar?.id,
-      date: selectedDate,
-      time: selectedTime,
-      form: bookingForm
-    });
-    setStep(3);
+  const handleBooking = async () => {
+    if (!calendar || !selectedDate || !selectedTime) {
+      return;
+    }
+
+    try {
+      const bookingData = {
+        date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        time: selectedTime,
+        name: bookingForm.name,
+        email: bookingForm.email,
+        phone: bookingForm.phone,
+        message: bookingForm.message
+      };
+
+      const response = await fetch(`/api/calendars/${calendar.customUrl}/book`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create booking');
+      }
+
+      const result = await response.json();
+      console.log('Booking created successfully:', result);
+      setStep(3);
+    } catch (error) {
+      console.error('Booking error:', error);
+      // You could add error handling here, like showing a toast notification
+      alert('Failed to create booking. Please try again.');
+    }
   };
 
   if (!match) {
