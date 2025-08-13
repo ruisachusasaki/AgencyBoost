@@ -440,7 +440,7 @@ export default function Campaigns() {
             <div className="flex space-x-3">
               <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="h-10">
                     <FolderPlus className="h-4 w-4 mr-2" />
                     New Folder
                   </Button>
@@ -629,7 +629,7 @@ export default function Campaigns() {
             <div className="flex space-x-3">
               <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="h-10">
                     <FolderPlus className="h-4 w-4 mr-2" />
                     New Folder
                   </Button>
