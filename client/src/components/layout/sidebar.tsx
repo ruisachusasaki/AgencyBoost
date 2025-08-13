@@ -118,7 +118,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         
         <div className="flex flex-col h-full bg-white">
           {/* Main navigation */}
-          <nav className={cn("px-4 flex-1 bg-white", isCollapsed && "px-2")}>
+          <nav className={cn("px-4 flex-1 bg-white pb-6", isCollapsed && "px-2")}>
             <ul className="space-y-2">
               {navigation.map((item) => (
                 <li key={item.name}>
