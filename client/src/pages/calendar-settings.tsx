@@ -48,6 +48,11 @@ export default function CalendarSettings() {
     queryKey: ["/api/calendars"],
   });
 
+  // Fetch staff for assignment
+  const { data: staff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string; email: string }>>({
+    queryKey: ["/api/staff"],
+  });
+
   // Create calendar mutation
   const createCalendarMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -254,6 +259,7 @@ export default function CalendarSettings() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateCalendar={(calendarData) => createCalendarMutation.mutate(calendarData)}
+        staff={staff}
       />
     </div>
   );
