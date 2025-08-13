@@ -346,8 +346,8 @@ export default function CalendarMain() {
                   {calendarView === "week" && (
                     <div className="p-4">
                       {/* Week header with days */}
-                      <div className="grid grid-cols-8 gap-1 mb-4">
-                        <div className="p-2"></div> {/* Empty cell for time column */}
+                      <div className="grid grid-cols-8 gap-0 mb-4">
+                        <div className="p-2 border-r border-gray-200 dark:border-gray-700"></div> {/* Empty cell for time column */}
                         {(() => {
                           const startOfWeek = new Date(currentDate);
                           startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
@@ -357,9 +357,9 @@ export default function CalendarMain() {
                             const isToday = day.toDateString() === new Date().toDateString();
                             
                             return (
-                              <div key={i} className={`p-2 text-center border-b border-gray-200 ${
-                                isToday ? "bg-primary/10 text-primary font-semibold" : ""
-                              }`}>
+                              <div key={i} className={`p-2 text-center border-b border-gray-200 dark:border-gray-700 ${
+                                i < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
+                              } ${isToday ? "bg-primary/10 text-primary font-semibold" : ""}`}>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
                                   {day.toLocaleDateString('en-US', { weekday: 'short' })}
                                 </div>
@@ -384,8 +384,8 @@ export default function CalendarMain() {
                           startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
                           
                           return (
-                            <div key={hour} className="grid grid-cols-8 gap-1 border-b border-gray-100 dark:border-gray-800">
-                              <div className="p-2 text-xs text-gray-500 dark:text-gray-400 text-right">
+                            <div key={hour} className="grid grid-cols-8 gap-0 border-b border-gray-100 dark:border-gray-800">
+                              <div className="p-2 text-xs text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700">
                                 {timeDisplay}
                               </div>
                               {Array.from({ length: 7 }, (_, dayIndex) => {
@@ -400,7 +400,9 @@ export default function CalendarMain() {
                                 });
                                 
                                 return (
-                                  <div key={dayIndex} className="min-h-[60px] p-1 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                  <div key={dayIndex} className={`min-h-[60px] p-1 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                    dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
+                                  }`}>
                                     {dayAppointments.map((apt) => (
                                       <div
                                         key={apt.id}
