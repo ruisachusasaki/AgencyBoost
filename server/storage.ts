@@ -39,7 +39,9 @@ import {
   type Role, type InsertRole,
   type Permission, type InsertPermission,
   type UserRole, type InsertUserRole,
-  type NotificationSettings, type InsertNotificationSettings
+  type NotificationSettings, type InsertNotificationSettings,
+  type CustomFieldFileUpload, type InsertCustomFieldFileUpload,
+  customFieldFileUploads
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -276,6 +278,12 @@ export interface IStorage {
   
   // Notification Settings
   getNotificationSettings(userId: string): Promise<NotificationSettings | undefined>;
+  
+  // Custom Field File Uploads
+  getCustomFieldFileUploads(clientId: string, customFieldId: string): Promise<CustomFieldFileUpload[]>;
+  getCustomFieldFileUpload(id: string): Promise<CustomFieldFileUpload | undefined>;
+  createCustomFieldFileUpload(upload: InsertCustomFieldFileUpload): Promise<CustomFieldFileUpload>;
+  deleteCustomFieldFileUpload(id: string): Promise<boolean>;
   createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings>;
   updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined>;
   
@@ -2805,6 +2813,55 @@ class MinimalStorage implements Partial<IStorage> {
   async getAutomationActions(): Promise<AutomationAction[]> { return []; }
   async getAllClientsForExport(): Promise<Client[]> { return this.getClients(); }
   
+  // Custom Field File Uploads
+  async getCustomFieldFileUploads(clientId: string, customFieldId: string): Promise<CustomFieldFileUpload[]> {
+    try {
+      const uploads = await db.select()
+        .from(customFieldFileUploads)
+        .where(and(
+          eq(customFieldFileUploads.clientId, clientId),
+          eq(customFieldFileUploads.customFieldId, customFieldId)
+        ));
+      return uploads;
+    } catch (error) {
+      console.error("Error getting custom field file uploads:", error);
+      return [];
+    }
+  }
+
+  async getCustomFieldFileUpload(id: string): Promise<CustomFieldFileUpload | undefined> {
+    try {
+      const upload = await db.select()
+        .from(customFieldFileUploads)
+        .where(eq(customFieldFileUploads.id, id))
+        .limit(1);
+      return upload[0];
+    } catch (error) {
+      console.error("Error getting custom field file upload:", error);
+      return undefined;
+    }
+  }
+
+  async createCustomFieldFileUpload(upload: InsertCustomFieldFileUpload): Promise<CustomFieldFileUpload> {
+    try {
+      const result = await db.insert(customFieldFileUploads).values(upload).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating custom field file upload:", error);
+      throw error;
+    }
+  }
+
+  async deleteCustomFieldFileUpload(id: string): Promise<boolean> {
+    try {
+      await db.delete(customFieldFileUploads).where(eq(customFieldFileUploads.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting custom field file upload:", error);
+      return false;
+    }
+  }
+
   // Add other empty implementations as needed
   [key: string]: any;
 }

@@ -53,7 +53,7 @@ export const customFieldFolders = pgTable("custom_field_folders", {
 export const customFields = pgTable("custom_fields", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  type: text("type").notNull(), // text, multiline, email, phone, dropdown, dropdown_multiple, checkbox, radio, date, url, number, currency
+  type: text("type").notNull(), // text, multiline, email, phone, dropdown, dropdown_multiple, checkbox, radio, date, url, number, currency, file_upload
   options: text("options").array(), // for dropdown fields
   required: boolean("required").default(false),
   folderId: varchar("folder_id").references(() => customFieldFolders.id),
@@ -1588,5 +1588,27 @@ export type InsertAppointmentReminder = z.infer<typeof insertAppointmentReminder
 
 export type RoundRobinTracking = typeof roundRobinTracking.$inferSelect;
 export type InsertRoundRobinTracking = z.infer<typeof insertRoundRobinTrackingSchema>;
+
+// Custom field file uploads - for file upload custom fields
+export const customFieldFileUploads = pgTable("custom_field_file_uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  customFieldId: varchar("custom_field_id").notNull().references(() => customFields.id),
+  fileName: text("file_name").notNull(),
+  originalFileName: text("original_file_name").notNull(),
+  fileType: text("file_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  filePath: text("file_path").notNull(), // Object storage path
+  uploadedBy: uuid("uploaded_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCustomFieldFileUploadSchema = createInsertSchema(customFieldFileUploads).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CustomFieldFileUpload = typeof customFieldFileUploads.$inferSelect;
+export type InsertCustomFieldFileUpload = z.infer<typeof insertCustomFieldFileUploadSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one

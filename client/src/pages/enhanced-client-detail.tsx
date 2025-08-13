@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit } from "lucide-react";
+import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { DocumentUploader } from "@/components/DocumentUploader";
@@ -147,7 +148,8 @@ const EditableField = ({
   cancelEditing,
   saveFieldValue,
   updateFieldMutation,
-  formatPhoneNumber
+  formatPhoneNumber,
+  clientId
 }: {
   fieldId: string;
   label: string;
@@ -165,8 +167,31 @@ const EditableField = ({
   saveFieldValue: (fieldId: string, type: string, isCustomField: boolean) => void;
   updateFieldMutation: any;
   formatPhoneNumber: (phone: string) => string;
+  clientId?: string;
 }) => {
   const isEditing = editingField === fieldId;
+  
+  // Handle file upload fields differently - they don't support inline editing
+  if (type === 'file_upload') {
+    return (
+      <div>
+        <label className="flex items-center justify-between text-gray-500 mb-1">
+          <span>
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </span>
+        </label>
+        <CustomFieldFileUpload
+          customFieldId={fieldId}
+          clientId={clientId || ""}
+          value={[]}
+          onChange={() => {}}
+          label={label}
+          required={required}
+        />
+      </div>
+    );
+  }
   
   return (
     <div>
@@ -2090,6 +2115,7 @@ export default function EnhancedClientDetail() {
                                 required={field.required}
                                 options={field.options}
                                 className={field.type === 'email' || field.type === 'url' ? "text-primary" : undefined}
+                                clientId={clientId}
                                 {...editableFieldProps}
                               />
                             );

@@ -18,14 +18,14 @@ import {
   insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
-  insertCalendarAppointmentSchema,
+  insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads
 } from "@shared/schema";
 import { z } from "zod";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql, inArray } from "drizzle-orm";
 import { permissionAuditService } from "./permissionAuditService";
@@ -5071,6 +5071,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating public booking:', error);
       res.status(500).json({ message: "Failed to create booking" });
+    }
+  });
+
+  // Custom Field File Upload Routes
+  app.post("/api/custom-field-files/upload-url", async (req, res) => {
+    try {
+      const { customFieldId, clientId, fileName, fileSize, fileType } = req.body;
+      
+      // Validate file type
+      if (!validateFileType(fileName)) {
+        return res.status(400).json({ 
+          message: "File type not supported", 
+          supportedTypes: "PDF, DOC, DOCX, XLS, XLSX, TXT, RTF, Pages, Numbers, JPG, PNG, GIF, TIFF, PPT, PPTX, KEY" 
+        });
+      }
+      
+      if (isForbiddenFileType(fileName)) {
+        return res.status(400).json({ 
+          message: "File type is forbidden for security reasons" 
+        });
+      }
+      
+      // Validate file size (250MB limit)
+      if (fileSize > 250 * 1024 * 1024) {
+        return res.status(400).json({ 
+          message: "File size exceeds 250MB limit" 
+        });
+      }
+      
+      const objectStorage = new ObjectStorageService();
+      const uploadUrl = await objectStorage.getCustomFieldFileUploadURL(fileType);
+      const filePath = objectStorage.extractFilePathFromUrl(uploadUrl);
+      
+      res.json({ uploadUrl, filePath });
+    } catch (error) {
+      console.error('Error generating upload URL:', error);
+      res.status(500).json({ message: "Failed to generate upload URL" });
+    }
+  });
+
+  app.post("/api/custom-field-files", async (req, res) => {
+    try {
+      const data = req.body;
+      
+      // Sanitize filename for security
+      data.fileName = sanitizeFileName(data.fileName);
+      
+      // Add default uploadedBy (in a real app, this would come from session)
+      data.uploadedBy = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const validatedData = insertCustomFieldFileUploadSchema.parse(data);
+      const fileUpload = await storage.createCustomFieldFileUpload(validatedData);
+      
+      await createAuditLog(
+        "created",
+        "custom_field_file",
+        fileUpload.id,
+        fileUpload.originalFileName,
+        undefined,
+        `Uploaded file: ${fileUpload.originalFileName}`,
+        null,
+        fileUpload,
+        req
+      );
+      
+      res.json(fileUpload);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating file upload record:', error);
+      res.status(500).json({ message: "Failed to create file upload record" });
+    }
+  });
+
+  app.get("/api/custom-field-files", async (req, res) => {
+    try {
+      const { clientId, customFieldId } = req.query as { clientId?: string; customFieldId?: string };
+      
+      if (!clientId || !customFieldId) {
+        return res.status(400).json({ message: "clientId and customFieldId are required" });
+      }
+      
+      const fileUploads = await storage.getCustomFieldFileUploads(clientId, customFieldId);
+      res.json(fileUploads);
+    } catch (error) {
+      console.error('Error fetching custom field file uploads:', error);
+      res.status(500).json({ message: "Failed to fetch file uploads" });
+    }
+  });
+
+  app.get("/api/custom-field-files/:id/download", async (req, res) => {
+    try {
+      const fileUpload = await storage.getCustomFieldFileUpload(req.params.id);
+      
+      if (!fileUpload) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      const objectStorage = new ObjectStorageService();
+      const file = await objectStorage.getFileFromPath(fileUpload.filePath);
+      
+      await objectStorage.downloadFile(file, res);
+    } catch (error) {
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      console.error('Error downloading file:', error);
+      res.status(500).json({ message: "Failed to download file" });
+    }
+  });
+
+  app.delete("/api/custom-field-files/:id", async (req, res) => {
+    try {
+      const fileUpload = await storage.getCustomFieldFileUpload(req.params.id);
+      
+      if (!fileUpload) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      const deleted = await storage.deleteCustomFieldFileUpload(req.params.id);
+      
+      if (deleted) {
+        await createAuditLog(
+          "deleted",
+          "custom_field_file",
+          fileUpload.id,
+          fileUpload.originalFileName,
+          undefined,
+          `Deleted file: ${fileUpload.originalFileName}`,
+          fileUpload,
+          null,
+          req
+        );
+        
+        res.json({ message: "File deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete file" });
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      res.status(500).json({ message: "Failed to delete file" });
     }
   });
 

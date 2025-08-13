@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link as LinkIcon, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical, ArrowLeft, Radio, AlignLeft, List, X } from "lucide-react";
+import { Database, Plus, Edit, Trash2, Folder, Type, Hash, Calendar, Link as LinkIcon, DollarSign, Mail, Phone, CheckSquare, Search, FolderOpen, Users, ChevronUp, ChevronDown, GripVertical, ArrowLeft, Radio, AlignLeft, List, X, Upload } from "lucide-react";
 import { Link } from "wouter";
 import type { CustomField, CustomFieldFolder } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -30,7 +30,8 @@ const fieldTypeIcons = {
   checkbox: CheckSquare,
   multiline: AlignLeft,
   dropdown_multiple: List,
-  radio: Radio
+  radio: Radio,
+  file_upload: Upload
 };
 
 type SortField = 'name' | 'type' | 'folder' | 'required';
@@ -514,6 +515,7 @@ export default function CustomFields() {
                             <SelectItem value="dropdown_multiple">Dropdown (Multiple)</SelectItem>
                             <SelectItem value="checkbox">Checkbox</SelectItem>
                             <SelectItem value="radio">Radio Select</SelectItem>
+                            <SelectItem value="file_upload">File Upload</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -946,6 +948,7 @@ export default function CustomFields() {
                       <SelectItem value="dropdown_multiple">Dropdown (Multiple)</SelectItem>
                       <SelectItem value="checkbox">Checkbox</SelectItem>
                       <SelectItem value="radio">Radio Select</SelectItem>
+                      <SelectItem value="file_upload">File Upload</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
