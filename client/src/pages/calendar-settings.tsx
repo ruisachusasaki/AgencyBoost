@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,8 @@ import {
   Trash2,
   ExternalLink,
   Copy,
-  ArrowLeft
+  ArrowLeft,
+  Filter
 } from "lucide-react";
 import { CalendarCreationModal } from "@/components/CalendarCreationModal";
 
@@ -28,6 +29,7 @@ interface CalendarData {
   id: string;
   name: string;
   description?: string;
+  type: string;
   isActive: boolean;
   color: string;
   bufferTime: number;
@@ -35,6 +37,7 @@ interface CalendarData {
   timezone: string;
   publicUrl: string;
   createdAt: string;
+  createdBy: string;
 }
 
 export default function CalendarSettings() {
@@ -42,6 +45,11 @@ export default function CalendarSettings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("calendars");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
 
   // Fetch calendars
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
@@ -52,6 +60,38 @@ export default function CalendarSettings() {
   const { data: staff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string; email: string }>>({
     queryKey: ["/api/staff"],
   });
+
+  // Filtered calendars based on filters
+  const filteredCalendars = useMemo(() => {
+    return calendars.filter(calendar => {
+      // Status filter
+      if (statusFilter === "active" && !calendar.isActive) return false;
+      if (statusFilter === "inactive" && calendar.isActive) return false;
+      
+      // Type filter
+      if (typeFilter === "personal" && calendar.type !== "personal") return false;
+      if (typeFilter === "round_robin" && calendar.type !== "round_robin") return false;
+      
+      // Owner filter
+      if (ownerFilter !== "all" && calendar.createdBy !== ownerFilter) return false;
+      
+      return true;
+    });
+  }, [calendars, statusFilter, typeFilter, ownerFilter]);
+
+  // Get unique owners for filter dropdown
+  const calendarOwners = useMemo(() => {
+    const ownerMap = new Map();
+    calendars.forEach(calendar => {
+      if (calendar.createdBy) {
+        const staffMember = staff.find(s => s.id === calendar.createdBy);
+        if (staffMember) {
+          ownerMap.set(calendar.createdBy, `${staffMember.firstName} ${staffMember.lastName}`);
+        }
+      }
+    });
+    return Array.from(ownerMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [calendars, staff]);
 
   // Create calendar mutation
   const createCalendarMutation = useMutation({
@@ -122,7 +162,7 @@ export default function CalendarSettings() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           {[
-            { id: "calendars", name: "Calendars", icon: Calendar, count: calendars.length },
+            { id: "calendars", name: "Calendars", icon: Calendar, count: filteredCalendars.length },
             { id: "integrations", name: "Integrations", icon: Settings, count: 0 }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -160,8 +200,122 @@ export default function CalendarSettings() {
             </Button>
           </div>
 
+          {/* Filter Controls */}
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Filter className="h-5 w-5" />
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Status Filter */}
+                <div className="space-y-2">
+                  <Label htmlFor="status-filter" className="text-sm font-medium">
+                    Status
+                  </Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger id="status-filter" data-testid="filter-status">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Type Filter */}
+                <div className="space-y-2">
+                  <Label htmlFor="type-filter" className="text-sm font-medium">
+                    Type
+                  </Label>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger id="type-filter" data-testid="filter-type">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="personal">Personal Booking</SelectItem>
+                      <SelectItem value="round_robin">Round Robin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Owner Filter */}
+                <div className="space-y-2">
+                  <Label htmlFor="owner-filter" className="text-sm font-medium">
+                    Owner
+                  </Label>
+                  <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                    <SelectTrigger id="owner-filter" data-testid="filter-owner">
+                      <SelectValue placeholder="All Owners" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Owners</SelectItem>
+                      {calendarOwners.map((owner) => (
+                        <SelectItem key={owner.id} value={owner.id}>
+                          {owner.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Filter Summary */}
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                  <span>
+                    Showing {filteredCalendars.length} of {calendars.length} calendars
+                  </span>
+                  {(statusFilter !== "all" || typeFilter !== "all" || ownerFilter !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter("all");
+                        setTypeFilter("all");
+                        setOwnerFilter("all");
+                      }}
+                      className="text-primary hover:text-primary-dark"
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid gap-6">
-            {calendars.map((calendar: CalendarData) => (
+            {filteredCalendars.length === 0 ? (
+              <Card className="border border-gray-200 dark:border-gray-700">
+                <CardContent className="p-8 text-center">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No calendars found
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    {calendars.length === 0 
+                      ? "You haven't created any calendars yet." 
+                      : "No calendars match the current filters."}
+                  </p>
+                  {calendars.length === 0 && (
+                    <Button 
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Your First Calendar
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              filteredCalendars.map((calendar: CalendarData) => (
               <Card key={calendar.id} className="border border-gray-200 dark:border-gray-700">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start">
@@ -183,6 +337,9 @@ export default function CalendarSettings() {
                       <Badge variant={calendar.isActive ? "default" : "secondary"}>
                         {calendar.isActive ? "Active" : "Inactive"}
                       </Badge>
+                      <Badge variant="outline">
+                        {calendar.type === "round_robin" ? "Round Robin" : "Personal"}
+                      </Badge>
                       <Link href={`/settings/calendar/${calendar.id}/edit`}>
                         <Button variant="ghost" size="sm" data-testid={`button-edit-${calendar.id}`}>
                           <Edit className="h-4 w-4" />
@@ -192,7 +349,7 @@ export default function CalendarSettings() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div>
                       <Label className="text-gray-500 dark:text-gray-400">Buffer Time</Label>
                       <p className="font-medium">{calendar.bufferTime} minutes</p>
@@ -204,6 +361,15 @@ export default function CalendarSettings() {
                     <div>
                       <Label className="text-gray-500 dark:text-gray-400">Timezone</Label>
                       <p className="font-medium">{calendar.timezone}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-500 dark:text-gray-400">Owner</Label>
+                      <p className="font-medium">
+                        {(() => {
+                          const owner = staff.find(s => s.id === calendar.createdBy);
+                          return owner ? `${owner.firstName} ${owner.lastName}` : "Unknown";
+                        })()}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-gray-500 dark:text-gray-400">Created</Label>
@@ -233,7 +399,8 @@ export default function CalendarSettings() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}
