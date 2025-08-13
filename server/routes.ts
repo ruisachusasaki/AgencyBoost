@@ -4717,6 +4717,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update calendar appointment
+  app.put("/api/calendar-appointments/:id", async (req, res) => {
+    try {
+      const [existingAppointment] = await db
+        .select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.id, req.params.id));
+
+      if (!existingAppointment) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      const updateData = req.body;
+      
+      const [updatedAppointment] = await db
+        .update(calendarAppointments)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(calendarAppointments.id, req.params.id))
+        .returning();
+
+      await createAuditLog(
+        "updated",
+        "appointment",
+        updatedAppointment.id,
+        updatedAppointment.title,
+        undefined,
+        `Updated appointment: ${updatedAppointment.title}`,
+        existingAppointment,
+        updatedAppointment,
+        req
+      );
+
+      res.json(updatedAppointment);
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      res.status(500).json({ message: "Failed to update appointment" });
+    }
+  });
+
+  // Delete calendar appointment
+  app.delete("/api/calendar-appointments/:id", async (req, res) => {
+    try {
+      const [existingAppointment] = await db
+        .select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.id, req.params.id));
+
+      if (!existingAppointment) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      await db.delete(calendarAppointments).where(eq(calendarAppointments.id, req.params.id));
+
+      await createAuditLog(
+        "deleted",
+        "appointment",
+        existingAppointment.id,
+        existingAppointment.title,
+        undefined,
+        `Deleted appointment: ${existingAppointment.title}`,
+        existingAppointment,
+        null,
+        req
+      );
+
+      res.json({ message: "Appointment deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      res.status(500).json({ message: "Failed to delete appointment" });
+    }
+  });
+
   app.put("/api/calendars/:id", async (req, res) => {
     try {
       const [existingCalendar] = await db

@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +45,8 @@ import {
   MapPin,
   Filter,
   ChevronUp,
+  Edit2,
+  Trash2,
   ChevronDown
 } from "lucide-react";
 
@@ -101,6 +105,9 @@ interface Appointment {
 type CalendarViewType = "day" | "week" | "month";
 
 export default function CalendarMain() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [activeTab, setActiveTab] = useState("calendar-view");
   const [calendarView, setCalendarView] = useState<CalendarViewType>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -230,6 +237,60 @@ export default function CalendarMain() {
 
   // Check if user has admin role or settings access
   const isAdmin = userPermissions?.settings?.canAccess || false;
+
+  // Mutation for updating appointment status
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: string }) => {
+      return await apiRequest('PUT', `/api/calendar-appointments/${appointmentId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+      toast({
+        title: "Appointment updated",
+        description: "Status updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating appointment",
+        description: error.message || "Failed to update appointment status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for deleting appointment
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      return await apiRequest('DELETE', `/api/calendar-appointments/${appointmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+      toast({
+        title: "Appointment deleted",
+        description: "Appointment has been deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting appointment",
+        description: error.message || "Failed to delete appointment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler for status change
+  const handleStatusChange = (appointmentId: string, newStatus: string) => {
+    updateAppointmentMutation.mutate({ appointmentId, status: newStatus });
+  };
+
+  // Handler for appointment deletion
+  const handleDeleteAppointment = (appointmentId: string, appointmentTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete the appointment "${appointmentTitle}"?`)) {
+      deleteAppointmentMutation.mutate(appointmentId);
+    }
+  };
 
   const handleUserToggle = (userId: string) => {
     setSelectedUsers(prev => 
@@ -1106,12 +1167,13 @@ export default function CalendarMain() {
                         </div>
                       </TableHead>
                       <TableHead>Appointment Owner</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredAndSortedAppointments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
                           No appointments found
                         </TableCell>
                       </TableRow>
@@ -1136,14 +1198,50 @@ export default function CalendarMain() {
                             </TableCell>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{appointment.bookerName || appointment.attendeeName || 'Unknown'}</div>
+                                <Link href={`/clients?search=${encodeURIComponent(appointment.bookerEmail || appointment.attendeeEmail || '')}`}>
+                                  <div className="font-medium text-primary hover:underline cursor-pointer">
+                                    {appointment.bookerName || appointment.attendeeName || 'Unknown'}
+                                  </div>
+                                </Link>
                                 <div className="text-sm text-gray-500 dark:text-gray-400">{appointment.bookerEmail || appointment.attendeeEmail || 'No email'}</div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge className={`${getStatusBadgeColor(appointment.status)} border-0 capitalize`}>
-                                {appointment.status}
-                              </Badge>
+                              <Select
+                                value={appointment.status}
+                                onValueChange={(newStatus) => handleStatusChange(appointment.id, newStatus)}
+                                disabled={updateAppointmentMutation.isPending}
+                              >
+                                <SelectTrigger className="w-32 h-8">
+                                  <SelectValue>
+                                    <Badge className={`${getStatusBadgeColor(appointment.status)} border-0 capitalize text-xs`}>
+                                      {appointment.status}
+                                    </Badge>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="confirmed">
+                                    <Badge className="bg-blue-100 text-blue-800 border-0 capitalize text-xs">
+                                      Confirmed
+                                    </Badge>
+                                  </SelectItem>
+                                  <SelectItem value="showed">
+                                    <Badge className="bg-green-100 text-green-800 border-0 capitalize text-xs">
+                                      Showed
+                                    </Badge>
+                                  </SelectItem>
+                                  <SelectItem value="no_show">
+                                    <Badge className="bg-yellow-100 text-yellow-800 border-0 capitalize text-xs">
+                                      No Show
+                                    </Badge>
+                                  </SelectItem>
+                                  <SelectItem value="cancelled">
+                                    <Badge className="bg-red-100 text-red-800 border-0 capitalize text-xs">
+                                      Cancelled
+                                    </Badge>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                             <TableCell>
                               <div>
@@ -1183,6 +1281,33 @@ export default function CalendarMain() {
                                   {owner ? `${owner.firstName.charAt(0)}${owner.lastName.charAt(0)}` : "?"}
                                 </div>
                                 <span>{owner ? `${owner.firstName} ${owner.lastName}` : "Unknown User"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    // TODO: Implement edit functionality
+                                    toast({
+                                      title: "Edit functionality",
+                                      description: "Edit appointment feature coming soon",
+                                    });
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteAppointment(appointment.id, appointment.title)}
+                                  disabled={deleteAppointmentMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
