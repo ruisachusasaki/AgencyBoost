@@ -11,10 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { DocumentUploader } from "@/components/DocumentUploader";
+import { AppointmentModal } from "@/components/AppointmentModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Client, Tag, InsertTag } from "@shared/schema";
@@ -425,6 +426,9 @@ export default function EnhancedClientDetail() {
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  
+  // Appointments state
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   // Helper function to toggle note expansion
   const toggleNoteExpansion = (noteId: string) => {
@@ -712,6 +716,17 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch staff');
       return response.json();
     },
+  });
+
+  // Fetch client appointments
+  const { data: clientAppointmentsData = [] } = useQuery({
+    queryKey: ['/api/appointments', 'client', clientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/appointments?clientId=${clientId}`);
+      if (!response.ok) throw new Error('Failed to fetch client appointments');
+      return response.json();
+    },
+    enabled: !!clientId
   });
 
   // Fetch current user data
@@ -3517,18 +3532,17 @@ export default function EnhancedClientDetail() {
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setActiveRightSection("appointments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
                             activeRightSection === "appointments"
                               ? "bg-white text-primary shadow-sm"
-                              : "text-gray-400"
+                              : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                           }`}
-                          disabled
                         >
                           <Calendar className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Meetings (Coming Soon)</p>
+                        <p>Meetings/Appointments</p>
                       </TooltipContent>
                     </Tooltip>
                     
@@ -4399,41 +4413,69 @@ export default function EnhancedClientDetail() {
                 {activeRightSection === "appointments" && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Appointments</h3>
-                      <Button size="sm" variant="outline">
+                      <h3 className="font-semibold text-gray-900">Meetings/Appointments</h3>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setShowAppointmentModal(true)}
+                      >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
                     
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-blue-900">Strategy Meeting</span>
-                          <span className="text-xs text-blue-600">Tomorrow</span>
+                      {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
+                        clientAppointmentsData.map((appointment: any) => (
+                          <div key={appointment.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-gray-900">{appointment.title}</h4>
+                                  <Badge 
+                                    variant={
+                                      appointment.status === 'confirmed' ? 'default' :
+                                      appointment.status === 'showed' ? 'secondary' :
+                                      appointment.status === 'cancelled' ? 'destructive' :
+                                      'outline'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {appointment.status}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-3 w-3" />
+                                    <span>
+                                      {format(new Date(appointment.startTime), 'MMM d, yyyy h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}
+                                    </span>
+                                  </div>
+                                  {appointment.location && (
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-3 w-3" />
+                                      <span>{appointment.location}</span>
+                                    </div>
+                                  )}
+                                  {appointment.assignedTo && (
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-3 w-3" />
+                                      <span>
+                                        {staffData.find((s: any) => s.id === appointment.assignedTo)?.firstName} {staffData.find((s: any) => s.id === appointment.assignedTo)?.lastName}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No meetings for this client</p>
+                          <p className="text-xs text-gray-400">Click the + button to schedule a meeting</p>
                         </div>
-                        <p className="text-sm text-blue-700 mb-1">Review campaign performance and Q4 planning</p>
-                        <div className="flex items-center gap-4 text-xs text-blue-600">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            2:00 PM - 3:00 PM
-                          </span>
-                          <span>Conference Room A</span>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-green-900">Campaign Review</span>
-                          <span className="text-xs text-green-600">Next Week</span>
-                        </div>
-                        <p className="text-sm text-green-700 mb-1">Monthly performance review and adjustments</p>
-                        <div className="flex items-center gap-4 text-xs text-green-600">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            10:00 AM - 11:30 AM
-                          </span>
-                          <span>Virtual Meeting</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -5134,6 +5176,17 @@ export default function EnhancedClientDetail() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Appointment Modal */}
+        <AppointmentModal
+          open={showAppointmentModal}
+          onOpenChange={setShowAppointmentModal}
+          clientId={clientId!}
+          clientName={client?.firstName && client?.lastName ? `${client.firstName} ${client.lastName}` : client?.companyName || 'Client'}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+          }}
+        />
     </div>
   );
 }

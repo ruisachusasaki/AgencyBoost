@@ -4838,6 +4838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/appointments", async (req, res) => {
     try {
       const calendarId = req.query.calendarId as string;
+      const clientId = req.query.clientId as string;
       const staffId = req.query.staffId as string;
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
@@ -4852,6 +4853,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: calendarAppointments.status,
           location: calendarAppointments.location,
           calendarId: calendarAppointments.calendarId,
+          clientId: calendarAppointments.clientId,
+          assignedTo: calendarAppointments.assignedTo,
           customFieldData: calendarAppointments.customFieldData,
           createdAt: calendarAppointments.createdAt,
         })
@@ -4859,6 +4862,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (calendarId) {
         query = query.where(eq(calendarAppointments.calendarId, calendarId));
+      }
+
+      if (clientId) {
+        query = query.where(eq(calendarAppointments.clientId, clientId));
       }
 
       const appointments = await query.orderBy(asc(calendarAppointments.startTime));

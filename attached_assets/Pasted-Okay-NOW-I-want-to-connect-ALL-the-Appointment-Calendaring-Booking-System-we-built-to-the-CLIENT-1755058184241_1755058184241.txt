@@ -1,0 +1,32 @@
+Okay NOW I want to connect ALL the Appointment / Calendaring / Booking System we built to the CLIENTS > Specific Client Page.
+
+Right now if you go to Clients > Specific Client (example: Jamie Smith) In the RIGHT Pane of Jamie Smith's Client Page there is a MEETINGS Icon that says COMING soon...
+
+I want to CONNECT that icon to the Booking System we've created.
+
+Here's how it should work:
+
+1. Under Clients > Specific Client (example: Jamie Smith) when I click on the Meeting Icon, it becomes the ACTIVE tab in that RIGHT PANE.
+2. The title should be Meetings/Appointments 
+2a. To the right of this Pane there should be a Plus Icon (similar to NOTES) that allows you to ADD a meeting.
+NOTE: If there are NO Meetings/Appointments this screen would show a calendar icon and say "No meetings for this client"
+
+When you click on the PLUS icon, it should allow you to CREATE a Meeting/Appointment. It should popup a MODAL to add an Appointment and here's what should be in the MODAL.
+
+Calendar - A dropdown menu allowing you to select ANY calendar in the system (pulled from the list here: Settings > Calendar Settings > Calendars)
+
+Appointment Title
+
+Team Member - this should be a drop down menu of ALL the Apps USERS/STAFF MEMBERS.
+
+Date & Time - This section should FIRST show a Dropdown of the TIMEZONE. 
+
+Next (side by side) have a DATE Picker "Date" (left) and SLOT Picker "Time" (right).
+
+When the Date Picker is clicked it should be like a normal date picker field. 
+
+When the SLOT is picked it should show TIMES that are available in whatever INCRAMENTS of time the CALENDAR is set for.
+
+NOTE: Because the calendars will have bookings already, this should ONLY SHOW Dates & Times that have NOT already been booked.
+
+There should be an option to select "Recurring", IF selected, a new field appears caled "Occurrences" with a dropdown with the following options: 1. Daily, 2. Weekly on "Current Day Selected' (example: Weekly on Tuesday), 3. Monthly on "Current day/week". Under that should be the functionality "Ends" with options (never, on (they can pick a specific date that the recurring meetings would end) or AFTER (they can input a number of occurences)
