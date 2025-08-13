@@ -119,7 +119,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           )}
         </button>
         
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white border-r border-slate-200">
           {/* Main navigation */}
           <nav className={cn("px-4 flex-1 bg-white", isCollapsed && "px-2")}>
             <ul className="space-y-2">
@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           </nav>
           
           {/* Bottom navigation (Settings) */}
-          <nav className={cn("px-4 pb-4 bg-white border-t border-r border-slate-200", isCollapsed && "px-2")}>
+          <nav className={cn("px-4 pb-4 bg-white border-t border-slate-200", isCollapsed && "px-2")}>
             <div className="pt-2">
               <ul className="space-y-2">
                 {bottomNavigation.map((item) => (
