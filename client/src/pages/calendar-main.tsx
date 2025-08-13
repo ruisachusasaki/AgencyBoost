@@ -81,7 +81,7 @@ type CalendarViewType = "day" | "week" | "month";
 
 export default function CalendarMain() {
   const [activeTab, setActiveTab] = useState("calendar-view");
-  const [calendarView, setCalendarView] = useState<CalendarViewType>("month");
+  const [calendarView, setCalendarView] = useState<CalendarViewType>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
