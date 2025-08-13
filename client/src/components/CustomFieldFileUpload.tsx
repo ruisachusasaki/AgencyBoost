@@ -92,20 +92,14 @@ export default function CustomFieldFileUpload({
     try {
       // Get upload URL from backend
       const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-      const uploadResponse = await apiRequest('/api/custom-field-files/upload-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customFieldId,
-          clientId,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: extension,
-        }),
+      const uploadResponse = await apiRequest('POST', '/api/custom-field-files/upload-url', {
+        customFieldId,
+        clientId,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: extension,
       });
-
+      
       const responseData = await uploadResponse.json();
       const { uploadUrl, filePath } = responseData;
 
@@ -123,20 +117,14 @@ export default function CustomFieldFileUpload({
       }
 
       // Register file upload with backend
-      const fileUploadResponse = await apiRequest('/api/custom-field-files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customFieldId,
-          clientId,
-          fileName: filePath.split('/').pop(),
-          originalFileName: file.name,
-          fileType: extension,
-          fileSize: file.size,
-          filePath,
-        }),
+      const fileUploadResponse = await apiRequest('POST', '/api/custom-field-files', {
+        customFieldId,
+        clientId,
+        fileName: filePath.split('/').pop(),
+        originalFileName: file.name,
+        fileType: extension,
+        fileSize: file.size,
+        filePath,
       });
 
       const fileUpload = await fileUploadResponse.json();
@@ -165,9 +153,7 @@ export default function CustomFieldFileUpload({
 
   const removeFile = async (fileId: string) => {
     try {
-      await apiRequest(`/api/custom-field-files/${fileId}`, {
-        method: 'DELETE',
-      });
+      await apiRequest('DELETE', `/api/custom-field-files/${fileId}`);
 
       const updatedFiles = files.filter(file => file.id !== fileId);
       setFiles(updatedFiles);
