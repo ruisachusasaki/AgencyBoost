@@ -25,7 +25,7 @@ interface AppointmentData {
   title: string;
   description: string;
   assignedTo: string;
-  attendees: string[];
+  status: string;
   date: string;
   time: string;
   duration: number; // in minutes
@@ -33,6 +33,9 @@ interface AppointmentData {
   location: string;
   locationDetails: string;
   meetingLink: string;
+  bookerName: string;
+  bookerEmail: string;
+  bookerPhone: string;
   isRecurring: boolean;
   recurringType: string;
   recurringEnds: string;
@@ -74,7 +77,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
     title: '',
     description: '',
     assignedTo: '',
-    attendees: [clientId], // Pre-select the client
+    status: 'confirmed',
     date: '',
     time: '',
     duration: 60,
@@ -82,6 +85,9 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
     location: '',
     locationDetails: '',
     meetingLink: '',
+    bookerName: clientName || '',
+    bookerEmail: '',
+    bookerPhone: '',
     isRecurring: false,
     recurringType: 'daily',
     recurringEnds: 'never',
@@ -146,7 +152,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
       title: '',
       description: '',
       assignedTo: '',
-      attendees: [clientId],
+      status: 'confirmed',
       date: '',
       time: '',
       duration: 60,
@@ -154,6 +160,9 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
       location: '',
       locationDetails: '',
       meetingLink: '',
+      bookerName: clientName || '',
+      bookerEmail: '',
+      bookerPhone: '',
       isRecurring: false,
       recurringType: 'daily',
       recurringEnds: 'never',
@@ -163,10 +172,10 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
   };
 
   const handleSubmit = () => {
-    if (!appointmentData.calendarId || !appointmentData.title || !appointmentData.assignedTo || !appointmentData.date || !appointmentData.time) {
+    if (!appointmentData.calendarId || !appointmentData.title || !appointmentData.assignedTo || !appointmentData.date || !appointmentData.time || !appointmentData.bookerEmail) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields (Calendar, Title, Team Member, Date, Time, and Email).",
         variant: "destructive",
       });
       return;
@@ -184,12 +193,14 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
       description: appointmentData.description,
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
+      status: appointmentData.status,
       timezone: appointmentData.timezone,
       location: appointmentData.location,
       locationDetails: appointmentData.locationDetails,
       meetingLink: appointmentData.meetingLink,
-      bookerName: clientName || 'Client',
-      bookerEmail: '', // Will be filled from client data
+      bookerName: appointmentData.bookerName,
+      bookerEmail: appointmentData.bookerEmail,
+      bookerPhone: appointmentData.bookerPhone,
       bookingSource: 'admin'
     };
 
@@ -256,6 +267,25 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
                     {member.firstName} {member.lastName}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+            <Select
+              value={appointmentData.status}
+              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, status: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="showed">Showed</SelectItem>
+                <SelectItem value="no_show">No Show</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -423,10 +453,11 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
                 <SelectValue placeholder="Select location type..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="in-person">In Person</SelectItem>
+                <SelectItem value="google_meet">Google Meet</SelectItem>
+                <SelectItem value="zoom">Zoom</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+                <SelectItem value="in_person">In Person</SelectItem>
                 <SelectItem value="phone">Phone Call</SelectItem>
-                <SelectItem value="video">Video Call</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -435,22 +466,63 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
           {appointmentData.location && (
             <div className="space-y-2">
               <Label htmlFor="locationDetails" className="text-sm font-medium">
-                {appointmentData.location === 'in-person' ? 'Address/Room' :
+                {appointmentData.location === 'in_person' ? 'Address/Room' :
                  appointmentData.location === 'phone' ? 'Phone Number' :
-                 appointmentData.location === 'video' ? 'Meeting Link' : 'Location Details'}
+                 appointmentData.location === 'google_meet' ? 'Meeting Details' :
+                 appointmentData.location === 'zoom' ? 'Zoom Link' :
+                 appointmentData.location === 'custom' ? 'Meeting Link/Details' : 'Location Details'}
               </Label>
               <Input
                 id="locationDetails"
                 value={appointmentData.locationDetails}
                 onChange={(e) => setAppointmentData(prev => ({ ...prev, locationDetails: e.target.value }))}
                 placeholder={
-                  appointmentData.location === 'in-person' ? 'Enter address or room number...' :
+                  appointmentData.location === 'in_person' ? 'Enter address or room number...' :
                   appointmentData.location === 'phone' ? 'Enter phone number...' :
-                  appointmentData.location === 'video' ? 'Enter meeting link...' : 'Enter location details...'
+                  appointmentData.location === 'google_meet' ? 'Google Meet will auto-generate link' :
+                  appointmentData.location === 'zoom' ? 'Enter Zoom meeting link...' :
+                  appointmentData.location === 'custom' ? 'Enter meeting link or details...' : 'Enter location details...'
                 }
               />
             </div>
           )}
+
+          {/* Contact Information */}
+          <div className="space-y-4">
+            <Label className="text-sm font-medium">Contact Information</Label>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="bookerName" className="text-xs text-gray-600">Name</Label>
+                <Input
+                  id="bookerName"
+                  value={appointmentData.bookerName}
+                  onChange={(e) => setAppointmentData(prev => ({ ...prev, bookerName: e.target.value }))}
+                  placeholder="Client name..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="bookerEmail" className="text-xs text-gray-600">Email *</Label>
+                <Input
+                  id="bookerEmail"
+                  type="email"
+                  value={appointmentData.bookerEmail}
+                  onChange={(e) => setAppointmentData(prev => ({ ...prev, bookerEmail: e.target.value }))}
+                  placeholder="Email address..."
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="bookerPhone" className="text-xs text-gray-600">Phone</Label>
+              <Input
+                id="bookerPhone"
+                value={appointmentData.bookerPhone}
+                onChange={(e) => setAppointmentData(prev => ({ ...prev, bookerPhone: e.target.value }))}
+                placeholder="Phone number..."
+              />
+            </div>
+          </div>
 
           {/* Description */}
           <div className="space-y-2">
