@@ -391,9 +391,26 @@ export default function Clients() {
 
     console.log('Current filter state:', currentFilter);
     console.log('Active Smart List:', activeSmartList);
+    console.log('Search term:', searchTerm);
 
     // First apply filters
-    const filtered = applyClientFilter(clients, currentFilter);
+    let filtered = applyClientFilter(clients, currentFilter);
+    
+    // Then apply search term filtering
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(client => {
+        const name = getClientDisplayName(client).toLowerCase();
+        const company = getBusinessDisplayName(client).toLowerCase(); 
+        const email = (client.email || '').toLowerCase();
+        const phone = (client.phone || '').toLowerCase();
+        
+        return name.includes(searchLower) || 
+               company.includes(searchLower) || 
+               email.includes(searchLower) || 
+               phone.includes(searchLower);
+      });
+    }
 
     // Then apply sorting
     const sorted = [...filtered].sort((a, b) => {
@@ -448,7 +465,7 @@ export default function Clients() {
     });
 
     return sorted;
-  }, [clients, sortField, sortDirection, staff, customFieldsData, currentFilter]);
+  }, [clients, sortField, sortDirection, staff, customFieldsData, currentFilter, searchTerm]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
