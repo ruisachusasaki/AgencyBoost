@@ -191,6 +191,17 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       return;
     }
 
+    // Ensure booker email is provided (required field)
+    const finalBookerEmail = appointmentData.bookerEmail || clientEmail || 'noemail@example.com';
+    if (!finalBookerEmail || finalBookerEmail === 'noemail@example.com') {
+      toast({
+        title: "Email Required",
+        description: "A valid email address is required for the appointment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Convert date and time to start/end timestamps
     const startDateTime = new Date(`${appointmentData.date}T${appointmentData.time}`);
     const endDateTime = new Date(startDateTime.getTime() + appointmentData.duration * 60000);
@@ -200,17 +211,17 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       clientId: clientId,
       assignedTo: appointmentData.assignedTo,
       title: appointmentData.title,
-      description: appointmentData.description,
+      description: appointmentData.description || '',
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
       status: appointmentData.status,
       timezone: appointmentData.timezone,
-      location: appointmentData.location,
-      locationDetails: appointmentData.locationDetails,
-      meetingLink: appointmentData.meetingLink,
-      bookerName: appointmentData.bookerName,
-      bookerEmail: appointmentData.bookerEmail,
-      bookerPhone: appointmentData.bookerPhone,
+      location: appointmentData.location || '',
+      locationDetails: appointmentData.locationDetails || '',
+      meetingLink: appointmentData.meetingLink || '',
+      bookerName: appointmentData.bookerName || clientName || 'Client',
+      bookerEmail: finalBookerEmail,
+      bookerPhone: appointmentData.bookerPhone || '',
       bookingSource: 'admin'
     };
 
