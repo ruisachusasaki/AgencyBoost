@@ -55,6 +55,7 @@ interface CalendarData {
   isActive: boolean;
   color: string;
   timezone: string;
+  createdBy?: string;
 }
 
 interface StaffMember {
@@ -67,13 +68,33 @@ interface StaffMember {
 interface Appointment {
   id: string;
   calendarId: string;
+  clientId?: string;
+  assignedTo: string;
   title: string;
+  description?: string | null;
   startTime: string;
   endTime: string;
-  attendeeEmail: string;
-  attendeeName: string;
   status: string;
+  location?: string | null;
+  locationDetails?: string | null;
+  meetingLink?: string | null;
+  timezone: string;
+  bookerName?: string | null;
+  bookerEmail: string;
+  bookerPhone?: string | null;
+  customFieldData?: any;
+  externalEventId?: string | null;
+  bookingSource: string;
+  bookingIp?: string | null;
+  bookingUserAgent?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
   createdAt: string;
+  updatedAt: string;
+  // Legacy fields for compatibility
+  attendeeEmail?: string;
+  attendeeName?: string;
 }
 
 // Calendar view types
@@ -239,11 +260,11 @@ export default function CalendarMain() {
         </div>
         <div className="flex items-center gap-2 text-xs">
           <User className="h-3 w-3" />
-          <span>{appointment.attendeeName}</span>
+          <span>{appointment.bookerName || appointment.attendeeName || 'Unknown'}</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <Mail className="h-3 w-3" />
-          <span>{appointment.attendeeEmail}</span>
+          <span>{appointment.bookerEmail || appointment.attendeeEmail || 'No email'}</span>
         </div>
         {appointment.description && (
           <div className="text-xs">
@@ -298,8 +319,8 @@ export default function CalendarMain() {
     }
     if (clientFilter !== "all") {
       filtered = filtered.filter(apt => 
-        apt.attendeeName.toLowerCase().includes(clientFilter.toLowerCase()) ||
-        apt.attendeeEmail.toLowerCase().includes(clientFilter.toLowerCase())
+        (apt.bookerName || apt.attendeeName || '').toLowerCase().includes(clientFilter.toLowerCase()) ||
+        (apt.bookerEmail || apt.attendeeEmail || '').toLowerCase().includes(clientFilter.toLowerCase())
       );
     }
 
@@ -314,8 +335,8 @@ export default function CalendarMain() {
             bValue = b.title;
             break;
           case "attendee":
-            aValue = a.attendeeName;
-            bValue = b.attendeeName;
+            aValue = a.bookerName || a.attendeeName || '';
+            bValue = b.bookerName || b.attendeeName || '';
             break;
           case "status":
             aValue = a.status;
@@ -640,7 +661,7 @@ export default function CalendarMain() {
                                         <TooltipTrigger asChild>
                                           <div className="text-xs p-2 bg-primary/20 text-primary rounded mb-1 cursor-pointer hover:bg-primary/30">
                                             <div className="font-medium truncate">{apt.title}</div>
-                                            <div className="text-xs opacity-75">{apt.attendeeName}</div>
+                                            <div className="text-xs opacity-75">{apt.bookerName || apt.attendeeName || 'Unknown'}</div>
                                           </div>
                                         </TooltipTrigger>
                                         <TooltipContent side="top" className="max-w-80">
@@ -712,7 +733,7 @@ export default function CalendarMain() {
                                               <div className="flex-1">
                                                 <div className="font-semibold">{apt.title}</div>
                                                 <div className="text-sm opacity-75 mt-1">
-                                                  {apt.attendeeName} ({apt.attendeeEmail})
+                                                  {apt.bookerName || apt.attendeeName || 'Unknown'} ({apt.bookerEmail || apt.attendeeEmail || 'No email'})
                                                 </div>
                                                 {apt.description && (
                                                   <div className="text-sm opacity-75 mt-1">
@@ -1099,8 +1120,8 @@ export default function CalendarMain() {
                             </TableCell>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{appointment.attendeeName}</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">{appointment.attendeeEmail}</div>
+                                <div className="font-medium">{appointment.bookerName || appointment.attendeeName || 'Unknown'}</div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">{appointment.bookerEmail || appointment.attendeeEmail || 'No email'}</div>
                               </div>
                             </TableCell>
                             <TableCell>
