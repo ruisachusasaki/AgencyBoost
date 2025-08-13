@@ -64,7 +64,7 @@ Bundle architecture preference: Collection-based bundles (confirmed working - us
 - **Custom Field Management**: Drag-and-drop reordering for folders and fields.
 - **Staff Management**: Full CRUD operations for staff, including profile image uploads.
 - **Settings Management**: Comprehensive section with configuration areas including Business Profile, Staff, Roles & Permissions, Integrations, Custom Fields, Tags, Products, and Audit Logs.
-- **Campaign Template Management**: WYSIWYG editor for email and SMS templates, with folder organization and dynamic merge tags.
+- **Marketing Template Management**: WYSIWYG editor for email and SMS templates, with folder organization and dynamic merge tags.
 - **Smart Lists System**: Advanced filtering with tab-based interface, comprehensive permission system (personal, shared, universal), multi-user collaboration, and intelligent overflow navigation.
 - **Enhanced Client Product Display**: Complete product and bundle management in client detail pages with cost visibility, role-based deletion, visual distinction, automatic bundle cost calculation, and accordion-style bundle expansion. Redesigned bundles architecture to be collection-based where base bundles define product collections (1 unit each) and client-specific quantities are stored per client. Removed price field from system, focusing on cost tracking.
 - **Communication Systems**: Comprehensive email and SMS functionality with advanced composer features (CC/BCC, WYSIWYG, merge tags, templates, scheduling, character count), matching modal structures, and DND (Do Not Disturb) system for communication control with audit logging.

@@ -389,7 +389,7 @@ export default function Campaigns() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
           <Mail className="h-8 w-8 text-[#46a1a0]" />
-          <span>Campaigns</span>
+          <span>Marketing</span>
         </h1>
         <p className="text-muted-foreground">
           Manage your email and SMS templates with organized folder structure

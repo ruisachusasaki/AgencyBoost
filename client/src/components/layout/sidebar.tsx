@@ -32,7 +32,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Projects", href: "/projects", icon: FolderOpen },
-  { name: "Campaigns", href: "/campaigns", icon: Megaphone },
+  { name: "Marketing", href: "/marketing", icon: Megaphone },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendars", href: "/calendar", icon: Calendar },
