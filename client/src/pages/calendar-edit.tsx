@@ -48,6 +48,7 @@ const calendarEditSchema = z.object({
   slotInterval: z.number().min(5).max(240), // 5 minutes to 4 hours
   maxBookingsPerDay: z.number().min(1).max(50),
   maxBookersPerSlot: z.number().min(1).max(20),
+  assignedStaff: z.string().optional(), // Staff member assigned to calendar
 });
 
 type CalendarEditForm = z.infer<typeof calendarEditSchema>;
@@ -108,6 +109,18 @@ export default function CalendarEdit() {
     enabled: !!calendarId,
   });
 
+  // Fetch staff data for assignment
+  const { data: staffList } = useQuery({
+    queryKey: ["/api/staff"],
+    queryFn: async () => {
+      const response = await fetch("/api/staff");
+      if (!response.ok) {
+        throw new Error('Failed to fetch staff');
+      }
+      return response.json();
+    },
+  });
+
   const form = useForm<CalendarEditForm>({
     resolver: zodResolver(calendarEditSchema),
     defaultValues: {
@@ -127,6 +140,7 @@ export default function CalendarEdit() {
       slotInterval: 30,
       maxBookingsPerDay: 8,
       maxBookersPerSlot: 1,
+      assignedStaff: "",
     },
   });
 
@@ -150,6 +164,7 @@ export default function CalendarEdit() {
         slotInterval: calendar.slotInterval || 30,
         maxBookingsPerDay: calendar.maxBookingsPerDay || 8,
         maxBookersPerSlot: calendar.maxBookersPerSlot || 1,
+        assignedStaff: (calendar as any).assignedStaff || "",
       });
     }
   }, [calendar, form]);
@@ -401,6 +416,35 @@ export default function CalendarEdit() {
                       )}
                     />
                   </div>
+
+                  {/* Staff Assignment */}
+                  <FormField
+                    control={form.control}
+                    name="assignedStaff"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assigned Staff Member</FormLabel>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-assigned-staff">
+                              <SelectValue placeholder="Select a staff member" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {staffList?.map((staff: any) => (
+                              <SelectItem key={staff.id} value={staff.id}>
+                                {staff.firstName} {staff.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          The staff member who will handle bookings from this calendar
+                        </p>
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}
