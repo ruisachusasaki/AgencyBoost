@@ -4571,12 +4571,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/calendars", async (req, res) => {
     try {
-      const validatedData = insertCalendarSchema.parse(req.body);
+      // Extract assignedStaff from request body before validation
+      const { assignedStaff, ...calendarData } = req.body;
+      
+      const validatedData = insertCalendarSchema.parse(calendarData);
       
       const [newCalendar] = await db
         .insert(calendars)
         .values(validatedData)
         .returning();
+
+      // Handle staff assignment if provided
+      if (assignedStaff && assignedStaff.trim() !== "") {
+        await db
+          .insert(calendarStaff)
+          .values({
+            calendarId: newCalendar.id,
+            staffId: assignedStaff,
+            isActive: true,
+          });
+      }
 
       await createAuditLog(
         "created",
@@ -4613,31 +4627,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get assigned staff member for this calendar
       const [assignedStaffRecord] = await db
-        .select({ 
-          userId: calendarStaff.userId,
-          userEmail: users.email 
-        })
+        .select({ staffId: calendarStaff.staffId })
         .from(calendarStaff)
-        .leftJoin(users, eq(calendarStaff.userId, users.id))
         .where(and(
           eq(calendarStaff.calendarId, req.params.id),
           eq(calendarStaff.isActive, true)
         ));
 
-      let assignedStaffId = null;
-      if (assignedStaffRecord?.userEmail) {
-        // Find the corresponding staff member by email
-        const [staffRecord] = await db
-          .select({ id: staff.id })
-          .from(staff)
-          .where(eq(staff.email, assignedStaffRecord.userEmail));
-        
-        assignedStaffId = staffRecord?.id || null;
-      }
-
       const calendarWithStaff = {
         ...calendar,
-        assignedStaff: assignedStaffId
+        assignedStaff: assignedStaffRecord?.staffId || null
       };
 
       res.json(calendarWithStaff);
@@ -4718,35 +4717,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // If assignedStaff is not empty, add the new assignment
         if (assignedStaff && assignedStaff.trim() !== "") {
-          // Get the staff member's email to find the corresponding user ID
-          const [staffMember] = await db
-            .select({ email: staff.email })
-            .from(staff)
-            .where(eq(staff.id, assignedStaff));
-          
-          if (staffMember) {
-            // Find the corresponding user by email
-            const [user] = await db
-              .select({ id: users.id })
-              .from(users)
-              .where(eq(users.email, staffMember.email));
-            
-            if (user) {
-              await db
-                .insert(calendarStaff)
-                .values({
-                  calendarId: req.params.id,
-                  userId: user.id,
-                  isActive: true,
-                });
-            } else {
-              console.error(`No user found with email ${staffMember.email}`);
-              return res.status(400).json({ message: "Staff member not found in users table" });
-            }
-          } else {
-            console.error(`No staff member found with ID ${assignedStaff}`);
-            return res.status(400).json({ message: "Staff member not found" });
-          }
+          await db
+            .insert(calendarStaff)
+            .values({
+              calendarId: req.params.id,
+              staffId: assignedStaff,
+              isActive: true,
+            });
         }
       }
 

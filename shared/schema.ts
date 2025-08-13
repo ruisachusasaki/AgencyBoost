@@ -1407,7 +1407,7 @@ export const calendars = pgTable("calendars", {
   scheduleWindowEnd: integer("schedule_window_end").default(1440), // hours ahead maximum (60 days)
   isActive: boolean("is_active").default(true),
   customFieldIds: text("custom_field_ids").array(), // Array of custom field IDs to show on booking form
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1416,17 +1416,17 @@ export const calendars = pgTable("calendars", {
 export const calendarStaff = pgTable("calendar_staff", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").default(true),
   roundRobinOrder: integer("round_robin_order"), // For round robin scheduling order
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Calendar availability settings (per user per calendar)
+// Calendar availability settings (per staff per calendar)
 export const calendarAvailability = pgTable("calendar_availability", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, ... 6=Saturday
   startTime: text("start_time").notNull(), // HH:MM format (24-hour)
   endTime: text("end_time").notNull(), // HH:MM format (24-hour)
@@ -1438,7 +1438,7 @@ export const calendarAvailability = pgTable("calendar_availability", {
 export const calendarDateOverrides = pgTable("calendar_date_overrides", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
   type: text("type").notNull(), // 'blocked', 'custom_hours'
   startTime: text("start_time"), // For custom hours (HH:MM format)
@@ -1450,7 +1450,7 @@ export const calendarDateOverrides = pgTable("calendar_date_overrides", {
 // Calendar integrations (Google Calendar, Outlook, etc.)
 export const calendarIntegrations = pgTable("calendar_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   provider: text("provider").notNull(), // 'google', 'outlook', 'apple'
   externalCalendarId: text("external_calendar_id").notNull(),
   accessToken: text("access_token").notNull(), // Encrypted OAuth token
@@ -1468,7 +1468,7 @@ export const calendarAppointments = pgTable("calendar_appointments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   calendarId: varchar("calendar_id").notNull().references(() => calendars.id),
   clientId: varchar("client_id").references(() => clients.id), // Can be null for external bookings
-  assignedTo: varchar("assigned_to").notNull().references(() => users.id),
+  assignedTo: uuid("assigned_to").notNull().references(() => staff.id),
   title: text("title").notNull(),
   description: text("description"),
   startTime: timestamp("start_time").notNull(),
@@ -1491,7 +1491,7 @@ export const calendarAppointments = pgTable("calendar_appointments", {
   bookingUserAgent: text("booking_user_agent"),
   // Cancellation details
   cancelledAt: timestamp("cancelled_at"),
-  cancelledBy: varchar("cancelled_by").references(() => users.id),
+  cancelledBy: uuid("cancelled_by").references(() => staff.id),
   cancellationReason: text("cancellation_reason"),
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
@@ -1515,7 +1515,7 @@ export const appointmentReminders = pgTable("appointment_reminders", {
 export const roundRobinTracking = pgTable("round_robin_tracking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   calendarId: varchar("calendar_id").notNull().references(() => calendars.id, { onDelete: "cascade" }),
-  lastAssignedUserId: varchar("last_assigned_user_id").references(() => users.id),
+  lastAssignedStaffId: uuid("last_assigned_staff_id").references(() => staff.id),
   assignmentCount: jsonb("assignment_count"), // {userId: count} for tracking assignments
   updatedAt: timestamp("updated_at").defaultNow(),
 });

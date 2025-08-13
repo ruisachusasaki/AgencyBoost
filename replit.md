@@ -74,6 +74,7 @@ Bundle architecture preference: Collection-based bundles (confirmed working - us
 - **Calendar Settings**: Design consistency achieved with other settings pages, streamlined tabs to "Calendars" and "Integrations."
 - **Calendar Staff Assignment**: Implemented complete staff assignment functionality for calendars with automatic ID mapping between staff and users tables. Fixed validation issues by filtering non-schema fields and preserving required calendar properties during updates.
 - **Storage Layer Recovery**: Fixed critical API issue where MinimalStorage implementation was missing required methods, causing clients to appear missing while data remained safely in PostgreSQL. Switched to fully functional DbStorage implementation.
+- **User ID Consistency Resolution**: Completed comprehensive schema migration to standardize entire system on staff table IDs. Updated all calendar system tables (calendars, calendar_staff, calendar_availability, calendar_date_overrides, calendar_integrations, calendar_appointments, round_robin_tracking) to use UUID references to staff table. Eliminated dual user/staff ID inconsistencies and established staff table as single source of truth for user management across the application.
 
 ## External Dependencies
 
