@@ -214,20 +214,20 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
 
     const appointmentPayload = {
       calendarId: appointmentData.calendarId,
-      clientId: clientId || null, // Allow null as per schema
+      clientId: clientId || null,
       assignedTo: appointmentData.assignedTo,
       title: appointmentData.title,
-      description: appointmentData.description || null, // Allow null as per schema
-      startTime: startDateTime.toISOString(),
-      endTime: endDateTime.toISOString(),
+      description: appointmentData.description || null,
+      startTime: startDateTime.toISOString(), // Send ISO string, server will convert
+      endTime: endDateTime.toISOString(), // Send ISO string, server will convert
       status: appointmentData.status,
       timezone: appointmentData.timezone,
-      location: appointmentData.location || null, // Allow null as per schema
-      locationDetails: appointmentData.locationDetails || null, // Allow null as per schema
-      meetingLink: appointmentData.meetingLink || null, // Allow null as per schema
-      bookerName: appointmentData.bookerName || clientName || null, // Allow null as per schema
+      location: appointmentData.location || null,
+      locationDetails: appointmentData.locationDetails || null,
+      meetingLink: appointmentData.meetingLink || null,
+      bookerName: appointmentData.bookerName || clientName || null,
       bookerEmail: finalBookerEmail,
-      bookerPhone: appointmentData.bookerPhone || null, // Allow null as per schema
+      bookerPhone: appointmentData.bookerPhone || null,
       bookingSource: 'admin'
     };
 
