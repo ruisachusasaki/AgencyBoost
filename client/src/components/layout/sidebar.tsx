@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           </nav>
           
           {/* Bottom navigation (Settings) */}
-          <nav className={cn("px-4 pb-4 bg-slate-50 border-t border-slate-200", isCollapsed && "px-2")}>
+          <nav className={cn("px-4 pb-4 border-t border-slate-200", isCollapsed && "px-2")}>
             <div className="pt-4">
               <ul className="space-y-2">
                 {bottomNavigation.map((item) => (
@@ -198,7 +198,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             </nav>
             
             {/* Bottom navigation (Settings) */}
-            <nav className="p-4 bg-slate-50 border-t border-slate-200">
+            <nav className="p-4 border-t border-slate-200">
               <div className="pt-4">
                 <ul className="space-y-2">
                   {bottomNavigation.map((item) => {
