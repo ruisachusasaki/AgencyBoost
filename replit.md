@@ -72,6 +72,7 @@ Bundle architecture preference: Collection-based bundles (confirmed working - us
 - **Client Ownership & Followers**: Implemented functionality with search-based assignment and display in client headers.
 - **Notes System**: Comprehensive notes functionality with database persistence, formatting, expand/collapse, and admin-only permissions.
 - **Calendar Settings**: Design consistency achieved with other settings pages, streamlined tabs to "Calendars" and "Integrations."
+- **Calendar Staff Assignment**: Implemented complete staff assignment functionality for calendars with automatic ID mapping between staff and users tables. Fixed validation issues by filtering non-schema fields and preserving required calendar properties during updates.
 - **Storage Layer Recovery**: Fixed critical API issue where MinimalStorage implementation was missing required methods, causing clients to appear missing while data remained safely in PostgreSQL. Switched to fully functional DbStorage implementation.
 
 ## External Dependencies
