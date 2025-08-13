@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     <TooltipProvider>
       {/* Desktop sidebar */}
       <aside className={cn(
-        "bg-white shadow-sm border-r border-slate-200 transition-all duration-300 relative min-h-screen",
+        "bg-slate-50 border-r border-slate-200 transition-all duration-300 relative min-h-full",
         isMobile ? "hidden" : "block",
         isCollapsed ? "w-16" : "w-64"
       )}>
