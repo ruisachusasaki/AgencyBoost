@@ -21,7 +21,7 @@ import {
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
-  calendars, calendarStaff, calendarAvailability
+  calendars, calendarStaff, calendarAvailability, calendarAppointments
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -4573,15 +4573,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertCalendarSchema.parse(req.body);
       
-      // Generate a public URL for the calendar
-      const publicUrl = `https://${req.get('host')}/book/${nanoid(12)}`;
-      
       const [newCalendar] = await db
         .insert(calendars)
-        .values({
-          ...validatedData,
-          publicUrl,
-        })
+        .values(validatedData)
         .returning();
 
       await createAuditLog(
