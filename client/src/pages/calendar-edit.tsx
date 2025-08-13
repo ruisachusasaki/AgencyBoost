@@ -204,8 +204,9 @@ export default function CalendarEdit() {
   };
 
   const copyPublicUrl = () => {
-    if (calendar?.publicUrl) {
-      navigator.clipboard.writeText(calendar.publicUrl);
+    if (calendar?.customUrl) {
+      const bookingUrl = `${window.location.origin}/book/${calendar.customUrl}`;
+      navigator.clipboard.writeText(bookingUrl);
       toast({
         title: "Copied",
         description: "Public booking URL copied to clipboard.",
@@ -831,7 +832,7 @@ export default function CalendarEdit() {
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Input 
-                          value={calendar.publicUrl} 
+                          value={`${window.location.origin}/book/${calendar.customUrl}`} 
                           readOnly 
                           className="flex-1 bg-gray-50 dark:bg-gray-800"
                           data-testid="input-public-url"
