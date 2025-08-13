@@ -128,12 +128,17 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('Sending appointment payload:', data);
       const response = await fetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Failed to create appointment');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server validation errors:', errorData);
+        throw new Error(errorData.message || 'Failed to create appointment');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -148,6 +153,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       resetForm();
     },
     onError: (error: any) => {
+      console.error('Full appointment creation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create appointment",
@@ -208,20 +214,20 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
 
     const appointmentPayload = {
       calendarId: appointmentData.calendarId,
-      clientId: clientId,
+      clientId: clientId || null, // Allow null as per schema
       assignedTo: appointmentData.assignedTo,
       title: appointmentData.title,
-      description: appointmentData.description || '',
+      description: appointmentData.description || null, // Allow null as per schema
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
       status: appointmentData.status,
       timezone: appointmentData.timezone,
-      location: appointmentData.location || '',
-      locationDetails: appointmentData.locationDetails || '',
-      meetingLink: appointmentData.meetingLink || '',
-      bookerName: appointmentData.bookerName || clientName || 'Client',
+      location: appointmentData.location || null, // Allow null as per schema
+      locationDetails: appointmentData.locationDetails || null, // Allow null as per schema
+      meetingLink: appointmentData.meetingLink || null, // Allow null as per schema
+      bookerName: appointmentData.bookerName || clientName || null, // Allow null as per schema
       bookerEmail: finalBookerEmail,
-      bookerPhone: appointmentData.bookerPhone || '',
+      bookerPhone: appointmentData.bookerPhone || null, // Allow null as per schema
       bookingSource: 'admin'
     };
 
