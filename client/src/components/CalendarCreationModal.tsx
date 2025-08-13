@@ -121,6 +121,18 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
   };
 
   const handleSubmit = () => {
+    // Use the first assigned staff member as the creator, or fallback to the first available staff member
+    const createdBy = formData.assignedStaff.length > 0 
+      ? formData.assignedStaff[0] 
+      : staff && staff.length > 0 
+        ? staff[0].id 
+        : null;
+
+    if (!createdBy) {
+      console.error('No valid staff member found for calendar creation');
+      return;
+    }
+
     // Convert form data to API format
     const calendarData = {
       name: formData.name,
@@ -146,7 +158,8 @@ export function CalendarCreationModal({ isOpen, onClose, onCreateCalendar, staff
         : formData.dateRange.value * 24,
       isActive: true,
       customFieldIds: [],
-      createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390" // TODO: Use actual current user
+      createdBy: createdBy,
+      assignedStaff: formData.assignedStaff.length > 0 ? formData.assignedStaff[0] : null
     };
 
     onCreateCalendar(calendarData);
