@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, MoreHorizontal, Copy, Tag, TrendingUp } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, MoreHorizontal, Copy, Tag, Megaphone } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -388,7 +388,7 @@ export default function Campaigns() {
     <div className="container mx-auto p-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
-          <TrendingUp className="h-8 w-8 text-[#46a1a0]" />
+          <Megaphone className="h-8 w-8 text-[#46a1a0]" />
           <span>Marketing</span>
         </h1>
         <p className="text-muted-foreground">
