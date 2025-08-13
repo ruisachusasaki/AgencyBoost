@@ -14,6 +14,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft,
@@ -25,7 +40,11 @@ import {
   Clock,
   User,
   Mail,
-  MapPin
+  MapPin,
+  Filter,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 
 // Types
@@ -70,6 +89,15 @@ export default function CalendarMain() {
   const [userSearch, setUserSearch] = useState("");
   const [calendarSearch, setCalendarSearch] = useState("");
   const [sidebarTab, setSidebarTab] = useState("users");
+  
+  // Appointments table state
+  const [appointmentsTab, setAppointmentsTab] = useState<"upcoming" | "cancelled" | "all">("upcoming");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [calendarFilter, setCalendarFilter] = useState<string>("all");
+  const [userFilter, setUserFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
 
   // Fetch data
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
@@ -230,6 +258,116 @@ export default function CalendarMain() {
         </div>
       </div>
     );
+  };
+
+  // Appointments filtering and sorting logic
+  const filteredAndSortedAppointments = useMemo(() => {
+    let filtered = appointments;
+    const now = new Date();
+
+    // Filter by tab
+    switch (appointmentsTab) {
+      case "upcoming":
+        filtered = filtered.filter(apt => new Date(apt.startTime) >= now && apt.status !== "cancelled");
+        break;
+      case "cancelled":
+        filtered = filtered.filter(apt => apt.status === "cancelled");
+        break;
+      case "all":
+        // Show all appointments
+        break;
+    }
+
+    // Apply filters
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(apt => apt.status === statusFilter);
+    }
+    if (calendarFilter !== "all") {
+      filtered = filtered.filter(apt => apt.calendarId === calendarFilter);
+    }
+    if (userFilter !== "all") {
+      // Find calendar owner from calendars data
+      filtered = filtered.filter(apt => {
+        const calendar = calendars.find(cal => cal.id === apt.calendarId);
+        return calendar?.createdBy === userFilter;
+      });
+    }
+    if (clientFilter !== "all") {
+      filtered = filtered.filter(apt => 
+        apt.attendeeName.toLowerCase().includes(clientFilter.toLowerCase()) ||
+        apt.attendeeEmail.toLowerCase().includes(clientFilter.toLowerCase())
+      );
+    }
+
+    // Apply sorting
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortField) {
+          case "title":
+            aValue = a.title;
+            bValue = b.title;
+            break;
+          case "attendee":
+            aValue = a.attendeeName;
+            bValue = b.attendeeName;
+            break;
+          case "status":
+            aValue = a.status;
+            bValue = b.status;
+            break;
+          case "startTime":
+            aValue = new Date(a.startTime);
+            bValue = new Date(b.startTime);
+            break;
+          case "calendar":
+            aValue = calendars.find(cal => cal.id === a.calendarId)?.name || "";
+            bValue = calendars.find(cal => cal.id === b.calendarId)?.name || "";
+            break;
+          default:
+            return 0;
+        }
+        
+        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [appointments, appointmentsTab, statusFilter, calendarFilter, userFilter, clientFilter, sortField, sortDirection, calendars]);
+
+  // Sort handler
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Get sort icon
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
+    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "confirmed":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "showed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "no show":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
   };
 
   return (
@@ -750,15 +888,247 @@ export default function CalendarMain() {
 
       {activeTab === "appointment-list" && (
         <div className="space-y-6">
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardContent className="p-8 text-center">
-              <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Appointment List View
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                This view will be implemented after completing the Calendar View.
-              </p>
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle>Appointments</CardTitle>
+              
+              {/* Sub-tabs for appointments */}
+              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                <button
+                  onClick={() => setAppointmentsTab("upcoming")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    appointmentsTab === "upcoming"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Upcoming ({appointments.filter(apt => 
+                    new Date(apt.startTime) >= new Date() && apt.status !== "cancelled"
+                  ).length})
+                </button>
+                <button
+                  onClick={() => setAppointmentsTab("cancelled")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    appointmentsTab === "cancelled"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Cancelled ({appointments.filter(apt => apt.status === "cancelled").length})
+                </button>
+                <button
+                  onClick={() => setAppointmentsTab("all")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    appointmentsTab === "all"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  All ({appointments.length})
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-4 pt-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
+                </div>
+                
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="showed">Showed</SelectItem>
+                    <SelectItem value="no show">No Show</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={calendarFilter} onValueChange={setCalendarFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Calendar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Calendars</SelectItem>
+                    {calendars.map((calendar) => (
+                      <SelectItem key={calendar.id} value={calendar.id}>
+                        {calendar.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={userFilter} onValueChange={setUserFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="User" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  placeholder="Filter by client..."
+                  value={clientFilter === "all" ? "" : clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value || "all")}
+                  className="w-48"
+                />
+
+                {(statusFilter !== "all" || calendarFilter !== "all" || userFilter !== "all" || clientFilter !== "all") && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setCalendarFilter("all");
+                      setUserFilter("all");
+                      setClientFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort("title")}>
+                        <div className="flex items-center gap-1">
+                          Title
+                          {getSortIcon("title")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort("attendee")}>
+                        <div className="flex items-center gap-1">
+                          Invitees
+                          {getSortIcon("attendee")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                        <div className="flex items-center gap-1">
+                          Status
+                          {getSortIcon("status")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort("startTime")}>
+                        <div className="flex items-center gap-1">
+                          Appointment Time
+                          {getSortIcon("startTime")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort("calendar")}>
+                        <div className="flex items-center gap-1">
+                          Calendar
+                          {getSortIcon("calendar")}
+                        </div>
+                      </TableHead>
+                      <TableHead>Appointment Owner</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAndSortedAppointments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          No appointments found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAndSortedAppointments.map((appointment) => {
+                        const calendar = calendars.find(cal => cal.id === appointment.calendarId);
+                        const owner = staff.find(member => member.id === calendar?.createdBy);
+                        const startTime = new Date(appointment.startTime);
+                        const endTime = new Date(appointment.endTime);
+                        
+                        return (
+                          <TableRow key={appointment.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <TableCell className="font-medium">
+                              <div>
+                                <div className="font-semibold">{appointment.title}</div>
+                                {appointment.description && (
+                                  <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                                    {appointment.description}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{appointment.attendeeName}</div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">{appointment.attendeeEmail}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`${getStatusBadgeColor(appointment.status)} border-0 capitalize`}>
+                                {appointment.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">
+                                  {startTime.toLocaleDateString('en-US', { 
+                                    weekday: 'short',
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {startTime.toLocaleTimeString('en-US', { 
+                                    hour: 'numeric', 
+                                    minute: '2-digit',
+                                    hour12: true 
+                                  })} - {endTime.toLocaleTimeString('en-US', { 
+                                    hour: 'numeric', 
+                                    minute: '2-digit',
+                                    hour12: true 
+                                  })}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-2 h-2 rounded-full" 
+                                  style={{ backgroundColor: calendar?.color || '#6366f1' }}
+                                ></div>
+                                <span>{calendar?.name || "Unknown Calendar"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                                  {owner ? `${owner.firstName.charAt(0)}${owner.lastName.charAt(0)}` : "?"}
+                                </div>
+                                <span>{owner ? `${owner.firstName} ${owner.lastName}` : "Unknown User"}</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {filteredAndSortedAppointments.length > 0 && (
+                <div className="px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50 text-sm text-gray-600 dark:text-gray-400">
+                  Showing {filteredAndSortedAppointments.length} appointment{filteredAndSortedAppointments.length !== 1 ? 's' : ''} 
+                  {appointmentsTab !== "all" && ` in ${appointmentsTab}`}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
