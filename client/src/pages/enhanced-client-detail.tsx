@@ -5182,7 +5182,8 @@ export default function EnhancedClientDetail() {
           open={showAppointmentModal}
           onOpenChange={setShowAppointmentModal}
           clientId={clientId!}
-          clientName={client?.firstName && client?.lastName ? `${client.firstName} ${client.lastName}` : client?.companyName || 'Client'}
+          clientName={client?.name || client?.company || 'Client'}
+          clientEmail={client?.email || ''}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
           }}

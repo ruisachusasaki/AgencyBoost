@@ -17,6 +17,7 @@ interface AppointmentModalProps {
   onOpenChange: (open: boolean) => void;
   clientId: string;
   clientName?: string;
+  clientEmail?: string;
   onSuccess?: () => void;
 }
 
@@ -68,9 +69,18 @@ const generateTimeSlots = () => {
   return slots;
 };
 
-export function AppointmentModal({ open, onOpenChange, clientId, clientName, onSuccess }: AppointmentModalProps) {
+export function AppointmentModal({ open, onOpenChange, clientId, clientName, clientEmail, onSuccess }: AppointmentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Additional attendees state
+  const [additionalAttendees, setAdditionalAttendees] = useState<Array<{
+    id: string;
+    name: string;
+    email: string;
+    type: 'staff' | 'custom';
+  }>>([]);
+  const [customEmailInput, setCustomEmailInput] = useState('');
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
     calendarId: '',
@@ -86,7 +96,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
     locationDetails: '',
     meetingLink: '',
     bookerName: clientName || '',
-    bookerEmail: '',
+    bookerEmail: clientEmail || '',
     bookerPhone: '',
     isRecurring: false,
     recurringType: 'daily',
@@ -161,7 +171,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
       locationDetails: '',
       meetingLink: '',
       bookerName: clientName || '',
-      bookerEmail: '',
+      bookerEmail: clientEmail || '',
       bookerPhone: '',
       isRecurring: false,
       recurringType: 'daily',
@@ -172,10 +182,10 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
   };
 
   const handleSubmit = () => {
-    if (!appointmentData.calendarId || !appointmentData.title || !appointmentData.assignedTo || !appointmentData.date || !appointmentData.time || !appointmentData.bookerEmail) {
+    if (!appointmentData.calendarId || !appointmentData.title || !appointmentData.assignedTo || !appointmentData.date || !appointmentData.time) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields (Calendar, Title, Team Member, Date, Time, and Email).",
+        description: "Please fill in all required fields (Calendar, Title, Team Member, Date, and Time).",
         variant: "destructive",
       });
       return;
@@ -271,24 +281,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
             </Select>
           </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status" className="text-sm font-medium">Status</Label>
-            <Select
-              value={appointmentData.status}
-              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, status: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="showed">Showed</SelectItem>
-                <SelectItem value="no_show">No Show</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
 
           {/* Date & Time Section */}
           <div className="space-y-4">
@@ -487,40 +480,104 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
             </div>
           )}
 
-          {/* Contact Information */}
+          {/* Attendees */}
           <div className="space-y-4">
-            <Label className="text-sm font-medium">Contact Information</Label>
+            <Label className="text-sm font-medium">Attendees</Label>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="bookerName" className="text-xs text-gray-600">Name</Label>
-                <Input
-                  id="bookerName"
-                  value={appointmentData.bookerName}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, bookerName: e.target.value }))}
-                  placeholder="Client name..."
-                />
-              </div>
-              <div>
-                <Label htmlFor="bookerEmail" className="text-xs text-gray-600">Email *</Label>
-                <Input
-                  id="bookerEmail"
-                  type="email"
-                  value={appointmentData.bookerEmail}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, bookerEmail: e.target.value }))}
-                  placeholder="Email address..."
-                />
+            {/* Primary Attendee (Client) */}
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">{clientName}</p>
+                  <p className="text-xs text-gray-600">Primary Client</p>
+                </div>
+                <div className="text-xs text-gray-500">Confirmed</div>
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="bookerPhone" className="text-xs text-gray-600">Phone</Label>
-              <Input
-                id="bookerPhone"
-                value={appointmentData.bookerPhone}
-                onChange={(e) => setAppointmentData(prev => ({ ...prev, bookerPhone: e.target.value }))}
-                placeholder="Phone number..."
-              />
+            {/* Additional Attendees */}
+            <div className="space-y-2">
+              <Label className="text-xs text-gray-600">Additional Attendees (Optional)</Label>
+              
+              {/* Staff Member Selection */}
+              <div className="space-y-2">
+                <Select
+                  onValueChange={(value) => {
+                    const selectedStaff = staff.find((member: any) => member.id === value);
+                    if (selectedStaff && !additionalAttendees.some(a => a.id === value)) {
+                      setAdditionalAttendees(prev => [...prev, {
+                        id: value,
+                        name: `${selectedStaff.firstName} ${selectedStaff.lastName}`,
+                        email: selectedStaff.email,
+                        type: 'staff'
+                      }]);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Add staff member..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.filter((member: any) => 
+                      !additionalAttendees.some(a => a.id === member.id)
+                    ).map((member: any) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Custom Email Input */}
+              <div className="flex gap-2">
+                <Input
+                  value={customEmailInput}
+                  onChange={(e) => setCustomEmailInput(e.target.value)}
+                  placeholder="Add custom email..."
+                  type="email"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (customEmailInput && !additionalAttendees.some(a => a.email === customEmailInput)) {
+                      setAdditionalAttendees(prev => [...prev, {
+                        id: customEmailInput,
+                        name: customEmailInput,
+                        email: customEmailInput,
+                        type: 'custom'
+                      }]);
+                      setCustomEmailInput('');
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              
+              {/* List of Additional Attendees */}
+              {additionalAttendees.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {additionalAttendees.map((attendee, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                      <div>
+                        <p className="text-sm font-medium">{attendee.name}</p>
+                        <p className="text-xs text-gray-600">{attendee.email}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAdditionalAttendees(prev => prev.filter((_, i) => i !== index))}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -536,21 +593,41 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, onS
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createAppointmentMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createAppointmentMutation.isPending}
-            >
-              {createAppointmentMutation.isPending ? "Creating..." : "Create Appointment"}
-            </Button>
+          {/* Action Buttons with Status */}
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="status" className="text-sm font-medium">Status:</Label>
+              <Select
+                value={appointmentData.status}
+                onValueChange={(value) => setAppointmentData(prev => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="showed">Showed</SelectItem>
+                  <SelectItem value="no_show">No Show</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={createAppointmentMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={createAppointmentMutation.isPending}
+              >
+                {createAppointmentMutation.isPending ? "Creating..." : "Create Appointment"}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
