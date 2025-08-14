@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder, Eye, Edit3 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder, Eye, Edit3, Palette, Type, Layout } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -19,6 +19,98 @@ import { useToast } from "@/hooks/use-toast";
 
 interface FormBuilderProps {
   formId?: string;
+}
+
+// Default form styling configuration
+const defaultFormStyling = {
+  layout: {
+    type: 'single-column' as const, // 'single-column', 'two-column', 'single-line'
+    formWidth: 600,
+    fieldSpacing: 16,
+    labelWidth: 120,
+    showLabels: true,
+    margins: { top: 20, right: 20, bottom: 20, left: 20 },
+    padding: { top: 24, right: 24, bottom: 24, left: 24 }
+  },
+  form: {
+    backgroundColor: '#ffffff',
+    fontColor: '#000000',
+    inputBackgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderStyle: 'solid',
+    cornerRadius: 6
+  },
+  inputFields: {
+    style: 'box' as const, // 'box' or 'line'
+    fontColor: '#000000',
+    activeTagColor: '#3b82f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    cornerRadius: 6,
+    width: '100%',
+    padding: { top: 8, right: 12, bottom: 8, left: 12 },
+    margins: { top: 0, right: 0, bottom: 0, left: 0 }
+  },
+  labels: {
+    color: '#374151',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 14,
+    fontWeight: 500
+  },
+  placeholders: {
+    color: '#9ca3af',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 14,
+    fontWeight: 400
+  },
+  customCSS: ''
+};
+
+// Form styling configuration interface
+interface FormStyling {
+  layout: {
+    type: 'single-column' | 'two-column' | 'single-line';
+    formWidth: number;
+    fieldSpacing: number;
+    labelWidth: number;
+    showLabels: boolean;
+    margins: { top: number; right: number; bottom: number; left: number };
+    padding: { top: number; right: number; bottom: number; left: number };
+  };
+  form: {
+    backgroundColor: string;
+    fontColor: string;
+    inputBackgroundColor: string;
+    borderWidth: number;
+    borderColor: string;
+    borderStyle: string;
+    cornerRadius: number;
+  };
+  inputFields: {
+    style: 'box' | 'line';
+    fontColor: string;
+    activeTagColor: string;
+    borderWidth: number;
+    borderColor: string;
+    cornerRadius: number;
+    width: string;
+    padding: { top: number; right: number; bottom: number; left: number };
+    margins: { top: number; right: number; bottom: number; left: number };
+  };
+  labels: {
+    color: string;
+    fontFamily: string;
+    fontSize: number;
+    fontWeight: number;
+  };
+  placeholders: {
+    color: string;
+    fontFamily: string;
+    fontSize: number;
+    fontWeight: number;
+  };
+  customCSS: string;
 }
 
 // Sample data generator for different field types
@@ -68,6 +160,8 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewData, setPreviewData] = useState<Record<string, any>>({});
+  const [formStyling, setFormStyling] = useState<FormStyling>(defaultFormStyling);
+  const [activeStyleTab, setActiveStyleTab] = useState("layout");
 
   // Generate preview data for all fields
   const generatePreviewData = () => {
@@ -98,6 +192,8 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
     id: string;
     name: string;
     description?: string;
+    status?: string;
+    settings?: { styling?: FormStyling; [key: string]: any };
     fields: FormField[];
   }>({
     queryKey: ['/api/forms', formId],
@@ -120,6 +216,14 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       setFormName(formData.name || "");
       setFormDescription(formData.description || "");
       setFormFields(formData.fields || []);
+      
+      // Load form styling from settings if available
+      if (formData.settings?.styling) {
+        setFormStyling({
+          ...defaultFormStyling,
+          ...formData.settings.styling
+        });
+      }
     }
   }, [formData]);
 
@@ -129,7 +233,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       const payload = {
         ...data,
         createdBy: currentUser?.id || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-        status: data.status || "draft"
+        status: data.status || "draft",
+        settings: {
+          styling: formStyling,
+          ...(formData?.settings || {})
+        }
       };
       
       if (formId) {
@@ -360,9 +468,13 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="add-fields" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="add-fields">Add Fields</TabsTrigger>
                   <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
+                  <TabsTrigger value="styling">
+                    <Palette className="w-4 h-4 mr-1" />
+                    Style
+                  </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="add-fields" className="mt-4">
@@ -502,6 +614,13 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                     </div>
                   )}
                 </TabsContent>
+                
+                <TabsContent value="styling" className="mt-4">
+                  <FormStylingPanel 
+                    styling={formStyling} 
+                    onUpdateStyling={setFormStyling}
+                  />
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
@@ -554,14 +673,40 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                   </div>
                 ) : isPreviewMode ? (
                   // Preview Mode - Show form as end user would see it
-                  <div className="max-w-2xl mx-auto">
-                    <div className="bg-white p-6 rounded-lg border shadow-sm">
-                      <div className="space-y-6">
+                  <div className="max-w-none mx-auto overflow-x-auto">
+                    {/* Inject Custom CSS */}
+                    {formStyling.customCSS && (
+                      <style dangerouslySetInnerHTML={{ __html: formStyling.customCSS }} />
+                    )}
+                    
+                    <div 
+                      className="p-6 rounded-lg border shadow-sm mx-auto"
+                      style={{
+                        backgroundColor: formStyling.form.backgroundColor,
+                        color: formStyling.form.fontColor,
+                        borderWidth: `${formStyling.form.borderWidth}px`,
+                        borderColor: formStyling.form.borderColor,
+                        borderStyle: formStyling.form.borderStyle,
+                        borderRadius: `${formStyling.form.cornerRadius}px`,
+                        width: `${formStyling.layout.formWidth}px`,
+                        margin: `${formStyling.layout.margins.top}px ${formStyling.layout.margins.right}px ${formStyling.layout.margins.bottom}px ${formStyling.layout.margins.left}px`,
+                        padding: `${formStyling.layout.padding.top}px ${formStyling.layout.padding.right}px ${formStyling.layout.padding.bottom}px ${formStyling.layout.padding.left}px`,
+                      }}
+                    >
+                      <div 
+                        className={
+                          formStyling.layout.type === 'two-column' ? 'grid grid-cols-2 gap-4' :
+                          formStyling.layout.type === 'single-line' ? 'flex flex-wrap gap-4' :
+                          'space-y-6'
+                        }
+                        style={{ gap: `${formStyling.layout.fieldSpacing}px` }}
+                      >
                         {formFields.map((field, index) => (
                           <FormFieldPreview
                             key={field.id || `field-${index}`}
                             field={field as FormField}
                             value={previewData[field.id || `field-${index}`]}
+                            styling={formStyling}
                             onChange={(value) => {
                               setPreviewData(prev => ({
                                 ...prev,
@@ -632,9 +777,63 @@ interface FormFieldPreviewProps {
   field: FormField;
   value: any;
   onChange: (value: any) => void;
+  styling?: FormStyling;
 }
 
-function FormFieldPreview({ field, value, onChange }: FormFieldPreviewProps) {
+function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewProps) {
+  // Generate dynamic styles based on form styling configuration
+  const getFieldStyles = () => {
+    if (!styling) return {};
+    
+    const inputStyle: React.CSSProperties = {
+      color: styling.inputFields.fontColor,
+      backgroundColor: styling.form.inputBackgroundColor,
+      borderWidth: `${styling.inputFields.borderWidth}px`,
+      borderColor: styling.inputFields.borderColor,
+      borderRadius: `${styling.inputFields.cornerRadius}px`,
+      fontFamily: styling.labels.fontFamily,
+      padding: `${styling.inputFields.padding.top}px ${styling.inputFields.padding.right}px ${styling.inputFields.padding.bottom}px ${styling.inputFields.padding.left}px`,
+      margin: `${styling.inputFields.margins.top}px ${styling.inputFields.margins.right}px ${styling.inputFields.margins.bottom}px ${styling.inputFields.margins.left}px`,
+    };
+
+    // Apply line style for inputs
+    if (styling.inputFields.style === 'line') {
+      inputStyle.borderTop = 'none';
+      inputStyle.borderLeft = 'none';
+      inputStyle.borderRight = 'none';
+      inputStyle.borderRadius = '0';
+      inputStyle.backgroundColor = 'transparent';
+    }
+
+    return inputStyle;
+  };
+
+  const getLabelStyles = () => {
+    if (!styling) return {};
+    
+    return {
+      color: styling.labels.color,
+      fontFamily: styling.labels.fontFamily,
+      fontSize: `${styling.labels.fontSize}px`,
+      fontWeight: styling.labels.fontWeight,
+      display: styling.layout.showLabels ? 'block' : 'none'
+    };
+  };
+
+  const getPlaceholderStyles = () => {
+    if (!styling) return {};
+    
+    return {
+      '--placeholder-color': styling.placeholders.color,
+      '--placeholder-font-family': styling.placeholders.fontFamily,
+      '--placeholder-font-size': `${styling.placeholders.fontSize}px`,
+      '--placeholder-font-weight': styling.placeholders.fontWeight,
+    } as React.CSSProperties;
+  };
+
+  const fieldStyles = getFieldStyles();
+  const labelStyles = getLabelStyles();
+  const placeholderStyles = getPlaceholderStyles();
   const renderPreviewField = () => {
     switch (field.type) {
       case 'text':
@@ -647,7 +846,8 @@ function FormFieldPreview({ field, value, onChange }: FormFieldPreviewProps) {
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder || `Enter ${field.label?.toLowerCase() || 'value'}`}
-            required={field.required}
+            required={field.required || false}
+            style={{ ...fieldStyles, ...placeholderStyles }}
             data-testid={`preview-input-${field.id}`}
           />
         );
@@ -658,7 +858,7 @@ function FormFieldPreview({ field, value, onChange }: FormFieldPreviewProps) {
             type="date"
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
-            required={field.required}
+            required={field.required || false}
             data-testid={`preview-date-${field.id}`}
           />
         );
@@ -773,7 +973,7 @@ function FormFieldPreview({ field, value, onChange }: FormFieldPreviewProps) {
               id={field.id}
               checked={value || false}
               onChange={(e) => onChange(e.target.checked)}
-              required={field.required}
+              required={field.required || false}
               className="rounded border-gray-300"
               data-testid={`preview-terms-${field.id}`}
             />
@@ -809,14 +1009,514 @@ function FormFieldPreview({ field, value, onChange }: FormFieldPreviewProps) {
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">
+      <Label className="text-sm font-medium" style={labelStyles}>
         {field.label || 'Untitled Field'}
         {field.required && <span className="text-red-500 ml-1">*</span>}
       </Label>
-      {field.description && (
-        <p className="text-xs text-gray-600">{field.description}</p>
+      {field.placeholder && (
+        <p className="text-xs text-gray-600">{field.placeholder}</p>
       )}
       {renderPreviewField()}
+    </div>
+  );
+}
+
+// Form Styling Panel Component
+interface FormStylingPanelProps {
+  styling: FormStyling;
+  onUpdateStyling: (styling: FormStyling) => void;
+}
+
+const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) => {
+  const updateStyling = (section: keyof FormStyling, updates: any) => {
+    onUpdateStyling({
+      ...styling,
+      [section]: {
+        ...styling[section],
+        ...updates
+      }
+    });
+  };
+
+  const googleFonts = [
+    'Inter, sans-serif',
+    'Roboto, sans-serif',
+    'Open Sans, sans-serif',
+    'Lato, sans-serif',
+    'Montserrat, sans-serif',
+    'Source Sans Pro, sans-serif',
+    'Raleway, sans-serif',
+    'Nunito, sans-serif',
+    'Poppins, sans-serif',
+    'Merriweather, serif'
+  ];
+
+  return (
+    <div className="space-y-4 max-h-96 overflow-y-auto">
+      <Accordion type="single" collapsible className="w-full">
+        {/* Layout Settings */}
+        <AccordionItem value="layout">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Layout className="w-4 h-4" />
+              Layout & Spacing
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Layout Type</Label>
+                <Select value={styling.layout.type} onValueChange={(value) => updateStyling('layout', { type: value })}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single-column">Single Column</SelectItem>
+                    <SelectItem value="two-column">Two Column</SelectItem>
+                    <SelectItem value="single-line">Single Line</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Form Width (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.layout.formWidth}
+                    onChange={(e) => updateStyling('layout', { formWidth: parseInt(e.target.value) || 600 })}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Field Spacing (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.layout.fieldSpacing}
+                    onChange={(e) => updateStyling('layout', { fieldSpacing: parseInt(e.target.value) || 16 })}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Show Labels</Label>
+                <Switch
+                  checked={styling.layout.showLabels}
+                  onCheckedChange={(checked) => updateStyling('layout', { showLabels: checked })}
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">Margins (px)</Label>
+                <div className="grid grid-cols-2 gap-1">
+                  <Input
+                    type="number"
+                    placeholder="Top"
+                    value={styling.layout.margins.top}
+                    onChange={(e) => updateStyling('layout', { 
+                      margins: { ...styling.layout.margins, top: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Right"
+                    value={styling.layout.margins.right}
+                    onChange={(e) => updateStyling('layout', { 
+                      margins: { ...styling.layout.margins, right: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Bottom"
+                    value={styling.layout.margins.bottom}
+                    onChange={(e) => updateStyling('layout', { 
+                      margins: { ...styling.layout.margins, bottom: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Left"
+                    value={styling.layout.margins.left}
+                    onChange={(e) => updateStyling('layout', { 
+                      margins: { ...styling.layout.margins, left: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Padding (px)</Label>
+                <div className="grid grid-cols-2 gap-1">
+                  <Input
+                    type="number"
+                    placeholder="Top"
+                    value={styling.layout.padding.top}
+                    onChange={(e) => updateStyling('layout', { 
+                      padding: { ...styling.layout.padding, top: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Right"
+                    value={styling.layout.padding.right}
+                    onChange={(e) => updateStyling('layout', { 
+                      padding: { ...styling.layout.padding, right: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Bottom"
+                    value={styling.layout.padding.bottom}
+                    onChange={(e) => updateStyling('layout', { 
+                      padding: { ...styling.layout.padding, bottom: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Left"
+                    value={styling.layout.padding.left}
+                    onChange={(e) => updateStyling('layout', { 
+                      padding: { ...styling.layout.padding, left: parseInt(e.target.value) || 0 }
+                    })}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Form Appearance */}
+        <AccordionItem value="form">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4" />
+              Form Appearance
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Background Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.form.backgroundColor}
+                    onChange={(e) => updateStyling('form', { backgroundColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Font Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.form.fontColor}
+                    onChange={(e) => updateStyling('form', { fontColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Input Background</Label>
+                <Input
+                  type="color"
+                  value={styling.form.inputBackgroundColor}
+                  onChange={(e) => updateStyling('form', { inputBackgroundColor: e.target.value })}
+                  className="h-8 p-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Border Width (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.form.borderWidth}
+                    onChange={(e) => updateStyling('form', { borderWidth: parseInt(e.target.value) || 0 })}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Corner Radius (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.form.cornerRadius}
+                    onChange={(e) => updateStyling('form', { cornerRadius: parseInt(e.target.value) || 0 })}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Border Color</Label>
+                <Input
+                  type="color"
+                  value={styling.form.borderColor}
+                  onChange={(e) => updateStyling('form', { borderColor: e.target.value })}
+                  className="h-8 p-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">Border Style</Label>
+                <Select value={styling.form.borderStyle} onValueChange={(value) => updateStyling('form', { borderStyle: value })}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="solid">Solid</SelectItem>
+                    <SelectItem value="dashed">Dashed</SelectItem>
+                    <SelectItem value="dotted">Dotted</SelectItem>
+                    <SelectItem value="double">Double</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Input Fields */}
+        <AccordionItem value="inputs">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Type className="w-4 h-4" />
+              Input Fields
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Input Style</Label>
+                <Select value={styling.inputFields.style} onValueChange={(value) => updateStyling('inputFields', { style: value })}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="box">Box</SelectItem>
+                    <SelectItem value="line">Line</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Font Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.inputFields.fontColor}
+                    onChange={(e) => updateStyling('inputFields', { fontColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Active Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.inputFields.activeTagColor}
+                    onChange={(e) => updateStyling('inputFields', { activeTagColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Border Width (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.inputFields.borderWidth}
+                    onChange={(e) => updateStyling('inputFields', { borderWidth: parseInt(e.target.value) || 0 })}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Corner Radius (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.inputFields.cornerRadius}
+                    onChange={(e) => updateStyling('inputFields', { cornerRadius: parseInt(e.target.value) || 0 })}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Border Color</Label>
+                <Input
+                  type="color"
+                  value={styling.inputFields.borderColor}
+                  onChange={(e) => updateStyling('inputFields', { borderColor: e.target.value })}
+                  className="h-8 p-1"
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Labels */}
+        <AccordionItem value="labels">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Type className="w-4 h-4" />
+              Labels
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Label Color</Label>
+                <Input
+                  type="color"
+                  value={styling.labels.color}
+                  onChange={(e) => updateStyling('labels', { color: e.target.value })}
+                  className="h-8 p-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">Font Family</Label>
+                <Select value={styling.labels.fontFamily} onValueChange={(value) => updateStyling('labels', { fontFamily: value })}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {googleFonts.map(font => (
+                      <SelectItem key={font} value={font}>{font.split(',')[0]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Font Size (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.labels.fontSize}
+                    onChange={(e) => updateStyling('labels', { fontSize: parseInt(e.target.value) || 14 })}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Font Weight</Label>
+                  <Select 
+                    value={styling.labels.fontWeight.toString()} 
+                    onValueChange={(value) => updateStyling('labels', { fontWeight: parseInt(value) })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="300">Light (300)</SelectItem>
+                      <SelectItem value="400">Normal (400)</SelectItem>
+                      <SelectItem value="500">Medium (500)</SelectItem>
+                      <SelectItem value="600">SemiBold (600)</SelectItem>
+                      <SelectItem value="700">Bold (700)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Placeholders */}
+        <AccordionItem value="placeholders">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Type className="w-4 h-4" />
+              Placeholders
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Placeholder Color</Label>
+                <Input
+                  type="color"
+                  value={styling.placeholders.color}
+                  onChange={(e) => updateStyling('placeholders', { color: e.target.value })}
+                  className="h-8 p-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">Font Family</Label>
+                <Select value={styling.placeholders.fontFamily} onValueChange={(value) => updateStyling('placeholders', { fontFamily: value })}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {googleFonts.map(font => (
+                      <SelectItem key={font} value={font}>{font.split(',')[0]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Font Size (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.placeholders.fontSize}
+                    onChange={(e) => updateStyling('placeholders', { fontSize: parseInt(e.target.value) || 14 })}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Font Weight</Label>
+                  <Select 
+                    value={styling.placeholders.fontWeight.toString()} 
+                    onValueChange={(value) => updateStyling('placeholders', { fontWeight: parseInt(value) })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="300">Light (300)</SelectItem>
+                      <SelectItem value="400">Normal (400)</SelectItem>
+                      <SelectItem value="500">Medium (500)</SelectItem>
+                      <SelectItem value="600">SemiBold (600)</SelectItem>
+                      <SelectItem value="700">Bold (700)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Custom CSS */}
+        <AccordionItem value="custom-css">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Custom CSS
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div>
+              <Label className="text-xs">Custom CSS</Label>
+              <Textarea
+                value={styling.customCSS}
+                onChange={(e) => onUpdateStyling({ ...styling, customCSS: e.target.value })}
+                placeholder="Add custom CSS here..."
+                className="h-24 text-xs font-mono"
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
