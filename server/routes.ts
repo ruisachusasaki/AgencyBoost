@@ -5311,10 +5311,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fields, ...formData } = req.body;
       
-      // Update form - remove updatedAt from formData and let DB handle it
-      const { updatedAt, createdAt, ...cleanFormData } = formData;
+      console.log("PUT /api/forms - received data:", JSON.stringify({ formData, fields }, null, 2));
+      
+      // Update form - only allow specific fields and ensure proper types
+      const allowedFields = ['name', 'description', 'status', 'settings'];
+      const cleanFormData: any = {};
+      
+      for (const field of allowedFields) {
+        if (formData[field] !== undefined) {
+          cleanFormData[field] = formData[field];
+        }
+      }
+      
+      cleanFormData.updatedAt = new Date();
+      
+      console.log("PUT /api/forms - clean data to update:", JSON.stringify(cleanFormData, null, 2));
+      
       const formResult = await db.update(forms)
-        .set({ ...cleanFormData, updatedAt: new Date() })
+        .set(cleanFormData)
         .where(eq(forms.id, req.params.id))
         .returning();
       
