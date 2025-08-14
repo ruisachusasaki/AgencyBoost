@@ -416,7 +416,7 @@ export default function Campaigns() {
           {[
             { id: "email", name: "Email", icon: Mail, count: emailTemplates.length },
             { id: "sms", name: "SMS", icon: MessageCircle, count: smsTemplates.length },
-            { id: "forms", name: "Forms", icon: FileText, count: forms?.length || 0 }
+            { id: "forms", name: "Forms", icon: FileText, count: Array.isArray(forms) ? forms.length : 0 }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -969,9 +969,7 @@ function FormsTab() {
   // Delete form mutation
   const deleteFormMutation = useMutation({
     mutationFn: async (formId: string) => {
-      return apiRequest(`/api/forms/${formId}`, {
-        method: 'DELETE',
-      });
+      return apiRequest(`/api/forms/${formId}`, "DELETE");
     },
     onSuccess: () => {
       toast({
@@ -995,8 +993,8 @@ function FormsTab() {
     }
   };
 
-  const filteredForms = forms.filter((form: any) =>
-    form.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredForms = (forms as any[]).filter((form: any) =>
+    form.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {
