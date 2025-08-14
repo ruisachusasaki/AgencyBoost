@@ -5276,8 +5276,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fields, ...formData } = req.body;
       
+      // Clean form data and set defaults
+      const { updatedAt, createdAt, id, ...cleanFormData } = formData;
+      const formToInsert = {
+        ...cleanFormData,
+        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user ID
+        status: cleanFormData.status || "draft"
+      };
+      
       // Create form
-      const formResult = await db.insert(forms).values(formData).returning();
+      const formResult = await db.insert(forms).values(formToInsert).returning();
       const form = formResult[0];
       
       // Create form fields if provided
@@ -5303,9 +5311,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fields, ...formData } = req.body;
       
-      // Update form
+      // Update form - remove updatedAt from formData and let DB handle it
+      const { updatedAt, createdAt, ...cleanFormData } = formData;
       const formResult = await db.update(forms)
-        .set({ ...formData, updatedAt: new Date() })
+        .set({ ...cleanFormData, updatedAt: new Date() })
         .where(eq(forms.id, req.params.id))
         .returning();
       
