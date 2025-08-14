@@ -1104,6 +1104,14 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                 </div>
               </div>
 
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Show Labels</Label>
+                <Switch
+                  checked={styling.layout.showLabels}
+                  onCheckedChange={(checked) => updateStyling('layout', { showLabels: checked })}
+                />
+              </div>
+
               <div>
                 <Label className="text-xs">Margins (px)</Label>
                 <div className="grid grid-cols-2 gap-1">
@@ -1212,11 +1220,11 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Label Font Color</Label>
+                  <Label className="text-xs">Font Color</Label>
                   <Input
                     type="color"
-                    value={styling.labels.color}
-                    onChange={(e) => updateStyling('labels', { color: e.target.value })}
+                    value={styling.form.fontColor}
+                    onChange={(e) => updateStyling('form', { fontColor: e.target.value })}
                     className="h-8 p-1"
                   />
                 </div>
@@ -1304,7 +1312,26 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                 </Select>
               </div>
 
-
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Font Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.inputFields.fontColor}
+                    onChange={(e) => updateStyling('inputFields', { fontColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Active Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.inputFields.activeTagColor}
+                    onChange={(e) => updateStyling('inputFields', { activeTagColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -1350,14 +1377,6 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Show Labels</Label>
-                <Switch
-                  checked={styling.layout.showLabels}
-                  onCheckedChange={(checked) => updateStyling('layout', { showLabels: checked })}
-                />
-              </div>
-
               <div>
                 <Label className="text-xs">Label Color</Label>
                 <Input
@@ -1449,14 +1468,34 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-xs">Font Size (px)</Label>
-                <Input
-                  type="number"
-                  value={styling.placeholders.fontSize}
-                  onChange={(e) => updateStyling('placeholders', { fontSize: parseInt(e.target.value) || 14 })}
-                  className="h-8"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Font Size (px)</Label>
+                  <Input
+                    type="number"
+                    value={styling.placeholders.fontSize}
+                    onChange={(e) => updateStyling('placeholders', { fontSize: parseInt(e.target.value) || 14 })}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Font Weight</Label>
+                  <Select 
+                    value={styling.placeholders.fontWeight.toString()} 
+                    onValueChange={(value) => updateStyling('placeholders', { fontWeight: parseInt(value) })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="300">Light (300)</SelectItem>
+                      <SelectItem value="400">Normal (400)</SelectItem>
+                      <SelectItem value="500">Medium (500)</SelectItem>
+                      <SelectItem value="600">SemiBold (600)</SelectItem>
+                      <SelectItem value="700">Bold (700)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </AccordionContent>
