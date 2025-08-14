@@ -66,7 +66,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
 
   // Create or update form mutation
   const saveFormMutation = useMutation({
-    mutationFn: async (data: { name: string; description: string; fields: Partial<FormField>[] }) => {
+    mutationFn: async (data: { name: string; description: string; fields: Partial<FormField>[]; status: string }) => {
       const payload = {
         ...data,
         createdBy: currentUser?.id || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
@@ -80,9 +80,12 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       }
     },
     onSuccess: (savedForm: any) => {
+      const isPublishing = savedForm?.status === "published";
       toast({
         title: "Success",
-        description: formId ? "Form updated successfully" : "Form created successfully",
+        description: isPublishing 
+          ? "Form published successfully! It's now live and ready to accept submissions." 
+          : formId ? "Form updated successfully" : "Form created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
       if (!formId && savedForm?.id) {
@@ -119,6 +122,25 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       name: formName,
       description: formDescription,
       fields: formFields,
+      status: "draft",
+    });
+  };
+
+  const handlePublishForm = () => {
+    if (!formName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Form name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    saveFormMutation.mutate({
+      name: formName,
+      description: formDescription,
+      fields: formFields,
+      status: "published",
     });
   };
 
@@ -204,14 +226,24 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
             </p>
           </div>
         </div>
-        <Button 
-          onClick={handleSaveForm} 
-          disabled={saveFormMutation.isPending}
-          data-testid="button-save-form"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {saveFormMutation.isPending ? "Saving..." : "Save Form"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleSaveForm} 
+            disabled={saveFormMutation.isPending}
+            data-testid="button-save-form"
+            variant="outline"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saveFormMutation.isPending ? "Saving..." : "Save Draft"}
+          </Button>
+          <Button 
+            onClick={handlePublishForm} 
+            disabled={saveFormMutation.isPending}
+            data-testid="button-publish-form"
+          >
+            {formData?.status === "published" ? "Republish" : "Publish Form"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -242,6 +274,22 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                   rows={3}
                   data-testid="textarea-form-description"
                 />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <div className="mt-1">
+                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    formData?.status === "published" 
+                      ? "bg-green-100 text-green-800" 
+                      : formData?.status === "archived"
+                      ? "bg-gray-100 text-gray-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`} data-testid="badge-form-status">
+                    {formData?.status === "published" ? "Published" 
+                     : formData?.status === "archived" ? "Archived" 
+                     : "Draft"}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

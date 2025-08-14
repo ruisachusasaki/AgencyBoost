@@ -44,6 +44,32 @@ export default function Campaigns() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Toggle form status mutation
+  const toggleFormStatusMutation = useMutation({
+    mutationFn: async ({ formId, newStatus }: { formId: string; newStatus: string }) => {
+      return apiRequest('PUT', `/api/forms/${formId}`, { status: newStatus });
+    },
+    onSuccess: (savedForm: any) => {
+      toast({
+        title: "Success",
+        description: `Form ${savedForm.status === "published" ? "published" : "saved as draft"} successfully`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update form status: ${error.message || "Unknown error"}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleFormStatus = (formId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "published" ? "draft" : "published";
+    toggleFormStatusMutation.mutate({ formId, newStatus });
+  };
+
   // Fetch custom fields for dynamic merge tags
   const { data: customFields = [] } = useQuery({
     queryKey: ["/api/custom-fields"],
@@ -996,6 +1022,12 @@ export default function Campaigns() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => toggleFormStatus(form.id, form.status)}
+                          >
+                            <Tag className="h-4 w-4 mr-2" />
+                            {form.status === "published" ? "Make Draft" : "Publish"}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => {
                             navigator.clipboard.writeText(`${window.location.origin}/forms/${form.id}`);
