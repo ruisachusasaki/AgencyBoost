@@ -815,47 +815,7 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Forms Tab */}
-      {activeTab === "forms" && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Forms</h2>
-              <p className="text-muted-foreground">Create and manage forms for lead capture and data collection</p>
-            </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Form
-            </Button>
-          </div>
 
-          {/* Search */}
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search forms..."
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Forms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="border-dashed border-2 border-gray-200 hover:border-gray-300 transition-colors">
-              <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-                <FileText className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Create Your First Form</h3>
-                <p className="text-gray-600 mb-4">Build forms to capture leads, collect feedback, and gather important client information.</p>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Form
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
 
       {/* Edit Template Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogClose}>
