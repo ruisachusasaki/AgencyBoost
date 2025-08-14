@@ -962,14 +962,10 @@ export default function Campaigns() {
         </DialogContent>
       </Dialog>
 
-      {/* Forms Tab - Debugging duplicates */}
+      {/* Forms Tab */}
       {activeTab === "forms" && (
-        <div id="forms-tab-unique" data-debug="forms-single-instance">
-          <h2 className="text-xl font-bold text-red-500 mb-4">
-            FORMS TAB DEBUG - Instance #{Math.random().toString(36).substr(2, 9)}
-          </h2>
-          
-          <div className="flex justify-between items-center mb-6" data-debug="forms-header">
+        <div>
+          <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -978,7 +974,7 @@ export default function Campaigns() {
                   value=""
                   onChange={() => {}}
                   className="pl-10 w-80"
-                  data-testid="input-search-forms-debug"
+                  data-testid="input-search-forms"
                 />
               </div>
             </div>
@@ -987,46 +983,108 @@ export default function Campaigns() {
                 asChild
                 className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" 
                 size="sm"
-                data-testid="button-create-form-debug"
+                data-testid="button-create-form"
               >
                 <a href="/form-builder">
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Form DEBUG
+                  Create Form
                 </a>
               </Button>
             </div>
           </div>
 
-          <div className="text-sm text-blue-600 mb-4">
-            Forms data length: {Array.isArray(formsData) ? formsData.length : 'not array'}
-          </div>
-
           {/* Forms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.isArray(formsData) && formsData.map((form: any) => (
-              <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow border-2 border-red-200">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-green-500" />
-                      <CardTitle className="text-sm font-medium truncate">
-                        {form.name} [DEBUG]
-                      </CardTitle>
+          {!Array.isArray(formsData) || formsData.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No forms found</h3>
+              <p className="text-gray-500 mb-4">
+                Get started by creating your first form.
+              </p>
+              <Button 
+                asChild
+                className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                data-testid="button-create-first-form"
+              >
+                <a href="/form-builder">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Form
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {formsData.map((form: any) => (
+                <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-green-500" />
+                        <CardTitle className="text-sm font-medium truncate">
+                          {form.name}
+                        </CardTitle>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" data-testid={`button-form-menu-${form.id}`}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <a href={`/form-builder/${form.id}`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/forms/${form.id}`);
+                            toast({
+                              title: "Success",
+                              description: "Form URL copied to clipboard",
+                            });
+                          }}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy URL
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to delete this form?")) {
+                                // Add delete functionality here if needed
+                              }
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">
-                    {form.description || "No description"}
-                  </p>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{form.status}</span>
-                    <span>Draft</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <p className="text-xs text-gray-500 truncate">
+                      {form.description || "No description"}
+                    </p>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={form.status === 'published' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {form.status || 'draft'}
+                        </Badge>
+                      </div>
+                      <span>
+                        {new Date(form.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
