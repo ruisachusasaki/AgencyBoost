@@ -213,10 +213,15 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       
       // Load form styling from settings if available
       if (formData.settings?.styling) {
-        setFormStyling({
+        const loadedStyling = {
           ...defaultFormStyling,
           ...formData.settings.styling
-        });
+        };
+        console.log('Loading form styling from data:', formData.settings.styling, 'Final styling:', loadedStyling);
+        setFormStyling(loadedStyling);
+      } else {
+        console.log('No styling in form data, using defaults:', defaultFormStyling);
+        setFormStyling(defaultFormStyling);
       }
     }
   }, [formData]);
@@ -407,7 +412,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-none">
         {/* Form Settings */}
         <div className="lg:col-span-1">
           <Card>
@@ -621,7 +626,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
 
         {/* Form Builder */}
-        <div className="lg:col-span-3 w-full">
+        <div className="lg:col-span-2 w-full">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -835,6 +840,10 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const fieldStyles = getFieldStyles();
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
+  
+  // Debug logging
+  console.log('Field styling applied:', fieldStyles, 'Label styling:', labelStyles, 'Placeholder CSS:', placeholderCSS);
+  
   const renderPreviewField = () => {
     switch (field.type) {
       case 'text':
@@ -1018,7 +1027,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" style={{ marginBottom: `${styling?.layout.fieldSpacing || 16}px` }}>
       <Label className="text-sm font-medium" style={labelStyles}>
         {field.label || 'Untitled Field'}
         {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -1039,13 +1048,15 @@ interface FormStylingPanelProps {
 
 const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) => {
   const updateStyling = (section: keyof FormStyling, updates: any) => {
-    onUpdateStyling({
+    const newStyling = {
       ...styling,
       [section]: {
         ...(styling[section] as object),
         ...updates
       }
-    });
+    };
+    console.log('Updating styling:', section, updates, 'New styling:', newStyling);
+    onUpdateStyling(newStyling);
   };
 
   const googleFonts = [
