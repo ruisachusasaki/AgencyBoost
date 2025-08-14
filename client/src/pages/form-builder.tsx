@@ -246,9 +246,9 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Form Settings */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Form Settings</CardTitle>
