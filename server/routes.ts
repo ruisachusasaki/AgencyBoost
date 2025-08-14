@@ -5334,11 +5334,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         RETURNING *
       `);
       
-      if (!formResult[0]) {
+      if (!formResult.rows || formResult.rows.length === 0) {
         return res.status(404).json({ message: "Form not found" });
       }
       
-      const form = formResult[0];
+      const form = formResult.rows[0];
       
       // Update form fields if provided
       if (fields && Array.isArray(fields)) {
