@@ -236,7 +236,8 @@ export default function Campaigns() {
   const handleCreateEmailTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const tags = (formData.get("tags") as string)?.split(",").map(tag => tag.trim()).filter(Boolean) || [];
+    const tagsValue = formData.get("tags") as string;
+    const tags = tagsValue && typeof tagsValue === 'string' ? tagsValue.split(",").map(tag => tag.trim()).filter(Boolean) : [];
     
     const data = {
       name: formData.get("name") as string,
@@ -252,7 +253,8 @@ export default function Campaigns() {
   const handleCreateSmsTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const tags = (formData.get("tags") as string)?.split(",").map(tag => tag.trim()).filter(Boolean) || [];
+    const tagsValue = formData.get("tags") as string;
+    const tags = tagsValue && typeof tagsValue === 'string' ? tagsValue.split(",").map(tag => tag.trim()).filter(Boolean) : [];
     
     const data = {
       name: formData.get("name") as string,
@@ -293,7 +295,8 @@ export default function Campaigns() {
     if (!editingTemplate) return;
     
     const formData = new FormData(e.currentTarget);
-    const tags = (formData.get("tags") as string)?.split(",").map(tag => tag.trim()).filter(Boolean) || [];
+    const tagsValue = formData.get("tags") as string;
+    const tags = tagsValue && typeof tagsValue === 'string' ? tagsValue.split(",").map(tag => tag.trim()).filter(Boolean) : [];
     
     const data = {
       id: editingTemplate.id,
@@ -312,7 +315,8 @@ export default function Campaigns() {
     if (!editingTemplate) return;
     
     const formData = new FormData(e.currentTarget);
-    const tags = (formData.get("tags") as string)?.split(",").map(tag => tag.trim()).filter(Boolean) || [];
+    const tagsValue = formData.get("tags") as string;
+    const tags = tagsValue && typeof tagsValue === 'string' ? tagsValue.split(",").map(tag => tag.trim()).filter(Boolean) : [];
     
     const data = {
       id: editingTemplate.id,
@@ -961,8 +965,7 @@ function FormsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Debug: Log component render
-  console.log("FormsTab component rendered");
+
 
   // Fetch forms
   const { data: forms = [], isLoading } = useQuery({
@@ -1015,10 +1018,6 @@ function FormsTab() {
 
   return (
     <div data-testid="forms-tab-container">
-      {/* DEBUG: Add debug info */}
-      <div className="text-xs text-gray-400 mb-2">
-        Forms Tab Debug: {Array.isArray(forms) ? forms.length : 0} forms loaded
-      </div>
       
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
