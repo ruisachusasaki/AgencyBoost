@@ -16,20 +16,25 @@ import type { TemplateFolder, EmailTemplate, SmsTemplate } from "@shared/schema"
 export default function Campaigns() {
   const [emailSearchTerm, setEmailSearchTerm] = useState("");
   const [smsSearchTerm, setSmsSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("email");
+  // Initialize activeTab based on URL params to prevent double render
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab');
+      return (tab && ['email', 'sms', 'forms'].includes(tab)) ? tab : "email";
+    }
+    return "email";
+  });
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   
   // Handle URL parameters for tab switching
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
-    if (tab && ['email', 'sms', 'forms'].includes(tab)) {
+    if (tab && ['email', 'sms', 'forms'].includes(tab) && tab !== activeTab) {
       setActiveTab(tab);
     }
-  }, []);
-
-  // Debug: Add console logging for tab switching
-  console.log("Campaigns component render - activeTab:", activeTab);
+  }, []); // Remove dependency to prevent re-running
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | SmsTemplate | null>(null);
@@ -445,10 +450,7 @@ export default function Campaigns() {
         </nav>
       </div>
 
-      {/* Debug info */}
-      <div className="text-xs text-gray-400 mb-2">
-        Debug: Active Tab = {activeTab}
-      </div>
+
 
       {/* Email Tab */}
       {activeTab === "email" && (
@@ -962,12 +964,7 @@ export default function Campaigns() {
 
       {/* Forms Tab */}
       {activeTab === "forms" && (
-        <div data-debug="forms-tab-wrapper">
-          <div className="text-xs text-red-500 mb-2">
-            FORMS TAB DEBUG: Rendering FormsTab component
-          </div>
-          <FormsTab forms={Array.isArray(formsData) ? formsData : []} />
-        </div>
+        <FormsTab forms={Array.isArray(formsData) ? formsData : []} />
       )}
     </div>
   );
