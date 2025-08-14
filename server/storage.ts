@@ -41,11 +41,13 @@ import {
   type UserRole, type InsertUserRole,
   type NotificationSettings, type InsertNotificationSettings,
   type CustomFieldFileUpload, type InsertCustomFieldFileUpload,
-  customFieldFileUploads
+  type Form, type InsertForm, type FormField, type InsertFormField,
+  type FormSubmission, type InsertFormSubmission,
+  customFieldFileUploads, forms, formFields, formSubmissions
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, sql, asc, desc } from "drizzle-orm";
+import { eq, sql, asc, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -286,6 +288,26 @@ export interface IStorage {
   deleteCustomFieldFileUpload(id: string): Promise<boolean>;
   createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings>;
   updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined>;
+  
+  // Forms
+  getForms(): Promise<Form[]>;
+  getForm(id: string): Promise<Form | undefined>;
+  createForm(form: InsertForm): Promise<Form>;
+  updateForm(id: string, form: Partial<InsertForm>): Promise<Form | undefined>;
+  deleteForm(id: string): Promise<boolean>;
+  
+  // Form Fields
+  getFormFields(formId: string): Promise<FormField[]>;
+  getFormField(id: string): Promise<FormField | undefined>;
+  createFormField(field: InsertFormField): Promise<FormField>;
+  updateFormField(id: string, field: Partial<InsertFormField>): Promise<FormField | undefined>;
+  deleteFormField(id: string): Promise<boolean>;
+  reorderFormFields(fieldIds: string[]): Promise<void>;
+  
+  // Form Submissions
+  getFormSubmissions(formId: string): Promise<FormSubmission[]>;
+  getFormSubmission(id: string): Promise<FormSubmission | undefined>;
+  createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
   
   // Missing methods that are called in routes.ts
   getWorkflowsByCategory(category: string): Promise<Workflow[]>;
@@ -2862,8 +2884,166 @@ class MinimalStorage implements Partial<IStorage> {
     }
   }
 
-  // Add other empty implementations as needed
-  [key: string]: any;
+  // Forms
+  async getForms(): Promise<Form[]> {
+    try {
+      return await db.select().from(forms).orderBy(desc(forms.createdAt));
+    } catch (error) {
+      console.error("Error getting forms:", error);
+      return [];
+    }
+  }
+
+  async getForm(id: string): Promise<Form | undefined> {
+    try {
+      const result = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting form:", error);
+      return undefined;
+    }
+  }
+
+  async createForm(form: InsertForm): Promise<Form> {
+    try {
+      const result = await db.insert(forms).values(form).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating form:", error);
+      throw error;
+    }
+  }
+
+  async updateForm(id: string, form: Partial<InsertForm>): Promise<Form | undefined> {
+    try {
+      const result = await db.update(forms)
+        .set({ ...form, updatedAt: new Date() })
+        .where(eq(forms.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating form:", error);
+      return undefined;
+    }
+  }
+
+  async deleteForm(id: string): Promise<boolean> {
+    try {
+      await db.delete(forms).where(eq(forms.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting form:", error);
+      return false;
+    }
+  }
+
+  // Form Fields
+  async getFormFields(formId: string): Promise<FormField[]> {
+    try {
+      return await db.select()
+        .from(formFields)
+        .where(eq(formFields.formId, formId))
+        .orderBy(asc(formFields.order));
+    } catch (error) {
+      console.error("Error getting form fields:", error);
+      return [];
+    }
+  }
+
+  async getFormField(id: string): Promise<FormField | undefined> {
+    try {
+      const result = await db.select().from(formFields).where(eq(formFields.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting form field:", error);
+      return undefined;
+    }
+  }
+
+  async createFormField(field: InsertFormField): Promise<FormField> {
+    try {
+      const result = await db.insert(formFields).values(field).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating form field:", error);
+      throw error;
+    }
+  }
+
+  async updateFormField(id: string, field: Partial<InsertFormField>): Promise<FormField | undefined> {
+    try {
+      const result = await db.update(formFields)
+        .set(field)
+        .where(eq(formFields.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating form field:", error);
+      return undefined;
+    }
+  }
+
+  async deleteFormField(id: string): Promise<boolean> {
+    try {
+      await db.delete(formFields).where(eq(formFields.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting form field:", error);
+      return false;
+    }
+  }
+
+  async reorderFormFields(fieldIds: string[]): Promise<void> {
+    try {
+      const updates = fieldIds.map((fieldId, index) => 
+        db.update(formFields)
+          .set({ order: index })
+          .where(eq(formFields.id, fieldId))
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Error reordering form fields:", error);
+      throw error;
+    }
+  }
+
+  // Form Submissions
+  async getFormSubmissions(formId: string): Promise<FormSubmission[]> {
+    try {
+      return await db.select()
+        .from(formSubmissions)
+        .where(eq(formSubmissions.formId, formId))
+        .orderBy(desc(formSubmissions.createdAt));
+    } catch (error) {
+      console.error("Error getting form submissions:", error);
+      return [];
+    }
+  }
+
+  async getFormSubmission(id: string): Promise<FormSubmission | undefined> {
+    try {
+      const result = await db.select().from(formSubmissions).where(eq(formSubmissions.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting form submission:", error);
+      return undefined;
+    }
+  }
+
+  async createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission> {
+    try {
+      const result = await db.insert(formSubmissions).values(submission).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating form submission:", error);
+      throw error;
+    }
+  }
+
+  // Additional form methods to ensure they're available at runtime
+  async getFormsMethods(): Promise<string[]> {
+    return ['getForms', 'getForm', 'createForm', 'updateForm', 'deleteForm', 'getFormFields', 'createFormField', 'updateFormField', 'deleteFormField', 'getFormSubmissions', 'getFormSubmission', 'createFormSubmission'];
+  }
 }
 
 export const storage = new DbStorage();

@@ -1611,4 +1611,69 @@ export const insertCustomFieldFileUploadSchema = createInsertSchema(customFieldF
 export type CustomFieldFileUpload = typeof customFieldFileUploads.$inferSelect;
 export type InsertCustomFieldFileUpload = z.infer<typeof insertCustomFieldFileUploadSchema>;
 
+// Forms - for drag-and-drop form builder
+export const forms = pgTable("forms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("draft"), // draft, published, archived
+  settings: jsonb("settings").default({}), // form settings like submit text, redirect url, etc.
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Form fields - the actual fields within forms
+export const formFields = pgTable("form_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => forms.id),
+  type: text("type").notNull(), // text, email, phone, dropdown, checkbox, radio, date, number, rating, html, terms_conditions, image, button, custom_field
+  label: text("label"),
+  placeholder: text("placeholder"),
+  required: boolean("required").default(false),
+  options: text("options").array(), // for dropdown/radio fields
+  validation: jsonb("validation").default({}), // validation rules
+  settings: jsonb("settings").default({}), // field-specific settings (rating max, html content, etc.)
+  customFieldId: varchar("custom_field_id").references(() => customFields.id), // reference to existing custom field if selected
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Form submissions - when someone fills out a form
+export const formSubmissions = pgTable("form_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => forms.id),
+  data: jsonb("data").notNull(), // submitted form data
+  submitterEmail: text("submitter_email"),
+  submitterName: text("submitter_name"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFormSchema = createInsertSchema(forms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFormFieldSchema = createInsertSchema(formFields).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFormSubmissionSchema = createInsertSchema(formSubmissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Form = typeof forms.$inferSelect;
+export type InsertForm = z.infer<typeof insertFormSchema>;
+
+export type FormField = typeof formFields.$inferSelect;
+export type InsertFormField = z.infer<typeof insertFormFieldSchema>;
+
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
+
 // Smart Lists schema exports - remove duplicate and use existing one

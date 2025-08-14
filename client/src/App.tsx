@@ -37,6 +37,7 @@ import Products from "@/pages/settings/products";
 import AuditLogs from "@/pages/settings/audit-logs";
 import PermissionAudit from "@/pages/settings/permission-audit";
 import MainLayout from "@/components/layout/main-layout";
+import FormBuilder from "@/pages/form-builder";
 
 function Router() {
   return (
@@ -74,6 +75,8 @@ function Router() {
       <Route path="/settings/tags" component={Tags} />
       <Route path="/settings/products" component={Products} />
       <Route path="/settings/audit-logs" component={AuditLogs} />
+      <Route path="/form-builder" component={FormBuilder} />
+      <Route path="/form-builder/:id" component={({ params }: { params: { id: string } }) => <FormBuilder formId={params.id} />} />
       <Route component={NotFound} />
     </Switch>
   );

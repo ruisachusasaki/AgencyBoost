@@ -22,7 +22,8 @@ import {
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
+  forms, formFields, formSubmissions
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -5225,6 +5226,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting file:', error);
       res.status(500).json({ message: "Failed to delete file" });
+    }
+  });
+
+  // Test route to bypass storage
+  app.get("/api/forms/test", async (req, res) => {
+    try {
+      console.log("Storage type:", storage.constructor.name);
+      console.log("Has getForms?", typeof storage.getForms);
+      console.log("Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(storage)).filter(name => name !== 'constructor'));
+      res.json({ success: true, storageType: storage.constructor.name });
+    } catch (error) {
+      console.error("Test error:", error);
+      res.status(500).json({ message: "Test failed" });
+    }
+  });
+
+  // Form Routes - Direct database operations (workaround for storage class compilation issue)
+  app.get("/api/forms", async (req, res) => {
+    try {
+      const formsResult = await db.select().from(forms).orderBy(desc(forms.createdAt));
+      res.json(formsResult);
+    } catch (error) {
+      console.error("Error fetching forms:", error);
+      res.status(500).json({ message: "Failed to fetch forms" });
+    }
+  });
+
+  app.get("/api/forms/:id", async (req, res) => {
+    try {
+      const formResult = await db.select().from(forms).where(eq(forms.id, req.params.id)).limit(1);
+      if (!formResult[0]) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      
+      const fieldsResult = await db.select()
+        .from(formFields)
+        .where(eq(formFields.formId, req.params.id))
+        .orderBy(formFields.order);
+      
+      res.json({ ...formResult[0], fields: fieldsResult });
+    } catch (error) {
+      console.error("Error fetching form:", error);
+      res.status(500).json({ message: "Failed to fetch form" });
+    }
+  });
+
+  app.post("/api/forms", async (req, res) => {
+    try {
+      const { fields, ...formData } = req.body;
+      
+      // Create form
+      const formResult = await db.insert(forms).values(formData).returning();
+      const form = formResult[0];
+      
+      // Create form fields if provided
+      if (fields && Array.isArray(fields)) {
+        for (let i = 0; i < fields.length; i++) {
+          const field = fields[i];
+          await db.insert(formFields).values({
+            ...field,
+            formId: form.id,
+            order: i
+          });
+        }
+      }
+      
+      res.status(201).json(form);
+    } catch (error) {
+      console.error("Error creating form:", error);
+      res.status(500).json({ message: "Failed to create form" });
+    }
+  });
+
+  app.put("/api/forms/:id", async (req, res) => {
+    try {
+      const { fields, ...formData } = req.body;
+      
+      // Update form
+      const formResult = await db.update(forms)
+        .set({ ...formData, updatedAt: new Date() })
+        .where(eq(forms.id, req.params.id))
+        .returning();
+      
+      if (!formResult[0]) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      
+      const form = formResult[0];
+      
+      // Update form fields if provided
+      if (fields && Array.isArray(fields)) {
+        // Get existing fields to delete ones not included
+        const existingFields = await db.select()
+          .from(formFields)
+          .where(eq(formFields.formId, req.params.id));
+          
+        const fieldIds = fields.map(f => f.id).filter(Boolean);
+        
+        // Delete removed fields
+        for (const existingField of existingFields) {
+          if (!fieldIds.includes(existingField.id)) {
+            await db.delete(formFields).where(eq(formFields.id, existingField.id));
+          }
+        }
+        
+        // Update or create fields
+        for (let i = 0; i < fields.length; i++) {
+          const field = fields[i];
+          if (field.id) {
+            // Update existing field
+            await db.update(formFields)
+              .set({ ...field, order: i })
+              .where(eq(formFields.id, field.id));
+          } else {
+            // Create new field
+            await db.insert(formFields).values({
+              ...field,
+              formId: req.params.id,
+              order: i
+            });
+          }
+        }
+      }
+      
+      res.json(form);
+    } catch (error) {
+      console.error("Error updating form:", error);
+      res.status(500).json({ message: "Failed to update form" });
+    }
+  });
+
+  app.delete("/api/forms/:id", async (req, res) => {
+    try {
+      // Delete form fields first (cascade delete)
+      await db.delete(formFields).where(eq(formFields.formId, req.params.id));
+      
+      // Delete the form
+      const result = await db.delete(forms).where(eq(forms.id, req.params.id)).returning();
+      
+      if (!result[0]) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      
+      res.json({ message: "Form deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting form:", error);
+      res.status(500).json({ message: "Failed to delete form" });
+    }
+  });
+
+  app.post("/api/forms/:formId/submit", async (req, res) => {
+    try {
+      const submissionResult = await db.insert(formSubmissions).values({
+        formId: req.params.formId,
+        data: req.body.data,
+        submitterEmail: req.body.submitterEmail || null,
+        submitterName: req.body.submitterName || null,
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null
+      }).returning();
+      
+      res.status(201).json(submissionResult[0]);
+    } catch (error) {
+      console.error("Error creating form submission:", error);
+      res.status(500).json({ message: "Failed to submit form" });
     }
   });
 
