@@ -68,9 +68,9 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       };
       
       if (formId) {
-        return apiRequest(`/api/forms/${formId}`, "PUT", payload);
+        return apiRequest('PUT', `/api/forms/${formId}`, payload);
       } else {
-        return apiRequest('/api/forms', "POST", payload);
+        return apiRequest('POST', '/api/forms', payload);
       }
     },
     onSuccess: (savedForm: any) => {
