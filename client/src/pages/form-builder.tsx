@@ -415,7 +415,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
               {/* Custom Fields - Grouped by Folder */}
               {customFields.length > 0 && (
                 <div className="mt-4">
-                  <Label className="text-sm font-medium mb-2 block">Custom Fields</Label>
+                  <div className="text-base font-semibold leading-none tracking-tight mb-2">Custom Fields</div>
                   <CustomFieldsAccordion 
                     customFields={customFields} 
                     customFieldFolders={customFieldFolders}
