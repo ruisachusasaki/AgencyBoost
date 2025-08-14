@@ -50,6 +50,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
     queryKey: ['/api/custom-fields'],
   });
 
+  // Fetch custom field folders to get folder names
+  const { data: customFieldFolders = [] } = useQuery<Array<{id: string; name: string}>>({
+    queryKey: ['/api/custom-field-folders'],
+  });
+
   // Load form data when it's available
   useEffect(() => {
     if (formData) {
@@ -365,6 +370,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                   <Label className="text-sm font-medium mb-2 block">Custom Fields</Label>
                   <CustomFieldsAccordion 
                     customFields={customFields} 
+                    customFieldFolders={customFieldFolders}
                     onAddField={handleAddField}
                   />
                 </div>
@@ -440,17 +446,25 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
 // Custom Fields Accordion Component
 interface CustomFieldsAccordionProps {
   customFields: CustomField[];
+  customFieldFolders: Array<{id: string; name: string}>;
   onAddField: (fieldType: string, customFieldId?: string) => void;
 }
 
-function CustomFieldsAccordion({ customFields, onAddField }: CustomFieldsAccordionProps) {
-  // Group custom fields by folder
+function CustomFieldsAccordion({ customFields, customFieldFolders, onAddField }: CustomFieldsAccordionProps) {
+  
+  // Helper function to get folder name by ID
+  const getFolderName = (folderId: string | null) => {
+    if (!folderId) return "No Folder";
+    const folder = customFieldFolders.find(f => f.id === folderId);
+    return folder?.name || "Unknown Folder";
+  };
+  // Group custom fields by folder name
   const groupedFields = customFields.reduce((groups, field) => {
-    const folder = field.folder || "No Folder";
-    if (!groups[folder]) {
-      groups[folder] = [];
+    const folderName = getFolderName(field.folderId);
+    if (!groups[folderName]) {
+      groups[folderName] = [];
     }
-    groups[folder].push(field);
+    groups[folderName].push(field);
     return groups;
   }, {} as Record<string, CustomField[]>);
 
