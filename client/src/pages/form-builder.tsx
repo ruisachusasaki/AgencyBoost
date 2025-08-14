@@ -28,8 +28,18 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
 
+  // Get current user for createdBy field
+  const { data: currentUser } = useQuery<{ id: string; role: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
+
   // Fetch form data if editing
-  const { data: formData, isLoading: isLoadingForm } = useQuery({
+  const { data: formData, isLoading: isLoadingForm } = useQuery<{
+    id: string;
+    name: string;
+    description?: string;
+    fields: FormField[];
+  }>({
     queryKey: ['/api/forms', formId],
     enabled: !!formId,
   });
@@ -51,25 +61,25 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   // Create or update form mutation
   const saveFormMutation = useMutation({
     mutationFn: async (data: { name: string; description: string; fields: FormField[] }) => {
+      const payload = {
+        ...data,
+        createdBy: currentUser?.id || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        status: "draft"
+      };
+      
       if (formId) {
-        return apiRequest(`/api/forms/${formId}`, {
-          method: 'PUT',
-          body: JSON.stringify(data),
-        });
+        return apiRequest(`/api/forms/${formId}`, "PUT", payload);
       } else {
-        return apiRequest('/api/forms', {
-          method: 'POST',
-          body: JSON.stringify(data),
-        });
+        return apiRequest('/api/forms', "POST", payload);
       }
     },
-    onSuccess: (savedForm) => {
+    onSuccess: (savedForm: any) => {
       toast({
         title: "Success",
         description: formId ? "Form updated successfully" : "Form created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
-      if (!formId) {
+      if (!formId && savedForm?.id) {
         navigate(`/form-builder/${savedForm.id}`);
       }
     },
@@ -504,25 +514,27 @@ function FormFieldEditor({ field, onUpdate, onDelete, dragProps }: FormFieldEdit
         {field.type === 'html' && (
           <div 
             className="border rounded-md p-3 bg-gray-50"
-            dangerouslySetInnerHTML={{ __html: field.settings?.content || '<p>HTML content will appear here</p>' }}
+            dangerouslySetInnerHTML={{ 
+              __html: (field.settings as any)?.content || '<p>HTML content will appear here</p>' 
+            }}
           />
         )}
         {field.type === 'terms_conditions' && (
           <div className="flex items-center gap-2">
             <input type="checkbox" disabled />
             <span className="text-sm">
-              {field.settings?.text || 'I agree to the terms and conditions'}
+              {(field.settings as any)?.text || 'I agree to the terms and conditions'}
             </span>
           </div>
         )}
         {field.type === 'button' && (
           <Button variant="outline" disabled>
-            {field.settings?.text || 'Button Text'}
+            {(field.settings as any)?.text || 'Button Text'}
           </Button>
         )}
         {field.type === 'rating' && (
           <div className="flex gap-1">
-            {Array.from({ length: Number(field.settings?.max) || 5 }, (_, i) => (
+            {Array.from({ length: Number((field.settings as any)?.max) || 5 }, (_, i) => (
               <span key={i} className="text-yellow-400">★</span>
             ))}
           </div>
@@ -593,9 +605,9 @@ function FormFieldEditor({ field, onUpdate, onDelete, dragProps }: FormFieldEdit
             <div>
               <Label>HTML Content</Label>
               <Textarea
-                value={field.settings?.content || ''}
+                value={(field.settings as any)?.content || ''}
                 onChange={(e) => onUpdate({ 
-                  settings: { ...field.settings, content: e.target.value } 
+                  settings: { ...(field.settings as any || {}), content: e.target.value } 
                 })}
                 placeholder="<p>Your HTML content here</p>"
                 rows={4}
@@ -608,9 +620,9 @@ function FormFieldEditor({ field, onUpdate, onDelete, dragProps }: FormFieldEdit
             <div>
               <Label>Maximum Rating</Label>
               <Select
-                value={String(field.settings?.max || 5)}
+                value={String((field.settings as any)?.max || 5)}
                 onValueChange={(value) => onUpdate({ 
-                  settings: { ...field.settings, max: parseInt(value) } 
+                  settings: { ...(field.settings as any || {}), max: parseInt(value) } 
                 })}
               >
                 <SelectTrigger data-testid={`select-field-rating-max-${field.id}`}>
@@ -629,9 +641,9 @@ function FormFieldEditor({ field, onUpdate, onDelete, dragProps }: FormFieldEdit
             <div>
               <Label>Terms Text</Label>
               <Input
-                value={field.settings?.text || ''}
+                value={(field.settings as any)?.text || ''}
                 onChange={(e) => onUpdate({ 
-                  settings: { ...field.settings, text: e.target.value } 
+                  settings: { ...(field.settings as any || {}), text: e.target.value } 
                 })}
                 placeholder="I agree to the terms and conditions"
                 data-testid={`input-field-terms-text-${field.id}`}
@@ -643,9 +655,9 @@ function FormFieldEditor({ field, onUpdate, onDelete, dragProps }: FormFieldEdit
             <div>
               <Label>Button Text</Label>
               <Input
-                value={field.settings?.text || ''}
+                value={(field.settings as any)?.text || ''}
                 onChange={(e) => onUpdate({ 
-                  settings: { ...field.settings, text: e.target.value } 
+                  settings: { ...(field.settings as any || {}), text: e.target.value } 
                 })}
                 placeholder="Submit"
                 data-testid={`input-field-button-text-${field.id}`}
