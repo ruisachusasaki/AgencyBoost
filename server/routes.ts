@@ -5372,14 +5372,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (let i = 0; i < fields.length; i++) {
           const field = fields[i];
           if (field.id) {
-            // Update existing field
+            // Update existing field - exclude timestamp fields
+            const { createdAt, ...fieldData } = field;
             await db.update(formFields)
-              .set({ ...field, order: i })
+              .set({ ...fieldData, order: i })
               .where(eq(formFields.id, field.id));
           } else {
-            // Create new field
+            // Create new field - exclude timestamp fields  
+            const { createdAt, id, ...fieldData } = field;
             await db.insert(formFields).values({
-              ...field,
+              ...fieldData,
               formId: req.params.id,
               order: i
             });

@@ -70,7 +70,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       const payload = {
         ...data,
         createdBy: currentUser?.id || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-        status: "draft"
+        status: data.status || "draft"
       };
       
       if (formId) {
