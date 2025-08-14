@@ -964,7 +964,62 @@ export default function Campaigns() {
 
       {/* Forms Tab */}
       {activeTab === "forms" && (
-        <FormsTab forms={Array.isArray(formsData) ? formsData : []} />
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search forms..."
+                  value=""
+                  onChange={() => {}}
+                  className="pl-10 w-80"
+                  data-testid="input-search-forms"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                asChild
+                className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" 
+                size="sm"
+                data-testid="button-create-form"
+              >
+                <a href="/form-builder">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Form
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          {/* Forms Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.isArray(formsData) && formsData.map((form: any) => (
+              <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-green-500" />
+                      <CardTitle className="text-sm font-medium truncate">
+                        {form.name}
+                      </CardTitle>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 truncate">
+                    {form.description || "No description"}
+                  </p>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{form.status}</span>
+                    <span>Draft</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
