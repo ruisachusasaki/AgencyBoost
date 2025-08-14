@@ -83,10 +83,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         navigate(`/form-builder/${savedForm.id}`);
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Form save error:", error);
       toast({
-        title: "Error",
-        description: "Failed to save form",
+        title: "Error", 
+        description: `Failed to save form: ${error.message || "Unknown error"}`,
         variant: "destructive",
       });
     },
@@ -101,6 +102,12 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       });
       return;
     }
+
+    console.log("Saving form with data:", {
+      name: formName,
+      description: formDescription,
+      fields: formFields,
+    });
 
     saveFormMutation.mutate({
       name: formName,
