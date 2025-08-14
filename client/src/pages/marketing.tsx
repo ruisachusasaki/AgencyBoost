@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Megaphone, Mail, FileText } from "lucide-react";
+import { Mail, MessageSquare, FileText } from "lucide-react";
 import Campaigns from "./campaigns";
 import Forms from "./marketing/forms";
 
@@ -10,29 +10,30 @@ export default function Marketing() {
   
   // Determine active tab based on current path
   const getActiveTab = () => {
-    if (location === "/marketing/templates" || location === "/marketing") {
-      return "templates";
+    if (location === "/marketing/sms") {
+      return "sms";
     } else if (location === "/marketing/forms") {
       return "forms";
+    } else if (location === "/marketing" || location === "/marketing/email") {
+      return "email";
     }
-    return "templates"; // default to templates (which is current campaigns page)
+    return "email"; // default to email
   };
 
   const activeTab = getActiveTab();
 
   const tabs = [
     {
-      id: "campaigns",
-      name: "Campaigns",
-      href: "/marketing/campaigns",
-      icon: Megaphone,
-      disabled: true, // Will implement later
-    },
-    {
-      id: "templates",
-      name: "Templates",
+      id: "email",
+      name: "Email",
       href: "/marketing",
       icon: Mail,
+    },
+    {
+      id: "sms",
+      name: "SMS",
+      href: "/marketing/sms",
+      icon: MessageSquare,
     },
     {
       id: "forms",
@@ -46,9 +47,11 @@ export default function Marketing() {
     switch (activeTab) {
       case "forms":
         return <Forms />;
-      case "templates":
+      case "sms":
+        return <Campaigns />; // Will be replaced with SMS component later
+      case "email":
       default:
-        return <Campaigns />;
+        return <Campaigns />; // Will be replaced with Email component later
     }
   };
 
@@ -58,7 +61,7 @@ export default function Marketing() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
           <p className="text-muted-foreground">
-            Manage your marketing campaigns, templates, and forms
+            Manage your email campaigns, SMS messaging, and forms
           </p>
         </div>
       </div>
@@ -69,21 +72,6 @@ export default function Marketing() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            
-            if (tab.disabled) {
-              return (
-                <div
-                  key={tab.id}
-                  className={cn(
-                    "flex items-center space-x-2 border-b-2 border-transparent py-2 px-1 text-sm font-medium text-muted-foreground cursor-not-allowed opacity-50"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{tab.name}</span>
-                  <span className="text-xs">(Coming Soon)</span>
-                </div>
-              );
-            }
             
             return (
               <Link

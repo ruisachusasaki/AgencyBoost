@@ -47,6 +47,8 @@ function Router() {
       <Route path="/clients/:id" component={EnhancedClientDetail} />
       <Route path="/projects" component={Projects} />
       <Route path="/marketing" component={Marketing} />
+      <Route path="/marketing/email" component={Marketing} />
+      <Route path="/marketing/sms" component={Marketing} />
       <Route path="/marketing/forms" component={Marketing} />
       <Route path="/marketing/forms/analytics" component={Marketing} />
       <Route path="/marketing/forms/submissions" component={Marketing} />
