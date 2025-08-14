@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import type { Form, FormField, CustomField } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -179,7 +180,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -208,7 +209,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Form Settings */}
         <div className="lg:col-span-1">
           <Card>
@@ -358,24 +359,14 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                 </Button>
               </div>
 
-              {/* Custom Fields */}
+              {/* Custom Fields - Grouped by Folder */}
               {customFields.length > 0 && (
                 <div className="mt-4">
-                  <Label className="text-sm font-medium">Custom Fields</Label>
-                  <div className="grid grid-cols-1 gap-2 mt-2">
-                    {customFields.map((field) => (
-                      <Button
-                        key={field.id}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAddField('custom_field', field.id)}
-                        className="justify-start text-xs"
-                        data-testid={`button-add-custom-field-${field.id}`}
-                      >
-                        {field.name}
-                      </Button>
-                    ))}
-                  </div>
+                  <Label className="text-sm font-medium mb-2 block">Custom Fields</Label>
+                  <CustomFieldsAccordion 
+                    customFields={customFields} 
+                    onAddField={handleAddField}
+                  />
                 </div>
               )}
             </CardContent>
@@ -383,7 +374,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
 
         {/* Form Builder */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle>Form Preview</CardTitle>
@@ -443,6 +434,65 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Custom Fields Accordion Component
+interface CustomFieldsAccordionProps {
+  customFields: CustomField[];
+  onAddField: (fieldType: string, customFieldId?: string) => void;
+}
+
+function CustomFieldsAccordion({ customFields, onAddField }: CustomFieldsAccordionProps) {
+  // Group custom fields by folder
+  const groupedFields = customFields.reduce((groups, field) => {
+    const folder = field.folder || "No Folder";
+    if (!groups[folder]) {
+      groups[folder] = [];
+    }
+    groups[folder].push(field);
+    return groups;
+  }, {} as Record<string, CustomField[]>);
+
+  // Sort folder names, with "No Folder" last
+  const sortedFolders = Object.keys(groupedFields).sort((a, b) => {
+    if (a === "No Folder") return 1;
+    if (b === "No Folder") return -1;
+    return a.localeCompare(b);
+  });
+
+  return (
+    <Accordion type="multiple" className="w-full">
+      {sortedFolders.map((folderName) => (
+        <AccordionItem key={folderName} value={folderName} className="border-none">
+          <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Folder className="w-4 h-4 text-gray-500" />
+              <span>{folderName}</span>
+              <Badge variant="secondary" className="text-xs">
+                {groupedFields[folderName].length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pt-0 pb-2">
+            <div className="grid grid-cols-1 gap-1">
+              {groupedFields[folderName].map((field) => (
+                <Button
+                  key={field.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAddField('custom_field', field.id)}
+                  className="justify-start text-xs h-8 px-2"
+                  data-testid={`button-add-custom-field-${field.id}`}
+                >
+                  {field.name}
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }
 
