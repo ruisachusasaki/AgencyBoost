@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder, Eye, Edit3 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -20,6 +21,42 @@ interface FormBuilderProps {
   formId?: string;
 }
 
+// Sample data generator for different field types
+const generateSampleData = (field: Partial<FormField>): any => {
+  const fieldId = field.id || `field-${Math.random()}`;
+  
+  switch (field.type) {
+    case 'text':
+      return field.label?.toLowerCase().includes('name') ? 'John Smith' : 
+             field.label?.toLowerCase().includes('company') ? 'Acme Corporation' :
+             field.label?.toLowerCase().includes('title') ? 'Marketing Manager' : 'Sample text';
+    case 'email':
+      return 'john.smith@example.com';
+    case 'phone':
+      return '(555) 123-4567';
+    case 'number':
+      return Math.floor(Math.random() * 100) + 1;
+    case 'date':
+      return new Date().toISOString().split('T')[0];
+    case 'dropdown':
+      const options = (field.settings as any)?.options || ['Option 1', 'Option 2', 'Option 3'];
+      return options[0];
+    case 'checkbox':
+      const checkboxOptions = (field.settings as any)?.options || ['Option 1', 'Option 2'];
+      return [checkboxOptions[0]];
+    case 'radio':
+      const radioOptions = (field.settings as any)?.options || ['Option 1', 'Option 2', 'Option 3'];
+      return radioOptions[0];
+    case 'rating':
+      const maxRating = Number((field.settings as any)?.max) || 5;
+      return Math.floor(Math.random() * maxRating) + 1;
+    case 'terms_conditions':
+      return true;
+    default:
+      return 'Sample data';
+  }
+};
+
 export default function FormBuilder({ formId }: FormBuilderProps) {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
@@ -29,6 +66,27 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   const [formDescription, setFormDescription] = useState("");
   const [formFields, setFormFields] = useState<Partial<FormField>[]>([]);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewData, setPreviewData] = useState<Record<string, any>>({});
+
+  // Generate preview data for all fields
+  const generatePreviewData = () => {
+    const newPreviewData: Record<string, any> = {};
+    formFields.forEach((field) => {
+      if (field.id) {
+        newPreviewData[field.id] = generateSampleData(field);
+      }
+    });
+    setPreviewData(newPreviewData);
+  };
+
+  // Toggle preview mode and generate sample data
+  const togglePreviewMode = () => {
+    if (!isPreviewMode) {
+      generatePreviewData();
+    }
+    setIsPreviewMode(!isPreviewMode);
+  };
 
   // Get current user for createdBy field
   const { data: currentUser } = useQuery<{ id: string; role: string }>({
@@ -453,7 +511,33 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle>Form Preview</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Form Preview</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Edit3 className="w-4 h-4" />
+                    <Label htmlFor="preview-toggle" className="text-sm">Edit</Label>
+                    <Switch
+                      id="preview-toggle"
+                      checked={isPreviewMode}
+                      onCheckedChange={togglePreviewMode}
+                      data-testid="switch-preview-mode"
+                    />
+                    <Label htmlFor="preview-toggle" className="text-sm">Preview</Label>
+                    <Eye className="w-4 h-4" />
+                  </div>
+                  {isPreviewMode && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={generatePreviewData}
+                      data-testid="button-refresh-preview"
+                    >
+                      Refresh Data
+                    </Button>
+                  )}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="min-h-96">
@@ -468,7 +552,37 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       </p>
                     </div>
                   </div>
+                ) : isPreviewMode ? (
+                  // Preview Mode - Show form as end user would see it
+                  <div className="max-w-2xl mx-auto">
+                    <div className="bg-white p-6 rounded-lg border shadow-sm">
+                      <div className="space-y-6">
+                        {formFields.map((field, index) => (
+                          <FormFieldPreview
+                            key={field.id || `field-${index}`}
+                            field={field as FormField}
+                            value={previewData[field.id || `field-${index}`]}
+                            onChange={(value) => {
+                              setPreviewData(prev => ({
+                                ...prev,
+                                [field.id || `field-${index}`]: value
+                              }));
+                            }}
+                          />
+                        ))}
+                        <div className="flex gap-3 pt-4">
+                          <Button className="bg-blue-600 hover:bg-blue-700">
+                            Submit Form
+                          </Button>
+                          <Button variant="outline">
+                            Clear Form
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
+                  // Edit Mode - Show editable fields
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <Droppable droppableId="form-fields">
                       {(provided) => (
@@ -509,6 +623,200 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Form Field Preview Component - Renders fields as end users would see them
+interface FormFieldPreviewProps {
+  field: FormField;
+  value: any;
+  onChange: (value: any) => void;
+}
+
+function FormFieldPreview({ field, value, onChange }: FormFieldPreviewProps) {
+  const renderPreviewField = () => {
+    switch (field.type) {
+      case 'text':
+      case 'email':
+      case 'phone':
+      case 'number':
+        return (
+          <Input
+            type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' ? 'number' : 'text'}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder || `Enter ${field.label?.toLowerCase() || 'value'}`}
+            required={field.required}
+            data-testid={`preview-input-${field.id}`}
+          />
+        );
+      
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            required={field.required}
+            data-testid={`preview-date-${field.id}`}
+          />
+        );
+      
+      case 'dropdown':
+        const options = (field.settings as any)?.options || ['Option 1', 'Option 2', 'Option 3'];
+        return (
+          <Select value={value || ''} onValueChange={onChange}>
+            <SelectTrigger data-testid={`preview-select-${field.id}`}>
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option: string, index: number) => (
+                <SelectItem key={index} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'checkbox':
+        const checkboxOptions = (field.settings as any)?.options || ['Option 1', 'Option 2'];
+        return (
+          <div className="space-y-2">
+            {checkboxOptions.map((option: string, index: number) => {
+              const isChecked = Array.isArray(value) ? value.includes(option) : false;
+              return (
+                <div key={index} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={`${field.id}-${index}`}
+                    checked={isChecked}
+                    onChange={(e) => {
+                      const currentValues = Array.isArray(value) ? value : [];
+                      if (e.target.checked) {
+                        onChange([...currentValues, option]);
+                      } else {
+                        onChange(currentValues.filter((v: string) => v !== option));
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                    data-testid={`preview-checkbox-${field.id}-${index}`}
+                  />
+                  <Label htmlFor={`${field.id}-${index}`} className="text-sm font-normal">
+                    {option}
+                  </Label>
+                </div>
+              );
+            })}
+          </div>
+        );
+      
+      case 'radio':
+        const radioOptions = (field.settings as any)?.options || ['Option 1', 'Option 2', 'Option 3'];
+        return (
+          <div className="space-y-2">
+            {radioOptions.map((option: string, index: number) => (
+              <div key={index} className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id={`${field.id}-${index}`}
+                  name={field.id}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="border-gray-300"
+                  data-testid={`preview-radio-${field.id}-${index}`}
+                />
+                <Label htmlFor={`${field.id}-${index}`} className="text-sm font-normal">
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </div>
+        );
+      
+      case 'rating':
+        const maxRating = Number((field.settings as any)?.max) || 5;
+        return (
+          <div className="flex gap-1">
+            {Array.from({ length: maxRating }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onChange(i + 1)}
+                className={`text-2xl ${i < (value || 0) ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400`}
+                data-testid={`preview-rating-${field.id}-${i + 1}`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+        );
+      
+      case 'html':
+        return (
+          <div 
+            className="p-3 bg-gray-50 rounded border"
+            dangerouslySetInnerHTML={{ 
+              __html: (field.settings as any)?.content || '<p>HTML content will appear here</p>' 
+            }}
+            data-testid={`preview-html-${field.id}`}
+          />
+        );
+      
+      case 'terms_conditions':
+        return (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id={field.id}
+              checked={value || false}
+              onChange={(e) => onChange(e.target.checked)}
+              required={field.required}
+              className="rounded border-gray-300"
+              data-testid={`preview-terms-${field.id}`}
+            />
+            <Label htmlFor={field.id} className="text-sm">
+              {(field.settings as any)?.text || 'I agree to the terms and conditions'}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+          </div>
+        );
+      
+      case 'button':
+        return (
+          <Button 
+            type="button" 
+            className="bg-blue-600 hover:bg-blue-700"
+            data-testid={`preview-button-${field.id}`}
+          >
+            {(field.settings as any)?.text || 'Button Text'}
+          </Button>
+        );
+      
+      default:
+        return (
+          <Input
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder || 'Enter value'}
+            data-testid={`preview-default-${field.id}`}
+          />
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">
+        {field.label || 'Untitled Field'}
+        {field.required && <span className="text-red-500 ml-1">*</span>}
+      </Label>
+      {field.description && (
+        <p className="text-xs text-gray-600">{field.description}</p>
+      )}
+      {renderPreviewField()}
     </div>
   );
 }
