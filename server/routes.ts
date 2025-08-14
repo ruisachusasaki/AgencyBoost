@@ -5311,8 +5311,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fields, ...formData } = req.body;
       
-      console.log("PUT /api/forms - received data:", JSON.stringify({ formData, fields }, null, 2));
-      
       // Update form - only allow specific fields and let DB handle updatedAt
       const allowedFields = ['name', 'description', 'status', 'settings'];
       const cleanFormData: any = {};
@@ -5323,12 +5321,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log("PUT /api/forms - clean data to update:", JSON.stringify(cleanFormData, null, 2));
-      
-      const formResult = await db.update(forms)
-        .set(cleanFormData)
-        .where(eq(forms.id, req.params.id))
-        .returning();
+      // Use sql template to avoid timestamp conflicts
+      const formResult = await db.execute(sql`
+        UPDATE forms 
+        SET 
+          name = ${cleanFormData.name || null},
+          description = ${cleanFormData.description || null},
+          status = ${cleanFormData.status || 'draft'},
+          settings = ${cleanFormData.settings ? JSON.stringify(cleanFormData.settings) : '{}'},
+          updated_at = NOW()
+        WHERE id = ${req.params.id}
+        RETURNING *
+      `);
       
       if (!formResult[0]) {
         return res.status(404).json({ message: "Form not found" });
