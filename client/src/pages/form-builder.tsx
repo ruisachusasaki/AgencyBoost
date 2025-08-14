@@ -412,10 +412,10 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-none">
-        {/* Form Settings */}
-        <div className="lg:col-span-1">
-          <Card>
+      <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* Form Settings - Left Column */}
+        <div className="lg:w-80 xl:w-96 flex-shrink-0">
+          <Card className="h-fit">
             <CardHeader>
               <CardTitle>Form Settings</CardTitle>
             </CardHeader>
@@ -625,8 +625,8 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
           </Card>
         </div>
 
-        {/* Form Builder */}
-        <div className="lg:col-span-2 w-full">
+        {/* Form Builder - Right Column */}
+        <div className="flex-1 min-w-0">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
