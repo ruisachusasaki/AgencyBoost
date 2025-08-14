@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Mail, MessageSquare, FileText } from "lucide-react";
-import Campaigns from "./campaigns";
+import EmailTemplates from "./marketing/email";
+import SmsTemplates from "./marketing/sms";
 import Forms from "./marketing/forms";
 
 export default function Marketing() {
@@ -48,10 +49,10 @@ export default function Marketing() {
       case "forms":
         return <Forms />;
       case "sms":
-        return <Campaigns />; // Will be replaced with SMS component later
+        return <SmsTemplates />;
       case "email":
       default:
-        return <Campaigns />; // Will be replaced with Email component later
+        return <EmailTemplates />;
     }
   };
 
