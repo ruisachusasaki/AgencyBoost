@@ -42,6 +42,8 @@ const defaultFormStyling = {
   },
   inputFields: {
     style: 'box' as const, // 'box' or 'line'
+    fontColor: '#000000',
+    activeTagColor: '#0066cc',
     borderWidth: 1,
     borderColor: '#d1d5db',
     cornerRadius: 6,
@@ -83,6 +85,8 @@ interface FormStyling {
   };
   inputFields: {
     style: 'box' | 'line';
+    fontColor: string;
+    activeTagColor: string;
     borderWidth: number;
     borderColor: string;
     cornerRadius: number;
@@ -403,9 +407,9 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
         {/* Form Settings */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle>Form Settings</CardTitle>
@@ -617,7 +621,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
 
         {/* Form Builder */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 w-full">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -673,7 +677,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="p-6 rounded-lg border shadow-sm mx-auto"
                       style={{
                         backgroundColor: formStyling.form.backgroundColor,
-                        color: formStyling.form.fontColor,
+                        color: formStyling.labels.color,
                         borderWidth: `${formStyling.form.borderWidth}px`,
                         borderColor: formStyling.form.borderColor,
                         borderStyle: formStyling.form.borderStyle,
@@ -777,12 +781,13 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     
     const inputStyle: React.CSSProperties = {
       backgroundColor: styling.form.inputBackgroundColor,
+      color: styling.inputFields.fontColor || '#000000',
       borderWidth: `${styling.inputFields.borderWidth}px`,
       borderColor: styling.inputFields.borderColor,
       borderStyle: 'solid',
       borderRadius: `${styling.inputFields.cornerRadius}px`,
-      padding: `${styling.inputFields.padding.top}px ${styling.inputFields.padding.right}px ${styling.inputFields.padding.bottom}px ${styling.inputFields.padding.left}px`,
-      margin: `${styling.inputFields.margins.top}px ${styling.inputFields.margins.right}px ${styling.inputFields.margins.bottom}px ${styling.inputFields.margins.left}px`,
+      padding: `${styling.inputFields.padding?.top || 8}px ${styling.inputFields.padding?.right || 12}px ${styling.inputFields.padding?.bottom || 8}px ${styling.inputFields.padding?.left || 12}px`,
+      margin: `${styling.inputFields.margins?.top || 0}px ${styling.inputFields.margins?.right || 0}px ${styling.inputFields.margins?.bottom || 0}px ${styling.inputFields.margins?.left || 0}px`,
       fontFamily: styling.placeholders.fontFamily,
       fontSize: `${styling.placeholders.fontSize}px`,
     };
@@ -1037,7 +1042,7 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
     onUpdateStyling({
       ...styling,
       [section]: {
-        ...styling[section],
+        ...(styling[section] as object),
         ...updates
       }
     });
@@ -1211,15 +1216,7 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                     className="h-8 p-1"
                   />
                 </div>
-                <div>
-                  <Label className="text-xs">Label Font Color</Label>
-                  <Input
-                    type="color"
-                    value={styling.labels.color}
-                    onChange={(e) => updateStyling('labels', { color: e.target.value })}
-                    className="h-8 p-1"
-                  />
-                </div>
+
               </div>
 
               <div>
@@ -1305,6 +1302,27 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
               </div>
 
 
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Font Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.inputFields.fontColor || '#000000'}
+                    onChange={(e) => updateStyling('inputFields', { fontColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Active Color</Label>
+                  <Input
+                    type="color"
+                    value={styling.inputFields.activeTagColor || '#0066cc'}
+                    onChange={(e) => updateStyling('inputFields', { activeTagColor: e.target.value })}
+                    className="h-8 p-1"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
