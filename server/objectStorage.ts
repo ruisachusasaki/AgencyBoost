@@ -172,6 +172,42 @@ export class ObjectStorageService {
       throw new Error('Invalid upload URL');
     }
   }
+
+  // Get object entity file
+  async getObjectEntityFile(entityType: string, entityId: string, fileName: string): Promise<File> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const filePath = `${privateObjectDir}/${entityType}/${entityId}/${fileName}`;
+    return this.getFileFromPath(filePath);
+  }
+
+  // Download object
+  async downloadObject(filePath: string, res: Response): Promise<void> {
+    const file = await this.getFileFromPath(filePath);
+    await this.downloadFile(file, res);
+  }
+
+  // Get object entity upload URL
+  async getObjectEntityUploadURL(entityType: string, entityId: string, fileExtension: string): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fileId = randomUUID();
+    const fileName = `${entityType}_${fileId}${fileExtension}`;
+    const fullPath = `${privateObjectDir}/${entityType}/${entityId}/${fileName}`;
+
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+
+    return signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 900, // 15 minutes
+    });
+  }
+
+  // Normalize object entity path
+  normalizeObjectEntityPath(uploadUrl: string, entityType: string, entityId: string): string {
+    const filePath = this.extractFilePathFromUrl(uploadUrl);
+    return filePath;
+  }
 }
 
 function parseObjectPath(path: string): {

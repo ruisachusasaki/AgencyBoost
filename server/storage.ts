@@ -309,20 +309,77 @@ export interface IStorage {
   getFormSubmission(id: string): Promise<FormSubmission | undefined>;
   createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
   
-  // Missing methods that are called in routes.ts
-  getWorkflowsByCategory(category: string): Promise<Workflow[]>;
-  getSocialMediaPostsByClient(clientId: string): Promise<SocialMediaPost[]>;
-  getSocialMediaTemplatesByClient(clientId: string): Promise<SocialMediaTemplate[]>;
-  getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]>;
-  getEnhancedTasksByAssignee(assigneeId: string): Promise<EnhancedTask[]>;
-  getEnhancedTasksByWorkflow(workflowId: string): Promise<EnhancedTask[]>;
-  getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]>;
-  getAutomationActionsByCategory(category: string): Promise<AutomationAction[]>;
+  // Additional methods that are called in routes.ts
   reorderCustomFields(fieldIds: string[]): Promise<void>;
   updateCustomFieldFolder(id: string, folder: Partial<InsertCustomFieldFolder>): Promise<CustomFieldFolder | undefined>;
   deleteCustomFieldFolder(id: string): Promise<boolean>;
   reorderCustomFieldFolders(folderIds: string[]): Promise<void>;
   getProducts(): Promise<Product[]>;
+  getProduct(id: string): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<boolean>;
+  getProductCategories(): Promise<any[]>;
+  createProductCategory(category: any): Promise<any>;
+  updateProductCategory(id: string, category: any): Promise<any>;
+  deleteProductCategory(id: string): Promise<boolean>;
+  
+  // Client-related
+  getClientProducts(clientId: string): Promise<any[]>;
+  createClientProduct(clientProduct: any): Promise<any>;
+  updateClientProduct(id: string, clientProduct: any): Promise<any>;
+  deleteClientProduct(id: string): Promise<boolean>;
+  
+  getClientBundles(clientId: string): Promise<any[]>;
+  createClientBundle(clientBundle: any): Promise<any>;
+  updateClientBundle(id: string, clientBundle: any): Promise<any>;
+  deleteClientBundle(id: string): Promise<boolean>;
+  
+  // Client notes, tasks, appointments
+  getClientNotes(clientId: string): Promise<any[]>;
+  createClientNote(note: any): Promise<any>;
+  updateClientNote(id: string, note: any): Promise<any>;
+  deleteClientNote(id: string): Promise<boolean>;
+  
+  getClientTasks(clientId: string): Promise<any[]>;
+  createClientTask(task: any): Promise<any>;
+  updateClientTask(id: string, task: any): Promise<any>;
+  deleteClientTask(id: string): Promise<boolean>;
+  
+  getClientAppointments(clientId: string): Promise<any[]>;
+  createClientAppointment(appointment: any): Promise<any>;
+  updateClientAppointment(id: string, appointment: any): Promise<any>;
+  deleteClientAppointment(id: string): Promise<boolean>;
+  
+  getClientDocuments(clientId: string): Promise<any[]>;
+  createClientDocument(document: any): Promise<any>;
+  updateClientDocument(id: string, document: any): Promise<any>;
+  deleteClientDocument(id: string): Promise<boolean>;
+  
+  getClientTransactions(clientId: string): Promise<any[]>;
+  createClientTransaction(transaction: any): Promise<any>;
+  updateClientTransaction(id: string, transaction: any): Promise<any>;
+  deleteClientTransaction(id: string): Promise<boolean>;
+
+  // Calendar related
+  getCalendars(): Promise<any[]>;
+  getCalendar(id: string): Promise<any>;
+  createCalendar(calendar: any): Promise<any>;
+  updateCalendar(id: string, calendar: any): Promise<any>;
+  deleteCalendar(id: string): Promise<boolean>;
+  
+  getCalendarStaff(calendarId: string): Promise<any[]>;
+  getCalendarAvailability(calendarId: string): Promise<any[]>;
+  getCalendarAppointments(calendarId?: string): Promise<any[]>;
+  createCalendarAppointment(appointment: any): Promise<any>;
+  updateCalendarAppointment(id: string, appointment: any): Promise<any>;
+  deleteCalendarAppointment(id: string): Promise<boolean>;
+  
+  // Task comments
+  getTaskComments(taskId: string): Promise<any[]>;
+  createTaskComment(comment: any): Promise<any>;
+  updateTaskComment(id: string, comment: any): Promise<any>;
+  deleteTaskComment(id: string): Promise<boolean>;
   getProduct(id: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
@@ -349,7 +406,7 @@ export interface IStorage {
   deleteWorkflowExecution(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
+export class DbStorage implements IStorage {
   private clients: Map<string, Client> = new Map();
   private projects: Map<string, Project> = new Map();
   private campaigns: Map<string, Campaign> = new Map();

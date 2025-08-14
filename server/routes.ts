@@ -1,9 +1,9 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
-import { storage } from "./storage";
+import { storage } from "./storage-simple";
 import { 
   insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, 
   insertTaskSchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
@@ -31,6 +31,18 @@ import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql, inArray } from "drizzle-orm";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
+
+// Extend Express Request to include session
+declare global {
+  namespace Express {
+    interface Request {
+      session?: {
+        userId?: string;
+        user?: any;
+      };
+    }
+  }
+}
 
 // Helper function to create audit logs
 async function createAuditLog(
@@ -766,14 +778,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Also remove from global tasks storage if it exists
-      if (global.tasks) {
-        global.tasks = global.tasks.filter(task => task.id !== req.params.id);
+      if ((global as any).tasks) {
+        (global as any).tasks = (global as any).tasks.filter((task: any) => task.id !== req.params.id);
       }
 
       // Remove from client tasks storage as well
-      if (global.clientTasks) {
-        Object.keys(global.clientTasks).forEach(clientId => {
-          global.clientTasks[clientId] = global.clientTasks[clientId].filter(task => task.id !== req.params.id);
+      if ((global as any).clientTasks) {
+        Object.keys((global as any).clientTasks).forEach(clientId => {
+          (global as any).clientTasks[clientId] = (global as any).clientTasks[clientId].filter((task: any) => task.id !== req.params.id);
         });
       }
 
@@ -3866,28 +3878,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied. Only administrators can delete tasks." });
       }
 
-      if (!global.clientTasks?.[clientId]) {
+      if (!(global as any).clientTasks?.[clientId]) {
         return res.status(404).json({ error: "Client not found or has no tasks" });
       }
 
-      const taskIndex = global.clientTasks[clientId].findIndex(t => t.id === taskId);
+      const taskIndex = (global as any).clientTasks[clientId].findIndex((t: any) => t.id === taskId);
       if (taskIndex === -1) {
         return res.status(404).json({ error: "Task not found" });
       }
 
-      const deletedTask = global.clientTasks[clientId][taskIndex];
+      const deletedTask = (global as any).clientTasks[clientId][taskIndex];
       
       // Remove from client tasks
-      global.clientTasks[clientId].splice(taskIndex, 1);
+      (global as any).clientTasks[clientId].splice(taskIndex, 1);
 
       // Also remove from global tasks storage
-      if (global.tasks) {
-        global.tasks = global.tasks.filter(task => task.id !== taskId);
+      if ((global as any).tasks) {
+        (global as any).tasks = (global as any).tasks.filter((task: any) => task.id !== taskId);
       }
 
       // Also delete associated comments
-      if (global.taskComments?.[taskId]) {
-        delete global.taskComments[taskId];
+      if ((global as any).taskComments?.[taskId]) {
+        delete (global as any).taskComments[taskId];
       }
 
       // Log the deletion
