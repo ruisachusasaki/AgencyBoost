@@ -27,6 +27,9 @@ export default function Campaigns() {
       setActiveTab(tab);
     }
   }, []);
+
+  // Debug: Add console logging for tab switching
+  console.log("Campaigns component render - activeTab:", activeTab);
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | SmsTemplate | null>(null);
@@ -440,6 +443,11 @@ export default function Campaigns() {
             );
           })}
         </nav>
+      </div>
+
+      {/* Debug info */}
+      <div className="text-xs text-gray-400 mb-2">
+        Debug: Active Tab = {activeTab}
       </div>
 
       {/* Email Tab */}
@@ -954,7 +962,12 @@ export default function Campaigns() {
 
       {/* Forms Tab */}
       {activeTab === "forms" && (
-        <FormsTab forms={Array.isArray(formsData) ? formsData : []} />
+        <div data-debug="forms-tab-wrapper">
+          <div className="text-xs text-red-500 mb-2">
+            FORMS TAB DEBUG: Rendering FormsTab component
+          </div>
+          <FormsTab forms={Array.isArray(formsData) ? formsData : []} />
+        </div>
       )}
     </div>
   );
