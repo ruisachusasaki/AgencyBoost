@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import type { Form, FormField, CustomField } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -297,132 +298,153 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
           {/* Field Selector */}
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle>Add Fields</CardTitle>
+              <CardTitle>Form Elements</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                {/* Basic Fields */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('text')}
-                  className="justify-start"
-                  data-testid="button-add-text-field"
-                >
-                  Text
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('email')}
-                  className="justify-start"
-                  data-testid="button-add-email-field"
-                >
-                  Email
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('phone')}
-                  className="justify-start"
-                  data-testid="button-add-phone-field"
-                >
-                  Phone
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('number')}
-                  className="justify-start"
-                  data-testid="button-add-number-field"
-                >
-                  Number
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('date')}
-                  className="justify-start"
-                  data-testid="button-add-date-field"
-                >
-                  Date
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('dropdown')}
-                  className="justify-start"
-                  data-testid="button-add-dropdown-field"
-                >
-                  Dropdown
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('checkbox')}
-                  className="justify-start"
-                  data-testid="button-add-checkbox-field"
-                >
-                  Checkbox
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('radio')}
-                  className="justify-start"
-                  data-testid="button-add-radio-field"
-                >
-                  Radio
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('rating')}
-                  className="justify-start"
-                  data-testid="button-add-rating-field"
-                >
-                  Rating
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('html')}
-                  className="justify-start"
-                  data-testid="button-add-html-field"
-                >
-                  HTML
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('terms_conditions')}
-                  className="justify-start text-xs"
-                  data-testid="button-add-terms-field"
-                >
-                  Terms
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddField('button')}
-                  className="justify-start"
-                  data-testid="button-add-button-field"
-                >
-                  Button
-                </Button>
-              </div>
-
-              {/* Custom Fields - Grouped by Folder */}
-              {customFields.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-base font-semibold leading-none tracking-tight mb-2">Custom Fields</div>
-                  <CustomFieldsAccordion 
-                    customFields={customFields} 
-                    customFieldFolders={customFieldFolders}
-                    onAddField={handleAddField}
-                  />
-                </div>
-              )}
+              <Tabs defaultValue="add-fields" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="add-fields">Add Fields</TabsTrigger>
+                  <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="add-fields" className="mt-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Basic Fields */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('text')}
+                      className="justify-start"
+                      data-testid="button-add-text-field"
+                    >
+                      Text
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('email')}
+                      className="justify-start"
+                      data-testid="button-add-email-field"
+                    >
+                      Email
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('phone')}
+                      className="justify-start"
+                      data-testid="button-add-phone-field"
+                    >
+                      Phone
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('number')}
+                      className="justify-start"
+                      data-testid="button-add-number-field"
+                    >
+                      Number
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('date')}
+                      className="justify-start"
+                      data-testid="button-add-date-field"
+                    >
+                      Date
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('dropdown')}
+                      className="justify-start"
+                      data-testid="button-add-dropdown-field"
+                    >
+                      Dropdown
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('checkbox')}
+                      className="justify-start"
+                      data-testid="button-add-checkbox-field"
+                    >
+                      Checkbox
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('radio')}
+                      className="justify-start"
+                      data-testid="button-add-radio-field"
+                    >
+                      Radio
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('rating')}
+                      className="justify-start"
+                      data-testid="button-add-rating-field"
+                    >
+                      Rating
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('image')}
+                      className="justify-start"
+                      data-testid="button-add-image-field"
+                    >
+                      Image
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('html')}
+                      className="justify-start"
+                      data-testid="button-add-html-field"
+                    >
+                      HTML
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('terms_conditions')}
+                      className="justify-start text-xs"
+                      data-testid="button-add-terms-field"
+                    >
+                      Terms
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddField('button')}
+                      className="justify-start"
+                      data-testid="button-add-button-field"
+                    >
+                      Button
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="custom-fields" className="mt-4">
+                  {customFields.length > 0 ? (
+                    <CustomFieldsAccordion 
+                      customFields={customFields} 
+                      customFieldFolders={customFieldFolders}
+                      onAddField={handleAddField}
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No custom fields available</p>
+                      <p className="text-sm">Create custom fields in Settings to use them here</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
