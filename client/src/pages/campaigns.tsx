@@ -961,6 +961,9 @@ function FormsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Debug: Log component render
+  console.log("FormsTab component rendered");
+
   // Fetch forms
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["/api/forms"],
@@ -1011,7 +1014,12 @@ function FormsTab() {
   }
 
   return (
-    <div>
+    <div data-testid="forms-tab-container">
+      {/* DEBUG: Add debug info */}
+      <div className="text-xs text-gray-400 mb-2">
+        Forms Tab Debug: {Array.isArray(forms) ? forms.length : 0} forms loaded
+      </div>
+      
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
           <div className="relative">
