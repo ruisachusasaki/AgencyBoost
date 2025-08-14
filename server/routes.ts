@@ -5313,7 +5313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("PUT /api/forms - received data:", JSON.stringify({ formData, fields }, null, 2));
       
-      // Update form - only allow specific fields and ensure proper types
+      // Update form - only allow specific fields and let DB handle updatedAt
       const allowedFields = ['name', 'description', 'status', 'settings'];
       const cleanFormData: any = {};
       
@@ -5322,8 +5322,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cleanFormData[field] = formData[field];
         }
       }
-      
-      cleanFormData.updatedAt = new Date();
       
       console.log("PUT /api/forms - clean data to update:", JSON.stringify(cleanFormData, null, 2));
       
