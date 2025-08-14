@@ -41,9 +41,10 @@ export default function Campaigns() {
     queryKey: ["/api/custom-fields"],
   });
 
-  // Fetch forms for forms tab count
-  const { data: forms = [] } = useQuery({
+  // Fetch forms for forms tab count (will be used by FormsTab component)
+  const { data: formsData = [] } = useQuery({
     queryKey: ["/api/forms"],
+    enabled: activeTab === "forms", // Only fetch when forms tab is active
   });
 
   // Define available merge tags based on client schema - dynamic with custom fields
@@ -420,7 +421,7 @@ export default function Campaigns() {
           {[
             { id: "email", name: "Email", icon: Mail, count: emailTemplates.length },
             { id: "sms", name: "SMS", icon: MessageCircle, count: smsTemplates.length },
-            { id: "forms", name: "Forms", icon: FileText, count: Array.isArray(forms) ? forms.length : 0 }
+            { id: "forms", name: "Forms", icon: FileText, count: Array.isArray(formsData) ? formsData.length : 0 }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -953,24 +954,21 @@ export default function Campaigns() {
 
       {/* Forms Tab */}
       {activeTab === "forms" && (
-        <FormsTab />
+        <FormsTab forms={Array.isArray(formsData) ? formsData : []} />
       )}
     </div>
   );
 }
 
 // Forms Tab Component
-function FormsTab() {
+function FormsTab({ forms: parentForms }: { forms: any[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-
-
-  // Fetch forms
-  const { data: forms = [], isLoading } = useQuery({
-    queryKey: ["/api/forms"],
-  });
+  // Use forms data passed from parent component to avoid duplicate queries
+  const forms = parentForms || [];
+  const isLoading = false; // Since we're using parent data, no loading state needed
 
   // Delete form mutation
   const deleteFormMutation = useMutation({
