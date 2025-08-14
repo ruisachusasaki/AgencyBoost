@@ -411,7 +411,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                           className="space-y-4"
                         >
                           {formFields.map((field, index) => (
-                            <Draggable key={field.id} draggableId={field.id} index={index}>
+                            <Draggable key={field.id || `field-${index}`} draggableId={field.id || `field-${index}`} index={index}>
                               {(provided, snapshot) => (
                                 <div
                                   ref={provided.innerRef}
@@ -422,9 +422,9 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                                   data-testid={`form-field-${field.id}`}
                                 >
                                   <FormFieldEditor
-                                    field={field}
-                                    onUpdate={(updates) => handleUpdateField(field.id, updates)}
-                                    onDelete={() => handleDeleteField(field.id)}
+                                    field={field as FormField}
+                                    onUpdate={(updates) => handleUpdateField(field.id || `field-${index}`, updates)}
+                                    onDelete={() => handleDeleteField(field.id || `field-${index}`)}
                                     dragProps={provided.dragHandleProps}
                                   />
                                 </div>
