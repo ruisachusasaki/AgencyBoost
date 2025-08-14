@@ -1,0 +1,110 @@
+Overview:
+Okay, I want to add another Tab to the Marketing Section, called Forms. 
+It should be the THIRD Tab.
+ This module will allow users to create, manage, and customize forms that integrate with our CRM/app. The forms will serve a variety of purposes, such as lead generation (web-to-lead form), customer feedback, and client intake.
+
+When you Click on Marketing > Forms we will have 3 Sub-Pages OF Forms:
+
+1. Builder
+2. Analytics
+3. Submissions
+
+Here’s what should happen on each Sub-Page: 
+BUILDER SUB-PAGE Icon and Page Title  (Right Side) Create Folder Button (ability to organize forms), then Add Form Button
+
+Under this top section there should be a TABLE of all the FOLDERS and FORMS that have been created.  The Table Should have Name, Last Update, Updated By (the user that last updated the form) and then an Edit and Delete icon (ONLY ADMINS should be able to delete forms). There should be pagination (matching the PAGINATION STYLE of the Settings > Custom Fields > Custom Fields Directory)
+
+When you CLICK on the Add Form Button this happens:  1. Takes you to a drag-and-drop builder or form wizard for easy customization.
+2. It would allow you to ADD Fields to your form (field types listed below) NOTE: You should be able to add NEW Fields OR choose from CUSTOM Fields (pulled from the Settings > Custom Fields section)
+	•	Text fields (single-line & multi-line)
+	•	Radio buttons (single-choice)
+	•	Checkboxes (multi-choice)
+	•	Dropdown lists
+	•	File upload (images, PDFs, etc.)
+	•	Date/time picker
+	•	Phone number field
+	•	Email
+	•	Rating fields (stars or numbers)
+	•	HTML
+	•	Terms & Conditions Checkbox
+	•	Image
+	•	Button
+	•	NOTE: If they ADD a NEW Field that DOES NOT EXIST in SETTINGS > CUSTOM FIELDS, this new field should be added there und NO FOLDER.
+3. There should be the ability to SEE/VISUALIZE what your form will look like
+4. When you click/edit a specific field that you’ve added you should be able to do this:
+	•	Add a labels 	•	Add a description
+	•	Create placeholder text
+	•	Mark the field as a Hidden field
+5. All forms should have Responsive Design
+	•	Ensure forms are mobile-friendly using responsive CSS techniques.
+6. You should be able to stylize your form with this functionality:
+	•	Layout Type: (Single Column, Two Column or Single Line)
+	•	Input Style: (Box or Line)
+	•	Form Width: In Pixels
+	•	Filed Spacing: in Pixels
+	•	Label Width: in Pixels
+	•	Set Margins & Padding
+	•	Ability to TOGGLE off / on “Show Labels”
+	•	Set the Background color of the form
+	•	Set the Font Color 
+	•	Input Background Color
+	•	Set the border width, corner radius, border color and border style
+	•	Changes for the INPUT FIELD
+		•	Adjust Font Color
+		•	Active Tag Color
+		•	Border Width
+		•	Border Color
+		•	Corner Radius
+		•	Width of Input Field
+		•	Padding & Margins
+	•	Changes for the LABEL COLOR
+		•	Label Color
+		•	Font Family (google fonts)
+		•	Font Size
+		•	Font Weight
+	•	Changes for the PLACEHOLDER COLOR
+		•	Placeholder Color
+		•	Font Family (google fonts)
+		•	Font Size
+		•	Font Weight
+	•	Have a place where I can put CUSTOM CSS
+7. Form Submission & Actions
+	•	Ability to Save the form
+	•	Set “On Submit” Functions: (Message or Open URL)
+
+ANALYTICS SUB-PAGE
+I should be able to see the analytics of the Forms:
+- Total Views
+- Responses (form completions)
+- Completion Rate (Completions divided by Views)
+- It would be nice if I could view this data historically in a chart and set date ranges for the data.
+- I would like to be able to filter BY form
+
+SUBMISSIONS SUB-PAGE
+
+Objective: Manage, edit, and organize forms and submissions.
+	•	View Submissions
+	•	Implement a dashboard to view all form submissions in a table format.
+		•	Table should include: Submitted Date & Time, Full Name (clickable to their Lead Record OR Client Record), Email
+		•	You should be able to add columns and add ANY field from the Custom Fields
+	•	Provide search and filter functionality for easy navigation through submissions.
+	•	Export Submissions
+	•	Allow export of form data to CSV, Excel, or PDF formats.
+
+OTHER IMPORTANT DETAILS
+
+Security & Compliance
+
+Objective: Ensure data security and compliance.
+	•	SSL Encryption
+	•	Ensure all form submissions use SSL encryption to securely handle sensitive information.
+	•	Data Privacy Compliance
+	•	IP Blocking / Geolocation
+	•	Implement an option to block submissions based on IP or location.
+	•	Audit Logs
+	•	Track and log any form editing or deletion activities for accountability.
+
+FUNCTIONALITY
+
+Objective: Integrate with CRM, email, and other third-party services.
+	•	Push form data directly into the CRM, linking lead data to customer profiles by the UNIQUE identifier (email). If there IS NOT record yet, create one under CLIENTS

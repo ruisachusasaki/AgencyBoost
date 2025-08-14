@@ -9,6 +9,7 @@ import Clients from "@/pages/clients";
 import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 import Projects from "@/pages/projects";
 import Campaigns from "@/pages/campaigns";
+import Marketing from "@/pages/marketing";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
@@ -45,7 +46,10 @@ function Router() {
       <Route path="/clients" component={Clients} />
       <Route path="/clients/:id" component={EnhancedClientDetail} />
       <Route path="/projects" component={Projects} />
-      <Route path="/marketing" component={Campaigns} />
+      <Route path="/marketing" component={Marketing} />
+      <Route path="/marketing/forms" component={Marketing} />
+      <Route path="/marketing/forms/analytics" component={Marketing} />
+      <Route path="/marketing/forms/submissions" component={Marketing} />
       <Route path="/leads" component={Leads} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/tasks/:taskId" component={TaskDetail} />

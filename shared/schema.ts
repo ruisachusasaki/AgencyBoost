@@ -1611,4 +1611,225 @@ export const insertCustomFieldFileUploadSchema = createInsertSchema(customFieldF
 export type CustomFieldFileUpload = typeof customFieldFileUploads.$inferSelect;
 export type InsertCustomFieldFileUpload = z.infer<typeof insertCustomFieldFileUploadSchema>;
 
+// Form Folders for organization
+export const formFolders = pgTable("form_folders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  order: integer("order").default(0),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Forms table for the form builder
+export const forms = pgTable("forms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  folderId: varchar("folder_id").references(() => formFolders.id),
+  
+  // Form configuration
+  fields: jsonb("fields").notNull(), // Array of form field definitions
+  settings: jsonb("settings").notNull().default('{}'), // Form styling and behavior settings
+  
+  // Design settings
+  layoutType: text("layout_type").default("single_column"), // single_column, two_column, single_line
+  inputStyle: text("input_style").default("box"), // box, line
+  formWidth: integer("form_width").default(600), // in pixels
+  fieldSpacing: integer("field_spacing").default(16), // in pixels
+  labelWidth: integer("label_width").default(120), // in pixels
+  showLabels: boolean("show_labels").default(true),
+  
+  // Styling
+  backgroundColor: text("background_color").default("#ffffff"),
+  fontColor: text("font_color").default("#000000"),
+  inputBackgroundColor: text("input_background_color").default("#ffffff"),
+  borderWidth: integer("border_width").default(1),
+  borderColor: text("border_color").default("#d1d5db"),
+  borderStyle: text("border_style").default("solid"), // solid, dashed, dotted
+  cornerRadius: integer("corner_radius").default(4),
+  
+  // Input field styling
+  inputFontColor: text("input_font_color").default("#000000"),
+  activeTagColor: text("active_tag_color").default("#3b82f6"),
+  inputBorderWidth: integer("input_border_width").default(1),
+  inputBorderColor: text("input_border_color").default("#d1d5db"),
+  inputCornerRadius: integer("input_corner_radius").default(4),
+  inputWidth: text("input_width").default("100%"),
+  inputPadding: text("input_padding").default("8px 12px"),
+  inputMargins: text("input_margins").default("0"),
+  
+  // Label styling
+  labelColor: text("label_color").default("#374151"),
+  labelFontFamily: text("label_font_family").default("Inter"),
+  labelFontSize: integer("label_font_size").default(14),
+  labelFontWeight: text("label_font_weight").default("500"),
+  
+  // Placeholder styling
+  placeholderColor: text("placeholder_color").default("#9ca3af"),
+  placeholderFontFamily: text("placeholder_font_family").default("Inter"),
+  placeholderFontSize: integer("placeholder_font_size").default(14),
+  placeholderFontWeight: text("placeholder_font_weight").default("400"),
+  
+  // Custom CSS
+  customCss: text("custom_css"),
+  
+  // Submission settings
+  submitAction: text("submit_action").default("message"), // message, redirect_url
+  submitMessage: text("submit_message").default("Thank you for your submission!"),
+  submitRedirectUrl: text("submit_redirect_url"),
+  
+  // Status and metadata
+  status: text("status").default("draft"), // draft, published, archived
+  isPublic: boolean("is_public").default(true),
+  
+  // Analytics
+  viewCount: integer("view_count").default(0),
+  submissionCount: integer("submission_count").default(0),
+  
+  // Security settings
+  enableCaptcha: boolean("enable_captcha").default(false),
+  enableIpBlocking: boolean("enable_ip_blocking").default(false),
+  blockedIps: text("blocked_ips").array(),
+  allowedCountries: text("allowed_countries").array(),
+  
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Form Submissions
+export const formSubmissions = pgTable("form_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => forms.id),
+  
+  // Submission data
+  data: jsonb("data").notNull(), // All form field values
+  
+  // Contact information (extracted from submission)
+  email: text("email"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  fullName: text("full_name"),
+  phone: text("phone"),
+  
+  // Linked records
+  clientId: varchar("client_id").references(() => clients.id), // Linked to existing client if found
+  leadId: varchar("lead_id").references(() => leads.id), // Linked to lead if created
+  
+  // Tracking information
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  utmContent: text("utm_content"),
+  utmTerm: text("utm_term"),
+  
+  // Geolocation (if enabled)
+  country: text("country"),
+  region: text("region"),
+  city: text("city"),
+  timezone: text("timezone"),
+  
+  // Processing status
+  isProcessed: boolean("is_processed").default(false),
+  processingNotes: text("processing_notes"),
+  
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+// Form Views for analytics
+export const formViews = pgTable("form_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => forms.id),
+  
+  // Tracking information
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  
+  // Session tracking
+  sessionId: text("session_id"),
+  
+  // Analytics
+  viewDuration: integer("view_duration"), // in seconds
+  exitedAt: text("exited_at"), // which field they exited at
+  
+  viewedAt: timestamp("viewed_at").defaultNow(),
+});
+
+// Form Analytics Daily Aggregates
+export const formAnalytics = pgTable("form_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => forms.id),
+  date: date("date").notNull(),
+  
+  // Daily metrics
+  views: integer("views").default(0),
+  submissions: integer("submissions").default(0),
+  uniqueViews: integer("unique_views").default(0),
+  completionRate: decimal("completion_rate", { precision: 5, scale: 2 }).default("0"),
+  averageCompletionTime: integer("average_completion_time").default(0), // in seconds
+  
+  // Traffic sources
+  directTraffic: integer("direct_traffic").default(0),
+  searchTraffic: integer("search_traffic").default(0),
+  socialTraffic: integer("social_traffic").default(0),
+  referralTraffic: integer("referral_traffic").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for Forms system
+export const insertFormFolderSchema = createInsertSchema(formFolders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFormSchema = createInsertSchema(forms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+  submissionCount: true,
+});
+
+export const insertFormSubmissionSchema = createInsertSchema(formSubmissions).omit({
+  id: true,
+  submittedAt: true,
+  processedAt: true,
+});
+
+export const insertFormViewSchema = createInsertSchema(formViews).omit({
+  id: true,
+  viewedAt: true,
+});
+
+export const insertFormAnalyticsSchema = createInsertSchema(formAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Export types for Forms system
+export type FormFolder = typeof formFolders.$inferSelect;
+export type InsertFormFolder = z.infer<typeof insertFormFolderSchema>;
+
+export type Form = typeof forms.$inferSelect;
+export type InsertForm = z.infer<typeof insertFormSchema>;
+
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
+
+export type FormView = typeof formViews.$inferSelect;
+export type InsertFormView = z.infer<typeof insertFormViewSchema>;
+
+export type FormAnalytics = typeof formAnalytics.$inferSelect;
+export type InsertFormAnalytics = z.infer<typeof insertFormAnalyticsSchema>;
+
 // Smart Lists schema exports - remove duplicate and use existing one
