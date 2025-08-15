@@ -1,6 +1,6 @@
 import { 
   type Client, type InsertClient, clients,
-  type Project, type InsertProject,
+  type Project, type InsertProject, projects,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
   type Task, type InsertTask,
@@ -2579,12 +2579,39 @@ export class DbStorage implements IStorage {
   private memStorage = new MemStorage();
 
   // Projects
-  async getProjects(): Promise<Project[]> { return this.memStorage.getProjects(); }
-  async getProject(id: string): Promise<Project | undefined> { return this.memStorage.getProject(id); }
-  async getProjectsByClient(clientId: string): Promise<Project[]> { return this.memStorage.getProjectsByClient(clientId); }
-  async createProject(project: InsertProject): Promise<Project> { return this.memStorage.createProject(project); }
-  async updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined> { return this.memStorage.updateProject(id, project); }
-  async deleteProject(id: string): Promise<boolean> { return this.memStorage.deleteProject(id); }
+  async getProjects(): Promise<Project[]> {
+    const result = await this.db.select().from(projects);
+    return result;
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+    const result = await this.db.select().from(projects).where(eq(projects.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getProjectsByClient(clientId: string): Promise<Project[]> {
+    const result = await this.db.select().from(projects).where(eq(projects.clientId, clientId));
+    return result;
+  }
+
+  async createProject(project: InsertProject): Promise<Project> {
+    const result = await this.db.insert(projects).values({
+      ...project,
+      id: sql`gen_random_uuid()`,
+      createdAt: new Date(),
+    }).returning();
+    return result[0];
+  }
+
+  async updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined> {
+    const result = await this.db.update(projects).set(project).where(eq(projects.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    const result = await this.db.delete(projects).where(eq(projects.id, id)).returning();
+    return result.length > 0;
+  }
 
   // Campaigns  
   async getCampaigns(): Promise<Campaign[]> { return this.memStorage.getCampaigns(); }

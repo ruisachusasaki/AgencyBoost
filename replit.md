@@ -57,6 +57,13 @@ Bundle architecture preference: Collection-based bundles.
 
 ## Recent Changes
 
+### Projects Migration Completion (August 2025)
+- Successfully migrated Projects from memory storage to PostgreSQL database
+- All project CRUD operations now use database persistence instead of temporary memory storage
+- Projects survive server restarts and maintain data integrity
+- Foreign key relationships with clients table properly enforced
+- API routes fully functional with database storage backend
+
 ### Template Folder System Completion (August 2025)
 - Fixed critical template folder sync issues by converting all operations from memory to PostgreSQL database storage
 - Resolved SMS template creation functionality with proper user ID validation and database persistence
@@ -69,7 +76,8 @@ Bundle architecture preference: Collection-based bundles.
 ### Memory Storage to Database Migration (August 2025)
 - Fixed tags storage issue by migrating from memory storage to PostgreSQL database
 - Migrated SMS templates from memory storage to database storage for data persistence
-- Tags and SMS templates now persist across server restarts and maintain data integrity
+- Migrated Projects from memory storage to database storage for data persistence
+- Tags, SMS templates, and projects now persist across server restarts and maintain data integrity
 - Resolved delete tag functionality error by fixing frontend JSON parsing for 204 responses
 - Fixed SMS folder "Edit Folder" functionality - added missing onClick handler and complete modal dialog system
 
