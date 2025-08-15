@@ -213,13 +213,17 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       setFormFields(formData.fields || []);
       
       // Load form styling from settings if available
+      console.log("Loading form data:", formData);
+      console.log("Form settings:", formData.settings);
       if (formData.settings?.styling) {
         const loadedStyling = {
           ...defaultFormStyling,
           ...formData.settings.styling
         };
+        console.log("Loaded styling:", loadedStyling);
         setFormStyling(loadedStyling);
       } else {
+        console.log("No styling found, using default");
         setFormStyling(defaultFormStyling);
       }
     }
@@ -281,6 +285,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       name: formName,
       description: formDescription,
       fields: formFields,
+      styling: formStyling,
     });
 
     saveFormMutation.mutate({
