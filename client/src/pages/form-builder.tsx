@@ -161,6 +161,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   const [previewData, setPreviewData] = useState<Record<string, any>>({});
   const [formStyling, setFormStyling] = useState<FormStyling>(defaultFormStyling);
   const [activeStyleTab, setActiveStyleTab] = useState("layout");
+  
+  // On Submit configuration
+  const [onSubmitAction, setOnSubmitAction] = useState<"url" | "message">("message");
+  const [redirectUrl, setRedirectUrl] = useState("");
+  const [successMessage, setSuccessMessage] = useState("Thank you for taking the time to complete this form.");
 
   // Generate preview data for all fields
   const generatePreviewData = () => {
@@ -217,6 +222,13 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       setFormDescription(formData.description || "");
       setFormFields(formData.fields || []);
       
+      // Load onSubmit settings from form settings
+      if (formData.settings?.onSubmit) {
+        setOnSubmitAction(formData.settings.onSubmit.action || "message");
+        setRedirectUrl(formData.settings.onSubmit.redirectUrl || "");
+        setSuccessMessage(formData.settings.onSubmit.successMessage || "Thank you for taking the time to complete this form.");
+      }
+      
       // Load form styling from settings if available
       console.log("Loading form data:", formData);
       console.log("Form settings:", formData.settings);
@@ -256,6 +268,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         status: data.status || "draft",
         settings: {
           styling: formStyling,
+          onSubmit: {
+            action: onSubmitAction,
+            redirectUrl: redirectUrl,
+            successMessage: successMessage
+          },
           ...(formData?.settings || {})
         }
       };
@@ -462,6 +479,48 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                   rows={3}
                   data-testid="textarea-form-description"
                 />
+              </div>
+              
+              {/* On Submit Configuration */}
+              <div>
+                <Label>On Submit</Label>
+                <Select value={onSubmitAction} onValueChange={(value: "url" | "message") => setOnSubmitAction(value)}>
+                  <SelectTrigger data-testid="select-on-submit-action">
+                    <SelectValue placeholder="Choose what happens after form submission" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="message">Show Message</SelectItem>
+                    <SelectItem value="url">Redirect to URL</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {onSubmitAction === "url" && (
+                  <div className="mt-2">
+                    <Label htmlFor="redirect-url" className="text-sm">Redirect URL</Label>
+                    <Input
+                      id="redirect-url"
+                      type="url"
+                      value={redirectUrl}
+                      onChange={(e) => setRedirectUrl(e.target.value)}
+                      placeholder="https://example.com/thank-you"
+                      data-testid="input-redirect-url"
+                    />
+                  </div>
+                )}
+                
+                {onSubmitAction === "message" && (
+                  <div className="mt-2">
+                    <Label htmlFor="success-message" className="text-sm">Success Message</Label>
+                    <Textarea
+                      id="success-message"
+                      value={successMessage}
+                      onChange={(e) => setSuccessMessage(e.target.value)}
+                      placeholder="Enter the message to display after form submission"
+                      rows={2}
+                      data-testid="textarea-success-message"
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Status</Label>
