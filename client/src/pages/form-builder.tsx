@@ -232,7 +232,8 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         
         // Force a re-render after setting styling
         setTimeout(() => {
-          console.log("Current formStyling state:", formStyling);
+          console.log("Current formStyling state after timeout:", formStyling);
+          console.log("formStyling.inputFields after timeout:", formStyling?.inputFields);
         }, 100);
       } else {
         console.log("No styling found, using default");
@@ -715,20 +716,23 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                         }
                         style={{ gap: `${formStyling.layout.fieldSpacing}px` }}
                       >
-                        {formFields.map((field, index) => (
-                          <FormFieldPreview
-                            key={field.id || `field-${index}`}
-                            field={field as FormField}
-                            value={previewData[field.id || `field-${index}`]}
-                            styling={formStyling}
-                            onChange={(value) => {
-                              setPreviewData(prev => ({
-                                ...prev,
-                                [field.id || `field-${index}`]: value
-                              }));
-                            }}
-                          />
-                        ))}
+                        {formFields.map((field, index) => {
+                          console.log(`Rendering FormFieldPreview ${index} with styling:`, formStyling);
+                          return (
+                            <FormFieldPreview
+                              key={field.id || `field-${index}`}
+                              field={field as FormField}
+                              value={previewData[field.id || `field-${index}`]}
+                              styling={formStyling}
+                              onChange={(value) => {
+                                setPreviewData(prev => ({
+                                  ...prev,
+                                  [field.id || `field-${index}`]: value
+                                }));
+                              }}
+                            />
+                          );
+                        })}
                         <div className="flex gap-3 pt-4">
                           <Button className="bg-blue-600 hover:bg-blue-700">
                             Submit Form

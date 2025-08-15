@@ -1,0 +1,77 @@
+Error: Invalid frameId for foreground frameId: 0
+    at ee (background-redux-new.js:2:1655424)
+    at f (background-redux-new.js:2:1662387)
+    at background-redux-new.js:2:1663388
+ee @ background-redux-new.js:2Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id LastPass https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id separator https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Add Item https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Add Password https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Add Address https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Add Payment Card https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Add other item https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Save all entered data https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Generate Secure Password https://chat.google.com/u/0/frame?shell=6&pt=6&origin=https%3A%2F%2Fmail.google.com&oi=1Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530484271.Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ee (background-redux-new.js:2:1655424)
+    at f (background-redux-new.js:2:1662387)
+    at background-redux-new.js:2:1663388
+ee @ background-redux-new.js:2Understand this error
+18Unchecked runtime.lastError: The page keeping the extension port is moved into back/forward cache, so the message channel is closed.Understand this error
+4background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ee (background-redux-new.js:2:1655424)
+    at f (background-redux-new.js:2:1662387)
+    at background-redux-new.js:2:1663388
+ee @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530484382.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530484423.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530484426.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530484251.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530484536.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 1530483025.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ee (background-redux-new.js:2:1655424)
+    at f (background-redux-new.js:2:1662387)
+    at background-redux-new.js:2:1663388
+ee @ background-redux-new.js:2Understand this error
+chunk-RPCDYKBN.js?v=292e0519:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+17251e24-7503-433f-b93c-3af4be9ff95e:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+17251e24-7503-433f-b93c-3af4be9ff95e:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+form-builder.tsx:216 Loading form data: Object
+form-builder.tsx:217 Form settings: Object
+form-builder.tsx:228 Loaded styling: Object
+form-builder.tsx:229 Input fields styling: Object
+form-builder.tsx:230 Setting form styling state to: Object
+chunk-RPCDYKBN.js?v=292e0519:521 Warning: Connect(Droppable): Support for defaultProps will be removed from memo components in a future major release. Use JavaScript default parameters instead.
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=292e0519:1738:20)
+    at App (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=292e0519:8281:25)
+    at ErrorBoundary2 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=292e0519:2778:35)
+    at DragDropContext (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=292e0519:8401:19)
+    at div
+    at div
+    at _c9 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at div
+    at FormBuilder (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/pages/form-builder.tsx:109:39)
+    at component (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/App.tsx?v=hOOIJZSuT8Y9unJFVd0MA:229:161)
+    at Route (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=292e0519:191:16)
+    at Switch (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=292e0519:247:17)
+    at Router
+    at div
+    at main
+    at div
+    at MainLayout (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/layout/main-layout.tsx:22:38)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=292e0519:38:15)
+    at TooltipProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=292e0519:62:5)
+    at QueryClientProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=292e0519:2805:3)
+    at App
