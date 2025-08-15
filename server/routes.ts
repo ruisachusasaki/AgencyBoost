@@ -1997,7 +1997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(userRoles).values({
           userId: req.params.id,
           roleId: cleanedBody.roleId,
-          assignedBy: "system" // TODO: Replace with current user ID
+          assignedBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb" // Using Brian (Admin) as default
         });
       }
       
