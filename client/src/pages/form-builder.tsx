@@ -783,28 +783,32 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const getFieldStyles = () => {
     if (!styling) return {};
     
+    const inputFields = styling.inputFields || {};
+    const form = styling.form || {};
+    const placeholders = styling.placeholders || {};
+    
     const inputStyle: React.CSSProperties = {
-      backgroundColor: styling.form.inputBackgroundColor,
-      color: styling.inputFields.fontColor || '#000000',
-      borderWidth: `${styling.inputFields.borderWidth}px`,
-      borderColor: styling.inputFields.borderColor,
+      backgroundColor: form.inputBackgroundColor || '#ffffff',
+      color: inputFields.fontColor || '#000000',
+      borderWidth: `${inputFields.borderWidth || 1}px`,
+      borderColor: inputFields.borderColor || '#d1d5db',
       borderStyle: 'solid',
-      borderRadius: `${styling.inputFields.cornerRadius}px`,
-      padding: `${styling.inputFields.padding?.top || 8}px ${styling.inputFields.padding?.right || 12}px ${styling.inputFields.padding?.bottom || 8}px ${styling.inputFields.padding?.left || 12}px`,
-      margin: `${styling.inputFields.margins?.top || 0}px ${styling.inputFields.margins?.right || 0}px ${styling.inputFields.margins?.bottom || 0}px ${styling.inputFields.margins?.left || 0}px`,
-      fontFamily: styling.placeholders.fontFamily,
-      fontSize: `${styling.placeholders.fontSize}px`,
+      borderRadius: `${inputFields.cornerRadius || 6}px`,
+      padding: `${inputFields.padding?.top || 8}px ${inputFields.padding?.right || 12}px ${inputFields.padding?.bottom || 8}px ${inputFields.padding?.left || 12}px`,
+      margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px`,
+      fontFamily: placeholders.fontFamily || 'Inter, sans-serif',
+      fontSize: `${placeholders.fontSize || 14}px`,
     };
 
     // Apply line style for inputs - only bottom border
-    if (styling.inputFields.style === 'line') {
+    if (inputFields.style === 'line') {
       inputStyle.borderTop = 'none';
       inputStyle.borderLeft = 'none';
       inputStyle.borderRight = 'none';
       inputStyle.borderRadius = '0';
       inputStyle.backgroundColor = 'transparent';
-      inputStyle.borderBottomWidth = `${styling.inputFields.borderWidth}px`;
-      inputStyle.borderBottomColor = styling.inputFields.borderColor;
+      inputStyle.borderBottomWidth = `${inputFields.borderWidth || 1}px`;
+      inputStyle.borderBottomColor = inputFields.borderColor || '#d1d5db';
       inputStyle.borderBottomStyle = 'solid';
     }
 
@@ -814,12 +818,15 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const getLabelStyles = () => {
     if (!styling) return {};
     
+    const labels = styling.labels || {};
+    const layout = styling.layout || {};
+    
     return {
-      color: styling.labels.color,
-      fontFamily: styling.labels.fontFamily,
-      fontSize: `${styling.labels.fontSize}px`,
-      fontWeight: styling.labels.fontWeight,
-      display: styling.layout.showLabels ? 'block' : 'none'
+      color: labels.color || '#374151',
+      fontFamily: labels.fontFamily || 'Inter, sans-serif',
+      fontSize: `${labels.fontSize || 14}px`,
+      fontWeight: labels.fontWeight || 500,
+      display: layout.showLabels !== false ? 'block' : 'none'
     };
   };
 
@@ -827,11 +834,13 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const getPlaceholderCSS = () => {
     if (!styling) return '';
     
+    const placeholders = styling.placeholders || {};
+    
     return `
       .form-field-input::placeholder {
-        color: ${styling.placeholders.color} !important;
-        font-family: ${styling.placeholders.fontFamily} !important;
-        font-size: ${styling.placeholders.fontSize}px !important;
+        color: ${placeholders.color || '#9ca3af'} !important;
+        font-family: ${placeholders.fontFamily || 'Inter, sans-serif'} !important;
+        font-size: ${placeholders.fontSize || 14}px !important;
       }
     `;
   };
@@ -1044,10 +1053,11 @@ interface FormStylingPanelProps {
 
 const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) => {
   const updateStyling = (section: keyof FormStyling, updates: any) => {
+    const currentSection = styling[section];
     const newStyling = {
       ...styling,
       [section]: {
-        ...(styling[section] as object),
+        ...(typeof currentSection === 'object' ? currentSection : {}),
         ...updates
       }
     };
@@ -1314,18 +1324,20 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                   <Label className="text-xs">Font Color</Label>
                   <Input
                     type="color"
-                    value={styling.inputFields.fontColor || '#000000'}
+                    value={styling.inputFields?.fontColor || '#000000'}
                     onChange={(e) => updateStyling('inputFields', { fontColor: e.target.value })}
                     className="h-8 p-1"
+                    data-testid="input-font-color"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Active Color</Label>
                   <Input
                     type="color"
-                    value={styling.inputFields.activeTagColor || '#0066cc'}
+                    value={styling.inputFields?.activeTagColor || '#0066cc'}
                     onChange={(e) => updateStyling('inputFields', { activeTagColor: e.target.value })}
                     className="h-8 p-1"
+                    data-testid="input-active-color"
                   />
                 </div>
               </div>
