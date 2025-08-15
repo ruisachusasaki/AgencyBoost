@@ -1070,6 +1070,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/template-folders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if any templates are using this folder
+      const emailTemplatesInFolder = await storage.getEmailTemplatesByFolder(id);
+      const smsTemplatesInFolder = await storage.getSmsTemplatesByFolder(id);
+      
+      const totalTemplates = emailTemplatesInFolder.length + smsTemplatesInFolder.length;
+      
+      if (totalTemplates > 0) {
+        return res.status(400).json({
+          message: `Cannot delete folder that contains ${totalTemplates} template(s). Please move or delete the templates first.`
+        });
+      }
+      
+      const deleted = await storage.deleteTemplateFolder(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Template folder not found" });
+      }
+
+      res.json({ message: "Template folder deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting template folder:', error);
+      res.status(500).json({ message: "Failed to delete template folder" });
+    }
+  });
+
   // Email Template routes
   app.get("/api/email-templates", async (req, res) => {
     try {
