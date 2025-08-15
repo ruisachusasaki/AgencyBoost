@@ -23,9 +23,10 @@ export default function Projects() {
     queryKey: ["/api/projects"],
   });
 
-  const { data: clients = [] } = useQuery<Client[]>({
+  const { data: clientsData } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
+  const clients = clientsData?.clients || [];
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: string) => {

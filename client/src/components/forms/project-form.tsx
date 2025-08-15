@@ -19,9 +19,10 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: clients = [] } = useQuery<Client[]>({
+  const { data: clientsData } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
+  const clients = clientsData?.clients || [];
 
   const form = useForm<InsertProject>({
     resolver: zodResolver(insertProjectSchema),
