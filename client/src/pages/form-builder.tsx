@@ -161,6 +161,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
   const [previewData, setPreviewData] = useState<Record<string, any>>({});
   const [formStyling, setFormStyling] = useState<FormStyling>(defaultFormStyling);
   const [activeStyleTab, setActiveStyleTab] = useState("layout");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   
   // On Submit configuration
   const [onSubmitAction, setOnSubmitAction] = useState<"url" | "message">("message");
@@ -198,6 +199,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
     name: string;
     description?: string;
     status?: string;
+    folderId?: string;
     settings?: { styling?: FormStyling; [key: string]: any };
     fields: FormField[];
   }>({
@@ -215,12 +217,18 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
     queryKey: ['/api/custom-field-folders'],
   });
 
+  // Fetch form folders for folder selection
+  const { data: formFolders = [] } = useQuery<Array<{id: string; name: string}>>({
+    queryKey: ['/api/form-folders'],
+  });
+
   // Load form data when it's available
   useEffect(() => {
     if (formData) {
       setFormName(formData.name || "");
       setFormDescription(formData.description || "");
       setFormFields(formData.fields || []);
+      setSelectedFolderId(formData.folderId || null);
       
       // Load onSubmit settings from form settings
       if (formData.settings?.onSubmit) {
@@ -266,6 +274,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         ...data,
         createdBy: currentUser?.id || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
         status: data.status || "draft",
+        folderId: selectedFolderId,
         settings: {
           ...(formData?.settings || {}),
           styling: formStyling,
@@ -485,6 +494,23 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                   rows={3}
                   data-testid="textarea-form-description"
                 />
+              </div>
+              
+              <div>
+                <Label htmlFor="form-folder">Folder</Label>
+                <Select value={selectedFolderId || ""} onValueChange={(value) => setSelectedFolderId(value || null)}>
+                  <SelectTrigger data-testid="select-form-folder">
+                    <SelectValue placeholder="Select a folder (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No folder</SelectItem>
+                    {formFolders.map((folder) => (
+                      <SelectItem key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               {/* On Submit Configuration */}

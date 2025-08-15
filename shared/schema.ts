@@ -1611,12 +1611,24 @@ export const insertCustomFieldFileUploadSchema = createInsertSchema(customFieldF
 export type CustomFieldFileUpload = typeof customFieldFileUploads.$inferSelect;
 export type InsertCustomFieldFileUpload = z.infer<typeof insertCustomFieldFileUploadSchema>;
 
+// Form folders - for organizing forms
+export const formFolders = pgTable("form_folders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  order: integer("order").default(0),
+  isDefault: boolean("is_default").default(false),
+  canReorder: boolean("can_reorder").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Forms - for drag-and-drop form builder
 export const forms = pgTable("forms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
   status: text("status").notNull().default("draft"), // draft, published, archived
+  folderId: varchar("folder_id").references(() => formFolders.id),
   settings: jsonb("settings").default({}), // form settings like submit text, redirect url, etc.
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1666,6 +1678,14 @@ export const insertFormSubmissionSchema = createInsertSchema(formSubmissions).om
   id: true,
   createdAt: true,
 });
+
+export const insertFormFolderSchema = createInsertSchema(formFolders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type FormFolder = typeof formFolders.$inferSelect;
+export type InsertFormFolder = z.infer<typeof insertFormFolderSchema>;
 
 export type Form = typeof forms.$inferSelect;
 export type InsertForm = z.infer<typeof insertFormSchema>;

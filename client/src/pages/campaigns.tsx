@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, MoreHorizontal, Copy, Tag, Megaphone, FileText } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,7 @@ export default function Campaigns() {
     }
   }, []); // Remove dependency to prevent re-running
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
+  const [isCreateFormFolderDialogOpen, setIsCreateFormFolderDialogOpen] = useState(false);
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | SmsTemplate | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -52,6 +53,12 @@ export default function Campaigns() {
   // Fetch forms for forms tab count (will be used by FormsTab component)
   const { data: formsData = [] } = useQuery({
     queryKey: ["/api/forms"],
+    enabled: activeTab === "forms", // Only fetch when forms tab is active
+  });
+
+  // Fetch form folders data
+  const { data: formFolders = [] } = useQuery<Array<{id: string; name: string; description?: string; order: number}>>({
+    queryKey: ['/api/form-folders'],
     enabled: activeTab === "forms", // Only fetch when forms tab is active
   });
 
@@ -154,6 +161,25 @@ export default function Campaigns() {
     }
   });
 
+  // Create form folder mutation
+  const createFormFolderMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/form-folders", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/form-folders"] });
+      toast({ title: "Success", description: "Form folder created successfully" });
+      setIsCreateFormFolderDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to create form folder",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create email template mutation
   const createEmailTemplateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -240,6 +266,19 @@ export default function Campaigns() {
       description: formData.get("description") as string || undefined,
     };
     createFolderMutation.mutate(data);
+  };
+
+  const handleCreateFormFolder = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    
+    createFormFolderMutation.mutate({
+      name,
+      description,
+      order: formFolders.length, // Add to end
+    });
   };
 
   const handleCreateEmailTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -939,6 +978,38 @@ export default function Campaigns() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Dialog open={isCreateFormFolderDialogOpen} onOpenChange={setIsCreateFormFolderDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10">
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    New Folder
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Form Folder</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateFormFolder} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Folder Name</label>
+                      <Input name="name" placeholder="Enter folder name" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Description</label>
+                      <Input name="description" placeholder="Optional description" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setIsCreateFormFolderDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createFormFolderMutation.isPending}>
+                        Create Folder
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
               <Button 
                 asChild
                 className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" 
@@ -953,7 +1024,7 @@ export default function Campaigns() {
             </div>
           </div>
 
-          {/* Forms Grid */}
+          {/* Forms by Folders */}
           {!Array.isArray(formsData) || formsData.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -973,76 +1044,187 @@ export default function Campaigns() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {formsData.map((form: any) => (
-                <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-green-500" />
-                        <CardTitle className="text-sm font-medium truncate">
-                          {form.name}
-                        </CardTitle>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" data-testid={`button-form-menu-${form.id}`}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <a href={`/form-builder/${form.id}`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </a>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/forms/${form.id}`);
-                            toast({
-                              title: "Success",
-                              description: "Form URL copied to clipboard",
-                            });
-                          }}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy URL
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              if (window.confirm("Are you sure you want to delete this form?")) {
-                                // Add delete functionality here if needed
-                              }
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+            <div className="space-y-6">
+              {formFolders.map((folder: any) => {
+                const formsInFolder = formsData.filter((form: any) => form.folderId === folder.id);
+                
+                return (
+                  <div key={folder.id} className="space-y-4">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <FolderOpen className="h-5 w-5 text-[#46a1a0]" />
+                      <h3 className="text-lg font-medium text-gray-900">{folder.name}</h3>
+                      <span className="text-sm text-gray-500">({formsInFolder.length} forms)</span>
                     </div>
-                    <p className="text-xs text-gray-500 truncate">
-                      {form.description || "No description"}
-                    </p>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <Badge 
-                          variant={form.status === 'published' ? 'default' : 'secondary'}
-                          className="text-xs"
-                        >
-                          {form.status || 'draft'}
-                        </Badge>
+                    
+                    {formsInFolder.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                        <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p>No forms in this folder</p>
                       </div>
-                      <span>
-                        {new Date(form.createdAt).toLocaleDateString()}
-                      </span>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {formsInFolder.map((form: any) => (
+                          <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-green-500" />
+                                  <CardTitle className="text-sm font-medium truncate">
+                                    {form.name}
+                                  </CardTitle>
+                                </div>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" data-testid={`button-form-menu-${form.id}`}>
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                      <a href={`/form-builder/${form.id}`}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                      </a>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      navigator.clipboard.writeText(`${window.location.origin}/forms/${form.id}`);
+                                      toast({
+                                        title: "Success",
+                                        description: "Form URL copied to clipboard",
+                                      });
+                                    }}>
+                                      <Copy className="h-4 w-4 mr-2" />
+                                      Copy URL
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        if (window.confirm("Are you sure you want to delete this form?")) {
+                                          // Add delete functionality here if needed
+                                        }
+                                      }}
+                                      className="text-red-600"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                              <p className="text-xs text-gray-500 truncate">
+                                {form.description || "No description"}
+                              </p>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant={form.status === 'published' ? 'default' : 'secondary'}
+                                    className="text-xs"
+                                  >
+                                    {form.status || 'draft'}
+                                  </Badge>
+                                </div>
+                                <span>
+                                  {new Date(form.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              
+              {/* Forms without folders */}
+              {(() => {
+                const formsWithoutFolder = formsData.filter((form: any) => !form.folderId);
+                if (formsWithoutFolder.length === 0) return null;
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <FileText className="h-5 w-5 text-gray-500" />
+                      <h3 className="text-lg font-medium text-gray-900">Uncategorized</h3>
+                      <span className="text-sm text-gray-500">({formsWithoutFolder.length} forms)</span>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {formsWithoutFolder.map((form: any) => (
+                        <Card key={form.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-green-500" />
+                                <CardTitle className="text-sm font-medium truncate">
+                                  {form.name}
+                                </CardTitle>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" data-testid={`button-form-menu-${form.id}`}>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem asChild>
+                                    <a href={`/form-builder/${form.id}`}>
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </a>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    navigator.clipboard.writeText(`${window.location.origin}/forms/${form.id}`);
+                                    toast({
+                                      title: "Success",
+                                      description: "Form URL copied to clipboard",
+                                    });
+                                  }}>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Copy URL
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      if (window.confirm("Are you sure you want to delete this form?")) {
+                                        // Add delete functionality here if needed
+                                      }
+                                    }}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">
+                              {form.description || "No description"}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  variant={form.status === 'published' ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {form.status || 'draft'}
+                                </Badge>
+                              </div>
+                              <span>
+                                {new Date(form.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

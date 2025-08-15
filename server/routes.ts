@@ -18,12 +18,12 @@ import {
   insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
-  insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema,
+  insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
-  forms, formFields, formSubmissions
+  forms, formFields, formSubmissions, formFolders
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -5251,6 +5251,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Test error:", error);
       res.status(500).json({ message: "Test failed" });
+    }
+  });
+
+  // Form folders endpoints
+  app.get("/api/form-folders", async (req, res) => {
+    try {
+      const foldersResult = await db.select().from(formFolders).orderBy(asc(formFolders.order));
+      res.json(foldersResult);
+    } catch (error) {
+      console.error("Error fetching form folders:", error);
+      res.status(500).json({ message: "Failed to fetch form folders" });
+    }
+  });
+
+  app.post("/api/form-folders", async (req, res) => {
+    try {
+      const folderData = insertFormFolderSchema.parse(req.body);
+      const result = await db.insert(formFolders).values(folderData).returning();
+      res.status(201).json(result[0]);
+    } catch (error) {
+      console.error("Error creating form folder:", error);
+      res.status(500).json({ message: "Failed to create form folder" });
+    }
+  });
+
+  app.put("/api/form-folders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const folderData = insertFormFolderSchema.parse(req.body);
+      const result = await db.update(formFolders)
+        .set(folderData)
+        .where(eq(formFolders.id, id))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Form folder not found" });
+      }
+      
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error updating form folder:", error);
+      res.status(500).json({ message: "Failed to update form folder" });
+    }
+  });
+
+  app.delete("/api/form-folders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if any forms are using this folder
+      const formsInFolder = await db.select().from(forms).where(eq(forms.folderId, id));
+      if (formsInFolder.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete folder that contains forms. Please move or delete the forms first." 
+        });
+      }
+      
+      const result = await db.delete(formFolders).where(eq(formFolders.id, id)).returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Form folder not found" });
+      }
+      
+      res.json({ message: "Form folder deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting form folder:", error);
+      res.status(500).json({ message: "Failed to delete form folder" });
     }
   });
 
