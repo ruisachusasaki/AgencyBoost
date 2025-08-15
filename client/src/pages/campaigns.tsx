@@ -145,7 +145,8 @@ export default function Campaigns() {
     const matchesSearch = template.name.toLowerCase().includes(emailSearchTerm.toLowerCase()) ||
                          template.subject.toLowerCase().includes(emailSearchTerm.toLowerCase()) ||
                          (template.tags && template.tags.some(tag => tag.toLowerCase().includes(emailSearchTerm.toLowerCase())));
-    const matchesFolder = !selectedFolder || template.folderId === selectedFolder;
+    // Show templates without folders when no folder is selected, or templates in selected folder
+    const matchesFolder = selectedFolder ? template.folderId === selectedFolder : !template.folderId;
     return matchesSearch && matchesFolder;
   });
 
@@ -153,7 +154,8 @@ export default function Campaigns() {
     const matchesSearch = template.name.toLowerCase().includes(smsSearchTerm.toLowerCase()) ||
                          template.content.toLowerCase().includes(smsSearchTerm.toLowerCase()) ||
                          (template.tags && template.tags.some(tag => tag.toLowerCase().includes(smsSearchTerm.toLowerCase())));
-    const matchesFolder = !selectedSmsFolder || template.folderId === selectedSmsFolder;
+    // Show templates without folders when no folder is selected, or templates in selected folder
+    const matchesFolder = selectedSmsFolder ? template.folderId === selectedSmsFolder : !template.folderId;
     return matchesSearch && matchesFolder;
   });
 
