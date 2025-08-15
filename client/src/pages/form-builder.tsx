@@ -10,7 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder, Eye, Edit3, Palette, Type, Layout } from "lucide-react";
+import { 
+  ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Folder, Eye, Edit3, Palette, Type, Layout,
+  // Field type icons
+  AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot, 
+  Star, Image, Code, FileText, MousePointer2, AlignJustify
+} from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -503,6 +508,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-text-field"
                     >
+                      <AlignLeft className="w-4 h-4 mr-2" />
                       Text
                     </Button>
                     <Button
@@ -512,6 +518,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-email-field"
                     >
+                      <Mail className="w-4 h-4 mr-2" />
                       Email
                     </Button>
                     <Button
@@ -521,6 +528,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-phone-field"
                     >
+                      <Phone className="w-4 h-4 mr-2" />
                       Phone
                     </Button>
                     <Button
@@ -530,6 +538,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-number-field"
                     >
+                      <Hash className="w-4 h-4 mr-2" />
                       Number
                     </Button>
                     <Button
@@ -539,6 +548,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-date-field"
                     >
+                      <Calendar className="w-4 h-4 mr-2" />
                       Date
                     </Button>
                     <Button
@@ -548,6 +558,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-dropdown-field"
                     >
+                      <ChevronDown className="w-4 h-4 mr-2" />
                       Dropdown
                     </Button>
                     <Button
@@ -557,6 +568,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-checkbox-field"
                     >
+                      <CheckSquare className="w-4 h-4 mr-2" />
                       Checkbox
                     </Button>
                     <Button
@@ -566,6 +578,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-radio-field"
                     >
+                      <CircleDot className="w-4 h-4 mr-2" />
                       Radio
                     </Button>
                     <Button
@@ -575,6 +588,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-rating-field"
                     >
+                      <Star className="w-4 h-4 mr-2" />
                       Rating
                     </Button>
                     <Button
@@ -584,6 +598,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-image-field"
                     >
+                      <Image className="w-4 h-4 mr-2" />
                       Image
                     </Button>
                     <Button
@@ -593,6 +608,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-html-field"
                     >
+                      <Code className="w-4 h-4 mr-2" />
                       HTML
                     </Button>
                     <Button
@@ -602,6 +618,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start text-xs"
                       data-testid="button-add-terms-field"
                     >
+                      <FileText className="w-4 h-4 mr-2" />
                       Terms
                     </Button>
                     <Button
@@ -611,6 +628,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="justify-start"
                       data-testid="button-add-button-field"
                     >
+                      <MousePointer2 className="w-4 h-4 mr-2" />
                       Button
                     </Button>
                   </div>
