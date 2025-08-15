@@ -57,6 +57,15 @@ Bundle architecture preference: Collection-based bundles.
 
 ## Recent Changes
 
+### Template Folder System Completion (August 2025)
+- Fixed critical template folder sync issues by converting all operations from memory to PostgreSQL database storage
+- Resolved SMS template creation functionality with proper user ID validation and database persistence
+- Successfully implemented "Move to Folder" functionality that works between all folders including newly created ones
+- Added missing DELETE route for template folders with safety checks preventing deletion of folders containing templates
+- Fixed UI filtering logic so templates only appear in their assigned folders, not duplicated in both folder and root views
+- Root table now correctly shows only templates without folders; templates in folders only appear in those specific folders
+- Eliminated duplicate folder creation issues and ensured proper data persistence across all template operations
+
 ### Folder Navigation for Forms (January 2025)
 - Implemented clickable folder navigation in Marketing > Forms tab
 - Added breadcrumb navigation with "All Forms" back button
