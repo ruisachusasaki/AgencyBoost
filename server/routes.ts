@@ -1977,10 +1977,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/staff/:id", async (req, res) => {
     try {
+      // Clean up the request body to handle empty date fields properly
+      const cleanedBody = { ...req.body };
+      
+      // Convert empty strings to null for date fields and remove undefined values
+      if (cleanedBody.hireDate === '' || cleanedBody.hireDate === undefined) {
+        delete cleanedBody.hireDate;
+      }
+      if (cleanedBody.birthdate === '' || cleanedBody.birthdate === undefined) {
+        delete cleanedBody.birthdate;
+      }
+      
+      // Also handle role assignment in user_roles table if roleId is provided
+      if (cleanedBody.roleId) {
+        // First, remove existing role assignments for this user
+        await db.delete(userRoles).where(eq(userRoles.userId, req.params.id));
+        
+        // Then add the new role assignment
+        await db.insert(userRoles).values({
+          userId: req.params.id,
+          roleId: cleanedBody.roleId,
+          assignedBy: "system" // TODO: Replace with current user ID
+        });
+      }
+      
       const [updatedStaff] = await db
         .update(staff)
         .set({
-          ...req.body,
+          ...cleanedBody,
           updatedAt: new Date()
         })
         .where(eq(staff.id, req.params.id))
