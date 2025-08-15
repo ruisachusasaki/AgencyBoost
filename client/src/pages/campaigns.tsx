@@ -53,6 +53,8 @@ export default function Campaigns() {
   const [smsTemplateToMove, setSmsTemplateToMove] = useState<SmsTemplate | null>(null);
   const [formSearchTerm, setFormSearchTerm] = useState("");
   const [selectedFormFolder, setSelectedFormFolder] = useState<string | null>(null);
+  const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
+  const [folderToEdit, setFolderToEdit] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -365,6 +367,24 @@ export default function Campaigns() {
     }
   });
 
+  const editFolderMutation = useMutation({
+    mutationFn: async ({ folderId, name, description }: { folderId: string; name: string; description?: string }) => {
+      return await apiRequest("PATCH", `/api/template-folders/${folderId}`, {
+        name,
+        description,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
+      toast({ title: "Success", description: "Folder updated successfully" });
+      setIsEditFolderDialogOpen(false);
+      setFolderToEdit(null);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update folder" });
+    }
+  });
+
   // Event handlers
   const handleCreateFolder = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -519,6 +539,21 @@ export default function Campaigns() {
       };
       createSmsTemplateMutation.mutate(data);
     }
+  };
+
+  const handleEditFolder = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!folderToEdit) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    
+    editFolderMutation.mutate({
+      folderId: folderToEdit.id,
+      name,
+      description,
+    });
   };
 
   const insertMergeTagIntoEmail = (tag: string) => {
@@ -1215,7 +1250,10 @@ export default function Campaigns() {
                               <FolderOpen className="h-4 w-4 mr-2" />
                               View Folder
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setFolderToEdit(folder);
+                              setIsEditFolderDialogOpen(true);
+                            }}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Folder
                             </DropdownMenuItem>
@@ -1800,6 +1838,36 @@ export default function Campaigns() {
               </Button>
               <Button type="submit" disabled={moveSmsToFolderMutation.isPending}>
                 Move Template
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Folder Dialog */}
+      <Dialog open={isEditFolderDialogOpen} onOpenChange={setIsEditFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Folder</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditFolder} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Folder Name</label>
+              <Input name="name" defaultValue={folderToEdit?.name || ""} placeholder="Enter folder name" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Description</label>
+              <Input name="description" defaultValue={folderToEdit?.description || ""} placeholder="Optional description" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => {
+                setIsEditFolderDialogOpen(false);
+                setFolderToEdit(null);
+              }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editFolderMutation.isPending}>
+                Update Folder
               </Button>
             </div>
           </form>
