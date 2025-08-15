@@ -5404,10 +5404,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formResult = await db.execute(sql`
         UPDATE forms 
         SET 
-          name = ${cleanFormData.name || null},
-          description = ${cleanFormData.description || null},
-          status = ${cleanFormData.status || 'draft'},
-          settings = ${cleanFormData.settings ? JSON.stringify(cleanFormData.settings) : '{}'},
+          name = COALESCE(${cleanFormData.name}, name),
+          description = COALESCE(${cleanFormData.description}, description),
+          status = COALESCE(${cleanFormData.status}, status),
+          settings = COALESCE(${cleanFormData.settings ? JSON.stringify(cleanFormData.settings) : null}, settings),
           updated_at = NOW()
         WHERE id = ${req.params.id}
         RETURNING *

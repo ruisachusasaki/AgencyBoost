@@ -277,7 +277,7 @@ export default function Campaigns() {
 
   const moveFormToFolderMutation = useMutation({
     mutationFn: async ({ formId, folderId }: { formId: string; folderId: string | null }) => {
-      return await apiRequest("PUT", `/api/forms/${formId}`, { folderId });
+      return await apiRequest("PUT", `/api/forms/${formId}/move`, { folderId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/forms"] });
