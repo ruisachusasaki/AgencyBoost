@@ -299,7 +299,19 @@ export default function Campaigns() {
   // Move email template to folder mutation
   const moveEmailToFolderMutation = useMutation({
     mutationFn: async ({ templateId, folderId }: { templateId: string; folderId: string | null }) => {
-      return await apiRequest("PUT", `/api/email-templates/${templateId}`, { folderId });
+      // Get the current template data first
+      const currentTemplate = emailTemplates.find(t => t.id === templateId);
+      if (!currentTemplate) throw new Error("Template not found");
+      
+      return await apiRequest("PUT", `/api/email-templates/${templateId}`, {
+        name: currentTemplate.name,
+        subject: currentTemplate.subject,
+        content: currentTemplate.content,
+        previewText: currentTemplate.previewText || "",
+        tags: currentTemplate.tags || [],
+        folderId: folderId,
+        createdBy: currentTemplate.createdBy
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
@@ -315,7 +327,17 @@ export default function Campaigns() {
   // Move SMS template to folder mutation
   const moveSmsToFolderMutation = useMutation({
     mutationFn: async ({ templateId, folderId }: { templateId: string; folderId: string | null }) => {
-      return await apiRequest("PUT", `/api/sms-templates/${templateId}`, { folderId });
+      // Get the current template data first
+      const currentTemplate = smsTemplates.find(t => t.id === templateId);
+      if (!currentTemplate) throw new Error("Template not found");
+      
+      return await apiRequest("PUT", `/api/sms-templates/${templateId}`, {
+        name: currentTemplate.name,
+        content: currentTemplate.content,
+        tags: currentTemplate.tags || [],
+        folderId: folderId,
+        createdBy: currentTemplate.createdBy
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
