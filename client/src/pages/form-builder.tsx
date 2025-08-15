@@ -496,22 +496,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                 />
               </div>
               
-              <div>
-                <Label htmlFor="form-folder">Folder</Label>
-                <Select value={selectedFolderId || "no-folder"} onValueChange={(value) => setSelectedFolderId(value === "no-folder" ? null : value)}>
-                  <SelectTrigger data-testid="select-form-folder">
-                    <SelectValue placeholder="Select a folder (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no-folder">No folder</SelectItem>
-                    {formFolders.map((folder) => (
-                      <SelectItem key={folder.id} value={folder.id}>
-                        {folder.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
               
               {/* On Submit Configuration */}
               <div>

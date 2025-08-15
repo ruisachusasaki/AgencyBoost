@@ -5482,6 +5482,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Duplicate form
+  app.post("/api/forms/:id/duplicate", async (req, res) => {
+    try {
+      // Get the original form
+      const originalForm = await db.select().from(forms).where(eq(forms.id, req.params.id)).limit(1);
+      if (!originalForm[0]) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+
+      // Get original form fields
+      const originalFields = await db.select().from(formFields)
+        .where(eq(formFields.formId, req.params.id))
+        .orderBy(asc(formFields.orderIndex));
+
+      // Create duplicated form
+      const duplicatedForm = {
+        ...originalForm[0],
+        id: undefined, // Let DB generate new ID
+        name: `${originalForm[0].name} (Copy)`,
+        createdAt: undefined,
+        updatedAt: undefined,
+        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user ID
+      };
+
+      const formResult = await db.insert(forms).values(duplicatedForm).returning();
+      const newForm = formResult[0];
+
+      // Duplicate form fields
+      if (originalFields.length > 0) {
+        const duplicatedFields = originalFields.map(field => ({
+          ...field,
+          id: undefined, // Let DB generate new ID
+          formId: newForm.id,
+        }));
+
+        await db.insert(formFields).values(duplicatedFields);
+      }
+
+      res.json(newForm);
+    } catch (error) {
+      console.error("Error duplicating form:", error);
+      res.status(500).json({ message: "Failed to duplicate form" });
+    }
+  });
+
+  // Move form to folder
+  app.put("/api/forms/:id/move", async (req, res) => {
+    try {
+      const { folderId } = req.body;
+      
+      // Validate that the folder exists if folderId is provided
+      if (folderId && folderId !== null) {
+        const folder = await db.select().from(formFolders).where(eq(formFolders.id, folderId)).limit(1);
+        if (!folder[0]) {
+          return res.status(404).json({ message: "Folder not found" });
+        }
+      }
+
+      // Update the form's folderId
+      const result = await db.update(forms)
+        .set({ folderId: folderId || null })
+        .where(eq(forms.id, req.params.id))
+        .returning();
+
+      if (!result[0]) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error moving form:", error);
+      res.status(500).json({ message: "Failed to move form" });
+    }
+  });
+
   app.post("/api/forms/:formId/submit", async (req, res) => {
     try {
       const submissionResult = await db.insert(formSubmissions).values({
