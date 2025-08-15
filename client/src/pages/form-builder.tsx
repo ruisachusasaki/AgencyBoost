@@ -216,11 +216,17 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       console.log("Loading form data:", formData);
       console.log("Form settings:", formData.settings);
       if (formData.settings?.styling) {
+        // Deep merge to preserve nested structure
         const loadedStyling = {
-          ...defaultFormStyling,
-          ...formData.settings.styling
+          form: { ...defaultFormStyling.form, ...(formData.settings.styling.form || {}) },
+          labels: { ...defaultFormStyling.labels, ...(formData.settings.styling.labels || {}) },
+          layout: { ...defaultFormStyling.layout, ...(formData.settings.styling.layout || {}) },
+          customCSS: formData.settings.styling.customCSS || defaultFormStyling.customCSS,
+          inputFields: { ...defaultFormStyling.inputFields, ...(formData.settings.styling.inputFields || {}) },
+          placeholders: { ...defaultFormStyling.placeholders, ...(formData.settings.styling.placeholders || {}) }
         };
         console.log("Loaded styling:", loadedStyling);
+        console.log("Input fields styling:", loadedStyling.inputFields);
         setFormStyling(loadedStyling);
       } else {
         console.log("No styling found, using default");
