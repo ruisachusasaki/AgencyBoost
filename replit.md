@@ -66,6 +66,14 @@ Bundle architecture preference: Collection-based bundles.
 - Root table now correctly shows only templates without folders; templates in folders only appear in those specific folders
 - Eliminated duplicate folder creation issues and ensured proper data persistence across all template operations
 
+### Unified Template System Completion (August 2025)
+- Unified email and SMS template systems between Marketing and Client communication sections
+- Replaced hardcoded templates in client detail pages with dynamic database-driven components
+- EmailTemplateSelector and SmsTemplateSelector components now fetch real templates from API endpoints
+- Both Marketing > Email/SMS and Clients > Communication sections now use identical database storage
+- Added search functionality for template selection in client communication workflows
+- Eliminated template duplication and synchronization issues between different sections
+
 ### Folder Navigation for Forms (January 2025)
 - Implemented clickable folder navigation in Marketing > Forms tab
 - Added breadcrumb navigation with "All Forms" back button
