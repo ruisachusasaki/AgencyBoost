@@ -406,7 +406,7 @@ export interface IStorage {
   deleteWorkflowExecution(id: string): Promise<boolean>;
 }
 
-export class DbStorage implements IStorage {
+export class MemStorage implements IStorage {
   private clients: Map<string, Client> = new Map();
   private projects: Map<string, Project> = new Map();
   private campaigns: Map<string, Campaign> = new Map();
@@ -2487,7 +2487,7 @@ export class DbStorage implements IStorage {
 
 // Database storage implementation using PostgreSQL
 
-class DbStorage implements IStorage {
+export class DbStorage implements IStorage {
   // Clients
   async getClients(): Promise<Client[]> {
     return await db.select().from(clients);
