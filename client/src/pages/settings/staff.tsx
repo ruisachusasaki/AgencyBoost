@@ -16,26 +16,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Staff, InsertStaff } from "@shared/schema";
+import type { Staff, InsertStaff, Role } from "@shared/schema";
 
-const userTypes = [
-  "Admin",
-  "User", 
-  "Manager",
-  "Viewer"
-];
+// Removed hardcoded userTypes - now using dynamic roles from API
 
 const staffFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
-  userType: z.string().min(1, "User type is required"),
+  roleId: z.string().min(1, "Role is required"),
 });
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
 
-type SortField = 'name' | 'email' | 'phone' | 'userType';
+type SortField = 'name' | 'email' | 'phone' | 'role';
 type SortOrder = 'asc' | 'desc';
 
 export default function Staff() {
@@ -52,7 +47,7 @@ export default function Staff() {
       lastName: "",
       email: "",
       phone: "",
-      userType: "User",
+      roleId: "",
     }
   });
   
@@ -67,10 +62,26 @@ export default function Staff() {
     },
   });
 
+  // Fetch available roles for the dropdown
+  const { data: roles = [] } = useQuery<Role[]>({
+    queryKey: ["/api/roles"],
+  });
+
   // Create staff mutation
   const createStaffMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
-      return apiRequest("POST", "/api/staff", data);
+      // When creating staff, we need to assign them to the role they selected
+      const staffResponse = await apiRequest("POST", "/api/staff", data);
+      
+      // Also assign the role in the user_roles table
+      if (data.roleId && staffResponse.id) {
+        await apiRequest("POST", `/api/users/${staffResponse.id}/roles`, {
+          roleId: data.roleId,
+          assignedBy: "system" // TODO: Replace with current user ID
+        });
+      }
+      
+      return staffResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -145,9 +156,12 @@ export default function Staff() {
         aValue = a.phone || '';
         bValue = b.phone || '';
         break;
-      case 'userType':
-        aValue = a.userType.toLowerCase();
-        bValue = b.userType.toLowerCase();
+      case 'role':
+        // Get role name from our roles data
+        const aRole = roles.find(r => r.id === a.roleId);
+        const bRole = roles.find(r => r.id === b.roleId);
+        aValue = aRole?.name?.toLowerCase() || '';
+        bValue = bRole?.name?.toLowerCase() || '';
         break;
     }
 
@@ -307,23 +321,26 @@ export default function Staff() {
                 />
                 <FormField
                   control={form.control}
-                  name="userType"
+                  name="roleId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>User Type</FormLabel>
+                      <FormLabel>Role</FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select user type" />
+                            <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {userTypes.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
+                          {roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{role.name}</span>
+                                <span className="text-xs text-muted-foreground">{role.description}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -379,7 +396,7 @@ export default function Staff() {
                   <SortableHeader field="name">Staff Member</SortableHeader>
                   <SortableHeader field="email">Email</SortableHeader>
                   <SortableHeader field="phone">Phone</SortableHeader>
-                  <SortableHeader field="userType">User Type</SortableHeader>
+                  <SortableHeader field="role">Role</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -448,11 +465,18 @@ export default function Staff() {
                         </div>
                       </TableCell>
 
-                      {/* User Type */}
+                      {/* Role */}
                       <TableCell>
-                        <Badge variant={staff.userType === "Admin" ? "default" : "secondary"}>
-                          {staff.userType}
-                        </Badge>
+                        {(() => {
+                          const role = roles.find(r => r.id === staff.roleId);
+                          return role ? (
+                            <Badge variant={role.name === "Admin" ? "default" : "secondary"}>
+                              {role.name}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">No Role</Badge>
+                          );
+                        })()}
                       </TableCell>
 
                       {/* Actions */}
