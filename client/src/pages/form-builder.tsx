@@ -34,7 +34,6 @@ const defaultFormStyling = {
   },
   form: {
     backgroundColor: '#ffffff',
-    inputBackgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderStyle: 'solid',
@@ -43,7 +42,8 @@ const defaultFormStyling = {
   inputFields: {
     style: 'box' as const, // 'box' or 'line'
     fontColor: '#000000',
-    activeTagColor: '#0066cc',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 14,
     borderWidth: 1,
     borderColor: '#d1d5db',
     cornerRadius: 6,
@@ -77,7 +77,6 @@ interface FormStyling {
   };
   form: {
     backgroundColor: string;
-    inputBackgroundColor: string;
     borderWidth: number;
     borderColor: string;
     borderStyle: string;
@@ -86,7 +85,8 @@ interface FormStyling {
   inputFields: {
     style: 'box' | 'line';
     fontColor: string;
-    activeTagColor: string;
+    fontFamily: string;
+    fontSize: number;
     borderWidth: number;
     borderColor: string;
     cornerRadius: number;
@@ -681,7 +681,6 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       className="p-6 rounded-lg border shadow-sm mx-auto"
                       style={{
                         backgroundColor: formStyling.form.backgroundColor,
-                        color: formStyling.labels.color,
                         borderWidth: `${formStyling.form.borderWidth}px`,
                         borderColor: formStyling.form.borderColor,
                         borderStyle: formStyling.form.borderStyle,
@@ -788,7 +787,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     const placeholders = styling.placeholders || {};
     
     const inputStyle: React.CSSProperties = {
-      backgroundColor: form.inputBackgroundColor || '#ffffff',
+      backgroundColor: '#ffffff',
       color: inputFields.fontColor || '#000000',
       borderWidth: `${inputFields.borderWidth || 1}px`,
       borderColor: inputFields.borderColor || '#d1d5db',
@@ -796,8 +795,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
       borderRadius: `${inputFields.cornerRadius || 6}px`,
       padding: `${inputFields.padding?.top || 8}px ${inputFields.padding?.right || 12}px ${inputFields.padding?.bottom || 8}px ${inputFields.padding?.left || 12}px`,
       margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px`,
-      fontFamily: placeholders.fontFamily || 'Inter, sans-serif',
-      fontSize: `${placeholders.fontSize || 14}px`,
+      fontFamily: inputFields.fontFamily || 'Inter, sans-serif',
+      fontSize: `${inputFields.fontSize || 14}px`,
     };
 
     // Apply line style for inputs - only bottom border
@@ -849,6 +848,31 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
   
+  // Load Google Font if needed
+  useEffect(() => {
+    const loadGoogleFont = (fontFamily: string) => {
+      if (!fontFamily || fontFamily === 'inherit' || fontFamily.includes('sans-serif') || fontFamily.includes('serif') || fontFamily.includes('monospace')) {
+        return;
+      }
+      
+      const fontName = fontFamily.split(',')[0].replace(/['"]/g, '');
+      const existingLink = document.querySelector(`link[href*="${fontName.replace(/\s+/g, '+')}"]`);
+      
+      if (!existingLink) {
+        const link = document.createElement('link');
+        link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap`;
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+    };
+
+    if (styling) {
+      loadGoogleFont(styling.labels.fontFamily);
+      loadGoogleFont(styling.inputFields.fontFamily);
+      loadGoogleFont(styling.placeholders.fontFamily);
+    }
+  }, [styling?.labels.fontFamily, styling?.inputFields.fontFamily, styling?.placeholders.fontFamily]);
+
   const renderPreviewField = () => {
     switch (field.type) {
       case 'text':
@@ -1222,26 +1246,13 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Background Color</Label>
-                  <Input
-                    type="color"
-                    value={styling.form.backgroundColor}
-                    onChange={(e) => updateStyling('form', { backgroundColor: e.target.value })}
-                    className="h-8 p-1"
-                  />
-                </div>
-
-              </div>
-
               <div>
-                <Label className="text-xs">Input Background</Label>
+                <Label className="text-xs">Background Color</Label>
                 <Input
                   type="color"
-                  value={styling.form.inputBackgroundColor}
-                  onChange={(e) => updateStyling('form', { inputBackgroundColor: e.target.value })}
-                  className="h-8 p-1"
+                  value={styling.form.backgroundColor}
+                  onChange={(e) => updateStyling('form', { backgroundColor: e.target.value })}
+                  className="h-8 p-1 w-full"
                 />
               </div>
 
@@ -1319,27 +1330,39 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
 
 
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Font Color</Label>
-                  <Input
-                    type="color"
-                    value={styling.inputFields?.fontColor || '#000000'}
-                    onChange={(e) => updateStyling('inputFields', { fontColor: e.target.value })}
-                    className="h-8 p-1"
-                    data-testid="input-font-color"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Active Color</Label>
-                  <Input
-                    type="color"
-                    value={styling.inputFields?.activeTagColor || '#0066cc'}
-                    onChange={(e) => updateStyling('inputFields', { activeTagColor: e.target.value })}
-                    className="h-8 p-1"
-                    data-testid="input-active-color"
-                  />
-                </div>
+              <div>
+                <Label className="text-xs">Font Color</Label>
+                <Input
+                  type="color"
+                  value={styling.inputFields?.fontColor || '#000000'}
+                  onChange={(e) => updateStyling('inputFields', { fontColor: e.target.value })}
+                  className="h-8 p-1 w-full"
+                  data-testid="input-font-color"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">Font Family</Label>
+                <Select value={styling.inputFields.fontFamily} onValueChange={(value) => updateStyling('inputFields', { fontFamily: value })}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {googleFonts.map(font => (
+                      <SelectItem key={font} value={font}>{font.split(',')[0]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs">Font Size (px)</Label>
+                <Input
+                  type="number"
+                  value={styling.inputFields.fontSize}
+                  onChange={(e) => updateStyling('inputFields', { fontSize: parseInt(e.target.value) || 14 })}
+                  className="h-8"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1369,7 +1392,7 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
                   type="color"
                   value={styling.inputFields.borderColor}
                   onChange={(e) => updateStyling('inputFields', { borderColor: e.target.value })}
-                  className="h-8 p-1"
+                  className="h-8 p-1 w-full"
                 />
               </div>
             </div>
