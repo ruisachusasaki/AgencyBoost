@@ -145,7 +145,8 @@ export default function TagsPage() {
         method: 'DELETE'
       });
       if (!response.ok) throw new Error('Failed to delete tag');
-      return response.json();
+      // 204 No Content response has no body, so don't try to parse JSON
+      return null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
