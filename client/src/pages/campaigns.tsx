@@ -1213,8 +1213,8 @@ export default function Campaigns() {
               </Button>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <Table className="bg-white">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40%]">
