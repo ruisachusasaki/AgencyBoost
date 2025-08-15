@@ -227,7 +227,13 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         };
         console.log("Loaded styling:", loadedStyling);
         console.log("Input fields styling:", loadedStyling.inputFields);
+        console.log("Setting form styling state to:", loadedStyling);
         setFormStyling(loadedStyling);
+        
+        // Force a re-render after setting styling
+        setTimeout(() => {
+          console.log("Current formStyling state:", formStyling);
+        }, 100);
       } else {
         console.log("No styling found, using default");
         setFormStyling(defaultFormStyling);
@@ -789,13 +795,22 @@ interface FormFieldPreviewProps {
 }
 
 function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewProps) {
+  // Debug logging to track styling prop
+  console.log("FormFieldPreview received styling:", styling);
+  console.log("Input fields styling:", styling?.inputFields);
+  
   // Generate dynamic styles based on form styling configuration
   const getFieldStyles = () => {
-    if (!styling) return {};
+    if (!styling) {
+      console.log("No styling provided to getFieldStyles");
+      return {};
+    }
     
     const inputFields = styling.inputFields || {};
     const form = styling.form || {};
     const placeholders = styling.placeholders || {};
+    
+    console.log("Using input fields:", inputFields);
     
     const inputStyle: React.CSSProperties = {
       backgroundColor: '#ffffff',
