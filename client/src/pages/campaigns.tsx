@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ArrowUpDown, ExternalLink } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ArrowUpDown, ExternalLink, ArrowLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +47,7 @@ export default function Campaigns() {
   const [moveToFolderDialogOpen, setMoveToFolderDialogOpen] = useState(false);
   const [formToMove, setFormToMove] = useState<any>(null);
   const [formSearchTerm, setFormSearchTerm] = useState("");
+  const [selectedFormFolder, setSelectedFormFolder] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -492,45 +493,74 @@ export default function Campaigns() {
     }
   };
 
-  // Filter forms with search - handle formsData being unknown type
-  const filteredForms = Array.isArray(formsData) ? formsData.filter((form: any) => 
-    form.name.toLowerCase().includes(formSearchTerm.toLowerCase()) ||
-    (form.description && form.description.toLowerCase().includes(formSearchTerm.toLowerCase()))
-  ) : [];
+  // Filter forms with search and folder selection - handle formsData being unknown type
+  const filteredForms = Array.isArray(formsData) ? formsData.filter((form: any) => {
+    const matchesSearch = form.name.toLowerCase().includes(formSearchTerm.toLowerCase()) ||
+                          (form.description && form.description.toLowerCase().includes(formSearchTerm.toLowerCase()));
+    const matchesFolder = !selectedFormFolder || form.folderId === selectedFormFolder;
+    return matchesSearch && matchesFolder;
+  }) : [];
+
+  // Handle folder navigation
+  const handleViewFolder = (folderId: string) => {
+    setSelectedFormFolder(folderId);
+  };
+
+  const handleClearFolderFilter = () => {
+    setSelectedFormFolder(null);
+  };
 
   // Combine forms and folders for table display
   const getTableData = () => {
     const items: any[] = [];
     
-    // Add folders
-    formFolders.forEach((folder: any) => {
-      const folderForms = filteredForms.filter((form: any) => form.folderId === folder.id);
-      items.push({
-        type: 'folder',
-        id: folder.id,
-        name: folder.name,
-        description: folder.description,
-        itemCount: folderForms.length,
-        lastUpdated: folder.createdAt || new Date().toISOString(),
-        updatedBy: 'System' // Folders don't have updatedBy yet
+    // If a folder is selected, only show forms from that folder
+    if (selectedFormFolder) {
+      filteredForms.forEach((form: any) => {
+        if (form.folderId === selectedFormFolder) {
+          items.push({
+            type: 'form',
+            id: form.id,
+            name: form.name,
+            description: form.description,
+            status: form.status,
+            lastUpdated: form.updatedAt || form.createdAt,
+            updatedBy: form.updatedBy || 'System',
+            originalForm: form
+          });
+        }
       });
-    });
-    
-    // Add forms without folders
-    filteredForms.forEach((form: any) => {
-      if (!form.folderId) {
+    } else {
+      // Add folders
+      formFolders.forEach((folder: any) => {
+        const folderForms = Array.isArray(formsData) ? formsData.filter((form: any) => form.folderId === folder.id) : [];
         items.push({
-          type: 'form',
-          id: form.id,
-          name: form.name,
-          description: form.description,
-          status: form.status,
-          lastUpdated: form.updatedAt || form.createdAt,
-          updatedBy: form.updatedBy || 'System',
-          originalForm: form
+          type: 'folder',
+          id: folder.id,
+          name: folder.name,
+          description: folder.description,
+          itemCount: folderForms.length,
+          lastUpdated: folder.createdAt || new Date().toISOString(),
+          updatedBy: 'System' // Folders don't have updatedBy yet
         });
-      }
-    });
+      });
+      
+      // Add forms without folders
+      filteredForms.forEach((form: any) => {
+        if (!form.folderId) {
+          items.push({
+            type: 'form',
+            id: form.id,
+            name: form.name,
+            description: form.description,
+            status: form.status,
+            lastUpdated: form.updatedAt || form.createdAt,
+            updatedBy: form.updatedBy || 'System',
+            originalForm: form
+          });
+        }
+      });
+    }
     
     return items;
   };
@@ -1083,12 +1113,32 @@ export default function Campaigns() {
       {/* Forms Tab */}
       {activeTab === "forms" && (
         <div>
+          {/* Breadcrumb for folder navigation */}
+          {selectedFormFolder && (
+            <div className="mb-4">
+              <nav className="flex items-center space-x-2 text-sm">
+                <button
+                  onClick={handleClearFolderFilter}
+                  className="text-[#46a1a0] hover:text-[#3a8b8a] flex items-center gap-1"
+                  data-testid="button-back-to-all-forms"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  All Forms
+                </button>
+                <span className="text-gray-400">/</span>
+                <span className="text-gray-900 font-medium">
+                  {formFolders.find(folder => folder.id === selectedFormFolder)?.name || 'Unknown Folder'}
+                </span>
+              </nav>
+            </div>
+          )}
+
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Search forms..."
+                  placeholder={selectedFormFolder ? "Search forms in folder..." : "Search forms..."}
                   value={formSearchTerm}
                   onChange={(e) => setFormSearchTerm(e.target.value)}
                   className="pl-10 w-80"
@@ -1189,7 +1239,11 @@ export default function Campaigns() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {item.type === 'folder' ? (
-                            <div className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]">
+                            <div 
+                              className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]"
+                              onClick={() => handleViewFolder(item.id)}
+                              data-testid={`folder-${item.id}`}
+                            >
                               <Folder className="h-4 w-4 text-[#46a1a0]" />
                               <div>
                                 <div className="font-medium">{item.name}</div>
@@ -1273,7 +1327,10 @@ export default function Campaigns() {
                               </>
                             ) : (
                               <>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleViewFolder(item.id)}
+                                  data-testid={`button-view-folder-${item.id}`}
+                                >
                                   <ExternalLink className="h-4 w-4 mr-2" />
                                   View Folder
                                 </DropdownMenuItem>
