@@ -20,7 +20,7 @@ import {
   type SocialMediaPost, type InsertSocialMediaPost,
   type SocialMediaTemplate, type InsertSocialMediaTemplate,
   type SocialMediaAnalytics, type InsertSocialMediaAnalytics,
-  type TemplateFolder, type InsertTemplateFolder,
+  type TemplateFolder, type InsertTemplateFolder, templateFolders,
   type EmailTemplate, type InsertEmailTemplate, emailTemplates,
   type SmsTemplate, type InsertSmsTemplate, smsTemplates,
   type SmartList, type InsertSmartList,
@@ -2501,6 +2501,7 @@ export class MemStorage implements IStorage {
 // Database storage implementation using PostgreSQL
 
 export class DbStorage implements IStorage {
+  private db = db;
   // Clients
   async getClients(): Promise<Client[]> {
     return await db.select().from(clients);
@@ -2702,11 +2703,46 @@ export class DbStorage implements IStorage {
   async deleteAutomationAction(id: string): Promise<boolean> { return this.memStorage.deleteAutomationAction(id); }
 
   // Templates
-  async getTemplateFolders(): Promise<TemplateFolder[]> { return this.memStorage.getTemplateFolders(); }
-  async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> { return this.memStorage.getTemplateFolder(id); }
-  async createTemplateFolder(folder: InsertTemplateFolder): Promise<TemplateFolder> { return this.memStorage.createTemplateFolder(folder); }
-  async updateTemplateFolder(id: string, folder: Partial<InsertTemplateFolder>): Promise<TemplateFolder | undefined> { return this.memStorage.updateTemplateFolder(id, folder); }
-  async deleteTemplateFolder(id: string): Promise<boolean> { return this.memStorage.deleteTemplateFolder(id); }
+  async getTemplateFolders(): Promise<TemplateFolder[]> {
+    const folders = await this.db.select().from(templateFolders);
+    return folders;
+  }
+
+  async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> {
+    const folder = await this.db.select().from(templateFolders).where(eq(templateFolders.id, id)).limit(1);
+    return folder[0];
+  }
+
+  async createTemplateFolder(folderData: InsertTemplateFolder): Promise<TemplateFolder> {
+    const folder: TemplateFolder = {
+      id: randomUUID(),
+      name: folderData.name,
+      description: folderData.description || null,
+      type: folderData.type,
+      parentId: folderData.parentId || null,
+      order: folderData.order || 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    await this.db.insert(templateFolders).values(folder);
+    return folder;
+  }
+
+  async updateTemplateFolder(id: string, folderData: Partial<InsertTemplateFolder>): Promise<TemplateFolder | undefined> {
+    const updates = {
+      ...folderData,
+      updatedAt: new Date(),
+    };
+    
+    await this.db.update(templateFolders).set(updates).where(eq(templateFolders.id, id));
+    return this.getTemplateFolder(id);
+  }
+
+  async deleteTemplateFolder(id: string): Promise<boolean> {
+    const result = await this.db.delete(templateFolders).where(eq(templateFolders.id, id));
+    return result.rowCount !== undefined && result.rowCount > 0;
+  }
 
   async getEmailTemplates(): Promise<EmailTemplate[]> { return this.memStorage.getEmailTemplates(); }
   async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> { return this.memStorage.getEmailTemplate(id); }
