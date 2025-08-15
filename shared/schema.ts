@@ -662,6 +662,9 @@ export const insertClientSchema = createInsertSchema(clients).omit({
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
+}).extend({
+  startDate: z.union([z.string(), z.date()]).transform((val) => val ? new Date(val) : undefined).optional(),
+  endDate: z.union([z.string(), z.date()]).transform((val) => val ? new Date(val) : undefined).optional(),
 });
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
