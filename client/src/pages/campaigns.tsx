@@ -960,18 +960,14 @@ export default function Campaigns() {
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
-                            {!template.folderId && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {
-                                  setEmailTemplateToMove(template);
-                                  setMoveEmailToFolderDialogOpen(true);
-                                }}>
-                                  <Folder className="h-4 w-4 mr-2" />
-                                  Move to Folder
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              setEmailTemplateToMove(template);
+                              setMoveEmailToFolderDialogOpen(true);
+                            }}>
+                              <Folder className="h-4 w-4 mr-2" />
+                              Move to Folder
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteTemplate(template.id, "email")}
@@ -1259,18 +1255,14 @@ export default function Campaigns() {
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
-                            {!template.folderId && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {
-                                  setSmsTemplateToMove(template);
-                                  setMoveSmsToFolderDialogOpen(true);
-                                }}>
-                                  <Folder className="h-4 w-4 mr-2" />
-                                  Move to Folder
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              setSmsTemplateToMove(template);
+                              setMoveSmsToFolderDialogOpen(true);
+                            }}>
+                              <Folder className="h-4 w-4 mr-2" />
+                              Move to Folder
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteTemplate(template.id, "sms")}
@@ -1706,7 +1698,7 @@ export default function Campaigns() {
               <label className="block text-sm font-medium mb-1">
                 Move "{emailTemplateToMove?.name}" to folder:
               </label>
-              <Select name="folderId" defaultValue="no-folder">
+              <Select name="folderId" defaultValue={emailTemplateToMove?.folderId || "no-folder"}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a folder" />
                 </SelectTrigger>
@@ -1756,7 +1748,7 @@ export default function Campaigns() {
               <label className="block text-sm font-medium mb-1">
                 Move "{smsTemplateToMove?.name}" to folder:
               </label>
-              <Select name="folderId" defaultValue="no-folder">
+              <Select name="folderId" defaultValue={smsTemplateToMove?.folderId || "no-folder"}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a folder" />
                 </SelectTrigger>
