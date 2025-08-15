@@ -43,7 +43,7 @@ import {
   type CustomFieldFileUpload, type InsertCustomFieldFileUpload,
   type Form, type InsertForm, type FormField, type InsertFormField,
   type FormSubmission, type InsertFormSubmission,
-  customFieldFileUploads, forms, formFields, formSubmissions
+  customFieldFileUploads, forms, formFields, formSubmissions, tags
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -2810,11 +2810,38 @@ export class DbStorage implements IStorage {
   async deleteStaffMember(id: string): Promise<boolean> { return this.memStorage.deleteStaffMember(id); }
 
   // Tags
-  async getTags(): Promise<Tag[]> { return this.memStorage.getTags(); }
-  async getTag(id: string): Promise<Tag | undefined> { return this.memStorage.getTag(id); }
-  async createTag(tag: InsertTag): Promise<Tag> { return this.memStorage.createTag(tag); }
-  async updateTag(id: string, tag: Partial<InsertTag>): Promise<Tag | undefined> { return this.memStorage.updateTag(id, tag); }
-  async deleteTag(id: string): Promise<boolean> { return this.memStorage.deleteTag(id); }
+  async getTags(): Promise<Tag[]> {
+    const result = await this.db.select().from(tags);
+    return result;
+  }
+
+  async getTag(id: string): Promise<Tag | undefined> {
+    const result = await this.db.select().from(tags).where(eq(tags.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createTag(tag: InsertTag): Promise<Tag> {
+    const result = await this.db.insert(tags).values({
+      ...tag,
+      id: sql`gen_random_uuid()`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return result[0];
+  }
+
+  async updateTag(id: string, tag: Partial<InsertTag>): Promise<Tag | undefined> {
+    const result = await this.db.update(tags).set({
+      ...tag,
+      updatedAt: new Date(),
+    }).where(eq(tags.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteTag(id: string): Promise<boolean> {
+    const result = await this.db.delete(tags).where(eq(tags.id, id)).returning();
+    return result.length > 0;
+  }
 
   // Products
   async getProducts(): Promise<Product[]> { return this.memStorage.getProducts(); }
