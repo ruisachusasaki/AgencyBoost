@@ -21,7 +21,7 @@ Bundle architecture preference: Collection-based bundles.
 - **Data Management**: Full CRUD operations for core entities (Clients, Staff), comprehensive audit logs, table sorting, pagination, and CSV import/export functionality.
 - **Customization**: Custom Field Management with drag-and-drop reordering, and Marketing Template Management with WYSIWYG editor and dynamic merge tags.
 - **Advanced Features**: Smart Lists system for advanced filtering, enhanced Client Product Display for product/bundle management, comprehensive Email and SMS communication with DND system, Document Management with secure handling and object storage integration, Notes System, and robust Calendar Management with staff assignment, filtering, and appointment scheduling.
-- **Form Builder**: Drag-and-drop form builder with live preview, extensive styling controls, and integration with custom fields.
+- **Form Builder**: Drag-and-drop form builder with live preview, extensive styling controls, integration with custom fields, and folder navigation for organizing forms.
 - **Data Integrity**: System designed to ensure data consistency, particularly by standardizing on staff table IDs across the application and resolving critical storage layer issues.
 
 ## External Dependencies
@@ -54,3 +54,12 @@ Bundle architecture preference: Collection-based bundles.
 ### Session Management
 - **Connect PG Simple**: PostgreSQL session store for Express.
 - **Express Session**: Session middleware.
+
+## Recent Changes
+
+### Folder Navigation for Forms (January 2025)
+- Implemented clickable folder navigation in Marketing > Forms tab
+- Added breadcrumb navigation with "All Forms" back button
+- Users can now click folder names or use "View Folder" dropdown option to filter forms by folder
+- Enhanced search functionality to work within specific folders
+- Improved user experience for organizing and accessing forms
