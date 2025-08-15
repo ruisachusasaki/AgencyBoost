@@ -1,120 +1,56 @@
 # AgencyFlow CRM System
 
 ## Overview
-AgencyFlow is a comprehensive Customer Relationship Management (CRM) system designed for marketing agencies. Its primary purpose is to provide a complete solution for managing clients, projects, campaigns, leads, tasks, and invoices. It includes integrated reporting capabilities and offers a responsive interface for tracking business operations and campaign performance, leveraging modern web technologies.
+AgencyFlow is a comprehensive Customer Relationship Management (CRM) system designed for marketing agencies. Its primary purpose is to provide a complete solution for managing clients, projects, campaigns, leads, tasks, and invoices. It includes integrated reporting capabilities and offers a responsive interface for tracking business operations and campaign performance. The project aims to provide a complete, modern CRM solution for marketing agencies, enhancing efficiency and operational oversight.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
-Bundle architecture preference: Collection-based bundles (confirmed working - user feedback: "LOVE how this functions!!!")
+Bundle architecture preference: Collection-based bundles.
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React 18 with TypeScript
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **State Management**: TanStack Query (React Query)
-- **Routing**: Wouter
-- **Forms**: React Hook Form with Zod validation
-- **Build Tool**: Vite
+### Core Technologies
+- **Frontend**: React 18 with TypeScript, Vite, TanStack Query for state management, Wouter for routing, React Hook Form with Zod for forms.
+- **Backend**: Node.js with Express.js, TypeScript, RESTful API design.
+- **Database**: PostgreSQL with Drizzle ORM.
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js
-- **Language**: TypeScript
-- **API Design**: RESTful API with CRUD operations
-- **File Structure**: Modular, with shared types
-
-### Data Storage Solutions
-- **Database**: PostgreSQL
-- **ORM**: Drizzle ORM
-- **Connection**: Neon Database serverless PostgreSQL
-- **Schema**: Comprehensive relational schema
-
-### Key Data Models
-- **Clients**: Contact details and status
-- **Projects**: Budget, timeline, progress
-- **Campaigns**: Performance metrics (impressions, clicks, conversions)
-- **Leads**: Sales pipeline with probability scoring
-- **Tasks**: Assignment and priority levels
-- **Invoices**: Financial tracking with payment status
-
-### Authentication and Authorization
-- Basic session-based structure.
-- Role-based access control system with predefined roles (Admin, Manager, User, Accounting) and granular permissions across modules (clients, projects, campaigns, tasks, invoices, leads, workflows, social_media, reports, settings, staff, roles).
-
-### Component Architecture
-- **Layout System**: Responsive sidebar navigation with mobile-first design; optimized 3-column layout (2-3-2 CSS grid distribution) for client details.
-- **UI Components**: Radix UI primitives
-- **Form Components**: Reusable, entity-specific forms
-- **Dashboard Components**: Modular widgets for metrics
-
-### Development and Build Process
-- **Development**: Hot module replacement with Vite
-- **Type Checking**: Strict TypeScript configuration
-- **Build Process**: Separate client and server builds with ESM
-- **Database Management**: Drizzle migrations for schema version control
-
-### Key Features Implemented
-- **Data Persistence**: Client records stored in PostgreSQL.
-- **Roles & Permissions**: Comprehensive role-based access control.
-- **Pagination**: Implemented for clients and Custom Fields directory.
-- **Client Management**: Full CRUD operations with custom field integration, contact owner assignment, and admin-only deletion.
-- **Audit Logs**: Comprehensive system activity tracking.
-- **Table Sorting**: Full sorting functionality for clients table.
-- **CSV Import/Export**: Full CSV import and export for clients with field mapping and validation.
-- **Custom Field Management**: Drag-and-drop reordering for folders and fields.
-- **Staff Management**: Full CRUD operations for staff, including profile image uploads.
-- **Settings Management**: Comprehensive section with configuration areas including Business Profile, Staff, Roles & Permissions, Integrations, Custom Fields, Tags, Products, and Audit Logs.
-- **Marketing Template Management**: WYSIWYG editor for email and SMS templates, with folder organization and dynamic merge tags.
-- **Smart Lists System**: Advanced filtering with tab-based interface, comprehensive permission system (personal, shared, universal), multi-user collaboration, and intelligent overflow navigation.
-- **Enhanced Client Product Display**: Complete product and bundle management in client detail pages with cost visibility, role-based deletion, visual distinction, automatic bundle cost calculation, and accordion-style bundle expansion. Redesigned bundles architecture to be collection-based where base bundles define product collections (1 unit each) and client-specific quantities are stored per client. Removed price field from system, focusing on cost tracking.
-- **Communication Systems**: Comprehensive email and SMS functionality with advanced composer features (CC/BCC, WYSIWYG, merge tags, templates, scheduling, character count), matching modal structures, and DND (Do Not Disturb) system for communication control with audit logging.
-- **Document Management System**: Comprehensive upload and management with secure handling, supporting 15+ file types, server-side validation, object storage integration, and PostgreSQL tracking.
-- **Client Ownership & Followers**: Implemented functionality with search-based assignment and display in client headers.
-- **Notes System**: Comprehensive notes functionality with database persistence, formatting, expand/collapse, and admin-only permissions.
-- **Calendar Settings**: Design consistency achieved with other settings pages, streamlined tabs to "Calendars" and "Integrations."
-- **Calendar Staff Assignment**: Implemented complete staff assignment functionality for calendars with automatic ID mapping between staff and users tables. Fixed validation issues by filtering non-schema fields and preserving required calendar properties during updates.
-- **Storage Layer Recovery**: Fixed critical API issue where MinimalStorage implementation was missing required methods, causing clients to appear missing while data remained safely in PostgreSQL. Switched to fully functional DbStorage implementation.
-- **User ID Consistency Resolution**: Completed comprehensive schema migration to standardize entire system on staff table IDs. Updated all calendar system tables (calendars, calendar_staff, calendar_availability, calendar_date_overrides, calendar_integrations, calendar_appointments, round_robin_tracking) to use UUID references to staff table. Eliminated dual user/staff ID inconsistencies and established staff table as single source of truth for user management across the application.
-- **Calendar Creation System**: Successfully resolved all calendar creation issues including staff dropdown functionality and foreign key constraint errors. Calendar creation modal now properly fetches and displays staff members, uses dynamic creator IDs based on assigned staff, and successfully creates calendars with proper staff assignments. System confirmed working with user feedback: "Awesome, it's working again!!!"
-- **Calendar Filtering System**: Implemented comprehensive three-tier filtering functionality for Calendar Settings page including Status filter (Active/Inactive), Type filter (Personal/Round Robin), and Owner filter (by staff member). Features smart filter summary, clear filters button, enhanced calendar display with type badges and owner information, and empty state handling. System confirmed working with user feedback: "Filters worked perfect!"
-- **Calendar Main Interface**: Successfully implemented comprehensive calendar system with two main tabs: Calendar View (Month/Week/Day views with interactive hover tooltips) and Appointment List View (three subtabs: Upcoming, Cancelled, All with advanced filtering and sorting). Features include color-coded status badges, 12-hour time format, professional table design with ChevronUp/ChevronDown sorting arrows matching app-wide design patterns, and admin-only Calendar Settings tab with proper permission-based visibility.
-- **User Permissions System**: Enhanced `/api/user-permissions` endpoint with comprehensive permission structure including settings.canAccess for admin-only features. Admin-only Calendar Settings tab confirmed working with user feedback: "That worked PERFECT!"
-- **Appointment Creation System**: Completed full appointment creation functionality from client detail pages with proper validation, date/time handling, and calendar integration. Fixed critical date validation issues by implementing server-side ISO string to Date object conversion. Enhanced appointment modal with attendees section, proper status positioning, and consistent meeting location options. Calendar page integration fully functional with comprehensive TypeScript interface updates and error handling. System confirmed working with user feedback: "It's working!"
-- **Appointment Management System**: Successfully implemented comprehensive edit and delete functionality for appointments across both calendar main page and client detail pages. Features include edit modal with pre-filled data, proper state management for editing appointments, delete confirmation dialogs, and seamless integration with existing AppointmentModal component. Fixed invitee linking to navigate directly to individual client detail pages instead of search results. Resolved API data structure issues with proper clients array extraction. System confirmed working with user feedback: "Everything worked the way I expected and wanted!"
-- **Dashboard Enhancement**: Enhanced Recent Clients widget with clickable client names that navigate directly to individual client detail pages. Added hover effects with smooth color transitions and proper cursor styling for improved user experience. System confirmed working with user feedback: "That's working great"
-- **File Upload Custom Fields**: Successfully implemented comprehensive File Upload custom field functionality with secure object storage integration. Features include drag-and-drop file upload, accepted file type validation (.pdf, .doc, .docx, .xls, .xlsx, .txt, .rtf, .pages, .numbers, .jpeg, .jpg, .png, .gif, .tiff, .ppt, .pptx, .key), forbidden file type blocking (.exe, .bat, .sh, .msi, .js, .php, .html, .css, .zip), 250MB file size limit, server-side validation, and secure file storage with database record tracking. Fixed storage interface issues by implementing direct database operations for reliable file upload record management. System confirmed working with user feedback: "That worked!"
-- **Form Builder System**: Successfully implemented comprehensive drag-and-drop form builder with working form creation and management. Resolved multiple technical issues including API request format errors, TypeScript type definitions, and database field handling. Features proper user authentication integration, form field management, and database persistence. Form builder now supports creating forms with drag-and-drop functionality and integrates with existing custom fields system. System confirmed working with user feedback: "That worked!"
-- **Form Publishing System**: Resolved critical form publishing errors by fixing status handling and timestamp conversion issues. Fixed mutation logic to properly use passed status (draft/published) instead of always defaulting to draft. Eliminated timestamp errors by excluding auto-managed database fields (createdAt) from form field updates. Publish Form functionality now works correctly with proper status updates and error-free database operations. System confirmed working with user feedback: "That worked!"
-- **Form Builder UI Enhancement**: Successfully implemented tabbed interface for Form Elements section with improved organization and user experience. Changed main section title from "Add Fields" to "Form Elements" and restructured content into two tabs: "Add Fields" (containing all form field buttons) and "Custom Fields" (containing custom field folders and elements). Enhanced sidebar width for better usability and added empty state messaging for custom fields. System confirmed working with user feedback: "You're a Genius!"
-- **Form Template Preview System**: Implemented comprehensive form preview functionality with live data simulation. Features include preview mode toggle switch with Edit/Preview icons, intelligent sample data generator for all field types (text, email, phone, dropdown, checkbox, radio, rating, HTML, terms & conditions, buttons), interactive preview component with realistic sample data, and refresh data button for regenerating sample values. Preview mode renders forms exactly as end users would see them with proper styling and functionality. System confirmed working with user feedback: "LOVE the Preview Functionality!!!"
+### Key Features and Design Patterns
+- **Data Models**: Comprehensive relational schema for Clients, Projects, Campaigns, Leads, Tasks, and Invoices.
+- **Authentication & Authorization**: Session-based authentication with role-based access control (Admin, Manager, User, Accounting) and granular permissions across modules.
+- **UI/UX**: Responsive sidebar navigation, mobile-first design, optimized 3-column layouts, Radix UI primitives, shadcn/ui components, and Tailwind CSS for styling.
+- **Data Management**: Full CRUD operations for core entities (Clients, Staff), comprehensive audit logs, table sorting, pagination, and CSV import/export functionality.
+- **Customization**: Custom Field Management with drag-and-drop reordering, and Marketing Template Management with WYSIWYG editor and dynamic merge tags.
+- **Advanced Features**: Smart Lists system for advanced filtering, enhanced Client Product Display for product/bundle management, comprehensive Email and SMS communication with DND system, Document Management with secure handling and object storage integration, Notes System, and robust Calendar Management with staff assignment, filtering, and appointment scheduling.
+- **Form Builder**: Drag-and-drop form builder with live preview, extensive styling controls, and integration with custom fields.
+- **Data Integrity**: System designed to ensure data consistency, particularly by standardizing on staff table IDs across the application and resolving critical storage layer issues.
 
 ## External Dependencies
 
 ### Database Services
-- **Neon Database**: Serverless PostgreSQL hosting
-- **Drizzle Kit**: Database migration and schema management
+- **Neon Database**: Serverless PostgreSQL hosting.
+- **Drizzle Kit**: Database migration and schema management.
 
 ### UI and Styling
-- **Radix UI**: Accessible headless UI components
-- **Tailwind CSS**: Utility-first CSS framework
-- **Lucide React**: Icon library
-- **shadcn/ui**: Reusable UI components built with Radix UI and Tailwind CSS
+- **Radix UI**: Accessible headless UI components.
+- **Tailwind CSS**: Utility-first CSS framework.
+- **Lucide React**: Icon library.
+- **shadcn/ui**: Reusable UI components.
 
 ### Development Tools
-- **Vite**: Build tool and development server
-- **ESBuild**: Fast JavaScript bundler
-- **TanStack Query**: Server state management
+- **Vite**: Build tool and development server.
+- **ESBuild**: Fast JavaScript bundler.
+- **TanStack Query**: Server state management.
 
 ### Form and Validation
-- **React Hook Form**: Performant form library
-- **Zod**: TypeScript-first schema validation
-- **Hookform Resolvers**: Integration between React Hook Form and Zod
+- **React Hook Form**: Performant form library.
+- **Zod**: TypeScript-first schema validation.
+- **Hookform Resolvers**: Integration between React Hook Form and Zod.
 
 ### Date and Utility Libraries
-- **Date-fns**: Date utility library
-- **Class Variance Authority**: Utility for component variants
-- **clsx**: Conditional className utility
+- **Date-fns**: Date utility library.
+- **Class Variance Authority**: Utility for component variants.
+- **clsx**: Conditional className utility.
 
 ### Session Management
-- **Connect PG Simple**: PostgreSQL session store for Express
-- **Express Session**: Session middleware
+- **Connect PG Simple**: PostgreSQL session store for Express.
+- **Express Session**: Session middleware.
