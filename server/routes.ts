@@ -23,7 +23,8 @@ import {
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, tasks, invoices
+  forms, formFields, formSubmissions, formFolders, leads, tasks, invoices,
+  socialMediaAccounts, socialMediaPosts, workflows, workflowSteps, workflowTriggers, workflowConditions, workflowActions
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -996,33 +997,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Social Media Account routes
+  // Social Media Account routes - Database Storage
   app.get("/api/social-media-accounts", async (req, res) => {
     try {
-      const accounts = await storage.getSocialMediaAccounts();
+      const { clientId } = req.query;
+      
+      let query = db.select().from(socialMediaAccounts);
+      if (clientId && typeof clientId === 'string') {
+        query = query.where(eq(socialMediaAccounts.clientId, clientId));
+      }
+      
+      const accounts = await query.orderBy(desc(socialMediaAccounts.createdAt));
       res.json(accounts);
     } catch (error) {
+      console.error("Error fetching social media accounts:", error);
       res.status(500).json({ message: "Failed to fetch social media accounts" });
     }
   });
 
   app.get("/api/social-media-accounts/:id", async (req, res) => {
     try {
-      const account = await storage.getSocialMediaAccount(req.params.id);
+      const [account] = await db.select()
+        .from(socialMediaAccounts)
+        .where(eq(socialMediaAccounts.id, req.params.id));
+      
       if (!account) {
         return res.status(404).json({ message: "Social media account not found" });
       }
       res.json(account);
     } catch (error) {
+      console.error("Error fetching social media account:", error);
       res.status(500).json({ message: "Failed to fetch social media account" });
     }
   });
 
   app.get("/api/clients/:clientId/social-media-accounts", async (req, res) => {
     try {
-      const accounts = await storage.getSocialMediaAccountsByClient(req.params.clientId);
+      const accounts = await db.select()
+        .from(socialMediaAccounts)
+        .where(eq(socialMediaAccounts.clientId, req.params.clientId))
+        .orderBy(desc(socialMediaAccounts.createdAt));
+      
       res.json(accounts);
     } catch (error) {
+      console.error("Error fetching client social media accounts:", error);
       res.status(500).json({ message: "Failed to fetch client social media accounts" });
     }
   });
@@ -1030,9 +1048,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/social-media-accounts", async (req, res) => {
     try {
       const validatedData = insertSocialMediaAccountSchema.parse(req.body);
-      const account = await storage.createSocialMediaAccount(validatedData);
-      res.status(201).json(account);
+      
+      const [newAccount] = await db.insert(socialMediaAccounts)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newAccount);
     } catch (error) {
+      console.error("Error creating social media account:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1043,12 +1066,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/social-media-accounts/:id", async (req, res) => {
     try {
       const validatedData = insertSocialMediaAccountSchema.partial().parse(req.body);
-      const account = await storage.updateSocialMediaAccount(req.params.id, validatedData);
-      if (!account) {
+      
+      const [updatedAccount] = await db.update(socialMediaAccounts)
+        .set(validatedData)
+        .where(eq(socialMediaAccounts.id, req.params.id))
+        .returning();
+      
+      if (!updatedAccount) {
         return res.status(404).json({ message: "Social media account not found" });
       }
-      res.json(account);
+      res.json(updatedAccount);
     } catch (error) {
+      console.error("Error updating social media account:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1058,43 +1087,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/social-media-accounts/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteSocialMediaAccount(req.params.id);
-      if (!deleted) {
+      const deletedRows = await db.delete(socialMediaAccounts)
+        .where(eq(socialMediaAccounts.id, req.params.id));
+      
+      if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Social media account not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting social media account:", error);
       res.status(500).json({ message: "Failed to delete social media account" });
     }
   });
 
-  // Social Media Post routes
+  // Social Media Post routes - Database Storage
   app.get("/api/social-media-posts", async (req, res) => {
     try {
-      const posts = await storage.getSocialMediaPosts();
+      const { clientId, campaignId, status, accountId } = req.query;
+      
+      let query = db.select().from(socialMediaPosts);
+      const conditions = [];
+      
+      if (clientId && typeof clientId === 'string') {
+        conditions.push(eq(socialMediaPosts.clientId, clientId));
+      }
+      
+      if (campaignId && typeof campaignId === 'string') {
+        conditions.push(eq(socialMediaPosts.campaignId, campaignId));
+      }
+      
+      if (status && typeof status === 'string') {
+        conditions.push(eq(socialMediaPosts.status, status));
+      }
+      
+      if (accountId && typeof accountId === 'string') {
+        conditions.push(eq(socialMediaPosts.accountId, accountId));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      const posts = await query.orderBy(desc(socialMediaPosts.createdAt));
       res.json(posts);
     } catch (error) {
+      console.error("Error fetching social media posts:", error);
       res.status(500).json({ message: "Failed to fetch social media posts" });
     }
   });
 
   app.get("/api/social-media-posts/:id", async (req, res) => {
     try {
-      const post = await storage.getSocialMediaPost(req.params.id);
+      const [post] = await db.select()
+        .from(socialMediaPosts)
+        .where(eq(socialMediaPosts.id, req.params.id));
+      
       if (!post) {
         return res.status(404).json({ message: "Social media post not found" });
       }
       res.json(post);
     } catch (error) {
+      console.error("Error fetching social media post:", error);
       res.status(500).json({ message: "Failed to fetch social media post" });
     }
   });
 
   app.get("/api/clients/:clientId/social-media-posts", async (req, res) => {
     try {
-      const posts = await storage.getSocialMediaPosts(); // Temporary fix - get all posts
+      const posts = await db.select()
+        .from(socialMediaPosts)
+        .where(eq(socialMediaPosts.clientId, req.params.clientId))
+        .orderBy(desc(socialMediaPosts.createdAt));
+      
       res.json(posts);
     } catch (error) {
+      console.error("Error fetching client social media posts:", error);
       res.status(500).json({ message: "Failed to fetch client social media posts" });
     }
   });
@@ -1102,9 +1169,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/social-media-posts", async (req, res) => {
     try {
       const validatedData = insertSocialMediaPostSchema.parse(req.body);
-      const post = await storage.createSocialMediaPost(validatedData);
-      res.status(201).json(post);
+      
+      const [newPost] = await db.insert(socialMediaPosts)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newPost);
     } catch (error) {
+      console.error("Error creating social media post:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1115,12 +1187,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/social-media-posts/:id", async (req, res) => {
     try {
       const validatedData = insertSocialMediaPostSchema.partial().parse(req.body);
-      const post = await storage.updateSocialMediaPost(req.params.id, validatedData);
-      if (!post) {
+      
+      const [updatedPost] = await db.update(socialMediaPosts)
+        .set(validatedData)
+        .where(eq(socialMediaPosts.id, req.params.id))
+        .returning();
+      
+      if (!updatedPost) {
         return res.status(404).json({ message: "Social media post not found" });
       }
-      res.json(post);
+      res.json(updatedPost);
     } catch (error) {
+      console.error("Error updating social media post:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1130,12 +1208,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/social-media-posts/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteSocialMediaPost(req.params.id);
-      if (!deleted) {
+      const deletedRows = await db.delete(socialMediaPosts)
+        .where(eq(socialMediaPosts.id, req.params.id));
+      
+      if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Social media post not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting social media post:", error);
       res.status(500).json({ message: "Failed to delete social media post" });
     }
   });
@@ -1551,34 +1632,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Workflow routes
+  // Workflow routes - Database Storage
   app.get("/api/workflows", async (req, res) => {
     try {
-      const { clientId, category } = req.query;
-      let workflows;
+      const { clientId, category, status } = req.query;
       
-      if (clientId) {
-        workflows = await storage.getWorkflows(); // Temporary fix - get all workflows 
-      } else if (category) {
-        workflows = await storage.getWorkflows(); // Temporary fix - get all workflows
-      } else {
-        workflows = await storage.getWorkflows();
+      let query = db.select().from(workflows);
+      const conditions = [];
+      
+      if (clientId && typeof clientId === 'string') {
+        conditions.push(eq(workflows.clientId, clientId));
       }
       
-      res.json(workflows);
+      if (category && typeof category === 'string') {
+        conditions.push(eq(workflows.category, category));
+      }
+      
+      if (status && typeof status === 'string') {
+        conditions.push(eq(workflows.status, status));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      const workflowsList = await query.orderBy(desc(workflows.createdAt));
+      res.json(workflowsList);
     } catch (error) {
+      console.error("Error fetching workflows:", error);
       res.status(500).json({ message: "Failed to fetch workflows" });
     }
   });
 
   app.get("/api/workflows/:id", async (req, res) => {
     try {
-      const workflow = await storage.getWorkflow(req.params.id);
+      const [workflow] = await db.select()
+        .from(workflows)
+        .where(eq(workflows.id, req.params.id));
+      
       if (!workflow) {
         return res.status(404).json({ message: "Workflow not found" });
       }
       res.json(workflow);
     } catch (error) {
+      console.error("Error fetching workflow:", error);
       res.status(500).json({ message: "Failed to fetch workflow" });
     }
   });
@@ -1586,9 +1683,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/workflows", async (req, res) => {
     try {
       const validatedData = insertWorkflowSchema.parse(req.body);
-      const workflow = await storage.createWorkflow(validatedData);
-      res.status(201).json(workflow);
+      
+      const [newWorkflow] = await db.insert(workflows)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newWorkflow);
     } catch (error) {
+      console.error("Error creating workflow:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1599,12 +1701,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/workflows/:id", async (req, res) => {
     try {
       const validatedData = insertWorkflowSchema.partial().parse(req.body);
-      const workflow = await storage.updateWorkflow(req.params.id, validatedData);
-      if (!workflow) {
+      
+      const [updatedWorkflow] = await db.update(workflows)
+        .set(validatedData)
+        .where(eq(workflows.id, req.params.id))
+        .returning();
+      
+      if (!updatedWorkflow) {
         return res.status(404).json({ message: "Workflow not found" });
       }
-      res.json(workflow);
+      res.json(updatedWorkflow);
     } catch (error) {
+      console.error("Error updating workflow:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1614,12 +1722,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/workflows/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteWorkflow(req.params.id);
-      if (!deleted) {
+      const deletedRows = await db.delete(workflows)
+        .where(eq(workflows.id, req.params.id));
+      
+      if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Workflow not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting workflow:", error);
       res.status(500).json({ message: "Failed to delete workflow" });
     }
   });
