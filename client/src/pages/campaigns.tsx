@@ -28,6 +28,7 @@ export default function Campaigns() {
     return "email";
   });
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedSmsFolder, setSelectedSmsFolder] = useState<string | null>(null);
   
   // Handle URL parameters for tab switching
   useEffect(() => {
@@ -152,7 +153,7 @@ export default function Campaigns() {
     const matchesSearch = template.name.toLowerCase().includes(smsSearchTerm.toLowerCase()) ||
                          template.content.toLowerCase().includes(smsSearchTerm.toLowerCase()) ||
                          (template.tags && template.tags.some(tag => tag.toLowerCase().includes(smsSearchTerm.toLowerCase())));
-    const matchesFolder = !selectedFolder || template.folderId === selectedFolder;
+    const matchesFolder = !selectedSmsFolder || template.folderId === selectedSmsFolder;
     return matchesSearch && matchesFolder;
   });
 
@@ -1098,11 +1099,11 @@ export default function Campaigns() {
           </div>
 
           {/* Breadcrumb navigation when viewing a specific folder */}
-          {selectedFolder && (
+          {selectedSmsFolder && (
             <div className="mb-4">
               <Button
                 variant="ghost"
-                onClick={() => setSelectedFolder(null)}
+                onClick={() => setSelectedSmsFolder(null)}
                 className="text-blue-600 hover:text-blue-800 p-0 h-auto font-normal"
                 data-testid="button-all-sms"
               >
@@ -1152,13 +1153,13 @@ export default function Campaigns() {
                 </TableHeader>
                 <TableBody>
                   {/* Show folders first (if not in a specific folder view) */}
-                  {!selectedFolder && smsFolders.map((folder) => (
+                  {!selectedSmsFolder && smsFolders.map((folder) => (
                     <TableRow key={folder.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <FolderOpen className="h-4 w-4 text-blue-500" />
                           <button
-                            onClick={() => setSelectedFolder(folder.id)}
+                            onClick={() => setSelectedSmsFolder(folder.id)}
                             className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                             data-testid={`folder-link-${folder.name.toLowerCase().replace(/\s+/g, '-')}`}
                           >
