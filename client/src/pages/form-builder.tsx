@@ -267,13 +267,13 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         createdBy: currentUser?.id || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
         status: data.status || "draft",
         settings: {
+          ...(formData?.settings || {}),
           styling: formStyling,
           onSubmit: {
             action: onSubmitAction,
             redirectUrl: redirectUrl,
             successMessage: successMessage
-          },
-          ...(formData?.settings || {})
+          }
         }
       };
       
@@ -315,6 +315,12 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       });
       return;
     }
+
+    console.log("Saving form with onSubmit settings:", {
+      action: onSubmitAction,
+      redirectUrl: redirectUrl,
+      successMessage: successMessage
+    });
 
     console.log("Saving form with data:", {
       name: formName,
