@@ -764,6 +764,21 @@ export default function Campaigns() {
             </div>
           </div>
 
+          {/* Breadcrumb navigation when viewing a specific folder */}
+          {selectedFolder && (
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedFolder(null)}
+                className="text-blue-600 hover:text-blue-800 p-0 h-auto font-normal"
+                data-testid="button-all-emails"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                All Email Templates
+              </Button>
+            </div>
+          )}
+
           {/* Email Templates and Folders Table */}
           {filteredEmailTemplates.length === 0 && emailFolders.length === 0 ? (
             <div className="text-center py-12">
@@ -927,20 +942,7 @@ export default function Campaigns() {
             </div>
           )}
 
-          {/* Breadcrumb navigation when viewing a specific folder */}
-          {selectedFolder && (
-            <div className="mt-4">
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedFolder(null)}
-                className="text-blue-600 hover:text-blue-800 p-0 h-auto font-normal"
-                data-testid="button-all-emails"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                All Email Templates
-              </Button>
-            </div>
-          )}
+
         </div>
       )}
 
