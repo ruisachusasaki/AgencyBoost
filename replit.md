@@ -71,6 +71,7 @@ Bundle architecture preference: Collection-based bundles.
 - Migrated SMS templates from memory storage to database storage for data persistence
 - Tags and SMS templates now persist across server restarts and maintain data integrity
 - Resolved delete tag functionality error by fixing frontend JSON parsing for 204 responses
+- Fixed SMS folder "Edit Folder" functionality - added missing onClick handler and complete modal dialog system
 
 ### Unified Template System Completion (August 2025)
 - Unified email and SMS template systems between Marketing and Client communication sections
