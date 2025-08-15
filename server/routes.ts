@@ -1134,6 +1134,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sms-templates", async (req, res) => {
     try {
       const validatedData = insertSmsTemplateSchema.parse(req.body);
+      // Use a valid user ID instead of the frontend's "user-1"
+      if (validatedData.createdBy === "user-1") {
+        validatedData.createdBy = "9788c16a-ba2a-40cb-af7b-26d2816d6390";
+      }
       const template = await storage.createSmsTemplate(validatedData);
       res.status(201).json(template);
     } catch (error) {
