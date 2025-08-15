@@ -19,10 +19,55 @@ import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Client, Tag, InsertTag } from "@shared/schema";
+import type { Client, Tag, InsertTag, EmailTemplate } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+
+// EmailTemplateSelector Component
+function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const { data: emailTemplates = [], isLoading } = useQuery({
+    queryKey: ["/api/email-templates"],
+  });
+
+  const filteredTemplates = emailTemplates.filter((template: EmailTemplate) =>
+    template.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading templates...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <Input 
+        placeholder="Search templates..." 
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <div className="grid gap-2 max-h-96 overflow-y-auto">
+        {filteredTemplates.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            {searchTerm ? "No templates found matching your search." : "No email templates available."}
+          </div>
+        ) : (
+          filteredTemplates.map((template: EmailTemplate) => (
+            <div 
+              key={template.id}
+              className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+              onClick={() => onSelectTemplate(template.content, template.name)}
+            >
+              <h4 className="font-medium">{template.name}</h4>
+              <p className="text-sm text-gray-600">{template.previewText || template.subject}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 // Types
 interface Section {
@@ -3029,32 +3074,7 @@ export default function EnhancedClientDetail() {
                 <DialogHeader>
                   <DialogTitle>Select Email Template</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <Input placeholder="Search templates..." />
-                  <div className="grid gap-2 max-h-96 overflow-y-auto">
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectTemplate(`<p>Dear {{firstName}},</p><p>Welcome to our services! We're excited to work with you and help you achieve your goals.</p><p>If you have any questions, please don't hesitate to reach out.</p><p>Best regards,<br>{{assignedUserFirstName}} {{assignedUserLastName}}</p>`, "Welcome Email")}
-                    >
-                      <h4 className="font-medium">Welcome Email</h4>
-                      <p className="text-sm text-gray-600">Welcome new clients to your services</p>
-                    </div>
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectTemplate(`<p>Hi {{firstName}},</p><p>I hope this email finds you well. I wanted to follow up on our recent conversation regarding your project.</p><p>Please let me know if you have any questions or if there's anything I can help you with.</p><p>Looking forward to hearing from you!</p><p>Best regards,<br>{{assignedUserFirstName}} {{assignedUserLastName}}</p>`, "Follow-up Email")}
-                    >
-                      <h4 className="font-medium">Follow-up Email</h4>
-                      <p className="text-sm text-gray-600">Standard follow-up template for existing clients</p>
-                    </div>
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectTemplate(`<p>Dear {{firstName}},</p><p>Thank you for choosing our services. We're thrilled to be working with {{companyName}} and look forward to delivering exceptional results.</p><p>Your account manager, {{assignedUserFirstName}} {{assignedUserLastName}}, will be your primary contact and will reach out to you within 24 hours to discuss next steps.</p><p>Welcome aboard!</p><p>Best regards,<br>The Team</p>`, "Thank You Email")}
-                    >
-                      <h4 className="font-medium">Thank You Email</h4>
-                      <p className="text-sm text-gray-600">Thank clients for choosing your services</p>
-                    </div>
-                  </div>
-                </div>
+                <EmailTemplateSelector onSelectTemplate={selectTemplate} />
               </DialogContent>
             </Dialog>
 
