@@ -213,7 +213,7 @@ export default function CustomFieldRenderer({
               // They are stored separately in the customFieldFileUploads table
             }}
             label={field.name}
-            required={field.required}
+            required={field.required || false}
           />
         );
 
