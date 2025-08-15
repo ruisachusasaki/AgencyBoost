@@ -21,8 +21,8 @@ import {
   type SocialMediaTemplate, type InsertSocialMediaTemplate,
   type SocialMediaAnalytics, type InsertSocialMediaAnalytics,
   type TemplateFolder, type InsertTemplateFolder,
-  type EmailTemplate, type InsertEmailTemplate,
-  type SmsTemplate, type InsertSmsTemplate,
+  type EmailTemplate, type InsertEmailTemplate, emailTemplates,
+  type SmsTemplate, type InsertSmsTemplate, smsTemplates,
   type SmartList, type InsertSmartList,
   type Workflow, type InsertWorkflow,
   type WorkflowExecution, type InsertWorkflowExecution,
@@ -2178,50 +2178,63 @@ export class MemStorage implements IStorage {
 
   // SMS Templates
   async getSmsTemplates(): Promise<SmsTemplate[]> {
-    return Array.from(this.smsTemplates.values());
+    try {
+      const result = await db.select().from(smsTemplates);
+      return result;
+    } catch (error) {
+      console.error("Error fetching SMS templates:", error);
+      return [];
+    }
   }
 
   async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> {
-    return this.smsTemplates.get(id);
+    try {
+      const result = await db.select().from(smsTemplates).where(eq(smsTemplates.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching SMS template:", error);
+      return undefined;
+    }
   }
 
   async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> {
-    return Array.from(this.smsTemplates.values()).filter(template => template.folderId === folderId);
+    try {
+      const result = await db.select().from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
+      return result;
+    } catch (error) {
+      console.error("Error fetching SMS templates by folder:", error);
+      return [];
+    }
   }
 
   async createSmsTemplate(templateData: InsertSmsTemplate): Promise<SmsTemplate> {
-    const template: SmsTemplate = {
-      id: randomUUID(),
-      name: templateData.name,
-      content: templateData.content,
-      folderId: templateData.folderId || null,
-      tags: templateData.tags || null,
-      isPublic: templateData.isPublic || false,
-      usageCount: 0,
-      lastUsed: null,
-      createdBy: templateData.createdBy,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.smsTemplates.set(template.id, template);
-    return template;
+    try {
+      const result = await db.insert(smsTemplates).values(templateData).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating SMS template:", error);
+      throw error;
+    }
   }
 
   async updateSmsTemplate(id: string, templateData: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined> {
-    const existing = this.smsTemplates.get(id);
-    if (!existing) return undefined;
-    
-    const updated: SmsTemplate = {
-      ...existing,
-      ...templateData,
-      updatedAt: new Date(),
-    };
-    this.smsTemplates.set(id, updated);
-    return updated;
+    try {
+      const result = await db.update(smsTemplates).set(templateData).where(eq(smsTemplates.id, id)).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating SMS template:", error);
+      return undefined;
+    }
   }
 
   async deleteSmsTemplate(id: string): Promise<boolean> {
-    return this.smsTemplates.delete(id);
+    try {
+      await db.delete(smsTemplates).where(eq(smsTemplates.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting SMS template:", error);
+      return false;
+    }
   }
 
   // Custom Fields

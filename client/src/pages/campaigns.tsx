@@ -303,7 +303,7 @@ export default function Campaigns() {
       const currentTemplate = emailTemplates.find(t => t.id === templateId);
       if (!currentTemplate) throw new Error("Template not found");
       
-      return await apiRequest("PUT", `/api/email-templates/${templateId}`, {
+      return await apiRequest("PATCH", `/api/email-templates/${templateId}`, {
         name: currentTemplate.name,
         subject: currentTemplate.subject,
         content: currentTemplate.content,
@@ -331,7 +331,7 @@ export default function Campaigns() {
       const currentTemplate = smsTemplates.find(t => t.id === templateId);
       if (!currentTemplate) throw new Error("Template not found");
       
-      return await apiRequest("PUT", `/api/sms-templates/${templateId}`, {
+      return await apiRequest("PATCH", `/api/sms-templates/${templateId}`, {
         name: currentTemplate.name,
         content: currentTemplate.content,
         tags: currentTemplate.tags || [],
