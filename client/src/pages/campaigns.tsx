@@ -1053,70 +1053,181 @@ export default function Campaigns() {
             </div>
           </div>
 
-          {/* SMS Templates Grid Display */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSmsTemplates.map((template) => (
-              <Card key={template.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-green-500" />
-                      <CardTitle className="text-sm font-medium truncate">
-                        {template.name}
-                      </CardTitle>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateTemplate(template)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteTemplate(template.id, "sms")}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">
-                    {template.content.substring(0, 50)}...
-                  </p>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>SMS Template</span>
-                    {template.tags && template.tags.length > 0 && (
-                      <div className="flex gap-1">
-                        {template.tags.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs px-1">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {template.tags.length > 2 && (
-                          <Badge variant="secondary" className="text-xs px-1">
-                            +{template.tags.length - 2}
-                          </Badge>
-                        )}
+          {/* Breadcrumb navigation when viewing a specific folder */}
+          {selectedFolder && (
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedFolder(null)}
+                className="text-blue-600 hover:text-blue-800 p-0 h-auto font-normal"
+                data-testid="button-all-sms"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                All SMS Templates
+              </Button>
+            </div>
+          )}
+
+          {/* SMS Templates and Folders Table */}
+          {filteredSmsTemplates.length === 0 && smsFolders.length === 0 ? (
+            <div className="text-center py-12">
+              <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No SMS templates found</h3>
+              <p className="text-gray-500 mb-4">
+                Get started by creating your first SMS template.
+              </p>
+              <Button 
+                onClick={() => setIsCreateTemplateDialogOpen(true)}
+                className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                data-testid="button-create-first-sms"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First SMS Template
+              </Button>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <Table className="bg-white">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40%]">
+                      <div className="flex items-center gap-2">
+                        Name
+                        <ArrowUpDown className="h-4 w-4" />
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    </TableHead>
+                    <TableHead className="w-[25%]">
+                      <div className="flex items-center gap-2">
+                        Content Preview
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="w-[20%]">Type</TableHead>
+                    <TableHead className="w-[15%]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {/* Show folders first (if not in a specific folder view) */}
+                  {!selectedFolder && smsFolders.map((folder) => (
+                    <TableRow key={folder.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4 text-blue-500" />
+                          <button
+                            onClick={() => setSelectedFolder(folder.id)}
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                            data-testid={`folder-link-${folder.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            {folder.name}
+                          </button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {folder.description || "No description"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          Folder
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid={`folder-actions-${folder.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedFolder(folder.id)}>
+                              <FolderOpen className="h-4 w-4 mr-2" />
+                              View Folder
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Folder
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Folder
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {/* Show SMS templates */}
+                  {filteredSmsTemplates.map((template) => (
+                    <TableRow key={template.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4 text-green-500" />
+                          <div>
+                            <div className="font-medium">{template.name}</div>
+                            {template.tags && template.tags.length > 0 && (
+                              <div className="flex gap-1 mt-1">
+                                {template.tags.slice(0, 2).map((tag, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs px-1">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {template.tags.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs px-1">
+                                    +{template.tags.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-900 truncate max-w-xs">
+                          {template.content.substring(0, 100)}...
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {template.content.length} characters
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          SMS Template
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid={`template-actions-${template.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDuplicateTemplate(template)}>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteTemplate(template.id, "sms")}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
 
