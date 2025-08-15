@@ -46,6 +46,10 @@ export default function Campaigns() {
   const [emailContent, setEmailContent] = useState("");
   const [moveToFolderDialogOpen, setMoveToFolderDialogOpen] = useState(false);
   const [formToMove, setFormToMove] = useState<any>(null);
+  const [moveEmailToFolderDialogOpen, setMoveEmailToFolderDialogOpen] = useState(false);
+  const [emailTemplateToMove, setEmailTemplateToMove] = useState<EmailTemplate | null>(null);
+  const [moveSmsToFolderDialogOpen, setMoveSmsToFolderDialogOpen] = useState(false);
+  const [smsTemplateToMove, setSmsTemplateToMove] = useState<SmsTemplate | null>(null);
   const [formSearchTerm, setFormSearchTerm] = useState("");
   const [selectedFormFolder, setSelectedFormFolder] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -288,6 +292,38 @@ export default function Campaigns() {
     },
     onError: () => {
       toast({ variant: "destructive", title: "Error", description: "Failed to move form" });
+    }
+  });
+
+  // Move email template to folder mutation
+  const moveEmailToFolderMutation = useMutation({
+    mutationFn: async ({ templateId, folderId }: { templateId: string; folderId: string | null }) => {
+      return await apiRequest("PUT", `/api/email-templates/${templateId}`, { folderId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      toast({ title: "Success", description: "Email template moved successfully" });
+      setMoveEmailToFolderDialogOpen(false);
+      setEmailTemplateToMove(null);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to move email template" });
+    }
+  });
+
+  // Move SMS template to folder mutation
+  const moveSmsToFolderMutation = useMutation({
+    mutationFn: async ({ templateId, folderId }: { templateId: string; folderId: string | null }) => {
+      return await apiRequest("PUT", `/api/sms-templates/${templateId}`, { folderId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
+      toast({ title: "Success", description: "SMS template moved successfully" });
+      setMoveSmsToFolderDialogOpen(false);
+      setSmsTemplateToMove(null);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to move SMS template" });
     }
   });
 
@@ -924,6 +960,18 @@ export default function Campaigns() {
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
+                            {!template.folderId && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  setEmailTemplateToMove(template);
+                                  setMoveEmailToFolderDialogOpen(true);
+                                }}>
+                                  <Folder className="h-4 w-4 mr-2" />
+                                  Move to Folder
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteTemplate(template.id, "email")}
@@ -1211,6 +1259,18 @@ export default function Campaigns() {
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
+                            {!template.folderId && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  setSmsTemplateToMove(template);
+                                  setMoveSmsToFolderDialogOpen(true);
+                                }}>
+                                  <Folder className="h-4 w-4 mr-2" />
+                                  Move to Folder
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteTemplate(template.id, "sms")}
@@ -1619,6 +1679,106 @@ export default function Campaigns() {
               </Button>
               <Button type="submit" disabled={moveFormToFolderMutation.isPending}>
                 Move Form
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Email Template to Folder Dialog */}
+      <Dialog open={moveEmailToFolderDialogOpen} onOpenChange={setMoveEmailToFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Email Template to Folder</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const folderId = formData.get("folderId") as string;
+            if (emailTemplateToMove) {
+              moveEmailToFolderMutation.mutate({
+                templateId: emailTemplateToMove.id,
+                folderId: folderId === "no-folder" ? null : folderId
+              });
+            }
+          }} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Move "{emailTemplateToMove?.name}" to folder:
+              </label>
+              <Select name="folderId" defaultValue="no-folder">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-folder">No folder</SelectItem>
+                  {emailFolders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => {
+                setMoveEmailToFolderDialogOpen(false);
+                setEmailTemplateToMove(null);
+              }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={moveEmailToFolderMutation.isPending}>
+                Move Template
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move SMS Template to Folder Dialog */}
+      <Dialog open={moveSmsToFolderDialogOpen} onOpenChange={setMoveSmsToFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move SMS Template to Folder</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const folderId = formData.get("folderId") as string;
+            if (smsTemplateToMove) {
+              moveSmsToFolderMutation.mutate({
+                templateId: smsTemplateToMove.id,
+                folderId: folderId === "no-folder" ? null : folderId
+              });
+            }
+          }} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Move "{smsTemplateToMove?.name}" to folder:
+              </label>
+              <Select name="folderId" defaultValue="no-folder">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-folder">No folder</SelectItem>
+                  {smsFolders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => {
+                setMoveSmsToFolderDialogOpen(false);
+                setSmsTemplateToMove(null);
+              }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={moveSmsToFolderMutation.isPending}>
+                Move Template
               </Button>
             </div>
           </form>
