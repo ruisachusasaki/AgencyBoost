@@ -19,7 +19,7 @@ import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Client, Tag, InsertTag, EmailTemplate } from "@shared/schema";
+import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -61,6 +61,51 @@ function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (conten
             >
               <h4 className="font-medium">{template.name}</h4>
               <p className="text-sm text-gray-600">{template.previewText || template.subject}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// SmsTemplateSelector Component
+function SmsTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const { data: smsTemplates = [], isLoading } = useQuery({
+    queryKey: ["/api/sms-templates"],
+  });
+
+  const filteredTemplates = smsTemplates.filter((template: SmsTemplate) =>
+    template.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading templates...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <Input 
+        placeholder="Search templates..." 
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <div className="grid gap-2 max-h-96 overflow-y-auto">
+        {filteredTemplates.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            {searchTerm ? "No templates found matching your search." : "No SMS templates available."}
+          </div>
+        ) : (
+          filteredTemplates.map((template: SmsTemplate) => (
+            <div 
+              key={template.id}
+              className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+              onClick={() => onSelectTemplate(template.content, template.name)}
+            >
+              <h4 className="font-medium">{template.name}</h4>
+              <p className="text-sm text-gray-600">{template.content.length > 100 ? template.content.substring(0, 100) + '...' : template.content}</p>
             </div>
           ))
         )}
@@ -3299,39 +3344,7 @@ export default function EnhancedClientDetail() {
                 <DialogHeader>
                   <DialogTitle>Select SMS Template</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <Input placeholder="Search templates..." />
-                  <div className="grid gap-2 max-h-96 overflow-y-auto">
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectSmsTemplate(`Hi {{firstName}}, this is {{assignedUserFirstName}} from your account team. Just wanted to check in and see how things are going!`, "Check-in SMS")}
-                    >
-                      <h4 className="font-medium">Check-in SMS</h4>
-                      <p className="text-sm text-gray-600">Quick check-in message for clients</p>
-                    </div>
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectSmsTemplate(`Hi {{firstName}}, your appointment with {{assignedUserFirstName}} is scheduled for tomorrow at {{appointmentTime}}. Reply YES to confirm.`, "Appointment Reminder")}
-                    >
-                      <h4 className="font-medium">Appointment Reminder</h4>
-                      <p className="text-sm text-gray-600">Remind clients about upcoming appointments</p>
-                    </div>
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectSmsTemplate(`Thanks for your payment, {{firstName}}! Your invoice has been marked as paid. Contact us if you have any questions.`, "Payment Confirmation")}
-                    >
-                      <h4 className="font-medium">Payment Confirmation</h4>
-                      <p className="text-sm text-gray-600">Confirm payment receipt</p>
-                    </div>
-                    <div 
-                      className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                      onClick={() => selectSmsTemplate(`Hi {{firstName}}, we wanted to follow up on our recent conversation. Please give us a call when you have a moment.`, "Follow-up SMS")}
-                    >
-                      <h4 className="font-medium">Follow-up SMS</h4>
-                      <p className="text-sm text-gray-600">General follow-up message</p>
-                    </div>
-                  </div>
-                </div>
+                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
               </DialogContent>
             </Dialog>
 
