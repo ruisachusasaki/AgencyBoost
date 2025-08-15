@@ -2744,12 +2744,41 @@ export class DbStorage implements IStorage {
     return result.rowCount !== undefined && result.rowCount > 0;
   }
 
-  async getEmailTemplates(): Promise<EmailTemplate[]> { return this.memStorage.getEmailTemplates(); }
-  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> { return this.memStorage.getEmailTemplate(id); }
-  async getEmailTemplatesByFolder(folderId: string): Promise<EmailTemplate[]> { return this.memStorage.getEmailTemplatesByFolder(folderId); }
-  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> { return this.memStorage.createEmailTemplate(template); }
-  async updateEmailTemplate(id: string, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined> { return this.memStorage.updateEmailTemplate(id, template); }
-  async deleteEmailTemplate(id: string): Promise<boolean> { return this.memStorage.deleteEmailTemplate(id); }
+  async getEmailTemplates(): Promise<EmailTemplate[]> {
+    return await db.select().from(emailTemplates).orderBy(asc(emailTemplates.name));
+  }
+  
+  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> {
+    const results = await db.select().from(emailTemplates).where(eq(emailTemplates.id, id));
+    return results[0];
+  }
+  
+  async getEmailTemplatesByFolder(folderId: string): Promise<EmailTemplate[]> {
+    return await db.select().from(emailTemplates).where(eq(emailTemplates.folderId, folderId));
+  }
+  
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const id = template.id || randomUUID();
+    const newTemplate = { 
+      ...template, 
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(emailTemplates).values(newTemplate);
+    return newTemplate as EmailTemplate;
+  }
+  
+  async updateEmailTemplate(id: string, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined> {
+    const updatedTemplate = { ...template, updatedAt: new Date() };
+    await db.update(emailTemplates).set(updatedTemplate).where(eq(emailTemplates.id, id));
+    return await this.getEmailTemplate(id);
+  }
+  
+  async deleteEmailTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(emailTemplates).where(eq(emailTemplates.id, id));
+    return result.rowCount > 0;
+  }
 
   async getSmsTemplates(): Promise<SmsTemplate[]> { return this.memStorage.getSmsTemplates(); }
   async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> { return this.memStorage.getSmsTemplate(id); }
