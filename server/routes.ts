@@ -23,7 +23,7 @@ import {
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders
+  forms, formFields, formSubmissions, formFolders, leads, tasks, invoices
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -641,24 +641,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Lead routes
+  // Lead routes - Database Storage
   app.get("/api/leads", async (req, res) => {
     try {
-      const leads = await storage.getLeads();
-      res.json(leads);
+      const { search } = req.query;
+      
+      let leadsQuery;
+      if (search && typeof search === 'string') {
+        leadsQuery = db.select()
+          .from(leads)
+          .where(
+            or(
+              like(leads.name, `%${search}%`),
+              like(leads.email, `%${search}%`),
+              like(leads.company, `%${search}%`)
+            )
+          )
+          .orderBy(desc(leads.createdAt));
+      } else {
+        leadsQuery = db.select()
+          .from(leads)
+          .orderBy(desc(leads.createdAt));
+      }
+      
+      const leadsList = await leadsQuery;
+      res.json(leadsList);
     } catch (error) {
+      console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
   });
 
   app.get("/api/leads/:id", async (req, res) => {
     try {
-      const lead = await storage.getLead(req.params.id);
+      const [lead] = await db.select()
+        .from(leads)
+        .where(eq(leads.id, req.params.id));
+      
       if (!lead) {
         return res.status(404).json({ message: "Lead not found" });
       }
       res.json(lead);
     } catch (error) {
+      console.error("Error fetching lead:", error);
       res.status(500).json({ message: "Failed to fetch lead" });
     }
   });
@@ -666,9 +691,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/leads", async (req, res) => {
     try {
       const validatedData = insertLeadSchema.parse(req.body);
-      const lead = await storage.createLead(validatedData);
-      res.status(201).json(lead);
+      
+      const [newLead] = await db.insert(leads)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newLead);
     } catch (error) {
+      console.error("Error creating lead:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -679,12 +709,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/leads/:id", async (req, res) => {
     try {
       const validatedData = insertLeadSchema.partial().parse(req.body);
-      const lead = await storage.updateLead(req.params.id, validatedData);
-      if (!lead) {
+      
+      const [updatedLead] = await db.update(leads)
+        .set(validatedData)
+        .where(eq(leads.id, req.params.id))
+        .returning();
+      
+      if (!updatedLead) {
         return res.status(404).json({ message: "Lead not found" });
       }
-      res.json(lead);
+      res.json(updatedLead);
     } catch (error) {
+      console.error("Error updating lead:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -694,12 +730,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/leads/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteLead(req.params.id);
-      if (!deleted) {
+      const deletedRows = await db.delete(leads)
+        .where(eq(leads.id, req.params.id));
+      
+      if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Lead not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting lead:", error);
       res.status(500).json({ message: "Failed to delete lead" });
     }
   });
@@ -707,22 +746,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task routes
   app.get("/api/tasks", async (req, res) => {
     try {
-      const tasks = await storage.getTasks();
+      const { search, status, priority, assignedTo, clientId, projectId } = req.query;
       
-      // Just use tasks from storage for now
-      const uniqueTasks = tasks;
+      let tasksQuery = db.select().from(tasks);
+      const conditions = [];
       
-      res.json(uniqueTasks);
+      if (search && typeof search === 'string') {
+        conditions.push(
+          or(
+            like(tasks.title, `%${search}%`),
+            like(tasks.description, `%${search}%`)
+          )
+        );
+      }
+      
+      if (status && typeof status === 'string') {
+        conditions.push(eq(tasks.status, status));
+      }
+      
+      if (priority && typeof priority === 'string') {
+        conditions.push(eq(tasks.priority, priority));
+      }
+      
+      if (assignedTo && typeof assignedTo === 'string') {
+        conditions.push(eq(tasks.assignedTo, assignedTo));
+      }
+      
+      if (clientId && typeof clientId === 'string') {
+        conditions.push(eq(tasks.clientId, clientId));
+      }
+      
+      if (projectId && typeof projectId === 'string') {
+        conditions.push(eq(tasks.projectId, projectId));
+      }
+      
+      if (conditions.length > 0) {
+        tasksQuery = tasksQuery.where(and(...conditions));
+      }
+      
+      const tasksList = await tasksQuery.orderBy(desc(tasks.createdAt));
+      res.json(tasksList);
     } catch (error) {
+      console.error("Error fetching tasks:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });
     }
   });
 
   app.get("/api/tasks/:id", async (req, res) => {
     try {
-      let task = await storage.getTask(req.params.id);
-      
-      // Use task from storage only for now
+      const [task] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, req.params.id));
       
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
@@ -737,9 +811,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks", async (req, res) => {
     try {
       const validatedData = insertTaskSchema.parse(req.body);
-      const task = await storage.createTask(validatedData);
-      res.status(201).json(task);
+      
+      const [newTask] = await db.insert(tasks)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newTask);
     } catch (error) {
+      console.error("Error creating task:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -750,12 +829,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/tasks/:id", async (req, res) => {
     try {
       const validatedData = insertTaskSchema.partial().parse(req.body);
-      const task = await storage.updateTask(req.params.id, validatedData);
-      if (!task) {
+      
+      const [updatedTask] = await db.update(tasks)
+        .set(validatedData)
+        .where(eq(tasks.id, req.params.id))
+        .returning();
+      
+      if (!updatedTask) {
         return res.status(404).json({ message: "Task not found" });
       }
-      res.json(task);
+      res.json(updatedTask);
     } catch (error) {
+      console.error("Error updating task:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -773,21 +858,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Only administrators can delete tasks." });
       }
 
-      const deleted = await storage.deleteTask(req.params.id);
-      if (!deleted) {
+      const deletedRows = await db.delete(tasks)
+        .where(eq(tasks.id, req.params.id));
+      
+      if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Task not found" });
-      }
-
-      // Also remove from global tasks storage if it exists
-      if ((global as any).tasks) {
-        (global as any).tasks = (global as any).tasks.filter((task: any) => task.id !== req.params.id);
-      }
-
-      // Remove from client tasks storage as well
-      if ((global as any).clientTasks) {
-        Object.keys((global as any).clientTasks).forEach(clientId => {
-          (global as any).clientTasks[clientId] = (global as any).clientTasks[clientId].filter((task: any) => task.id !== req.params.id);
-        });
       }
 
       // Log the deletion
@@ -809,24 +884,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice routes
+  // Invoice routes - Database Storage
   app.get("/api/invoices", async (req, res) => {
     try {
-      const invoices = await storage.getInvoices();
-      res.json(invoices);
+      const { search, status, clientId, projectId } = req.query;
+      
+      let invoicesQuery = db.select().from(invoices);
+      const conditions = [];
+      
+      if (search && typeof search === 'string') {
+        conditions.push(
+          or(
+            like(invoices.invoiceNumber, `%${search}%`),
+            like(invoices.notes, `%${search}%`)
+          )
+        );
+      }
+      
+      if (status && typeof status === 'string') {
+        conditions.push(eq(invoices.status, status));
+      }
+      
+      if (clientId && typeof clientId === 'string') {
+        conditions.push(eq(invoices.clientId, clientId));
+      }
+      
+      if (projectId && typeof projectId === 'string') {
+        conditions.push(eq(invoices.projectId, projectId));
+      }
+      
+      if (conditions.length > 0) {
+        invoicesQuery = invoicesQuery.where(and(...conditions));
+      }
+      
+      const invoicesList = await invoicesQuery.orderBy(desc(invoices.createdAt));
+      res.json(invoicesList);
     } catch (error) {
+      console.error("Error fetching invoices:", error);
       res.status(500).json({ message: "Failed to fetch invoices" });
     }
   });
 
   app.get("/api/invoices/:id", async (req, res) => {
     try {
-      const invoice = await storage.getInvoice(req.params.id);
+      const [invoice] = await db.select()
+        .from(invoices)
+        .where(eq(invoices.id, req.params.id));
+      
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
       res.json(invoice);
     } catch (error) {
+      console.error("Error fetching invoice:", error);
       res.status(500).json({ message: "Failed to fetch invoice" });
     }
   });
@@ -834,9 +944,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/invoices", async (req, res) => {
     try {
       const validatedData = insertInvoiceSchema.parse(req.body);
-      const invoice = await storage.createInvoice(validatedData);
-      res.status(201).json(invoice);
+      
+      const [newInvoice] = await db.insert(invoices)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newInvoice);
     } catch (error) {
+      console.error("Error creating invoice:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -847,12 +962,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/invoices/:id", async (req, res) => {
     try {
       const validatedData = insertInvoiceSchema.partial().parse(req.body);
-      const invoice = await storage.updateInvoice(req.params.id, validatedData);
-      if (!invoice) {
+      
+      const [updatedInvoice] = await db.update(invoices)
+        .set(validatedData)
+        .where(eq(invoices.id, req.params.id))
+        .returning();
+      
+      if (!updatedInvoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
-      res.json(invoice);
+      res.json(updatedInvoice);
     } catch (error) {
+      console.error("Error updating invoice:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -862,12 +983,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/invoices/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteInvoice(req.params.id);
-      if (!deleted) {
+      const deletedRows = await db.delete(invoices)
+        .where(eq(invoices.id, req.params.id));
+      
+      if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Invoice not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting invoice:", error);
       res.status(500).json({ message: "Failed to delete invoice" });
     }
   });

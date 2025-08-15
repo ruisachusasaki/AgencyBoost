@@ -77,9 +77,16 @@ Bundle architecture preference: Collection-based bundles.
 - Fixed tags storage issue by migrating from memory storage to PostgreSQL database
 - Migrated SMS templates from memory storage to database storage for data persistence
 - Migrated Projects from memory storage to database storage for data persistence
-- Tags, SMS templates, and projects now persist across server restarts and maintain data integrity
+- **Migrated Leads from memory storage to database storage for complete CRM functionality**
+- **Migrated Tasks from memory storage to database storage with advanced filtering capabilities**
+- **Migrated Invoices from memory storage to database storage with comprehensive business logic**
+- Tags, SMS templates, projects, leads, tasks, and invoices now persist across server restarts and maintain data integrity
 - Resolved delete tag functionality error by fixing frontend JSON parsing for 204 responses
 - Fixed SMS folder "Edit Folder" functionality - added missing onClick handler and complete modal dialog system
+- Added search functionality for leads with filtering by name, email, and company
+- Added comprehensive filtering for tasks by status, priority, assignedTo, clientId, and projectId
+- Added filtering for invoices by status, clientId, projectId, and search by invoice number
+- All leads, tasks, and invoices CRUD operations now use direct database queries instead of memory storage
 
 ### Unified Template System Completion (August 2025)
 - Unified email and SMS template systems between Marketing and Client communication sections
