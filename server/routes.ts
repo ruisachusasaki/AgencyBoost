@@ -1111,13 +1111,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/email-templates", async (req, res) => {
     try {
       const validatedData = insertEmailTemplateSchema.parse(req.body);
+      console.log("Creating email template with data:", validatedData);
       const template = await storage.createEmailTemplate(validatedData);
       res.status(201).json(template);
     } catch (error) {
+      console.error("Email template creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create email template" });
+      res.status(500).json({ message: "Failed to create email template", error: error.message });
     }
   });
 

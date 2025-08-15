@@ -2758,7 +2758,7 @@ export class DbStorage implements IStorage {
   }
   
   async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
-    const id = template.id || randomUUID();
+    const id = randomUUID();
     const newTemplate = { 
       ...template, 
       id,
