@@ -3286,6 +3286,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canEdit: perm.canEdit || false,
           canDelete: perm.canDelete || false,
           canManage: perm.canManage || false,
+          canExport: perm.canExport || false,
+          canImport: perm.canImport || false,
+          dataAccessLevel: perm.dataAccessLevel || "own",
+          restrictedFields: perm.restrictedFields || [],
+          readOnlyFields: perm.readOnlyFields || [],
         }));
         
         const insertedPermissions = await db.insert(permissions).values(permissionsToInsert).returning();
@@ -3553,6 +3558,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error removing user role:', error);
       res.status(500).json({ message: "Failed to remove user role" });
+    }
+  });
+
+  // Permission Check API Route - Check if current user has specific permission
+  app.get("/api/permissions/check/:module/:action", async (req, res) => {
+    try {
+      const { module, action } = req.params;
+      const userId = req.query.userId as string || "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Default for testing
+      
+      // Get user's roles and permissions
+      const userPermissions = await db
+        .select({
+          canView: permissions.canView,
+          canCreate: permissions.canCreate,
+          canEdit: permissions.canEdit,
+          canDelete: permissions.canDelete,
+          canManage: permissions.canManage,
+          canExport: permissions.canExport,
+          canImport: permissions.canImport,
+          dataAccessLevel: permissions.dataAccessLevel,
+          restrictedFields: permissions.restrictedFields,
+          readOnlyFields: permissions.readOnlyFields,
+          module: permissions.module,
+          roleName: roles.name
+        })
+        .from(userRoles)
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .innerJoin(permissions, eq(roles.id, permissions.roleId))
+        .where(and(
+          eq(userRoles.userId, userId),
+          eq(permissions.module, module)
+        ));
+
+      if (userPermissions.length === 0) {
+        return res.json({ 
+          hasPermission: false, 
+          reason: "No permissions found for this module",
+          userRoles: []
+        });
+      }
+
+      // Aggregate permissions from all roles (OR logic - if any role grants permission, user has it)
+      const hasPermission = userPermissions.some(perm => {
+        switch (action.toLowerCase()) {
+          case 'view': return perm.canView;
+          case 'create': return perm.canCreate;
+          case 'edit': return perm.canEdit;
+          case 'delete': return perm.canDelete;
+          case 'manage': return perm.canManage;
+          case 'export': return perm.canExport;
+          case 'import': return perm.canImport;
+          default: return false;
+        }
+      });
+
+      const aggregatedPermission = {
+        canView: userPermissions.some(p => p.canView),
+        canCreate: userPermissions.some(p => p.canCreate),
+        canEdit: userPermissions.some(p => p.canEdit),
+        canDelete: userPermissions.some(p => p.canDelete),
+        canManage: userPermissions.some(p => p.canManage),
+        canExport: userPermissions.some(p => p.canExport),
+        canImport: userPermissions.some(p => p.canImport),
+        dataAccessLevel: userPermissions.find(p => p.dataAccessLevel === 'all')?.dataAccessLevel || 
+                        userPermissions.find(p => p.dataAccessLevel === 'department')?.dataAccessLevel ||
+                        userPermissions.find(p => p.dataAccessLevel === 'team')?.dataAccessLevel || 'own',
+        restrictedFields: [...new Set(userPermissions.flatMap(p => p.restrictedFields || []))],
+        readOnlyFields: [...new Set(userPermissions.flatMap(p => p.readOnlyFields || []))],
+        userRoles: userPermissions.map(p => p.roleName)
+      };
+
+      res.json({
+        hasPermission,
+        permissions: aggregatedPermission,
+        requestedAction: action,
+        module,
+        userId
+      });
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      res.status(500).json({ message: "Failed to check permissions" });
+    }
+  });
+
+  // Get all permissions for a user across all modules
+  app.get("/api/users/:userId/permissions", async (req, res) => {
+    try {
+      const userPermissions = await db
+        .select({
+          module: permissions.module,
+          canView: permissions.canView,
+          canCreate: permissions.canCreate,
+          canEdit: permissions.canEdit,
+          canDelete: permissions.canDelete,
+          canManage: permissions.canManage,
+          canExport: permissions.canExport,
+          canImport: permissions.canImport,
+          dataAccessLevel: permissions.dataAccessLevel,
+          restrictedFields: permissions.restrictedFields,
+          readOnlyFields: permissions.readOnlyFields,
+          roleName: roles.name,
+          roleId: roles.id
+        })
+        .from(userRoles)
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .innerJoin(permissions, eq(roles.id, permissions.roleId))
+        .where(eq(userRoles.userId, req.params.userId))
+        .orderBy(permissions.module, roles.name);
+
+      // Group by module and aggregate permissions
+      const modulePermissions = userPermissions.reduce((acc, perm) => {
+        if (!acc[perm.module]) {
+          acc[perm.module] = {
+            module: perm.module,
+            canView: false,
+            canCreate: false,
+            canEdit: false,
+            canDelete: false,
+            canManage: false,
+            canExport: false,
+            canImport: false,
+            dataAccessLevel: 'own',
+            restrictedFields: [],
+            readOnlyFields: [],
+            grantedByRoles: []
+          };
+        }
+
+        const current = acc[perm.module];
+        current.canView = current.canView || perm.canView;
+        current.canCreate = current.canCreate || perm.canCreate;
+        current.canEdit = current.canEdit || perm.canEdit;
+        current.canDelete = current.canDelete || perm.canDelete;
+        current.canManage = current.canManage || perm.canManage;
+        current.canExport = current.canExport || perm.canExport;
+        current.canImport = current.canImport || perm.canImport;
+        
+        // Use highest data access level
+        const accessLevels = ['own', 'team', 'department', 'all'];
+        const currentLevel = accessLevels.indexOf(current.dataAccessLevel);
+        const newLevel = accessLevels.indexOf(perm.dataAccessLevel);
+        if (newLevel > currentLevel) {
+          current.dataAccessLevel = perm.dataAccessLevel;
+        }
+
+        // Combine field restrictions
+        current.restrictedFields = [...new Set([...current.restrictedFields, ...(perm.restrictedFields || [])])];
+        current.readOnlyFields = [...new Set([...current.readOnlyFields, ...(perm.readOnlyFields || [])])];
+        current.grantedByRoles.push({ roleId: perm.roleId, roleName: perm.roleName });
+
+        return acc;
+      }, {} as Record<string, any>);
+
+      res.json(Object.values(modulePermissions));
+    } catch (error) {
+      console.error('Error fetching user permissions:', error);
+      res.status(500).json({ message: "Failed to fetch user permissions" });
     }
   });
 

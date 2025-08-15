@@ -1007,6 +1007,16 @@ export const permissions = pgTable("permissions", {
   canEdit: boolean("can_edit").default(false),
   canDelete: boolean("can_delete").default(false),
   canManage: boolean("can_manage").default(false), // for settings and admin functions
+  canExport: boolean("can_export").default(false), // export data permissions
+  canImport: boolean("can_import").default(false), // import data permissions
+  
+  // Data access level - CRM best practice for data segmentation
+  dataAccessLevel: text("data_access_level").notNull().default("own"), // own, team, department, all
+  
+  // Field-level restrictions for sensitive data
+  restrictedFields: text("restricted_fields").array(), // fields user cannot view/edit
+  readOnlyFields: text("read_only_fields").array(), // fields user can view but not edit
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
