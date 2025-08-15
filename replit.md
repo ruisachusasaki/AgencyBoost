@@ -66,6 +66,12 @@ Bundle architecture preference: Collection-based bundles.
 - Root table now correctly shows only templates without folders; templates in folders only appear in those specific folders
 - Eliminated duplicate folder creation issues and ensured proper data persistence across all template operations
 
+### Memory Storage to Database Migration (August 2025)
+- Fixed tags storage issue by migrating from memory storage to PostgreSQL database
+- Migrated SMS templates from memory storage to database storage for data persistence
+- Tags and SMS templates now persist across server restarts and maintain data integrity
+- Resolved delete tag functionality error by fixing frontend JSON parsing for 204 responses
+
 ### Unified Template System Completion (August 2025)
 - Unified email and SMS template systems between Marketing and Client communication sections
 - Replaced hardcoded templates in client detail pages with dynamic database-driven components

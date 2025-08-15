@@ -2780,12 +2780,42 @@ export class DbStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  async getSmsTemplates(): Promise<SmsTemplate[]> { return this.memStorage.getSmsTemplates(); }
-  async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> { return this.memStorage.getSmsTemplate(id); }
-  async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> { return this.memStorage.getSmsTemplatesByFolder(folderId); }
-  async createSmsTemplate(template: InsertSmsTemplate): Promise<SmsTemplate> { return this.memStorage.createSmsTemplate(template); }
-  async updateSmsTemplate(id: string, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined> { return this.memStorage.updateSmsTemplate(id, template); }
-  async deleteSmsTemplate(id: string): Promise<boolean> { return this.memStorage.deleteSmsTemplate(id); }
+  async getSmsTemplates(): Promise<SmsTemplate[]> {
+    const result = await this.db.select().from(smsTemplates);
+    return result;
+  }
+
+  async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> {
+    const result = await this.db.select().from(smsTemplates).where(eq(smsTemplates.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> {
+    return await this.db.select().from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
+  }
+
+  async createSmsTemplate(template: InsertSmsTemplate): Promise<SmsTemplate> {
+    const result = await this.db.insert(smsTemplates).values({
+      ...template,
+      id: sql`gen_random_uuid()`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return result[0];
+  }
+
+  async updateSmsTemplate(id: string, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined> {
+    const result = await this.db.update(smsTemplates).set({
+      ...template,
+      updatedAt: new Date(),
+    }).where(eq(smsTemplates.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSmsTemplate(id: string): Promise<boolean> {
+    const result = await this.db.delete(smsTemplates).where(eq(smsTemplates.id, id)).returning();
+    return result.length > 0;
+  }
 
   // Custom Fields
   async getCustomFields(): Promise<CustomField[]> { return this.memStorage.getCustomFields(); }
