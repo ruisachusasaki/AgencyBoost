@@ -379,6 +379,7 @@ export default function Campaigns() {
       previewText: formData.get("previewText") as string || "",
       tags,
       folderId: selectedFolder || undefined,
+      createdBy: "user-1", // Required field for email template creation
     };
     createEmailTemplateMutation.mutate(data);
   };
@@ -393,7 +394,8 @@ export default function Campaigns() {
       name: formData.get("name") as string,
       content: smsContent,
       tags,
-      folderId: selectedFolder || undefined,
+      folderId: selectedSmsFolder || undefined,
+      createdBy: "user-1", // Required field for SMS template creation
     };
     createSmsTemplateMutation.mutate(data);
   };
@@ -479,6 +481,7 @@ export default function Campaigns() {
         previewText: emailTemplate.previewText || "",
         tags: emailTemplate.tags || [],
         folderId: emailTemplate.folderId,
+        createdBy: "user-1",
       };
       createEmailTemplateMutation.mutate(data);
     } else {
@@ -488,6 +491,7 @@ export default function Campaigns() {
         content: smsTemplate.content,
         tags: smsTemplate.tags || [],
         folderId: smsTemplate.folderId,
+        createdBy: "user-1",
       };
       createSmsTemplateMutation.mutate(data);
     }
