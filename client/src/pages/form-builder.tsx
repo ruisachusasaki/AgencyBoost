@@ -170,10 +170,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
 
   // Toggle preview mode and generate sample data
   const togglePreviewMode = () => {
-    if (!isPreviewMode) {
+    const newPreviewMode = !isPreviewMode;
+    setIsPreviewMode(newPreviewMode);
+    if (newPreviewMode) {
       generatePreviewData();
     }
-    setIsPreviewMode(!isPreviewMode);
   };
 
   // Get current user for createdBy field
@@ -217,10 +218,8 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
           ...defaultFormStyling,
           ...formData.settings.styling
         };
-        console.log('Loading form styling from data:', formData.settings.styling, 'Final styling:', loadedStyling);
         setFormStyling(loadedStyling);
       } else {
-        console.log('No styling in form data, using defaults:', defaultFormStyling);
         setFormStyling(defaultFormStyling);
       }
     }
@@ -841,9 +840,6 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
   
-  // Debug logging
-  console.log('Field styling applied:', fieldStyles, 'Label styling:', labelStyles, 'Placeholder CSS:', placeholderCSS);
-  
   const renderPreviewField = () => {
     switch (field.type) {
       case 'text':
@@ -1055,7 +1051,6 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
         ...updates
       }
     };
-    console.log('Updating styling:', section, updates, 'New styling:', newStyling);
     onUpdateStyling(newStyling);
   };
 
