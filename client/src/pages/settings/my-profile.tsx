@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,10 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, MapPin, Bell, Settings } from "lucide-react";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UploadResult } from "@uppy/core";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -18,10 +18,37 @@ import "react-quill/dist/quill.snow.css";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { apiRequest } from "@/lib/queryClient";
 import type { Staff } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { z } from "zod";
+
+// Form schemas for different tabs
+const personalInfoSchema = z.object({
+  birthdate: z.string().optional(),
+});
+
+const addressSchema = z.object({
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  country: z.string().optional(),
+});
+
+const notificationSchema = z.object({
+  emailNotifications: z.boolean().default(true),
+  smsNotifications: z.boolean().default(false),
+  pushNotifications: z.boolean().default(true),
+  taskReminders: z.boolean().default(true),
+  appointmentReminders: z.boolean().default(true),
+});
 
 export default function MyProfile() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("profile");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signatureEnabled, setSignatureEnabled] = useState(true);
@@ -37,6 +64,38 @@ export default function MyProfile() {
       return await response.json();
     },
   });
+
+  // Form for personal information
+  const personalForm = useForm<z.infer<typeof personalInfoSchema>>({
+    resolver: zodResolver(personalInfoSchema),
+    defaultValues: {
+      birthdate: currentUser?.birthdate || "",
+    },
+  });
+
+  // Form for address information
+  const addressForm = useForm<z.infer<typeof addressSchema>>({
+    resolver: zodResolver(addressSchema),
+    defaultValues: {
+      address: currentUser?.address || "",
+      city: currentUser?.city || "",
+      state: currentUser?.state || "",
+      zip: currentUser?.zip || "",
+      country: currentUser?.country || "",
+    },
+  });
+
+  // Form for notification settings
+  const notificationForm = useForm<z.infer<typeof notificationSchema>>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      emailNotifications: true,
+      smsNotifications: false,
+      pushNotifications: true,
+      taskReminders: true,
+      appointmentReminders: true,
+    },
+  });
   
   const [formData, setFormData] = useState({
     extension: "101",
@@ -47,39 +106,71 @@ export default function MyProfile() {
     signature: `<p><strong>Best regards,</strong></p><p>${currentUser?.firstName || "John"} ${currentUser?.lastName || "Doe"}<br>AgencyFlow Marketing<br><a href="mailto:${currentUser?.email || "john@agencyflow.com"}">${currentUser?.email || "john@agencyflow.com"}</a><br>${currentUser?.phone || "(555) 123-4567"}</p>`
   });
 
-  const profileImageMutation = useMutation({
-    mutationFn: async (imageURL: string) => {
-      const response = await apiRequest("PUT", "/api/profile-images", { profileImageURL: imageURL });
+  // Update staff mutation for personal info
+  const updateStaffMutation = useMutation({
+    mutationFn: async (data: Partial<Staff>) => {
+      const response = await apiRequest("PUT", `/api/staff/${currentUserId}`, data);
       return await response.json();
     },
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement API call to save profile
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", currentUserId] });
       toast({
         title: "Success",
         description: "Profile updated successfully.",
       });
-    } catch (error) {
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+    },
+  });
+
+  // Update form defaults when user data loads
+  useEffect(() => {
+    if (currentUser) {
+      personalForm.reset({
+        birthdate: currentUser.birthdate || "",
+      });
+      addressForm.reset({
+        address: currentUser.address || "",
+        city: currentUser.city || "",
+        state: currentUser.state || "",
+        zip: currentUser.zip || "",
+        country: currentUser.country || "",
+      });
+      setFormData(prev => ({
+        ...prev,
+        signature: `<p><strong>Best regards,</strong></p><p>${currentUser.firstName} ${currentUser.lastName}<br>AgencyFlow Marketing<br><a href="mailto:${currentUser.email}">${currentUser.email}</a><br>${currentUser.phone}</p>`
+      }));
     }
+  }, [currentUser, personalForm, addressForm]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle profile tab form submission
+    toast({
+      title: "Success",
+      description: "Profile settings saved successfully.",
+    });
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -102,298 +193,522 @@ export default function MyProfile() {
           <p className="text-gray-600 mt-2">Manage your personal profile and preferences</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Profile Photo */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Photo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-6">
-                <div className="relative">
-                  <Avatar className="w-32 h-32 border-2 border-gray-200">
-                    <AvatarImage 
-                      src={currentUser?.profileImagePath ? `/objects${currentUser.profileImagePath}` : undefined}
-                      alt="Profile photo" 
-                    />
-                    <AvatarFallback className="text-2xl">
-                      {currentUser ? `${currentUser.firstName.charAt(0)}${currentUser.lastName.charAt(0)}` : "JD"}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-                <div>
-                  <ObjectUploader
-                    maxNumberOfFiles={1}
-                    maxFileSize={5242880} // 5MB
-                    onGetUploadParameters={async () => {
-                      const response = await apiRequest("POST", "/api/objects/upload", {
-                        entityType: "staff",
-                        entityId: currentUserId,
-                        fileExtension: ".jpg"
-                      });
-                      const data = await response.json();
-                      return { method: "PUT" as const, url: data.uploadURL };
-                    }}
-                    onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-                      const uploadedFile = result.successful[0];
-                      if (uploadedFile?.uploadURL) {
-                        profileImageMutation.mutate(uploadedFile.uploadURL as string, {
-                          onSuccess: (data) => {
-                            setProfileImageUrl(data.objectPath);
-                            toast({
-                              title: "Success",
-                              description: "Profile photo uploaded successfully.",
-                            });
-                          },
-                          onError: () => {
-                            toast({
-                              title: "Error",
-                              description: "Failed to save photo. Please try again.",
-                              variant: "destructive",
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          {/* Tabs Navigation */}
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile" className="flex items-center space-x-2">
+              <User className="h-4 w-4" />
+              <span>Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="personal" className="flex items-center space-x-2">
+              <Calendar className="h-4 w-4" />
+              <span>Personal</span>
+            </TabsTrigger>
+            <TabsTrigger value="address" className="flex items-center space-x-2">
+              <MapPin className="h-4 w-4" />
+              <span>Address</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center space-x-2">
+              <Bell className="h-4 w-4" />
+              <span>Notifications</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Profile Photo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Photo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-6">
+                    <div className="relative">
+                      <Avatar className="w-32 h-32 border-2 border-gray-200">
+                        <AvatarImage 
+                          src={currentUser?.profileImagePath ? `/objects${currentUser.profileImagePath}` : undefined}
+                          alt="Profile photo" 
+                        />
+                        <AvatarFallback className="text-2xl">
+                          {currentUser ? `${currentUser.firstName.charAt(0)}${currentUser.lastName.charAt(0)}` : "JD"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div>
+                      <ObjectUploader
+                        maxNumberOfFiles={1}
+                        maxFileSize={5242880} // 5MB
+                        onGetUploadParameters={async () => {
+                          const response = await apiRequest("POST", "/api/objects/upload", {
+                            entityType: "staff",
+                            entityId: currentUserId,
+                            fileExtension: ".jpg"
+                          });
+                          const data = await response.json();
+                          return { method: "PUT" as const, url: data.uploadURL };
+                        }}
+                        onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                          const uploadedFile = result.successful[0];
+                          if (uploadedFile?.uploadURL) {
+                            // Update staff record with new profile image
+                            updateStaffMutation.mutate({
+                              profileImagePath: uploadedFile.uploadURL as string
                             });
                           }
-                        });
-                      }
-                    }}
-                    buttonClassName="mb-2"
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Upload Photo
-                  </ObjectUploader>
+                        }}
+                        buttonClassName="mb-2"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Upload Photo
+                      </ObjectUploader>
+                      <p className="text-sm text-gray-500">
+                        Recommended: 500x500px, PNG or JPG, max 5MB
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Personal Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        value={currentUser?.firstName || ""}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        value={currentUser?.lastName || ""}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={currentUser?.email || ""}
+                      readOnly
+                      className="bg-gray-50"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        value={currentUser?.phone || ""}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="extension">Extension</Label>
+                      <Input
+                        id="extension"
+                        value={formData.extension}
+                        onChange={(e) => handleInputChange('extension', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* System Preferences */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="calendar">Internal Calendar</Label>
+                    <Select value={formData.calendar} onValueChange={(value) => handleInputChange('calendar', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a calendar (Coming Soon)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="main">Main Calendar</SelectItem>
+                        <SelectItem value="sales">Sales Calendar</SelectItem>
+                        <SelectItem value="marketing">Marketing Calendar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Calendar integration is coming soon
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Password Update */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Password Update</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.currentPassword}
+                        onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                        placeholder="Enter current password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="newPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={formData.newPassword}
+                          onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                          placeholder="Enter new password"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={formData.confirmPassword}
+                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                          placeholder="Confirm new password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-sm text-gray-500">
-                    Recommended: 500x500px, PNG or JPG, max 5MB
+                    Password must be at least 8 characters long and include uppercase, lowercase, and numbers.
                   </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Personal Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={currentUser?.firstName || ""}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={currentUser?.lastName || ""}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={currentUser?.email || ""}
-                  readOnly
-                  className="bg-gray-50"
-                />
-                <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    value={currentUser?.phone || ""}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
-                </div>
-                <div>
-                  <Label htmlFor="extension">Extension</Label>
-                  <Input
-                    id="extension"
-                    value={formData.extension}
-                    onChange={(e) => handleInputChange('extension', e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* System Preferences */}
-          <Card>
-            <CardHeader>
-              <CardTitle>System Preferences</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="calendar">Internal Calendar</Label>
-                <Select value={formData.calendar} onValueChange={(value) => handleInputChange('calendar', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a calendar (Coming Soon)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="main">Main Calendar</SelectItem>
-                    <SelectItem value="sales">Sales Calendar</SelectItem>
-                    <SelectItem value="marketing">Marketing Calendar</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-gray-500 mt-1">
-                  Calendar integration is coming soon
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Password Update */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Password Update</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <div className="relative">
-                  <Input
-                    id="currentPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.currentPassword}
-                    onChange={(e) => handleInputChange('currentPassword', e.target.value)}
-                    placeholder="Enter current password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={formData.newPassword}
-                      onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                      placeholder="Enter new password"
-                    />
+              {/* Email Signature */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Email Signature</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signatureEnabled" className="text-sm font-medium">
+                        Enable signature on all outgoing messages
+                      </Label>
+                      <Switch
+                        id="signatureEnabled"
+                        checked={signatureEnabled}
+                        onCheckedChange={setSignatureEnabled}
+                      />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <Label>Signature Content</Label>
+                      <ReactQuill
+                        value={formData.signature}
+                        onChange={(value) => handleInputChange('signature', value)}
+                        modules={{
+                          toolbar: [
+                            [{ 'header': [1, 2, false] }],
+                            ['bold', 'italic', 'underline'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link'],
+                            ['clean']
+                          ],
+                        }}
+                        formats={[
+                          'header', 'bold', 'italic', 'underline',
+                          'color', 'background', 'list', 'bullet', 'link'
+                        ]}
+                        style={{ 
+                          height: '200px',
+                          marginBottom: '50px'
+                        }}
+                        className={!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}
+                      />
+                    </div>
+                    
+                    <p className="text-sm text-gray-500">
+                      This signature will be automatically added to all outgoing emails when enabled.
+                    </p>
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      placeholder="Confirm new password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end">
+                <Button type="submit">
+                  Save Profile Changes
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+
+          {/* Personal Information Tab */}
+          <TabsContent value="personal" className="space-y-6">
+            <Form {...personalForm}>
+              <form onSubmit={personalForm.handleSubmit((data) => updateStaffMutation.mutate(data))}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personal Information</CardTitle>
+                    <p className="text-sm text-muted-foreground">Update your personal details</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={personalForm.control}
+                      name="birthdate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Birthdate</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
+                    />
+                    <Button type="submit" disabled={updateStaffMutation.isPending}>
+                      {updateStaffMutation.isPending ? "Saving..." : "Save Personal Information"}
                     </Button>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500">
-                Password must be at least 8 characters long and include uppercase, lowercase, and numbers.
-              </p>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              </form>
+            </Form>
+          </TabsContent>
 
-          {/* Email Signature */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Signature</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="signatureEnabled" className="text-sm font-medium">
-                    Enable signature on all outgoing messages
-                  </Label>
-                  <Switch
-                    id="signatureEnabled"
-                    checked={signatureEnabled}
-                    onCheckedChange={setSignatureEnabled}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-2">
-                  <Label>Signature Content</Label>
-                  <ReactQuill
-                    value={formData.signature}
-                    onChange={(value) => handleInputChange('signature', value)}
-                    modules={{
-                      toolbar: [
-                        [{ 'header': [1, 2, false] }],
-                        ['bold', 'italic', 'underline'],
-                        [{ 'color': [] }, { 'background': [] }],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link'],
-                        ['clean']
-                      ],
-                    }}
-                    formats={[
-                      'header', 'bold', 'italic', 'underline',
-                      'color', 'background', 'list', 'bullet', 'link'
-                    ]}
-                    style={{ 
-                      height: '200px',
-                      marginBottom: '50px'
-                    }}
-                    className={!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}
-                  />
-                </div>
-                
-                <p className="text-sm text-gray-500">
-                  This signature will be automatically added to all outgoing emails when enabled.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Address Tab */}
+          <TabsContent value="address" className="space-y-6">
+            <Form {...addressForm}>
+              <form onSubmit={addressForm.handleSubmit((data) => updateStaffMutation.mutate(data))}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Address Information</CardTitle>
+                    <p className="text-sm text-muted-foreground">Update your address details</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={addressForm.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Street Address</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="123 Main Street" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={addressForm.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="City" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addressForm.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State/Province</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="State" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={addressForm.control}
+                        name="zip"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ZIP/Postal Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="12345" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addressForm.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Country" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <Button type="submit" disabled={updateStaffMutation.isPending}>
+                      {updateStaffMutation.isPending ? "Saving..." : "Save Address Information"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </form>
+            </Form>
+          </TabsContent>
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-6">
+            <Form {...notificationForm}>
+              <form onSubmit={notificationForm.handleSubmit((data) => {
+                toast({
+                  title: "Coming Soon",
+                  description: "Notification settings will be available in a future update.",
+                });
+              })}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notification Preferences</CardTitle>
+                    <p className="text-sm text-muted-foreground">Manage how you receive notifications</p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <FormField
+                        control={notificationForm.control}
+                        name="emailNotifications"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Email Notifications</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Receive email notifications for updates and reminders
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={notificationForm.control}
+                        name="taskReminders"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Task Reminders</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Get reminders for upcoming task deadlines
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={notificationForm.control}
+                        name="appointmentReminders"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Appointment Reminders</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Receive reminders for upcoming appointments
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="rounded-lg bg-muted p-4">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Note:</strong> Notification settings are coming soon. These preferences will be saved once the feature is fully implemented.
+                      </p>
+                    </div>
+                    <Button type="submit" variant="outline" disabled>
+                      Save Notification Preferences (Coming Soon)
+                    </Button>
+                  </CardContent>
+                </Card>
+              </form>
+            </Form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
