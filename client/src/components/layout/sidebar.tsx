@@ -18,7 +18,8 @@ import {
   ChevronRight,
   GitBranch,
   Share2,
-  Settings
+  Settings,
+  Package
 } from "lucide-react";
 
 interface SidebarProps {
@@ -35,6 +36,7 @@ const navigation = [
   { name: "Marketing", href: "/marketing", icon: Megaphone },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Bundle Management", href: "/bundle-management", icon: Package },
   { name: "Calendars", href: "/calendar", icon: Calendar },
   { name: "Workflows", href: "/workflows", icon: GitBranch },
   { name: "Invoices", href: "/invoices", icon: FileText },

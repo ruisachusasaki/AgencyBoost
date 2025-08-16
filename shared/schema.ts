@@ -188,6 +188,37 @@ export const bundleProducts = pgTable("bundle_products", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client Bundle Assignments - tracks which bundles clients have purchased
+export const clientBundles = pgTable("client_bundles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
+  projectId: varchar("project_id").notNull().references(() => projects.id), // Project where tasks will be created
+  status: text("status").notNull().default("active"), // active, paused, cancelled
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"), // Optional end date
+  lastTaskGeneration: timestamp("last_task_generation"), // When tasks were last generated
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bundle Task Templates - defines what tasks each bundle creates monthly
+export const bundleTaskTemplates = pgTable("bundle_task_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
+  title: text("title").notNull(), // Template for task title (e.g., "SEO Blog Post #{sequence}")
+  description: text("description"), // Template for task description
+  quantity: integer("quantity").notNull().default(1), // How many of these tasks to create per month
+  priority: text("priority").notNull().default("medium"), // low, medium, high
+  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }), // Time estimate for each task
+  assigneeType: text("assignee_type").notNull().default("auto"), // auto, specific, role
+  assignedTo: varchar("assigned_to").references(() => users.id), // Specific user if assigneeType is 'specific'
+  assignedRole: text("assigned_role"), // Role if assigneeType is 'role' (e.g., 'content_writer')
+  dayOffset: integer("day_offset").default(0), // Days from month start when task should be due
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Client products/services assignments
 export const clientProducts = pgTable("client_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -198,16 +229,7 @@ export const clientProducts = pgTable("client_products", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Client bundle assignments
-export const clientBundles = pgTable("client_bundles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clientId: varchar("client_id").notNull().references(() => clients.id),
-  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
-  price: decimal("price", { precision: 10, scale: 2 }),
-  status: text("status").default("active"),
-  customQuantities: jsonb("custom_quantities"), // Client-specific quantities: { "product_id": quantity }
-  createdAt: timestamp("created_at").defaultNow(),
-});
+
 
 // Notes
 export const notes = pgTable("notes", {
@@ -627,10 +649,7 @@ export const insertClientProductSchema = createInsertSchema(clientProducts).omit
   createdAt: true,
 });
 
-export const insertClientBundleSchema = createInsertSchema(clientBundles).omit({
-  id: true,
-  createdAt: true,
-});
+
 
 export const insertClientAppointmentSchema = createInsertSchema(clientAppointments).omit({
   id: true,
@@ -754,9 +773,6 @@ export type InsertClientGroup = z.infer<typeof insertClientGroupSchema>;
 
 export type ClientProduct = typeof clientProducts.$inferSelect;
 export type InsertClientProduct = z.infer<typeof insertClientProductSchema>;
-
-export type ClientBundle = typeof clientBundles.$inferSelect;
-export type InsertClientBundle = z.infer<typeof insertClientBundleSchema>;
 
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = z.infer<typeof insertNoteSchema>;
@@ -1289,6 +1305,24 @@ export const insertBundleProductSchema = createInsertSchema(bundleProducts).omit
 
 export type ProductBundle = typeof productBundles.$inferSelect;
 export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
+
+// Client Bundle types
+export const insertClientBundleSchema = createInsertSchema(clientBundles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ClientBundle = typeof clientBundles.$inferSelect;
+export type InsertClientBundle = z.infer<typeof insertClientBundleSchema>;
+
+// Bundle Task Template types  
+export const insertBundleTaskTemplateSchema = createInsertSchema(bundleTaskTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type BundleTaskTemplate = typeof bundleTaskTemplates.$inferSelect;
+export type InsertBundleTaskTemplate = z.infer<typeof insertBundleTaskTemplateSchema>;
 export type BundleProduct = typeof bundleProducts.$inferSelect;
 export type InsertBundleProduct = z.infer<typeof insertBundleProductSchema>;
 

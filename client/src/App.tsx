@@ -40,6 +40,7 @@ import PermissionAudit from "@/pages/settings/permission-audit";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
+import BundleManagement from "@/pages/bundle-management";
 
 function Router() {
   return (
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/form-builder" component={FormBuilder} />
       <Route path="/form-builder/:id" component={({ params }: { params: { id: string } }) => <FormBuilder formId={params.id} />} />
       <Route path="/forms-test" component={FormsTest} />
+      <Route path="/bundle-management" component={BundleManagement} />
       <Route component={NotFound} />
     </Switch>
   );
