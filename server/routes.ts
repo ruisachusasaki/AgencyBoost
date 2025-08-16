@@ -2062,9 +2062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
-      const objectPath = objectStorageService.normalizeObjectEntityPath(
-        req.body.profileImageURL,
-      );
+      const objectPath = objectStorageService.extractFilePathFromUrl(req.body.profileImageURL);
       console.log("Normalized object path:", objectPath);
 
       res.status(200).json({
