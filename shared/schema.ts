@@ -198,6 +198,7 @@ export const clientBundles = pgTable("client_bundles", {
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date"), // Optional end date
   lastTaskGeneration: timestamp("last_task_generation"), // When tasks were last generated
+  customQuantities: jsonb("custom_quantities"), // Client-specific quantity overrides: { templateId: quantity }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -651,6 +652,8 @@ export const insertClientProductSchema = createInsertSchema(clientProducts).omit
 
 
 
+
+
 export const insertClientAppointmentSchema = createInsertSchema(clientAppointments).omit({
   id: true,
   createdAt: true,
@@ -773,6 +776,8 @@ export type InsertClientGroup = z.infer<typeof insertClientGroupSchema>;
 
 export type ClientProduct = typeof clientProducts.$inferSelect;
 export type InsertClientProduct = z.infer<typeof insertClientProductSchema>;
+
+
 
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = z.infer<typeof insertNoteSchema>;
