@@ -65,6 +65,18 @@ export default function MyProfile() {
     },
   });
 
+  // Fetch calendars for assignment
+  const { data: calendars = [], isLoading: calendarsLoading } = useQuery<Array<{
+    id: string;
+    name: string;
+    description?: string;
+    type: string;
+    isActive: boolean;
+    color: string;
+  }>>({
+    queryKey: ["/api/calendars"],
+  });
+
   // Form for personal information
   const personalForm = useForm<z.infer<typeof personalInfoSchema>>({
     resolver: zodResolver(personalInfoSchema),
@@ -99,7 +111,7 @@ export default function MyProfile() {
   
   const [formData, setFormData] = useState({
     extension: "101",
-    calendar: "",
+    assignedCalendarId: currentUser?.assignedCalendarId || "none",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -143,6 +155,7 @@ export default function MyProfile() {
       });
       setFormData(prev => ({
         ...prev,
+        assignedCalendarId: currentUser.assignedCalendarId || "none",
         signature: `<p><strong>Best regards,</strong></p><p>${currentUser.firstName} ${currentUser.lastName}<br>AgencyFlow Marketing<br><a href="mailto:${currentUser.email}">${currentUser.email}</a><br>${currentUser.phone}</p>`
       }));
     }
@@ -150,10 +163,9 @@ export default function MyProfile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle profile tab form submission
-    toast({
-      title: "Success",
-      description: "Profile settings saved successfully.",
+    // Update staff record with calendar assignment
+    updateStaffMutation.mutate({
+      assignedCalendarId: formData.assignedCalendarId === "none" ? null : formData.assignedCalendarId,
     });
   };
 
@@ -370,19 +382,36 @@ export default function MyProfile() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="calendar">Internal Calendar</Label>
-                    <Select value={formData.calendar} onValueChange={(value) => handleInputChange('calendar', value)}>
+                    <Label htmlFor="assignedCalendar">Assigned Calendar</Label>
+                    <Select 
+                      value={formData.assignedCalendarId} 
+                      onValueChange={(value) => handleInputChange('assignedCalendarId', value)}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a calendar (Coming Soon)" />
+                        <SelectValue placeholder={calendarsLoading ? "Loading calendars..." : "Select a calendar"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="main">Main Calendar</SelectItem>
-                        <SelectItem value="sales">Sales Calendar</SelectItem>
-                        <SelectItem value="marketing">Marketing Calendar</SelectItem>
+                        <SelectItem value="none">No calendar assigned</SelectItem>
+                        {calendars
+                          .filter(calendar => calendar.isActive)
+                          .map((calendar) => (
+                            <SelectItem key={calendar.id} value={calendar.id}>
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: calendar.color }}
+                                />
+                                <span>{calendar.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({calendar.type})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <p className="text-sm text-gray-500 mt-1">
-                      Calendar integration is coming soon
+                      Select which calendar this staff member should be assigned to for appointments and scheduling
                     </p>
                   </div>
                 </CardContent>

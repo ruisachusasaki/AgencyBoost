@@ -1229,6 +1229,7 @@ export const staff = pgTable("staff", {
   position: varchar("position", { length: 100 }),
   managerId: uuid("manager_id"),
   birthdate: date("birthdate"),
+  assignedCalendarId: varchar("assigned_calendar_id"), // Links to calendar assignment
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
