@@ -173,8 +173,7 @@ export default function MyProfile() {
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="container mx-auto p-6 max-w-7xl">
         {/* Back to Settings */}
         <div className="mb-4">
           <Link href="/settings">
@@ -194,28 +193,58 @@ export default function MyProfile() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Tabs Navigation */}
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile" className="flex items-center space-x-2">
-              <User className="h-4 w-4" />
-              <span>Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4" />
-              <span>Personal</span>
-            </TabsTrigger>
-            <TabsTrigger value="address" className="flex items-center space-x-2">
-              <MapPin className="h-4 w-4" />
-              <span>Address</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center space-x-2">
-              <Bell className="h-4 w-4" />
-              <span>Notifications</span>
-            </TabsTrigger>
-          </TabsList>
+          {/* Tabs Navigation - Matching Calendar Settings Style */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab("profile")}
+                className={`${
+                  activeTab === "profile"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+              >
+                <User className="h-4 w-4" />
+                <span>Profile</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("personal")}
+                className={`${
+                  activeTab === "personal"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+              >
+                <Calendar className="h-4 w-4" />
+                <span>Personal</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("address")}
+                className={`${
+                  activeTab === "address"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+              >
+                <MapPin className="h-4 w-4" />
+                <span>Address</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("notifications")}
+                className={`${
+                  activeTab === "notifications"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+              >
+                <Bell className="h-4 w-4" />
+                <span>Notifications</span>
+              </button>
+            </nav>
+          </div>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
+          <div className={activeTab === "profile" ? "space-y-6" : "hidden"}>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Profile Photo */}
               <Card>
@@ -496,10 +525,10 @@ export default function MyProfile() {
                 </Button>
               </div>
             </form>
-          </TabsContent>
+          </div>
 
           {/* Personal Information Tab */}
-          <TabsContent value="personal" className="space-y-6">
+          <div className={activeTab === "personal" ? "space-y-6" : "hidden"}>
             <Form {...personalForm}>
               <form onSubmit={personalForm.handleSubmit((data) => updateStaffMutation.mutate(data))}>
                 <Card>
@@ -528,10 +557,10 @@ export default function MyProfile() {
                 </Card>
               </form>
             </Form>
-          </TabsContent>
+          </div>
 
           {/* Address Tab */}
-          <TabsContent value="address" className="space-y-6">
+          <div className={activeTab === "address" ? "space-y-6" : "hidden"}>
             <Form {...addressForm}>
               <form onSubmit={addressForm.handleSubmit((data) => updateStaffMutation.mutate(data))}>
                 <Card>
@@ -616,10 +645,10 @@ export default function MyProfile() {
                 </Card>
               </form>
             </Form>
-          </TabsContent>
+          </div>
 
           {/* Notifications Tab */}
-          <TabsContent value="notifications" className="space-y-6">
+          <div className={activeTab === "notifications" ? "space-y-6" : "hidden"}>
             <Form {...notificationForm}>
               <form onSubmit={notificationForm.handleSubmit((data) => {
                 toast({
@@ -707,9 +736,8 @@ export default function MyProfile() {
                 </Card>
               </form>
             </Form>
-          </TabsContent>
+          </div>
         </Tabs>
       </div>
-    </div>
   );
 }
