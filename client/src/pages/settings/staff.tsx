@@ -26,6 +26,7 @@ const staffFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
   roleId: z.string().min(1, "Role is required"),
+  position: z.string().optional(),
 });
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
@@ -314,6 +315,19 @@ export default function Staff() {
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
                         <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g. Marketing Director, Account Manager" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

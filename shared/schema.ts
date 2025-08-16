@@ -1226,6 +1226,7 @@ export const staff = pgTable("staff", {
   // Additional profile fields
   hireDate: date("hire_date"),
   department: varchar("department", { length: 100 }),
+  position: varchar("position", { length: 100 }),
   managerId: uuid("manager_id"),
   birthdate: date("birthdate"),
   

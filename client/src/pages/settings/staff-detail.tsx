@@ -51,6 +51,7 @@ const staffFormSchema = z.object({
   country: z.string().optional(),
   hireDate: z.string().optional(),
   department: z.string().optional(),
+  position: z.string().optional(),
   managerId: z.string().nullable().optional(),
   birthdate: z.string().optional(),
 });
@@ -461,6 +462,19 @@ export default function StaffDetail() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="position"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Position</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g. Marketing Director, Account Manager" disabled={!isEditing} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
