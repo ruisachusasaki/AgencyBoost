@@ -149,7 +149,11 @@ export default function StaffDetail() {
 
   const handleProfileImageUpload = async () => {
     try {
-      const response = await apiRequest("POST", "/api/objects/upload");
+      const response = await apiRequest("POST", "/api/objects/upload", {
+        entityType: "staff",
+        entityId: id,
+        fileExtension: ".jpg"
+      });
       const data = await response.json();
       return {
         method: "PUT" as const,
