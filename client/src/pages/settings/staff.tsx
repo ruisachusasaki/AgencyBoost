@@ -430,7 +430,7 @@ export default function Staff() {
                         <div className="flex items-center space-x-3">
                           <Avatar>
                             <AvatarImage
-                              src={staff.profileImagePath ? staff.profileImagePath : undefined}
+                              src={staff.profileImagePath ? `/objects${staff.profileImagePath}` : undefined}
                             />
                             <AvatarFallback>
                               {staff.firstName.charAt(0)}{staff.lastName.charAt(0)}

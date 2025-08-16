@@ -309,7 +309,7 @@ export default function StaffDetail() {
               <div className="flex justify-center">
                 <Avatar className="h-32 w-32">
                   <AvatarImage 
-                    src={staffMember.profileImagePath ? staffMember.profileImagePath : undefined} 
+                    src={staffMember.profileImagePath ? `/objects${staffMember.profileImagePath}` : undefined} 
                   />
                   <AvatarFallback className="text-2xl">
                     {staffMember.firstName.charAt(0)}{staffMember.lastName.charAt(0)}
