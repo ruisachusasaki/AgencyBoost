@@ -9,43 +9,48 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Upload, Camera, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { UploadResult } from "@uppy/core";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { apiRequest } from "@/lib/queryClient";
+import type { Staff } from "@shared/schema";
 
 export default function MyProfile() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [profileImageUrl, setProfileImageUrl] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signatureEnabled, setSignatureEnabled] = useState(true);
   
+  // For demo purposes, using Brian's ID as current user - in real app this would come from session
+  const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+  
+  // Fetch current user's staff record
+  const { data: currentUser, isLoading: userLoading } = useQuery<Staff>({
+    queryKey: ["/api/staff", currentUserId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/staff/${currentUserId}`);
+      return await response.json();
+    },
+  });
+  
   const [formData, setFormData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john@agencyflow.com",
-    phone: "(555) 123-4567",
     extension: "101",
     calendar: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-    signature: `<p><strong>Best regards,</strong></p><p>John Doe<br>AgencyFlow Marketing<br><a href="mailto:john@agencyflow.com">john@agencyflow.com</a><br>(555) 123-4567</p>`
+    signature: `<p><strong>Best regards,</strong></p><p>${currentUser?.firstName || "John"} ${currentUser?.lastName || "Doe"}<br>AgencyFlow Marketing<br><a href="mailto:${currentUser?.email || "john@agencyflow.com"}">${currentUser?.email || "john@agencyflow.com"}</a><br>${currentUser?.phone || "(555) 123-4567"}</p>`
   });
 
   const profileImageMutation = useMutation({
     mutationFn: async (imageURL: string) => {
-      const response = await fetch("/api/profile-images", {
-        method: "PUT",
-        body: JSON.stringify({ imageURL }),
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) throw new Error("Failed to save image");
-      return response.json();
+      const response = await apiRequest("PUT", "/api/profile-images", { profileImageURL: imageURL });
+      return await response.json();
     },
   });
 
@@ -106,24 +111,26 @@ export default function MyProfile() {
             <CardContent>
               <div className="flex items-center space-x-6">
                 <div className="relative">
-                  {profileImageUrl ? (
-                    <img 
-                      src={profileImageUrl} 
+                  <Avatar className="w-32 h-32 border-2 border-gray-200">
+                    <AvatarImage 
+                      src={currentUser?.profileImagePath ? `/objects${currentUser.profileImagePath}` : undefined}
                       alt="Profile photo" 
-                      className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
                     />
-                  ) : (
-                    <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300">
-                      <User className="h-8 w-8 text-gray-400" />
-                    </div>
-                  )}
+                    <AvatarFallback className="text-2xl">
+                      {currentUser ? `${currentUser.firstName.charAt(0)}${currentUser.lastName.charAt(0)}` : "JD"}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
                 <div>
                   <ObjectUploader
                     maxNumberOfFiles={1}
                     maxFileSize={5242880} // 5MB
                     onGetUploadParameters={async () => {
-                      const response = await fetch("/api/objects/upload", { method: "POST" });
+                      const response = await apiRequest("POST", "/api/objects/upload", {
+                        entityType: "staff",
+                        entityId: currentUserId,
+                        fileExtension: ".jpg"
+                      });
                       const data = await response.json();
                       return { method: "PUT" as const, url: data.uploadURL };
                     }}
@@ -172,19 +179,21 @@ export default function MyProfile() {
                   <Label htmlFor="firstName">First Name *</Label>
                   <Input
                     id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    required
+                    value={currentUser?.firstName || ""}
+                    readOnly
+                    className="bg-gray-50"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
                 </div>
                 <div>
                   <Label htmlFor="lastName">Last Name *</Label>
                   <Input
                     id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    required
+                    value={currentUser?.lastName || ""}
+                    readOnly
+                    className="bg-gray-50"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
                 </div>
               </div>
               
@@ -193,10 +202,11 @@ export default function MyProfile() {
                 <Input
                   id="email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
+                  value={currentUser?.email || ""}
+                  readOnly
+                  className="bg-gray-50"
                 />
+                <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
               </div>
               
               <div className="grid md:grid-cols-2 gap-4">
@@ -204,9 +214,11 @@ export default function MyProfile() {
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
                     id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    value={currentUser?.phone || ""}
+                    readOnly
+                    className="bg-gray-50"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
                 </div>
                 <div>
                   <Label htmlFor="extension">Extension</Label>
