@@ -251,7 +251,7 @@ export default function Leads() {
             </div>
           ) : (
             <div className="h-full p-6 overflow-hidden">
-              <div className="h-full border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
+              <div className="h-full rounded-lg bg-gray-50 overflow-hidden">
                 <div className="h-full p-4 overflow-x-auto">
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="flex gap-6 h-full">
