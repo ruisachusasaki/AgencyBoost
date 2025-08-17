@@ -61,8 +61,17 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
     mutationFn: async (data: AppointmentFormData) => {
       console.log("Mutation started with data:", data);
       
+      // Validate time format
+      if (!data.time || !data.time.includes(':')) {
+        throw new Error("Invalid time format");
+      }
+      
       // Combine date and time
       const [hours, minutes] = data.time.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) {
+        throw new Error("Invalid time values");
+      }
+      
       const startTime = new Date(data.date);
       startTime.setHours(hours, minutes, 0, 0);
       
@@ -131,7 +140,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       return;
     }
     
-    if (!data.title) {
+    if (!data.title?.trim()) {
       toast({
         title: "Error", 
         description: "Please enter a meeting title",
@@ -140,7 +149,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       return;
     }
     
-    if (!data.time) {
+    if (!data.time || !data.time.includes(':')) {
       toast({
         title: "Error",
         description: "Please select a time",
