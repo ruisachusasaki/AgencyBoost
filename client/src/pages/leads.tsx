@@ -546,9 +546,10 @@ export default function Leads() {
                                                 ref={provided.innerRef}
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
-                                                className={`cursor-move transition-shadow relative ${
+                                                className={`cursor-pointer transition-shadow relative ${
                                                   snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
                                                 }`}
+                                                onClick={() => setEditingLead(lead)}
                                               >
                                                 <CardContent className="p-4">
                                                   <div className="flex items-start justify-between mb-2">
@@ -634,18 +635,6 @@ export default function Leads() {
                                                       </div>
                                                     )}
 
-                                                  </div>
-                                                  
-                                                  {/* Edit button moved to bottom left */}
-                                                  <div className="absolute bottom-1 left-1">
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="h-6 w-6 p-0 bg-white/90 hover:bg-white shadow-sm border border-gray-200"
-                                                      onClick={() => setEditingLead(lead)}
-                                                    >
-                                                      <Edit className="h-3 w-3" />
-                                                    </Button>
                                                   </div>
                                                 </CardContent>
                                               </Card>
