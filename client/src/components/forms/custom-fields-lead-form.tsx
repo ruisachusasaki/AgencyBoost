@@ -62,7 +62,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead & { customFields?: Record<string, any> }) => {
-      await apiRequest("/api/leads", "POST", data);
+      return await apiRequest("/api/leads", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -83,7 +83,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const updateLeadMutation = useMutation({
     mutationFn: async (data: InsertLead & { customFields?: Record<string, any> }) => {
-      await apiRequest(`/api/leads/${lead!.id}`, "PUT", data);
+      return await apiRequest(`/api/leads/${lead!.id}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -169,7 +169,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
   const filteredCustomFields = customFields.filter(field => {
     const duplicateFields = ['first name', 'last name', 'name', 'email', 'phone', 'company'];
     const isDuplicate = duplicateFields.some(dup => 
-      field.name.toLowerCase().includes(dup) || field.label?.toLowerCase().includes(dup)
+      field.name.toLowerCase().includes(dup)
     );
     return !isDuplicate;
   });
