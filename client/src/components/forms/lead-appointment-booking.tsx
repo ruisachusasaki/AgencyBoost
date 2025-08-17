@@ -35,6 +35,12 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
   const { toast } = useToast();
   
   console.log("LeadAppointmentBooking component loaded with leadId:", leadId);
+  
+  // Add a simple test button to verify the component is working
+  const handleTestClick = () => {
+    console.log("Test button clicked in LeadAppointmentBooking");
+    alert("LeadAppointmentBooking component is working!");
+  };
 
   const { data: calendars = [] } = useQuery({
     queryKey: ["/api/calendars"],
@@ -203,6 +209,12 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 p-2 bg-gray-100 rounded">
+          <p className="text-sm">Component Test:</p>
+          <Button onClick={handleTestClick} variant="outline" size="sm">
+            Test Component
+          </Button>
+        </div>
         <Form {...form}>
           <form 
             onSubmit={(e) => {

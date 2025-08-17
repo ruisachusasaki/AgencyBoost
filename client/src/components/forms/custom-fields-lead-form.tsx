@@ -594,10 +594,19 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
         </TabsContent>
 
         <TabsContent value="appointment" className="space-y-4 max-h-[50vh] overflow-y-auto">
+          <div className="p-4 border rounded mb-4">
+            <p>Debug Info:</p>
+            <p>Lead ID: {lead?.id || 'undefined'}</p>
+            <p>Lead Name: {lead?.name || 'undefined'}</p>
+            <Button onClick={() => {
+              console.log("Tab test button clicked - lead:", lead);
+              alert('Test button works!');
+            }}>Test Button</Button>
+          </div>
           <LeadAppointmentBooking 
             leadId={lead?.id} 
             onSuccess={() => {
-              // Success handled by the component itself
+              console.log("Appointment booking success callback triggered");
             }}
           />
         </TabsContent>
