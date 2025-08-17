@@ -230,8 +230,8 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* Content Area - Fixed Height */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Content Area - Maximize Height */}
+      <div className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
         {activeTab === "pipeline" && (
           pipelineStages.length === 0 ? (
             <div className="flex items-center justify-center h-full p-6">
@@ -286,7 +286,7 @@ export default function Leads() {
                                     <div
                                       ref={provided.innerRef}
                                       {...provided.droppableProps}
-                                      className={`space-y-3 h-full min-h-96 overflow-y-auto ${
+                                      className={`space-y-3 h-full min-h-[500px] overflow-y-auto ${
                                         snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
                                       }`}
                                     >
