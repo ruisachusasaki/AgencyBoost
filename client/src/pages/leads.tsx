@@ -577,11 +577,18 @@ export default function Leads() {
                                                                 {(() => {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
                                                                   if (staffMember?.profileImagePath) {
+                                                                    // Convert object storage path to proper URL format
+                                                                    const imageUrl = `/objects${staffMember.profileImagePath}`;
                                                                     return (
                                                                       <img
-                                                                        src={staffMember.profileImagePath}
+                                                                        src={imageUrl}
                                                                         alt={`${staffMember.firstName} ${staffMember.lastName}`}
                                                                         className="w-6 h-6 rounded-full object-cover"
+                                                                        onError={(e) => {
+                                                                          // Fallback to initials if image fails to load
+                                                                          e.currentTarget.style.display = 'none';
+                                                                          e.currentTarget.nextElementSibling?.setAttribute('style', 'display: flex');
+                                                                        }}
                                                                       />
                                                                     );
                                                                   } else {
