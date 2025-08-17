@@ -5,13 +5,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import PipelineStageManager from "@/components/pipeline-stage-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import type { Lead, LeadPipelineStage } from "@shared/schema";
+
+interface Column {
+  key: string;
+  label: string;
+  sortable: boolean;
+  defaultVisible: boolean;
+}
+
+const AVAILABLE_COLUMNS: Column[] = [
+  { key: 'name', label: 'Name', sortable: true, defaultVisible: true },
+  { key: 'email', label: 'Email', sortable: true, defaultVisible: true },
+  { key: 'company', label: 'Company', sortable: true, defaultVisible: true },
+  { key: 'phone', label: 'Phone', sortable: true, defaultVisible: true },
+  { key: 'stage', label: 'Stage', sortable: true, defaultVisible: true },
+  { key: 'value', label: 'Value', sortable: true, defaultVisible: true },
+  { key: 'probability', label: 'Probability', sortable: true, defaultVisible: true },
+  { key: 'source', label: 'Source', sortable: true, defaultVisible: false },
+  { key: 'assignedTo', label: 'Assigned To', sortable: true, defaultVisible: false },
+  { key: 'lastContactDate', label: 'Last Contact', sortable: true, defaultVisible: false },
+  { key: 'createdAt', label: 'Created Date', sortable: true, defaultVisible: true },
+  { key: 'actions', label: 'Actions', sortable: false, defaultVisible: true },
+];
+
+type SortField = 'name' | 'email' | 'company' | 'phone' | 'stage' | 'value' | 'probability' | 'source' | 'assignedTo' | 'lastContactDate' | 'createdAt';
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,6 +46,11 @@ export default function Leads() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState("pipeline");
   const [showStageManager, setShowStageManager] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
+  );
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -69,20 +101,80 @@ export default function Leads() {
     },
   });
 
-  const filteredLeads = leads.filter(lead =>
-    !searchTerm ||
-    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.source?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAndSortedLeads = leads
+    .filter(lead =>
+      !searchTerm ||
+      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.source?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      let aValue: any = '';
+      let bValue: any = '';
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case 'company':
+          aValue = (a.company || '').toLowerCase();
+          bValue = (b.company || '').toLowerCase();
+          break;
+        case 'phone':
+          aValue = a.phone || '';
+          bValue = b.phone || '';
+          break;
+        case 'value':
+          aValue = Number(a.value) || 0;
+          bValue = Number(b.value) || 0;
+          break;
+        case 'probability':
+          aValue = a.probability || 0;
+          bValue = b.probability || 0;
+          break;
+        case 'source':
+          aValue = (a.source || '').toLowerCase();
+          bValue = (b.source || '').toLowerCase();
+          break;
+        case 'assignedTo':
+          aValue = (a.assignedTo || '').toLowerCase();
+          bValue = (b.assignedTo || '').toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt || 0).getTime();
+          bValue = new Date(b.createdAt || 0).getTime();
+          break;
+        case 'lastContactDate':
+          aValue = new Date(a.lastContactDate || 0).getTime();
+          bValue = new Date(b.lastContactDate || 0).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortField === 'createdAt' || sortField === 'lastContactDate') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      } else if (sortField === 'value' || sortField === 'probability') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      } else {
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      }
+    });
 
   const formatDate = (date: string | Date | null) => {
     if (!date) return "Never";
     if (typeof date === 'string') {
-      return new Date(date).toLocaleDateString();
+      return format(new Date(date), 'MMM dd, yyyy');
     }
-    return date.toLocaleDateString();
+    return format(date, 'MMM dd, yyyy');
   };
 
   const getLeadInitials = (lead: Lead) => {
@@ -98,6 +190,128 @@ export default function Leads() {
     if (confirm("Are you sure you want to delete this lead?")) {
       deleteLeadMutation.mutate(id);
     }
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const toggleColumnVisibility = (columnKey: string) => {
+    const newVisibleColumns = new Set(visibleColumns);
+    if (newVisibleColumns.has(columnKey)) {
+      newVisibleColumns.delete(columnKey);
+    } else {
+      newVisibleColumns.add(columnKey);
+    }
+    setVisibleColumns(newVisibleColumns);
+  };
+
+  const getStageName = (stageId: string | null) => {
+    if (!stageId) return 'New';
+    const stage = pipelineStages.find(s => s.id === stageId);
+    return stage ? stage.name : 'Unknown';
+  };
+
+  const renderCellContent = (lead: Lead, columnKey: string) => {
+    switch (columnKey) {
+      case 'name':
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {getLeadInitials(lead)}
+            </div>
+            <span className="font-medium">{lead.name}</span>
+          </div>
+        );
+      case 'email':
+        return lead.email;
+      case 'company':
+        return lead.company || '-';
+      case 'phone':
+        return lead.phone || '-';
+      case 'stage':
+        return (
+          <Badge variant="secondary">
+            {getStageName(lead.stageId)}
+          </Badge>
+        );
+      case 'value':
+        return lead.value ? `$${Number(lead.value).toLocaleString()}` : '-';
+      case 'probability':
+        return lead.probability ? `${lead.probability}%` : '0%';
+      case 'source':
+        return lead.source || '-';
+      case 'assignedTo':
+        return lead.assignedTo || '-';
+      case 'lastContactDate':
+        return formatDate(lead.lastContactDate);
+      case 'createdAt':
+        return formatDate(lead.createdAt);
+      case 'actions':
+        return (
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => setEditingLead(lead)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Lead
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDeleteLead(lead.id)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Lead
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      default:
+        return '-';
+    }
+  };
+
+  const SortableHeader = ({ column, children }: { column: SortField; children: React.ReactNode }) => {
+    const isActive = sortField === column;
+    return (
+      <TableHead 
+        className="cursor-pointer hover:bg-slate-50 select-none"
+        onClick={() => handleSort(column)}
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          <div className="flex flex-col ml-1">
+            <ChevronUp 
+              className={`h-3 w-3 ${
+                isActive && sortDirection === 'asc' 
+                  ? 'text-blue-600' 
+                  : 'text-gray-400'
+              }`} 
+            />
+            <ChevronDown 
+              className={`h-3 w-3 -mt-1 ${
+                isActive && sortDirection === 'desc' 
+                  ? 'text-blue-600' 
+                  : 'text-gray-400'
+              }`} 
+            />
+          </div>
+        </div>
+      </TableHead>
+    );
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -390,13 +604,34 @@ export default function Leads() {
               <CardHeader className="border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">All Leads</h3>
-                  <div className="text-sm text-slate-600">
-                    {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-slate-600">
+                      {filteredAndSortedLeads.length} lead{filteredAndSortedLeads.length !== 1 ? 's' : ''}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Columns
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {AVAILABLE_COLUMNS.map((column) => (
+                          <DropdownMenuCheckboxItem
+                            key={column.key}
+                            checked={visibleColumns.has(column.key)}
+                            onCheckedChange={() => toggleColumnVisibility(column.key)}
+                          >
+                            {column.label}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {filteredLeads.length === 0 ? (
+                {filteredAndSortedLeads.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-slate-500 mb-4">
                       {searchTerm ? "No leads found matching your search." : "No leads found."}
@@ -408,84 +643,39 @@ export default function Leads() {
                     )}
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-200">
-                    {filteredLeads.map((lead) => (
-                      <div key={lead.id} className="p-6 hover:bg-slate-50">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-slate-600">
-                                {getLeadInitials(lead)}
-                              </span>
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h3 className="text-lg font-semibold text-slate-900 mb-1">{lead.name}</h3>
-                                  <p className="text-slate-600 mb-2">{lead.email}</p>
-                                  {lead.company && (
-                                    <p className="text-sm text-slate-500 mb-2">{lead.company}</p>
-                                  )}
-                                  <div className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border-l-4 ${getStatusColor(lead.status)}`}>
-                                    {lead.status}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setEditingLead(lead)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteLead(lead.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {lead.value && (
-                            <div>
-                              <p className="text-xs text-slate-500">Potential Value</p>
-                              <p className="font-semibold text-slate-900 flex items-center gap-1">
-                                <DollarSign className="h-3 w-3" />
-                                ${Number(lead.value).toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                          
-                          <div>
-                            <p className="text-xs text-slate-500">Probability</p>
-                            <p className="font-semibold text-slate-900 flex items-center gap-1">
-                              <Percent className="h-3 w-3" />
-                              {lead.probability || 0}%
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <p className="text-xs text-slate-500">Last Contact</p>
-                            <p className="font-semibold text-slate-900 flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(lead.lastContactDate)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {lead.notes && (
-                          <div className="mt-3 pt-3 border-t border-slate-100">
-                            <p className="text-sm text-slate-600">{lead.notes}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
+                            if (column.sortable) {
+                              return (
+                                <SortableHeader key={column.key} column={column.key as SortField}>
+                                  <div className="whitespace-nowrap">{column.label}</div>
+                                </SortableHeader>
+                              );
+                            } else {
+                              return (
+                                <TableHead key={column.key}>
+                                  <div className="whitespace-nowrap">{column.label}</div>
+                                </TableHead>
+                              );
+                            }
+                          })}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAndSortedLeads.map((lead) => (
+                          <TableRow key={lead.id} className="hover:bg-slate-50">
+                            {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                              <TableCell key={column.key} className="py-3">
+                                {renderCellContent(lead, column.key)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
