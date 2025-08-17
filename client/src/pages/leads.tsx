@@ -430,32 +430,33 @@ export default function Leads() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-b border-gray-200">
-          <div>
-            <nav className="-mb-px flex space-x-8">
-              {[
-                { id: "pipeline", name: "Pipeline View", icon: Kanban, count: leads.length },
-                { id: "list", name: "List View", icon: Users, count: leads.length }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                      activeTab === tab.id
-                        ? "border-primary text-primary"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.name} {tab.count > 0 && `(${tab.count})`}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-          
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { id: "pipeline", name: "Pipeline View", icon: Kanban, count: leads.length },
+              { id: "list", name: "List View", icon: Users, count: leads.length }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.name} {tab.count > 0 && `(${tab.count})`}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Search Section - Below tabs but still in fixed area */}
+        <div className="py-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
