@@ -2668,11 +2668,9 @@ export class DbStorage implements IStorage {
   async deleteSocialMediaTemplate(id: string): Promise<boolean> { return this.memStorage.deleteSocialMediaTemplate(id); }
 
   async getSocialMediaAnalytics(): Promise<SocialMediaAnalytics[]> { return this.memStorage.getSocialMediaAnalytics(); }
-  async getSocialMediaAnalytic(id: string): Promise<SocialMediaAnalytics | undefined> { return this.memStorage.getSocialMediaAnalytic(id); }
-  async getSocialMediaAnalyticsByAccount(accountId: string): Promise<SocialMediaAnalytics[]> { return this.memStorage.getSocialMediaAnalyticsByAccount(accountId); }
+  async getSocialMediaAnalyticsForAccount(accountId: string): Promise<SocialMediaAnalytics[]> { return this.memStorage.getSocialMediaAnalyticsForAccount(accountId); }
   async createSocialMediaAnalytics(analytics: InsertSocialMediaAnalytics): Promise<SocialMediaAnalytics> { return this.memStorage.createSocialMediaAnalytics(analytics); }
-  async updateSocialMediaAnalytics(id: string, analytics: Partial<InsertSocialMediaAnalytics>): Promise<SocialMediaAnalytics | undefined> { return this.memStorage.updateSocialMediaAnalytics(id, analytics); }
-  async deleteSocialMediaAnalytics(id: string): Promise<boolean> { return this.memStorage.deleteSocialMediaAnalytics(id); }
+
 
   // Workflows
   async getWorkflows(): Promise<Workflow[]> { return this.memStorage.getWorkflows(); }
@@ -2686,7 +2684,7 @@ export class DbStorage implements IStorage {
   async getWorkflowExecutionsByWorkflow(workflowId: string): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutionsByWorkflow(workflowId); }
   async createWorkflowExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution> { return this.memStorage.createWorkflowExecution(execution); }
   async updateWorkflowExecution(id: string, execution: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> { return this.memStorage.updateWorkflowExecution(id, execution); }
-  async deleteWorkflowExecution(id: string): Promise<boolean> { return this.memStorage.deleteWorkflowExecution(id); }
+
 
   async getWorkflowTemplates(): Promise<WorkflowTemplate[]> { return this.memStorage.getWorkflowTemplates(); }
   async getWorkflowTemplate(id: string): Promise<WorkflowTemplate | undefined> { return this.memStorage.getWorkflowTemplate(id); }
@@ -2704,7 +2702,7 @@ export class DbStorage implements IStorage {
   // Enhanced Tasks  
   async getEnhancedTasks(): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasks(); }
   async getEnhancedTask(id: string): Promise<EnhancedTask | undefined> { return this.memStorage.getEnhancedTask(id); }
-  async getEnhancedTasksByCategory(categoryId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByCategory(categoryId); }
+  async getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByClient(clientId); }
   async getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByProject(projectId); }
   async createEnhancedTask(task: InsertEnhancedTask): Promise<EnhancedTask> { return this.memStorage.createEnhancedTask(task); }
   async updateEnhancedTask(id: string, task: Partial<InsertEnhancedTask>): Promise<EnhancedTask | undefined> { return this.memStorage.updateEnhancedTask(id, task); }
@@ -2768,7 +2766,7 @@ export class DbStorage implements IStorage {
 
   async deleteTemplateFolder(id: string): Promise<boolean> {
     const result = await this.db.delete(templateFolders).where(eq(templateFolders.id, id));
-    return result.rowCount !== undefined && result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getEmailTemplates(): Promise<EmailTemplate[]> {
@@ -2804,7 +2802,7 @@ export class DbStorage implements IStorage {
   
   async deleteEmailTemplate(id: string): Promise<boolean> {
     const result = await db.delete(emailTemplates).where(eq(emailTemplates.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getSmsTemplates(): Promise<SmsTemplate[]> {

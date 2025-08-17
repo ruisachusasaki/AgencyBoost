@@ -25,7 +25,7 @@ import {
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, invoices,
-  socialMediaAccounts, socialMediaPosts, workflows, workflowSteps, workflowTriggers, workflowConditions, workflowActions
+  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create project", error: error.message });
+      res.status(500).json({ message: "Failed to create project", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -1406,7 +1406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/clients/:clientId/social-media-templates", async (req, res) => {
     try {
-      const templates = await storage.getSocialMediaTemplatesByClient(req.params.clientId);
+      const templates = await storage.getSocialMediaTemplates();
       res.json(templates);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch client social media templates" });
@@ -1498,7 +1498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create email template", error: error.message });
+      res.status(500).json({ message: "Failed to create email template", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
