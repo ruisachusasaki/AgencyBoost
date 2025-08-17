@@ -137,5 +137,8 @@ Bundle architecture preference: Collection-based bundles.
 - **Fixed object storage URL conversion** for proper profile image display from `/api/objects` endpoint
 - **Removed redundant assigned staff text** from card bottoms for cleaner visual design
 - **Implemented clickable lead cards** - removed edit buttons and made entire cards clickable for cleaner UX without element overlap
+- **Enhanced pipeline visual design** - widened stage columns from 320px to 384px (w-80 → w-96) and improved card spacing for better visual balance
+- **Optimized search field positioning** - moved search functionality to header row alongside action buttons for cleaner layout organization
+- **Removed probability field completely** per user preference - all leads maintain 100% confidence level
 - Horizontal scrolling now works as intended: only affects the pipeline view area, not the entire application interface
 - Lead ownership and staff assignment fully functional across pipeline and table views
