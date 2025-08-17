@@ -165,10 +165,19 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
     }));
   };
 
-  // Group custom fields by folder
-  const fieldsWithoutFolder = customFields.filter(field => !field.folderId);
+  // Filter custom fields to exclude duplicates of built-in lead fields
+  const filteredCustomFields = customFields.filter(field => {
+    const duplicateFields = ['first name', 'last name', 'name', 'email', 'phone', 'company'];
+    const isDuplicate = duplicateFields.some(dup => 
+      field.name.toLowerCase().includes(dup) || field.label?.toLowerCase().includes(dup)
+    );
+    return !isDuplicate;
+  });
+
+  // Group filtered custom fields by folder
+  const fieldsWithoutFolder = filteredCustomFields.filter(field => !field.folderId);
   const fieldsByFolder = customFieldFolders.reduce((acc, folder) => {
-    acc[folder.id] = customFields.filter(field => field.folderId === folder.id);
+    acc[folder.id] = filteredCustomFields.filter(field => field.folderId === folder.id);
     return acc;
   }, {} as Record<string, CustomField[]>);
 
@@ -295,7 +304,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 Custom Fields
-                <Badge variant="secondary">{customFields.length} fields</Badge>
+                <Badge variant="secondary">{filteredCustomFields.length} fields</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
