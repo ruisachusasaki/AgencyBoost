@@ -142,3 +142,11 @@ Bundle architecture preference: Collection-based bundles.
 - **Removed probability field completely** per user preference - all leads maintain 100% confidence level
 - Horizontal scrolling now works as intended: only affects the pipeline view area, not the entire application interface
 - Lead ownership and staff assignment fully functional across pipeline and table views
+
+### Custom Fields System Integration (August 2025)
+- **Fixed critical custom field saving issue** - custom field values now properly persist across all field types
+- **Resolved field name vs ID mismatch** - custom fields store by field name for consistent filtering and display
+- **Enhanced custom field data initialization** - existing lead custom field values properly load when editing
+- **Comprehensive field type support** - text, email, phone, url, date, currency, number, dropdown, and file upload fields all functional
+- **Integrated filtering system** - dropdown custom fields (like Client Vertical) now work seamlessly with pipeline and list view filtering
+- Custom field data persistence ensures all 30+ available custom fields save and load correctly across the CRM system
