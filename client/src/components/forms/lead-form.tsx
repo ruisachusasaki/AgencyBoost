@@ -38,7 +38,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
-      await apiRequest("POST", "/api/leads", data);
+      await apiRequest("/api/leads", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -59,7 +59,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
 
   const updateLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
-      await apiRequest("PUT", `/api/leads/${lead!.id}`, data);
+      await apiRequest(`/api/leads/${lead!.id}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -127,7 +127,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Phone</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="+1 (555) 123-4567" />
+                  <Input {...field} value={field.value || ""} placeholder="+1 (555) 123-4567" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -141,7 +141,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Company</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Company name" />
+                  <Input {...field} value={field.value || ""} placeholder="Company name" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -207,7 +207,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Potential Value</FormLabel>
                 <FormControl>
-                  <Input {...field} type="number" placeholder="10000" />
+                  <Input {...field} value={field.value || ""} type="number" placeholder="10000" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -223,6 +223,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
                 <FormControl>
                   <Input 
                     {...field} 
+                    value={field.value || ""} 
                     type="number" 
                     min="0" 
                     max="100" 
@@ -242,7 +243,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Team member name" />
+                  <Input {...field} value={field.value || ""} placeholder="Team member name" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -276,7 +277,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
             <FormItem>
               <FormLabel>Notes</FormLabel>
               <FormControl>
-                <Textarea {...field} placeholder="Additional notes about the lead" rows={3} />
+                <Textarea {...field} value={field.value || ""} placeholder="Additional notes about the lead" rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>

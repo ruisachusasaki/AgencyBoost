@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
-import LeadForm from "@/components/forms/lead-form";
+import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import PipelineStageManager from "@/components/pipeline-stage-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -183,7 +183,7 @@ export default function Leads() {
               <DialogHeader>
                 <DialogTitle>Add New Lead</DialogTitle>
               </DialogHeader>
-              <LeadForm onSuccess={() => setIsCreateDialogOpen(false)} />
+              <CustomFieldsLeadForm onSuccess={() => setIsCreateDialogOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
@@ -307,7 +307,7 @@ export default function Leads() {
                                         <div className="space-y-2 text-xs">
                                           <div className="flex items-center gap-1 text-gray-600">
                                             <Calendar className="w-3 h-3" />
-                                            {new Date(lead.createdAt).toLocaleDateString()}
+                                            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
                                           </div>
                                           {lead.value && (
                                             <div className="flex items-center gap-1 text-green-600">
@@ -451,7 +451,7 @@ export default function Leads() {
                           <p className="text-xs text-slate-500">Last Contact</p>
                           <p className="font-semibold text-slate-900 flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {formatDate(lead.lastContactDate)}
+                            {formatDate(lead.lastContactDate ? (typeof lead.lastContactDate === 'string' ? lead.lastContactDate : lead.lastContactDate.toISOString()) : null)}
                           </p>
                         </div>
                       </div>
@@ -477,7 +477,7 @@ export default function Leads() {
             <DialogHeader>
               <DialogTitle>Edit Lead</DialogTitle>
             </DialogHeader>
-            <LeadForm
+            <CustomFieldsLeadForm
               lead={editingLead}
               onSuccess={() => setEditingLead(null)}
             />

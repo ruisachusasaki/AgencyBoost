@@ -424,6 +424,7 @@ export const leads = pgTable("leads", {
   assignedTo: text("assigned_to"),
   createdAt: timestamp("created_at").defaultNow(),
   lastContactDate: timestamp("last_contact_date"),
+  customFieldData: jsonb("custom_field_data"), // custom field values
   stageHistory: jsonb("stage_history").default([]), // track stage movements
 });
 

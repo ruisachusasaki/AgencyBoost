@@ -692,7 +692,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/leads", async (req, res) => {
     try {
-      const validatedData = insertLeadSchema.parse(req.body);
+      const { customFields, ...leadData } = req.body;
+      const validatedData = insertLeadSchema.parse({
+        ...leadData,
+        customFieldData: customFields || null
+      });
       
       const [newLead] = await db.insert(leads)
         .values(validatedData)
@@ -710,7 +714,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/leads/:id", async (req, res) => {
     try {
-      const validatedData = insertLeadSchema.partial().parse(req.body);
+      const { customFields, ...leadData } = req.body;
+      const validatedData = insertLeadSchema.partial().parse({
+        ...leadData,
+        customFieldData: customFields !== undefined ? customFields : undefined
+      });
       
       const [updatedLead] = await db.update(leads)
         .set(validatedData)
