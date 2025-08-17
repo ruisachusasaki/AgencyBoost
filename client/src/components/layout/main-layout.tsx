@@ -23,7 +23,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       
       <main className="flex-1 min-w-0 overflow-x-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <div className="h-[calc(100vh-4rem)] overflow-x-hidden">
+        <div className="p-6 pb-12 overflow-x-hidden">
           {children}
         </div>
       </main>

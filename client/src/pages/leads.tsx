@@ -159,7 +159,7 @@ export default function Leads() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
+    <div className="flex flex-col h-full w-full overflow-hidden -m-6 mb-0">
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 p-6 bg-white border-b">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
