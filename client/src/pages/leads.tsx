@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
@@ -562,13 +564,38 @@ export default function Leads() {
                                                       </div>
                                                     </div>
                                                     <div className="flex items-center gap-1">
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setEditingLead(lead)}
-                                                      >
-                                                        <Edit className="h-3 w-3" />
-                                                      </Button>
+                                                      {lead.assignedTo ? (
+                                                        <TooltipProvider>
+                                                          <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={() => setEditingLead(lead)}
+                                                              >
+                                                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center">
+                                                                  {(() => {
+                                                                    const staffMember = staff.find(s => s.id === lead.assignedTo);
+                                                                    return staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?';
+                                                                  })()}
+                                                                </div>
+                                                              </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                              <p>{getStaffName(lead.assignedTo)}</p>
+                                                            </TooltipContent>
+                                                          </Tooltip>
+                                                        </TooltipProvider>
+                                                      ) : (
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          onClick={() => setEditingLead(lead)}
+                                                        >
+                                                          <Edit className="h-3 w-3" />
+                                                        </Button>
+                                                      )}
                                                     </div>
                                                   </div>
                                                   
