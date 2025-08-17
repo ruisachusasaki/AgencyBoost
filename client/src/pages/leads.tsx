@@ -7,16 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal, Filter, X } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import PipelineStageManager from "@/components/pipeline-stage-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Lead, LeadPipelineStage, User } from "@shared/schema";
+import type { Lead, LeadPipelineStage, User, Tag, Client } from "@shared/schema";
 
 interface Column {
   key: string;
@@ -53,6 +56,11 @@ export default function Leads() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
   );
+  
+  // Filter states
+  const [filterOwner, setFilterOwner] = useState<string>("");
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterVertical, setFilterVertical] = useState<string>("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -67,6 +75,15 @@ export default function Leads() {
   const { data: staff = [] } = useQuery<User[]>({
     queryKey: ["/api/staff"],
   });
+
+  const { data: tags = [] } = useQuery<Tag[]>({
+    queryKey: ["/api/tags"],
+  });
+
+  const { data: clientsData } = useQuery<{clients: Client[]}>({
+    queryKey: ["/api/clients"],
+  });
+  const clients = clientsData?.clients || [];
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -107,14 +124,47 @@ export default function Leads() {
     },
   });
 
+  // Get unique client verticals for filtering
+  const uniqueVerticals = Array.from(new Set(
+    clients.filter(client => client.clientVertical).map(client => client.clientVertical!)
+  ));
+
   const filteredAndSortedLeads = leads
-    .filter(lead =>
-      !searchTerm ||
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.source?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(lead => {
+      // Search term filter
+      if (searchTerm && !(
+        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.source?.toLowerCase().includes(searchTerm.toLowerCase())
+      )) {
+        return false;
+      }
+
+      // Owner filter
+      if (filterOwner && lead.assignedTo !== filterOwner) {
+        return false;
+      }
+
+      // Tags filter  
+      if (filterTags.length > 0) {
+        const leadTags = lead.tags || [];
+        const hasAllTags = filterTags.every(tag => leadTags.includes(tag));
+        if (!hasAllTags) {
+          return false;
+        }
+      }
+
+      // Client vertical filter
+      if (filterVertical) {
+        const client = clients.find(c => c.companyName?.toLowerCase() === lead.company?.toLowerCase());
+        if (!client || client.clientVertical !== filterVertical) {
+          return false;
+        }
+      }
+
+      return true;
+    })
     .sort((a, b) => {
       let aValue: any = '';
       let bValue: any = '';
@@ -464,6 +514,125 @@ export default function Leads() {
           </nav>
         </div>
 
+        {/* Filters Section */}
+        <div className="py-4 space-y-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Filters:</span>
+            </div>
+            
+            {/* Owner Filter */}
+            <div className="min-w-[160px]">
+              <Select value={filterOwner} onValueChange={setFilterOwner}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Owners</SelectItem>
+                  {staff.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstName} {member.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tags Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  Tags {filterTags.length > 0 && `(${filterTags.length})`}
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" align="start">
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">Select Tags</div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {tags.map((tag) => (
+                      <div key={tag.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={tag.name}
+                          checked={filterTags.includes(tag.name)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFilterTags([...filterTags, tag.name]);
+                            } else {
+                              setFilterTags(filterTags.filter(t => t !== tag.name));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={tag.name}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                        >
+                          <span
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: tag.color || "#46a1a0" }}
+                          />
+                          {tag.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {filterTags.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFilterTags([])}
+                      className="w-full mt-2"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Vertical Filter */}
+            <div className="min-w-[160px]">
+              <Select value={filterVertical} onValueChange={setFilterVertical}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Vertical" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Verticals</SelectItem>
+                  {uniqueVerticals.map((vertical) => (
+                    <SelectItem key={vertical} value={vertical}>
+                      {vertical}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Clear Filters Button */}
+            {(filterOwner || filterTags.length > 0 || filterVertical) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFilterOwner("");
+                  setFilterTags([]);
+                  setFilterVertical("");
+                }}
+                className="h-8 text-sm"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear Filters
+              </Button>
+            )}
+            
+            {/* Active filters count */}
+            {(filterOwner || filterTags.length > 0 || filterVertical) && (
+              <Badge variant="secondary" className="text-xs">
+                {[filterOwner, filterTags.length > 0, filterVertical].filter(Boolean).length} active
+              </Badge>
+            )}
+          </div>
+        </div>
 
       </div>
 
