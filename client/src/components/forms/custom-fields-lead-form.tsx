@@ -62,7 +62,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       value: lead?.value || "",
       probability: lead?.probability || 0,
       notes: lead?.notes || "",
-      assignedTo: lead?.assignedTo || "",
+      assignedTo: lead?.assignedTo || "unassigned",
       lastContactDate: lead?.lastContactDate ? new Date(lead.lastContactDate) : undefined,
       stageId: lead?.stageId || pipelineStages.find(s => s.isDefault)?.id || "",
       tags: lead?.tags || [],
@@ -185,6 +185,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
   const onSubmit = (data: InsertLead) => {
     const submissionData = {
       ...data,
+      assignedTo: data.assignedTo === "unassigned" ? null : data.assignedTo,
       customFields: customFieldValues,
     };
     
@@ -332,7 +333,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">
+                          <SelectItem value="unassigned">
                             <div className="text-muted-foreground">Unassigned</div>
                           </SelectItem>
                           {staff.map((user) => (
