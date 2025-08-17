@@ -127,4 +127,7 @@ Bundle architecture preference: Collection-based bundles.
 - **Enhanced main layout structure** with overflow-x: hidden and proper flexbox constraints
 - **Pipeline view optimization** - horizontal scrolling now contained only within designated pipeline container area
 - **Fixed multiple JSX syntax errors** that were causing application crashes and HMR failures
+- **Improved leads page header styling** - added UserPlus icon matching navigation, removed white background, fixed tab separators
+- **Enhanced vertical space utilization** - pipeline stages now use calc(100vh - 200px) height with 500px minimum for better screen usage
+- **Removed pipeline container border** for cleaner visual appearance
 - Horizontal scrolling now works as intended: only affects the pipeline view area, not the entire application interface
