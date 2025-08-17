@@ -158,41 +158,42 @@ export default function Leads() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
-          <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0 p-6 bg-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
+            <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowStageManager(true)}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Pipeline
+            </Button>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Lead
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Lead</DialogTitle>
+                </DialogHeader>
+                <CustomFieldsLeadForm onSuccess={() => setIsCreateDialogOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowStageManager(true)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Manage Pipeline
-          </Button>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Lead
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add New Lead</DialogTitle>
-              </DialogHeader>
-              <CustomFieldsLeadForm onSuccess={() => setIsCreateDialogOpen(false)} />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
 
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           {/* Custom Tabs */}
-          <div className="border-b border-gray-200 mb-6">
+          <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: "pipeline", name: "Pipeline View", icon: Kanban, count: leads.length },
@@ -227,34 +228,39 @@ export default function Leads() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-hidden p-6">
 
         {activeTab === "pipeline" && (
-        <div className="space-y-6">
-          {pipelineStages.length === 0 ? (
-            <Card className="p-8">
-              <div className="text-center">
-                <Kanban className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pipeline Stages</h3>
-                <p className="text-gray-600 mb-4">
-                  Create your first pipeline stage to start organizing your leads.
-                </p>
-                <Button onClick={() => setShowStageManager(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Pipeline Stage
-                </Button>
-              </div>
-            </Card>
+          pipelineStages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <Card className="p-8">
+                <div className="text-center">
+                  <Kanban className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pipeline Stages</h3>
+                  <p className="text-gray-600 mb-4">
+                    Create your first pipeline stage to start organizing your leads.
+                  </p>
+                  <Button onClick={() => setShowStageManager(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Pipeline Stage
+                  </Button>
+                </div>
+              </Card>
+            </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="w-full border border-gray-200 rounded-lg bg-gray-50">
+              <div className="h-full w-full border border-gray-200 rounded-lg bg-gray-50">
                 <div 
-                  className="overflow-x-auto p-4"
+                  className="h-full overflow-x-auto overflow-y-hidden p-4"
                   style={{ 
                     scrollBehavior: 'smooth',
                     WebkitOverflowScrolling: 'touch'
                   }}
                 >
-                  <div className="flex gap-6 pb-2" style={{ minWidth: 'max-content' }}>
+                  <div className="flex gap-6 h-full" style={{ width: 'max-content' }}>
                 {pipelineStages.map((stage) => {
                   const stageLeads = leadsByStage[stage.id] || [];
                   const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
@@ -378,8 +384,7 @@ export default function Leads() {
                 </div>
               </div>
             </DragDropContext>
-          )}
-        </div>
+          )
         )}
 
         {activeTab === "list" && (
