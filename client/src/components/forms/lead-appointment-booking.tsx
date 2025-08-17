@@ -1,0 +1,303 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { insertLeadAppointmentSchema, type LeadAppointment, type InsertLeadAppointment } from "@shared/schema";
+import { Calendar as CalendarIcon, Clock, MapPin, FileText } from "lucide-react";
+import { format } from "date-fns";
+import { z } from "zod";
+
+interface LeadAppointmentBookingProps {
+  leadId?: string;
+  onSuccess?: () => void;
+}
+
+const appointmentFormSchema = insertLeadAppointmentSchema.extend({
+  date: z.date(),
+  time: z.string().min(1, "Time is required"),
+});
+
+type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
+
+export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppointmentBookingProps) {
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: calendars = [] } = useQuery({
+    queryKey: ["/api/calendars"],
+  });
+
+  const form = useForm<AppointmentFormData>({
+    resolver: zodResolver(appointmentFormSchema),
+    defaultValues: {
+      leadId: leadId || "",
+      calendarId: "",
+      title: "",
+      description: "",
+      location: "",
+      time: "",
+    },
+  });
+
+  const createAppointmentMutation = useMutation({
+    mutationFn: async (data: AppointmentFormData) => {
+      // Combine date and time
+      const [hours, minutes] = data.time.split(':').map(Number);
+      const startTime = new Date(data.date);
+      startTime.setHours(hours, minutes, 0, 0);
+      
+      // Set end time to 1 hour later
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + 1);
+
+      const appointmentData: InsertLeadAppointment = {
+        leadId: data.leadId,
+        calendarId: data.calendarId,
+        title: data.title,
+        description: data.description || undefined,
+        location: data.location || undefined,
+        startTime,
+        endTime,
+        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from auth
+      };
+
+      return apiRequest("/api/lead-appointments", {
+        method: "POST",
+        body: JSON.stringify(appointmentData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lead-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments"] });
+      toast({
+        title: "Success",
+        description: "Appointment booked successfully!",
+      });
+      form.reset();
+      setSelectedDate(undefined);
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to book appointment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: AppointmentFormData) => {
+    if (!selectedDate) {
+      toast({
+        title: "Error",
+        description: "Please select a date",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createAppointmentMutation.mutate({
+      ...data,
+      date: selectedDate,
+    });
+  };
+
+  // Generate time options (9 AM to 6 PM in 30-minute intervals)
+  const timeOptions = [];
+  for (let hour = 9; hour <= 18; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      const displayTime = new Date(0, 0, 0, hour, minute).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      timeOptions.push({ value: time, label: displayTime });
+    }
+  }
+
+  const isLoading = createAppointmentMutation.isPending;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CalendarIcon className="w-5 h-5" />
+          Book Appointment
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Step 1: Select Calendar */}
+            <FormField
+              control={form.control}
+              name="calendarId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    Step 1: Select Calendar *
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a calendar" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {calendars.map((calendar: any) => (
+                        <SelectItem key={calendar.id} value={calendar.id}>
+                          {calendar.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Step 2: Select Date & Time */}
+            <div className="space-y-4">
+              <FormLabel className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Step 2: Choose Date & Time *
+              </FormLabel>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Date Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-left font-normal ${!selectedDate && "text-muted-foreground"}`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Time Selection */}
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Time</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose time" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {timeOptions.map((time) => (
+                            <SelectItem key={time.value} value={time.value}>
+                              {time.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Step 3: Meeting Details */}
+            <div className="space-y-4">
+              <FormLabel className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Step 3: Meeting Details *
+              </FormLabel>
+
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Appointment Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., Initial consultation, Follow-up meeting" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Meeting Location
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Office address, Zoom link, or phone number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        placeholder="Meeting agenda, notes, or additional details..."
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={onSuccess}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Booking..." : "Book Appointment"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}

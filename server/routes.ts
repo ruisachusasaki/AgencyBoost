@@ -4260,6 +4260,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === LEAD NOTES ===
+  app.get("/api/lead-notes/:leadId", async (req, res) => {
+    try {
+      const { leadId } = req.params;
+      const notes = await db.select()
+        .from(leadNotes)
+        .where(eq(leadNotes.leadId, leadId))
+        .orderBy(desc(leadNotes.createdAt));
+
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching lead notes:", error);
+      res.status(500).json({ error: "Failed to fetch lead notes" });
+    }
+  });
+
+  app.post("/api/lead-notes", async (req, res) => {
+    try {
+      const validatedData = insertLeadNoteSchema.parse(req.body);
+      const [note] = await db.insert(leadNotes).values(validatedData).returning();
+      
+      await createAuditLog(
+        "created",
+        "lead_note",
+        note.id,
+        `Note for lead ${validatedData.leadId}`,
+        validatedData.authorId,
+        "Lead note created",
+        null,
+        validatedData,
+        req
+      );
+
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error creating lead note:", error);
+      res.status(500).json({ error: "Failed to create lead note" });
+    }
+  });
+
+  app.patch("/api/lead-notes/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertLeadNoteSchema.partial().parse(req.body);
+      
+      const [note] = await db.update(leadNotes)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(leadNotes.id, id))
+        .returning();
+
+      if (!note) {
+        return res.status(404).json({ error: "Lead note not found" });
+      }
+
+      await createAuditLog(
+        "updated",
+        "lead_note",
+        id,
+        `Note for lead ${note.leadId}`,
+        note.authorId,
+        "Lead note updated",
+        null,
+        validatedData,
+        req
+      );
+
+      res.json(note);
+    } catch (error) {
+      console.error("Error updating lead note:", error);
+      res.status(500).json({ error: "Failed to update lead note" });
+    }
+  });
+
+  app.delete("/api/lead-notes/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [note] = await db.delete(leadNotes)
+        .where(eq(leadNotes.id, id))
+        .returning();
+
+      if (!note) {
+        return res.status(404).json({ error: "Lead note not found" });
+      }
+
+      await createAuditLog(
+        "deleted",
+        "lead_note",
+        id,
+        `Note for lead ${note.leadId}`,
+        note.authorId,
+        "Lead note deleted",
+        note,
+        null,
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting lead note:", error);
+      res.status(500).json({ error: "Failed to delete lead note" });
+    }
+  });
+
+  // === LEAD APPOINTMENTS ===
+  app.get("/api/lead-appointments/:leadId", async (req, res) => {
+    try {
+      const { leadId } = req.params;
+      const appointments = await db.select({
+        id: leadAppointments.id,
+        leadId: leadAppointments.leadId,
+        calendarId: leadAppointments.calendarId,
+        title: leadAppointments.title,
+        description: leadAppointments.description,
+        startTime: leadAppointments.startTime,
+        endTime: leadAppointments.endTime,
+        location: leadAppointments.location,
+        status: leadAppointments.status,
+        createdBy: leadAppointments.createdBy,
+        createdAt: leadAppointments.createdAt,
+        calendarName: calendars.name,
+        createdByName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+      })
+      .from(leadAppointments)
+      .leftJoin(calendars, eq(leadAppointments.calendarId, calendars.id))
+      .leftJoin(staff, eq(leadAppointments.createdBy, staff.id))
+      .where(eq(leadAppointments.leadId, leadId))
+      .orderBy(desc(leadAppointments.startTime));
+
+      res.json(appointments);
+    } catch (error) {
+      console.error("Error fetching lead appointments:", error);
+      res.status(500).json({ error: "Failed to fetch lead appointments" });
+    }
+  });
+
+  app.post("/api/lead-appointments", async (req, res) => {
+    try {
+      const validatedData = insertLeadAppointmentSchema.parse(req.body);
+      const [appointment] = await db.insert(leadAppointments).values(validatedData).returning();
+      
+      await createAuditLog(
+        "created",
+        "lead_appointment",
+        appointment.id,
+        `${validatedData.title} - Lead ${validatedData.leadId}`,
+        validatedData.createdBy,
+        "Lead appointment booked",
+        null,
+        validatedData,
+        req
+      );
+
+      res.status(201).json(appointment);
+    } catch (error) {
+      console.error("Error creating lead appointment:", error);
+      res.status(500).json({ error: "Failed to create lead appointment" });
+    }
+  });
+
+  app.patch("/api/lead-appointments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertLeadAppointmentSchema.partial().parse(req.body);
+      
+      const [appointment] = await db.update(leadAppointments)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(leadAppointments.id, id))
+        .returning();
+
+      if (!appointment) {
+        return res.status(404).json({ error: "Lead appointment not found" });
+      }
+
+      await createAuditLog(
+        "updated",
+        "lead_appointment",
+        id,
+        `${appointment.title} - Lead ${appointment.leadId}`,
+        appointment.createdBy,
+        "Lead appointment updated",
+        null,
+        validatedData,
+        req
+      );
+
+      res.json(appointment);
+    } catch (error) {
+      console.error("Error updating lead appointment:", error);
+      res.status(500).json({ error: "Failed to update lead appointment" });
+    }
+  });
+
+  app.delete("/api/lead-appointments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [appointment] = await db.delete(leadAppointments)
+        .where(eq(leadAppointments.id, id))
+        .returning();
+
+      if (!appointment) {
+        return res.status(404).json({ error: "Lead appointment not found" });
+      }
+
+      await createAuditLog(
+        "deleted",
+        "lead_appointment",
+        id,
+        `${appointment.title} - Lead ${appointment.leadId}`,
+        appointment.createdBy,
+        "Lead appointment deleted",
+        appointment,
+        null,
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting lead appointment:", error);
+      res.status(500).json({ error: "Failed to delete lead appointment" });
+    }
+  });
+
   // Client Tasks endpoints
   app.get("/api/clients/:clientId/tasks", async (req, res) => {
     try {

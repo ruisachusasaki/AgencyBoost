@@ -17,6 +17,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User } from "@shared/schema";
 import { ArrowRight, UserPlus, X, Trash2, User as UserIcon, Calendar, NotebookPen, CheckSquare } from "lucide-react";
+import LeadAppointmentBooking from "@/components/forms/lead-appointment-booking";
+import LeadNotesSection from "@/components/forms/lead-notes-section";
 import { z } from "zod";
 
 interface CustomFieldsLeadFormProps {
@@ -592,21 +594,16 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
         </TabsContent>
 
         <TabsContent value="appointment" className="space-y-4 max-h-[50vh] overflow-y-auto">
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <h3 className="font-medium mb-2">Appointment Booking</h3>
-            <p className="text-sm">Book appointments with this lead using our integrated calendar system.</p>
-            <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
-          </div>
+          <LeadAppointmentBooking 
+            leadId={lead?.id} 
+            onSuccess={() => {
+              // Success handled by the component itself
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="notes" className="space-y-4 max-h-[50vh] overflow-y-auto">
-          <div className="text-center py-8 text-gray-500">
-            <NotebookPen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <h3 className="font-medium mb-2">Lead Notes</h3>
-            <p className="text-sm">Add and manage notes for this lead that will transfer when converted to a client.</p>
-            <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
-          </div>
+          <LeadNotesSection leadId={lead?.id} />
         </TabsContent>
 
         <TabsContent value="tasks" className="space-y-4 max-h-[50vh] overflow-y-auto">
