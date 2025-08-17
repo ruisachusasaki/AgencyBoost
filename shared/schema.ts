@@ -725,6 +725,23 @@ export const insertLeadPipelineStagSchema = createInsertSchema(leadPipelineStage
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
+}).extend({
+  value: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => {
+    if (val === '' || val === null || val === undefined) return null;
+    if (typeof val === 'string') {
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? null : parsed.toString();
+    }
+    return val?.toString() || null;
+  }),
+  probability: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => {
+    if (val === '' || val === null || val === undefined) return 0;
+    if (typeof val === 'string') {
+      const parsed = parseInt(val);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return val || 0;
+  }),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
