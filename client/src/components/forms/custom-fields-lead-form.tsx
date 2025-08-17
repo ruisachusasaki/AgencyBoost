@@ -367,6 +367,28 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="probability"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Probability (%)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          value={field.value || ""} 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          placeholder="50"
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </CardContent>
           </Card>
