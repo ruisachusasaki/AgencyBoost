@@ -47,7 +47,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
   });
 
   const { data: staff = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
+    queryKey: ["/api/staff"],
   });
 
   const form = useForm<InsertLead>({

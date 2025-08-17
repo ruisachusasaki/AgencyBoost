@@ -63,7 +63,7 @@ export default function Leads() {
   });
 
   const { data: staff = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
+    queryKey: ["/api/staff"],
   });
 
   const deleteLeadMutation = useMutation({
