@@ -119,3 +119,12 @@ Bundle architecture preference: Collection-based bundles.
 - Users can now click folder names or use "View Folder" dropdown option to filter forms by folder
 - Enhanced search functionality to work within specific folders
 - Improved user experience for organizing and accessing forms
+
+### Horizontal Scrolling Layout Fix (August 2025)
+- **Resolved critical horizontal scrolling issue** where entire screen was scrolling horizontally instead of containing scroll to pipeline view
+- **Complete leads page rebuild** with proper layout structure and overflow controls
+- **Added CSS overflow constraints** to html, body, and #root elements to prevent whole-screen horizontal overflow
+- **Enhanced main layout structure** with overflow-x: hidden and proper flexbox constraints
+- **Pipeline view optimization** - horizontal scrolling now contained only within designated pipeline container area
+- **Fixed multiple JSX syntax errors** that were causing application crashes and HMR failures
+- Horizontal scrolling now works as intended: only affects the pipeline view area, not the entire application interface
