@@ -865,6 +865,7 @@ export default function ProductsSettings() {
                   <TableHeader>
                     <TableRow>
                       <SortableTableHead field="name">Name</SortableTableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead>Cost</TableHead>
                       <SortableTableHead field="type">Type</SortableTableHead>
                       <SortableTableHead field="status">Status</SortableTableHead>
@@ -883,6 +884,15 @@ export default function ProductsSettings() {
                               </div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {product.categoryId ? (
+                            <Badge variant="outline">
+                              {categories.find(cat => cat.id === product.categoryId)?.name || 'Unknown'}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400">No category</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {product.cost ? (
