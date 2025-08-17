@@ -11,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User } from "@shared/schema";
-import { ArrowRight, UserPlus, X, Trash2 } from "lucide-react";
+import { ArrowRight, UserPlus, X, Trash2, User as UserIcon, Calendar, NotebookPen, CheckSquare } from "lucide-react";
 import { z } from "zod";
 
 interface CustomFieldsLeadFormProps {
@@ -235,8 +236,29 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   return (
     <>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[70vh] overflow-y-auto">
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="details" className="flex items-center gap-2">
+            <UserIcon className="w-4 h-4" />
+            Lead Details
+          </TabsTrigger>
+          <TabsTrigger value="appointment" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Book Appointment
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="flex items-center gap-2">
+            <NotebookPen className="w-4 h-4" />
+            Notes
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="flex items-center gap-2">
+            <CheckSquare className="w-4 h-4" />
+            Tasks
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="space-y-4 max-h-[50vh] overflow-y-auto">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Core Lead Fields */}
           <Card>
             <CardHeader>
@@ -565,8 +587,37 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
               </Button>
             </div>
           </div>
-        </form>
-      </Form>
+          </form>
+        </Form>
+        </TabsContent>
+
+        <TabsContent value="appointment" className="space-y-4 max-h-[50vh] overflow-y-auto">
+          <div className="text-center py-8 text-gray-500">
+            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <h3 className="font-medium mb-2">Appointment Booking</h3>
+            <p className="text-sm">Book appointments with this lead using our integrated calendar system.</p>
+            <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notes" className="space-y-4 max-h-[50vh] overflow-y-auto">
+          <div className="text-center py-8 text-gray-500">
+            <NotebookPen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <h3 className="font-medium mb-2">Lead Notes</h3>
+            <p className="text-sm">Add and manage notes for this lead that will transfer when converted to a client.</p>
+            <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tasks" className="space-y-4 max-h-[50vh] overflow-y-auto">
+          <div className="text-center py-8 text-gray-500">
+            <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <h3 className="font-medium mb-2">Lead Tasks</h3>
+            <p className="text-sm">Create and assign tasks related to this lead.</p>
+            <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Convert to Client Dialog */}
       <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
