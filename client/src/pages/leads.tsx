@@ -637,11 +637,11 @@ export default function Leads() {
                                                   </div>
                                                   
                                                   {/* Edit button moved to bottom left */}
-                                                  <div className="absolute bottom-1 left-2">
+                                                  <div className="absolute bottom-1 left-1">
                                                     <Button
                                                       variant="ghost"
                                                       size="sm"
-                                                      className="h-6 w-6 p-0 bg-white/80 hover:bg-white shadow-sm"
+                                                      className="h-6 w-6 p-0 bg-white/90 hover:bg-white shadow-sm border border-gray-200"
                                                       onClick={() => setEditingLead(lead)}
                                                     >
                                                       <Edit className="h-3 w-3" />
