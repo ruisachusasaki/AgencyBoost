@@ -532,9 +532,6 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
           <div className="flex justify-between items-center pt-4">
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onSuccess}>
-                Cancel
-              </Button>
               {canConvert && (
                 <Button
                   type="button"
@@ -559,9 +556,14 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                 </Button>
               )}
             </div>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : lead ? "Update Lead" : "Create Lead"}
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onSuccess}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : lead ? "Update Lead" : "Create Lead"}
+              </Button>
+            </div>
           </div>
         </form>
       </Form>
