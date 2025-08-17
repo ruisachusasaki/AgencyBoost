@@ -136,5 +136,6 @@ Bundle architecture preference: Collection-based bundles.
 - **Added profile image tooltip functionality** showing staff member names on hover
 - **Fixed object storage URL conversion** for proper profile image display from `/api/objects` endpoint
 - **Removed redundant assigned staff text** from card bottoms for cleaner visual design
+- **Implemented clickable lead cards** - removed edit buttons and made entire cards clickable for cleaner UX without element overlap
 - Horizontal scrolling now works as intended: only affects the pipeline view area, not the entire application interface
 - Lead ownership and staff assignment fully functional across pipeline and table views
