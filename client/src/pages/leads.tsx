@@ -246,14 +246,15 @@ export default function Leads() {
             </Card>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div 
-                className="relative w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-                style={{ 
-                  scrollBehavior: 'smooth',
-                  WebkitOverflowScrolling: 'touch'
-                }}
-              >
-                <div className="flex gap-6 pb-4" style={{ width: 'fit-content', minWidth: '100%' }}>
+              <div className="w-full border border-gray-200 rounded-lg bg-gray-50">
+                <div 
+                  className="overflow-x-auto p-4"
+                  style={{ 
+                    scrollBehavior: 'smooth',
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  <div className="flex gap-6 pb-2" style={{ minWidth: 'max-content' }}>
                 {pipelineStages.map((stage) => {
                   const stageLeads = leadsByStage[stage.id] || [];
                   const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
@@ -373,6 +374,7 @@ export default function Leads() {
                   </Card>
                   );
                 })}
+                  </div>
                 </div>
               </div>
             </DragDropContext>
