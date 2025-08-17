@@ -32,21 +32,13 @@ function NotificationButton() {
   // Fetch notifications
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['/api/notifications'],
-    queryFn: async () => {
-      const response = await fetch('/api/notifications');
-      if (!response.ok) throw new Error('Failed to fetch notifications');
-      return response.json();
-    },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to mark as read');
+      const response = await apiRequest(`/api/notifications/${notificationId}/read`, 'PATCH');
       return response.json();
     },
     onSuccess: () => {
@@ -57,10 +49,7 @@ function NotificationButton() {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/notifications/mark-all-read', {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to mark all as read');
+      const response = await apiRequest('/api/notifications/mark-all-read', 'PATCH');
       return response.json();
     },
     onSuccess: () => {
@@ -71,10 +60,7 @@ function NotificationButton() {
   // Delete notification mutation
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete notification');
+      const response = await apiRequest(`/api/notifications/${notificationId}`, 'DELETE');
       return response.json();
     },
     onSuccess: () => {

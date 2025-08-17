@@ -20,22 +20,13 @@ interface PaginatedClientsResponse {
 
 export default function RecentClients() {
   const { data: clientsData, isLoading, error } = useQuery<PaginatedClientsResponse>({
-    queryKey: ["/api/clients", "recent", "v5"],
-    queryFn: async () => {
-      const timestamp = Date.now();
-      const response = await fetch(`/api/clients?page=1&limit=3&sortBy=createdAt&sortOrder=desc&_t=${timestamp}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
-      return result;
-    },
+    queryKey: ["/api/clients"],
     staleTime: 0,
     gcTime: 0,
   });
 
   const clients = clientsData?.clients || [];
-  const recentClients = Array.isArray(clients) ? clients : [];
+  const recentClients = Array.isArray(clients) ? clients.slice(0, 3) : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
