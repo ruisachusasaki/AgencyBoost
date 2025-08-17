@@ -14,8 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage } from "@shared/schema";
-import { ArrowRight, UserPlus } from "lucide-react";
+import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag } from "@shared/schema";
+import { ArrowRight, UserPlus, X, Trash2 } from "lucide-react";
 import { z } from "zod";
 
 interface CustomFieldsLeadFormProps {
@@ -42,6 +42,10 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
     queryKey: ["/api/lead-pipeline-stages"],
   });
 
+  const { data: tags = [] } = useQuery<Tag[]>({
+    queryKey: ["/api/tags"],
+  });
+
   const form = useForm<InsertLead>({
     resolver: zodResolver(insertLeadSchema),
     defaultValues: {
@@ -57,6 +61,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       assignedTo: lead?.assignedTo || "",
       lastContactDate: lead?.lastContactDate ? new Date(lead.lastContactDate) : undefined,
       stageId: lead?.stageId || pipelineStages.find(s => s.isDefault)?.id || "",
+      tags: lead?.tags || [],
     },
   });
 
@@ -144,6 +149,34 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       });
     },
   });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/leads/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({
+        title: "Lead deleted",
+        description: "The lead has been successfully deleted.",
+      });
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete lead. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteLead = () => {
+    if (!lead) return;
+    if (confirm("Are you sure you want to delete this lead? This action cannot be undone.")) {
+      deleteLeadMutation.mutate(lead.id);
+    }
+  };
 
   const onSubmit = (data: InsertLead) => {
     const submissionData = {
@@ -299,6 +332,88 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
             </CardContent>
           </Card>
 
+          {/* Tags Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Tags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <div className="space-y-2">
+                        {/* Selected Tags */}
+                        {field.value && field.value.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {field.value.map((tagName: string, index: number) => {
+                              const tag = tags.find(t => t.name === tagName);
+                              return (
+                                <Badge 
+                                  key={index}
+                                  variant="secondary" 
+                                  className="flex items-center gap-1"
+                                  style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined }}
+                                >
+                                  {tagName}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-4 w-4 p-0 hover:bg-transparent"
+                                    onClick={() => {
+                                      const newTags = field.value.filter((_: string, i: number) => i !== index);
+                                      field.onChange(newTags);
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
+                        {/* Tag Selection */}
+                        <Select
+                          onValueChange={(tagName) => {
+                            const currentTags = field.value || [];
+                            if (!currentTags.includes(tagName)) {
+                              field.onChange([...currentTags, tagName]);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tags to add" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tags
+                              .filter(tag => !field.value?.includes(tag.name))
+                              .map((tag) => (
+                                <SelectItem key={tag.id} value={tag.name}>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-3 h-3 rounded-full"
+                                      style={{ backgroundColor: tag.color || "#46a1a0" }}
+                                    />
+                                    {tag.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
           {/* Custom Fields */}
           <Card>
             <CardHeader>
@@ -379,6 +494,18 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                 >
                   <UserPlus className="w-4 h-4" />
                   Convert to Client
+                </Button>
+              )}
+              {lead && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteLead}
+                  disabled={deleteLeadMutation.isPending}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleteLeadMutation.isPending ? "Deleting..." : "Delete Lead"}
                 </Button>
               )}
             </div>

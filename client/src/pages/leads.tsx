@@ -396,7 +396,7 @@ export default function Leads() {
                   Add Lead
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>Add New Lead</DialogTitle>
                 </DialogHeader>
@@ -543,13 +543,6 @@ export default function Leads() {
                                                       >
                                                         <Edit className="h-3 w-3" />
                                                       </Button>
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteLead(lead.id)}
-                                                      >
-                                                        <Trash2 className="h-3 w-3" />
-                                                      </Button>
                                                     </div>
                                                   </div>
                                                   
@@ -687,7 +680,7 @@ export default function Leads() {
       {/* Edit Lead Dialog */}
       {editingLead && (
         <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Edit Lead</DialogTitle>
             </DialogHeader>

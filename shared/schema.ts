@@ -742,6 +742,7 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
     }
     return val || 0;
   }),
+  tags: z.array(z.string()).optional().default([]),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
