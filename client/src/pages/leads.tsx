@@ -736,12 +736,7 @@ export default function Leads() {
                                                       <TooltipProvider>
                                                         <Tooltip>
                                                           <TooltipTrigger asChild>
-                                                            <Button
-                                                              variant="ghost"
-                                                              size="sm"
-                                                              className="h-8 w-8 p-0"
-                                                              onClick={() => setEditingLead(lead)}
-                                                            >
+                                                            <div className="cursor-pointer">
                                                               {(() => {
                                                                 if (lead.assignedTo) {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
@@ -762,7 +757,7 @@ export default function Leads() {
                                                                     );
                                                                   } else if (staffMember) {
                                                                     return (
-                                                                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center">
+                                                                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                                                                         {`${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}`}
                                                                       </div>
                                                                     );
@@ -775,10 +770,10 @@ export default function Leads() {
                                                                   </div>
                                                                 );
                                                               })()}
-                                                            </Button>
+                                                            </div>
                                                           </TooltipTrigger>
                                                           <TooltipContent>
-                                                            <p>{lead.assignedTo ? getStaffName(lead.assignedTo) : 'Unassigned - Click to assign'}</p>
+                                                            <p>{lead.assignedTo ? getStaffName(lead.assignedTo) : 'Unassigned'}</p>
                                                           </TooltipContent>
                                                         </Tooltip>
                                                       </TooltipProvider>
