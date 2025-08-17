@@ -89,7 +89,7 @@ export default function ProductsSettings() {
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [sortField, setSortField] = useState<'name' | 'type' | 'status' | 'createdAt'>('name');
+  const [sortField, setSortField] = useState<'name' | 'type' | 'status' | 'category' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch products
@@ -475,6 +475,13 @@ export default function ProductsSettings() {
         case 'status':
           aValue = a.status.toLowerCase();
           bValue = b.status.toLowerCase();
+          break;
+        case 'category':
+          // Sort by category name, with "No category" items at the end
+          const aCategoryName = a.categoryId ? (categories.find(cat => cat.id === a.categoryId)?.name || 'zzz') : 'zzz';
+          const bCategoryName = b.categoryId ? (categories.find(cat => cat.id === b.categoryId)?.name || 'zzz') : 'zzz';
+          aValue = aCategoryName.toLowerCase();
+          bValue = bCategoryName.toLowerCase();
           break;
         case 'createdAt':
           aValue = new Date(a.createdAt).getTime();
@@ -865,7 +872,7 @@ export default function ProductsSettings() {
                   <TableHeader>
                     <TableRow>
                       <SortableTableHead field="name">Name</SortableTableHead>
-                      <TableHead>Category</TableHead>
+                      <SortableTableHead field="category">Category</SortableTableHead>
                       <TableHead>Cost</TableHead>
                       <SortableTableHead field="type">Type</SortableTableHead>
                       <SortableTableHead field="status">Status</SortableTableHead>
