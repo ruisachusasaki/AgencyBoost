@@ -250,7 +250,7 @@ export default function Leads() {
               </Card>
             </div>
           ) : (
-            <div className="h-full p-6 overflow-hidden">
+            <div className="flex-1 p-6 overflow-hidden">
               <div className="h-full rounded-lg bg-gray-50 overflow-hidden">
                 <div className="h-full p-4 overflow-x-auto">
                   <DragDropContext onDragEnd={handleDragEnd}>
@@ -260,7 +260,7 @@ export default function Leads() {
                         const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
                         
                         return (
-                          <div key={stage.id} className="flex-shrink-0 w-80">
+                          <div key={stage.id} className="flex-shrink-0 w-80 h-full">
                             <Card className="bg-white h-full flex flex-col">
                               <CardHeader className="pb-3 flex-shrink-0">
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -286,7 +286,7 @@ export default function Leads() {
                                     <div
                                       ref={provided.innerRef}
                                       {...provided.droppableProps}
-                                      className={`space-y-3 h-full overflow-y-auto ${
+                                      className={`space-y-3 h-full min-h-96 overflow-y-auto ${
                                         snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
                                       }`}
                                     >
