@@ -202,7 +202,14 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form 
+            onSubmit={(e) => {
+              console.log("Form onSubmit triggered");
+              e.preventDefault();
+              form.handleSubmit(onSubmit)(e);
+            }} 
+            className="space-y-4"
+          >
             {/* Step 1: Select Calendar */}
             <FormField
               control={form.control}
@@ -355,7 +362,14 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
               <Button type="button" variant="outline" onClick={onSuccess}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                onClick={(e) => {
+                  console.log("Book Appointment button clicked");
+                  // Form submission will be handled by onSubmit
+                }}
+              >
                 {isLoading ? "Booking..." : "Book Appointment"}
               </Button>
             </div>
