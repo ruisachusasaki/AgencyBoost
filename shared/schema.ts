@@ -396,6 +396,19 @@ export const smsTemplates = pgTable("sms_templates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Lead Pipeline Stages - Customizable stages for lead management
+export const leadPipelineStages = pgTable("lead_pipeline_stages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").notNull().default("#6b7280"), // hex color for stage display
+  order: integer("order").notNull().default(0),
+  isDefault: boolean("is_default").default(false), // default stage for new leads
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -403,13 +416,15 @@ export const leads = pgTable("leads", {
   phone: text("phone"),
   company: text("company"),
   source: text("source"), // website, referral, social_media, advertising, cold_outreach
-  status: text("status").notNull().default("new"), // new, qualified, proposal, negotiation, won, lost
+  status: text("status").notNull().default("new"), // will be deprecated in favor of stageId
+  stageId: varchar("stage_id").references(() => leadPipelineStages.id),
   value: decimal("value", { precision: 10, scale: 2 }),
   probability: integer("probability").default(0), // 0-100
   notes: text("notes"),
   assignedTo: text("assigned_to"),
   createdAt: timestamp("created_at").defaultNow(),
   lastContactDate: timestamp("last_contact_date"),
+  stageHistory: jsonb("stage_history").default([]), // track stage movements
 });
 
 // Smart Lists for saved client filters
@@ -700,6 +715,12 @@ export const insertSmartListSchema = createInsertSchema(smartLists).omit({
   updatedAt: true,
 });
 
+export const insertLeadPipelineStagSchema = createInsertSchema(leadPipelineStages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
@@ -787,6 +808,9 @@ export type InsertSmsTemplate = z.infer<typeof insertSmsTemplateSchema>;
 
 export type SmartList = typeof smartLists.$inferSelect;
 export type InsertSmartList = z.infer<typeof insertSmartListSchema>;
+
+export type LeadPipelineStage = typeof leadPipelineStages.$inferSelect;
+export type InsertLeadPipelineStage = z.infer<typeof insertLeadPipelineStagSchema>;
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;

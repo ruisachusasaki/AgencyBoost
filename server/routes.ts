@@ -19,11 +19,12 @@ import {
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
+  insertLeadPipelineStagSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, tasks, invoices,
+  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, tasks, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowSteps, workflowTriggers, workflowConditions, workflowActions
 } from "@shared/schema";
 import { z } from "zod";
@@ -741,6 +742,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting lead:", error);
       res.status(500).json({ message: "Failed to delete lead" });
+    }
+  });
+
+  // Lead Pipeline Stage routes
+  app.get("/api/lead-pipeline-stages", async (req, res) => {
+    try {
+      const stages = await db.select()
+        .from(leadPipelineStages)
+        .where(eq(leadPipelineStages.isActive, true))
+        .orderBy(asc(leadPipelineStages.order));
+      
+      res.json(stages);
+    } catch (error) {
+      console.error("Error fetching pipeline stages:", error);
+      res.status(500).json({ message: "Failed to fetch pipeline stages" });
+    }
+  });
+
+  app.post("/api/lead-pipeline-stages", async (req, res) => {
+    try {
+      const validatedData = insertLeadPipelineStagSchema.parse(req.body);
+      
+      // Get the highest order number and increment it
+      const maxOrderResult = await db.select({ maxOrder: sql<number>`MAX(${leadPipelineStages.order})` })
+        .from(leadPipelineStages);
+      const nextOrder = (maxOrderResult[0]?.maxOrder || 0) + 1;
+      
+      const [newStage] = await db.insert(leadPipelineStages)
+        .values({
+          ...validatedData,
+          order: nextOrder
+        })
+        .returning();
+      
+      res.status(201).json(newStage);
+    } catch (error) {
+      console.error("Error creating pipeline stage:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create pipeline stage" });
+    }
+  });
+
+  app.put("/api/lead-pipeline-stages/:id", async (req, res) => {
+    try {
+      const validatedData = insertLeadPipelineStagSchema.partial().parse(req.body);
+      
+      const [updatedStage] = await db.update(leadPipelineStages)
+        .set(validatedData)
+        .where(eq(leadPipelineStages.id, req.params.id))
+        .returning();
+      
+      if (!updatedStage) {
+        return res.status(404).json({ message: "Pipeline stage not found" });
+      }
+      res.json(updatedStage);
+    } catch (error) {
+      console.error("Error updating pipeline stage:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update pipeline stage" });
+    }
+  });
+
+  app.delete("/api/lead-pipeline-stages/:id", async (req, res) => {
+    try {
+      // Check if any leads are using this stage
+      const leadsUsingStage = await db.select({ count: sql<number>`count(*)` })
+        .from(leads)
+        .where(eq(leads.stageId, req.params.id));
+      
+      if (leadsUsingStage[0]?.count > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete stage that has leads assigned to it. Please move leads to another stage first." 
+        });
+      }
+      
+      const [deletedStage] = await db.delete(leadPipelineStages)
+        .where(eq(leadPipelineStages.id, req.params.id))
+        .returning();
+      
+      if (!deletedStage) {
+        return res.status(404).json({ message: "Pipeline stage not found" });
+      }
+      res.json({ message: "Pipeline stage deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting pipeline stage:", error);
+      res.status(500).json({ message: "Failed to delete pipeline stage" });
+    }
+  });
+
+  // Update stage order (for drag-and-drop reordering)
+  app.put("/api/lead-pipeline-stages/reorder", async (req, res) => {
+    try {
+      const { stageOrders } = req.body; // Array of {id, order}
+      
+      if (!Array.isArray(stageOrders)) {
+        return res.status(400).json({ message: "stageOrders must be an array" });
+      }
+      
+      // Update each stage's order
+      for (const { id, order } of stageOrders) {
+        await db.update(leadPipelineStages)
+          .set({ order })
+          .where(eq(leadPipelineStages.id, id));
+      }
+      
+      res.json({ message: "Stage order updated successfully" });
+    } catch (error) {
+      console.error("Error reordering stages:", error);
+      res.status(500).json({ message: "Failed to reorder stages" });
+    }
+  });
+
+  // Move lead to different stage
+  app.put("/api/leads/:id/stage", async (req, res) => {
+    try {
+      const { stageId } = req.body;
+      
+      if (!stageId) {
+        return res.status(400).json({ message: "stageId is required" });
+      }
+      
+      // Verify stage exists
+      const [stage] = await db.select()
+        .from(leadPipelineStages)
+        .where(eq(leadPipelineStages.id, stageId));
+      
+      if (!stage) {
+        return res.status(404).json({ message: "Pipeline stage not found" });
+      }
+      
+      // Get current lead to track history
+      const [currentLead] = await db.select()
+        .from(leads)
+        .where(eq(leads.id, req.params.id));
+      
+      if (!currentLead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
+      // Update stage history
+      const stageHistory = Array.isArray(currentLead.stageHistory) ? currentLead.stageHistory : [];
+      const historyEntry = {
+        fromStageId: currentLead.stageId,
+        toStageId: stageId,
+        movedAt: new Date().toISOString(),
+        movedBy: "current-user" // In real app, get from session
+      };
+      
+      const [updatedLead] = await db.update(leads)
+        .set({
+          stageId,
+          stageHistory: [...stageHistory, historyEntry]
+        })
+        .where(eq(leads.id, req.params.id))
+        .returning();
+      
+      res.json(updatedLead);
+    } catch (error) {
+      console.error("Error moving lead stage:", error);
+      res.status(500).json({ message: "Failed to move lead stage" });
     }
   });
 

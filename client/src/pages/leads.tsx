@@ -1,20 +1,25 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import LeadForm from "@/components/forms/lead-form";
+import PipelineStageManager from "@/components/pipeline-stage-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Lead } from "@shared/schema";
+import type { Lead, LeadPipelineStage } from "@shared/schema";
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [activeTab, setActiveTab] = useState("pipeline");
+  const [showStageManager, setShowStageManager] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -22,9 +27,13 @@ export default function Leads() {
     queryKey: ["/api/leads"],
   });
 
+  const { data: pipelineStages = [] } = useQuery<LeadPipelineStage[]>({
+    queryKey: ["/api/lead-pipeline-stages"],
+  });
+
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/leads/${id}`);
+      await apiRequest(`/api/leads/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -42,12 +51,76 @@ export default function Leads() {
     },
   });
 
+  const moveLeadStageMutation = useMutation({
+    mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string }) => 
+      apiRequest(`/api/leads/${leadId}/stage`, "PUT", { stageId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({
+        title: "Lead moved",
+        description: "Lead has been moved to the new stage.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to move lead",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredLeads = leads.filter(lead =>
+    !searchTerm ||
     lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.source?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const formatDate = (date: string | null) => {
+    if (!date) return "Never";
+    return new Date(date).toLocaleDateString();
+  };
+
+  const getLeadInitials = (lead: Lead) => {
+    return lead.name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleDeleteLead = (id: string) => {
+    if (confirm("Are you sure you want to delete this lead?")) {
+      deleteLeadMutation.mutate(id);
+    }
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const sourceStageId = result.source.droppableId;
+    const destinationStageId = result.destination.droppableId;
+    const leadId = result.draggableId;
+
+    // Only move if the stage actually changed
+    if (sourceStageId !== destinationStageId) {
+      moveLeadStageMutation.mutate({
+        leadId,
+        stageId: destinationStageId
+      });
+    }
+  };
+
+  // Group leads by stage for pipeline view
+  const leadsByStage = pipelineStages.reduce((acc, stage) => {
+    acc[stage.id] = leads.filter(lead => 
+      lead.stageId === stage.id || (!lead.stageId && stage.isDefault)
+    );
+    return acc;
+  }, {} as Record<string, Lead[]>);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -68,82 +141,18 @@ export default function Leads() {
     }
   };
 
-  const getSourceColor = (source: string | null) => {
-    if (!source) return "bg-gray-100 text-gray-800";
-    
-    switch (source) {
-      case "website":
-        return "bg-teal-100 text-teal-800";
-      case "referral":
-        return "bg-green-100 text-green-800";
-      case "social_media":
-        return "bg-purple-100 text-purple-800";
-      case "advertising":
-        return "bg-orange-100 text-orange-800";
-      case "cold_outreach":
-        return "bg-cyan-100 text-cyan-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatDate = (date: Date | null) => {
-    if (!date) return "Never";
-    return new Date(date).toLocaleDateString();
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const handleDeleteLead = (id: string) => {
-    if (confirm("Are you sure you want to delete this lead?")) {
-      deleteLeadMutation.mutate(id);
-    }
-  };
-
-  // Group leads by status for pipeline view
-  const leadsByStatus = {
-    new: leads.filter(l => l.status === "new"),
-    qualified: leads.filter(l => l.status === "qualified"),
-    proposal: leads.filter(l => l.status === "proposal"),
-    negotiation: leads.filter(l => l.status === "negotiation"),
-    won: leads.filter(l => l.status === "won"),
-    lost: leads.filter(l => l.status === "lost"),
-  };
-
   const totalPipelineValue = leads
     .filter(l => !["won", "lost"].includes(l.status))
     .reduce((sum, lead) => sum + Number(lead.value || 0), 0);
 
+  if (showStageManager) {
+    return <PipelineStageManager onClose={() => setShowStageManager(false)} />;
+  }
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
-          <Button disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Lead
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="h-5 bg-slate-200 rounded" />
-                  <div className="h-4 bg-slate-200 rounded w-2/3" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="space-y-6 p-6">
+        <div className="text-center">Loading leads...</div>
       </div>
     );
   }
@@ -155,195 +164,326 @@ export default function Leads() {
           <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
           <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Lead
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowStageManager(true)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Manage Pipeline
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Lead
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New Lead</DialogTitle>
+              </DialogHeader>
+              <LeadForm onSuccess={() => setIsCreateDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex items-center justify-between mb-6">
+          <TabsList>
+            <TabsTrigger value="pipeline" className="flex items-center gap-2">
+              <Kanban className="w-4 h-4" />
+              Pipeline View
+            </TabsTrigger>
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              List View
+            </TabsTrigger>
+          </TabsList>
+          
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search leads..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        <TabsContent value="pipeline" className="space-y-6">
+          {pipelineStages.length === 0 ? (
+            <Card className="p-8">
+              <div className="text-center">
+                <Kanban className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pipeline Stages</h3>
+                <p className="text-gray-600 mb-4">
+                  Create your first pipeline stage to start organizing your leads.
+                </p>
+                <Button onClick={() => setShowStageManager(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Pipeline Stage
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                {pipelineStages.map((stage) => (
+                  <Card key={stage.id} className="bg-gray-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: stage.color }}
+                        />
+                        {stage.name}
+                        <Badge variant="secondary" className="ml-auto">
+                          {leadsByStage[stage.id]?.length || 0}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Droppable droppableId={stage.id}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={`space-y-3 min-h-[200px] ${
+                              snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
+                            }`}
+                          >
+                            {(leadsByStage[stage.id] || [])
+                              .filter(lead => 
+                                !searchTerm || 
+                                lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
+                              )
+                              .map((lead, index) => (
+                                <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <Card
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className={`cursor-move transition-shadow ${
+                                        snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
+                                      }`}
+                                    >
+                                      <CardContent className="p-4">
+                                        <div className="flex items-start justify-between mb-2">
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                              {getLeadInitials(lead)}
+                                            </div>
+                                            <div>
+                                              <h3 className="font-medium text-sm">{lead.name}</h3>
+                                              {lead.company && (
+                                                <p className="text-xs text-gray-600">{lead.company}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => setEditingLead(lead)}
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => handleDeleteLead(lead.id)}
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2 text-xs">
+                                          <div className="flex items-center gap-1 text-gray-600">
+                                            <Calendar className="w-3 h-3" />
+                                            {new Date(lead.createdAt).toLocaleDateString()}
+                                          </div>
+                                          {lead.value && (
+                                            <div className="flex items-center gap-1 text-green-600">
+                                              <DollarSign className="w-3 h-3" />
+                                              ${Number(lead.value).toLocaleString()}
+                                            </div>
+                                          )}
+                                          {lead.probability && (
+                                            <div className="flex items-center gap-1 text-blue-600">
+                                              <Percent className="w-3 h-3" />
+                                              {lead.probability}%
+                                            </div>
+                                          )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
+                                </Draggable>
+                              ))}
+                            {provided.placeholder}
+                            {(!leadsByStage[stage.id] || leadsByStage[stage.id].length === 0) && (
+                              <div className="text-center py-8 text-gray-400">
+                                <div className="text-sm">No leads in this stage</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Droppable>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </DragDropContext>
+          )}
+        </TabsContent>
+
+        <TabsContent value="list" className="space-y-4">
+          <Card>
+            <CardHeader className="border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">All Leads</h3>
+                <div className="text-sm text-slate-600">
+                  {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {filteredLeads.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-500 mb-4">
+                    {searchTerm ? "No leads found matching your search." : "No leads found."}
+                  </p>
+                  {!searchTerm && (
+                    <Button onClick={() => setIsCreateDialogOpen(true)}>
+                      Add Your First Lead
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-200">
+                  {filteredLeads.map((lead) => (
+                    <div key={lead.id} className="p-6 hover:bg-slate-50">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-slate-600">
+                              {getLeadInitials(lead)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-slate-900 truncate">{lead.name}</h3>
+                              <Badge className={getStatusColor(lead.status)} variant="outline">
+                                {lead.status}
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <p className="text-sm text-slate-600">
+                                📧 {lead.email}
+                              </p>
+                              {lead.phone && (
+                                <p className="text-sm text-slate-600">
+                                  📞 {lead.phone}
+                                </p>
+                              )}
+                              {lead.company && (
+                                <p className="text-sm text-slate-600">
+                                  🏢 {lead.company}
+                                </p>
+                              )}
+                              {lead.source && (
+                                <p className="text-sm text-slate-600">
+                                  📍 Source: {lead.source}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingLead(lead)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLead(lead.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {lead.value && (
+                          <div>
+                            <p className="text-xs text-slate-500">Potential Value</p>
+                            <p className="font-semibold text-slate-900 flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              ${Number(lead.value).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div>
+                          <p className="text-xs text-slate-500">Probability</p>
+                          <p className="font-semibold text-slate-900 flex items-center gap-1">
+                            <Percent className="h-3 w-3" />
+                            {lead.probability || 0}%
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-xs text-slate-500">Last Contact</p>
+                          <p className="font-semibold text-slate-900 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(lead.lastContactDate)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {lead.notes && (
+                        <div className="mt-3 pt-3 border-t border-slate-100">
+                          <p className="text-sm text-slate-600">{lead.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Lead Dialog */}
+      {editingLead && (
+        <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Lead</DialogTitle>
+              <DialogTitle>Edit Lead</DialogTitle>
             </DialogHeader>
             <LeadForm
-              onSuccess={() => setIsCreateDialogOpen(false)}
+              lead={editingLead}
+              onSuccess={() => setEditingLead(null)}
             />
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Pipeline Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Object.entries(leadsByStatus).map(([status, statusLeads]) => {
-          if (["won", "lost"].includes(status)) return null;
-          
-          const stageValue = statusLeads.reduce((sum, lead) => sum + Number(lead.value || 0), 0);
-          
-          return (
-            <Card key={status} className="border-l-4 border-l-slate-300">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-slate-900 capitalize">
-                    {status === "new" ? "New Leads" : status}
-                  </h3>
-                  <span className="text-sm font-medium text-slate-600">
-                    {statusLeads.length}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-600">
-                  ${stageValue.toLocaleString()} potential
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card>
-        <CardHeader className="border-b border-slate-200">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search leads..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="text-sm text-slate-600">
-              {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {filteredLeads.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-slate-500 mb-4">
-                {searchTerm ? "No leads found matching your search." : "No leads found."}
-              </p>
-              {!searchTerm && (
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>Add Your First Lead</Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Add New Lead</DialogTitle>
-                    </DialogHeader>
-                    <LeadForm
-                      onSuccess={() => setIsCreateDialogOpen(false)}
-                    />
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-200">
-              {filteredLeads.map((lead) => (
-                <div key={lead.id} className="p-6 hover:bg-slate-50">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-slate-600">
-                          {getInitials(lead.name)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-slate-900 truncate">{lead.name}</h3>
-                          <Badge className={getStatusColor(lead.status)}>
-                            {lead.status}
-                          </Badge>
-                          {lead.source && (
-                            <Badge className={getSourceColor(lead.source)}>
-                              {lead.source.replace('_', ' ')}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-slate-600 mb-1">{lead.email}</p>
-                        {lead.company && (
-                          <p className="text-sm text-slate-500 mb-1">{lead.company}</p>
-                        )}
-                        {lead.phone && (
-                          <p className="text-sm text-slate-500">{lead.phone}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-4">
-                      <Dialog 
-                        open={editingLead?.id === lead.id} 
-                        onOpenChange={(open) => setEditingLead(open ? lead : null)}
-                      >
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Edit Lead</DialogTitle>
-                          </DialogHeader>
-                          <LeadForm
-                            lead={editingLead}
-                            onSuccess={() => setEditingLead(null)}
-                          />
-                        </DialogContent>
-                      </Dialog>
-                      
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteLead(lead.id)}
-                        disabled={deleteLeadMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {lead.value && (
-                      <div>
-                        <p className="text-xs text-slate-500">Potential Value</p>
-                        <p className="font-semibold text-slate-900 flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          ${Number(lead.value).toLocaleString()}
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div>
-                      <p className="text-xs text-slate-500">Probability</p>
-                      <p className="font-semibold text-slate-900 flex items-center gap-1">
-                        <Percent className="h-3 w-3" />
-                        {lead.probability || 0}%
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-xs text-slate-500">Last Contact</p>
-                      <p className="font-semibold text-slate-900 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(lead.lastContactDate)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {lead.notes && (
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <p className="text-sm text-slate-600">{lead.notes}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      )}
     </div>
   );
 }
