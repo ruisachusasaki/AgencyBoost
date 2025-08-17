@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertLeadSchema, type Lead, type InsertLead } from "@shared/schema";
+import { User, Calendar, NotebookPen, CheckSquare } from "lucide-react";
 
 interface LeadFormProps {
   lead?: Lead | null;
@@ -90,8 +92,29 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="details" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Lead Details
+            </TabsTrigger>
+            <TabsTrigger value="appointment" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Book Appointment
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="flex items-center gap-2">
+              <NotebookPen className="w-4 h-4" />
+              Notes
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              Tasks
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details" className="space-y-4 max-h-[50vh] overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="name"
@@ -248,19 +271,47 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea {...field} value={field.value || ""} placeholder="Additional notes about the lead" rows={3} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} value={field.value || ""} placeholder="Additional notes about the lead" rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="appointment" className="space-y-4 max-h-[50vh] overflow-y-auto">
+            <div className="text-center py-8 text-gray-500">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <h3 className="font-medium mb-2">Appointment Booking</h3>
+              <p className="text-sm">Book appointments with this lead using our integrated calendar system.</p>
+              <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notes" className="space-y-4 max-h-[50vh] overflow-y-auto">
+            <div className="text-center py-8 text-gray-500">
+              <NotebookPen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <h3 className="font-medium mb-2">Lead Notes</h3>
+              <p className="text-sm">Add and manage notes for this lead that will transfer when converted to a client.</p>
+              <p className="text-xs mt-2 text-gray-400">Coming in next update</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-4 max-h-[50vh] overflow-y-auto">
+            <div className="text-center py-8 text-gray-500">
+              <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <h3 className="font-medium mb-2">Tasks Coming Soon</h3>
+              <p className="text-sm">Task management integration will be available in the next update.</p>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onSuccess}>

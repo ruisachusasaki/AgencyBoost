@@ -19,12 +19,12 @@ import {
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
-  insertLeadPipelineStagSchema,
+  insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, tasks, invoices,
+  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowSteps, workflowTriggers, workflowConditions, workflowActions
 } from "@shared/schema";
 import { z } from "zod";

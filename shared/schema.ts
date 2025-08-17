@@ -421,7 +421,7 @@ export const leads = pgTable("leads", {
   value: decimal("value", { precision: 10, scale: 2 }),
   probability: integer("probability").default(0), // 0-100
   notes: text("notes"),
-  assignedTo: varchar("assigned_to").references(() => users.id),
+  assignedTo: uuid("assigned_to").references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   lastContactDate: timestamp("last_contact_date"),
   customFieldData: jsonb("custom_field_data"), // custom field values
@@ -1521,6 +1521,53 @@ export const calendarIntegrations = pgTable("calendar_integrations", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Lead Notes - Multiple notes per lead  
+export const leadNotes = pgTable("lead_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  content: text("content").notNull(),
+  leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  isLocked: boolean("is_locked").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Lead Appointments - Calendar appointments specific to leads
+export const leadAppointments = pgTable("lead_appointments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  calendarId: varchar("calendar_id").notNull().references(() => calendars.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  location: text("location"),
+  status: text("status").notNull().default("confirmed"), // confirmed, showed, no_show, cancelled
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Lead Notes schema exports
+export const insertLeadNoteSchema = createInsertSchema(leadNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LeadNote = typeof leadNotes.$inferSelect;
+export type InsertLeadNote = z.infer<typeof insertLeadNoteSchema>;
+
+// Lead Appointments schema exports  
+export const insertLeadAppointmentSchema = createInsertSchema(leadAppointments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LeadAppointment = typeof leadAppointments.$inferSelect;
+export type InsertLeadAppointment = z.infer<typeof insertLeadAppointmentSchema>;
 
 // Calendar appointments/bookings (different from clientAppointments)
 export const calendarAppointments = pgTable("calendar_appointments", {
