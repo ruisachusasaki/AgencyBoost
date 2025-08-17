@@ -738,8 +738,14 @@ export default function Leads() {
                                                           <TooltipTrigger asChild>
                                                             <div className="cursor-pointer">
                                                               {(() => {
+                                                                // Debug: log the lead and staff data
+                                                                console.log('Lead:', lead.name, 'AssignedTo:', lead.assignedTo);
+                                                                console.log('Staff array:', staff);
+                                                                
                                                                 if (lead.assignedTo) {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
+                                                                  console.log('Found staff member:', staffMember);
+                                                                  
                                                                   if (staffMember?.profileImage) {
                                                                     // Convert object storage path to proper URL format
                                                                     const imageUrl = `/objects${staffMember.profileImage}`;
@@ -756,14 +762,18 @@ export default function Leads() {
                                                                       />
                                                                     );
                                                                   } else if (staffMember) {
+                                                                    console.log('Showing initials for:', staffMember.firstName, staffMember.lastName);
                                                                     return (
                                                                       <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                                                                         {`${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}`}
                                                                       </div>
                                                                     );
+                                                                  } else {
+                                                                    console.log('No staff member found for ID:', lead.assignedTo);
                                                                   }
                                                                 }
                                                                 // Default unassigned user image
+                                                                console.log('Showing unassigned icon');
                                                                 return (
                                                                   <div className="w-6 h-6 bg-gray-400 text-white text-xs rounded-full flex items-center justify-center">
                                                                     <Users className="w-3 h-3" />
