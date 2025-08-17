@@ -14,7 +14,7 @@ import PipelineStageManager from "@/components/pipeline-stage-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Lead, LeadPipelineStage } from "@shared/schema";
+import type { Lead, LeadPipelineStage, User } from "@shared/schema";
 
 interface Column {
   key: string;
@@ -60,6 +60,10 @@ export default function Leads() {
 
   const { data: pipelineStages = [] } = useQuery<LeadPipelineStage[]>({
     queryKey: ["/api/lead-pipeline-stages"],
+  });
+
+  const { data: staff = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
   });
 
   const deleteLeadMutation = useMutation({
@@ -217,6 +221,12 @@ export default function Leads() {
     return stage ? stage.name : 'Unknown';
   };
 
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return 'Unassigned';
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown';
+  };
+
   const renderCellContent = (lead: Lead, columnKey: string) => {
     switch (columnKey) {
       case 'name':
@@ -247,7 +257,23 @@ export default function Leads() {
       case 'source':
         return lead.source || '-';
       case 'assignedTo':
-        return lead.assignedTo || '-';
+        return (
+          <div className="flex items-center gap-2">
+            {lead.assignedTo ? (
+              <>
+                <div className="w-6 h-6 bg-green-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {(() => {
+                    const staffMember = staff.find(s => s.id === lead.assignedTo);
+                    return staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?';
+                  })()}
+                </div>
+                <span className="text-sm">{getStaffName(lead.assignedTo)}</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">Unassigned</span>
+            )}
+          </div>
+        );
       case 'lastContactDate':
         return formatDate(lead.lastContactDate);
       case 'createdAt':
@@ -561,6 +587,17 @@ export default function Leads() {
                                                       <div className="flex items-center gap-1 text-blue-600">
                                                         <Percent className="w-3 h-3" />
                                                         {lead.probability}%
+                                                      </div>
+                                                    )}
+                                                    {lead.assignedTo && (
+                                                      <div className="flex items-center gap-1 text-gray-600">
+                                                        <div className="w-3 h-3 bg-green-500 text-white text-[8px] rounded-full flex items-center justify-center">
+                                                          {(() => {
+                                                            const staffMember = staff.find(s => s.id === lead.assignedTo);
+                                                            return staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?';
+                                                          })()}
+                                                        </div>
+                                                        <span className="truncate">{getStaffName(lead.assignedTo)}</span>
                                                       </div>
                                                     )}
                                                   </div>

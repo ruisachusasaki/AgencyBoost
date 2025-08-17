@@ -421,11 +421,12 @@ export const leads = pgTable("leads", {
   value: decimal("value", { precision: 10, scale: 2 }),
   probability: integer("probability").default(0), // 0-100
   notes: text("notes"),
-  assignedTo: text("assigned_to"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   lastContactDate: timestamp("last_contact_date"),
   customFieldData: jsonb("custom_field_data"), // custom field values
   stageHistory: jsonb("stage_history").default([]), // track stage movements
+  tags: text("tags").array().default([]), // array of tag names
 });
 
 // Smart Lists for saved client filters

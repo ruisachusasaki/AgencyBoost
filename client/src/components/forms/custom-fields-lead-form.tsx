@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag } from "@shared/schema";
+import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User } from "@shared/schema";
 import { ArrowRight, UserPlus, X, Trash2 } from "lucide-react";
 import { z } from "zod";
 
@@ -44,6 +44,10 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const { data: tags = [] } = useQuery<Tag[]>({
     queryKey: ["/api/tags"],
+  });
+
+  const { data: staff = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
   });
 
   const form = useForm<InsertLead>({
@@ -305,6 +309,40 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                                   style={{ backgroundColor: stage.color }}
                                 />
                                 {stage.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="assignedTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assigned To</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select staff member" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">
+                            <div className="text-muted-foreground">Unassigned</div>
+                          </SelectItem>
+                          {staff.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                </div>
+                                {user.firstName} {user.lastName}
+                                <span className="text-xs text-muted-foreground">({user.role})</span>
                               </div>
                             </SelectItem>
                           ))}
