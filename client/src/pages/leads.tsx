@@ -268,7 +268,6 @@ export default function Leads() {
                           <div className="flex items-center gap-1 mt-2 text-green-600 font-semibold">
                             <DollarSign className="w-4 h-4" />
                             <span>${totalValue.toLocaleString()}</span>
-                            <span className="text-xs text-gray-500 font-normal">potential</span>
                           </div>
                         )}
                       </CardHeader>
