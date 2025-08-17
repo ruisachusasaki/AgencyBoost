@@ -70,9 +70,17 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
         authorId: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Should come from auth context
       };
 
-      return apiRequest("/api/lead-notes", {
+      return await fetch("/api/lead-notes", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(noteData),
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
       });
     },
     onSuccess: () => {
@@ -97,9 +105,17 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
     mutationFn: async (data: NoteFormData) => {
       if (!editingNote) throw new Error("No note selected for editing");
 
-      return apiRequest(`/api/lead-notes/${editingNote.id}`, {
+      return await fetch(`/api/lead-notes/${editingNote.id}`, {
         method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
       });
     },
     onSuccess: () => {
@@ -121,8 +137,13 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
 
   const deleteNoteMutation = useMutation({
     mutationFn: async (noteId: string) => {
-      return apiRequest(`/api/lead-notes/${noteId}`, {
+      return await fetch(`/api/lead-notes/${noteId}`, {
         method: "DELETE",
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.status === 204 ? null : res.json();
       });
     },
     onSuccess: () => {
@@ -143,9 +164,17 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
 
   const toggleNoteLockMutation = useMutation({
     mutationFn: async ({ noteId, isLocked }: { noteId: string; isLocked: boolean }) => {
-      return apiRequest(`/api/lead-notes/${noteId}`, {
+      return await fetch(`/api/lead-notes/${noteId}`, {
         method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ isLocked }),
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
       });
     },
     onSuccess: () => {
@@ -179,7 +208,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
   };
 
   const getStaffMember = (staffId: string) => {
-    return staff.find((s: any) => s.id === staffId);
+    return (staff as any[]).find((s: any) => s.id === staffId);
   };
 
   const isLoading_mutation = createNoteMutation.isPending || updateNoteMutation.isPending;
@@ -339,7 +368,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => setEditingNote(note)}
-                        disabled={note.isLocked}
+                        disabled={note.isLocked || false}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

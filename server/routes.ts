@@ -4398,7 +4398,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/lead-appointments", async (req, res) => {
     try {
-      const validatedData = insertLeadAppointmentSchema.parse(req.body);
+      // Convert string dates to Date objects
+      const requestData = {
+        ...req.body,
+        startTime: new Date(req.body.startTime),
+        endTime: new Date(req.body.endTime),
+      };
+      
+      const validatedData = insertLeadAppointmentSchema.parse(requestData);
       const [appointment] = await db.insert(leadAppointments).values(validatedData).returning();
       
       await createAuditLog(

@@ -72,9 +72,17 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
         createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from auth
       };
 
-      return apiRequest("/api/lead-appointments", {
+      return await fetch("/api/lead-appointments", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(appointmentData),
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
       });
     },
     onSuccess: () => {
@@ -114,7 +122,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
   };
 
   // Generate time options (9 AM to 6 PM in 30-minute intervals)
-  const timeOptions = [];
+  const timeOptions: { value: string; label: string }[] = [];
   for (let hour = 9; hour <= 18; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
       const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
@@ -157,7 +165,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {calendars.map((calendar: any) => (
+                      {(calendars as any[]).map((calendar: any) => (
                         <SelectItem key={calendar.id} value={calendar.id}>
                           {calendar.name}
                         </SelectItem>
@@ -261,7 +269,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
                       Meeting Location
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Office address, Zoom link, or phone number" />
+                      <Input {...field} value={field.value || ""} placeholder="Office address, Zoom link, or phone number" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -276,7 +284,8 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
                     <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
                       <Textarea 
-                        {...field} 
+                        {...field}
+                        value={field.value || ""} 
                         placeholder="Meeting agenda, notes, or additional details..."
                         rows={3}
                       />
