@@ -247,20 +247,31 @@ export default function Leads() {
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="flex gap-6 overflow-x-auto pb-4">
-                {pipelineStages.map((stage) => (
-                  <Card key={stage.id} className="bg-gray-50 flex-shrink-0 w-80">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: stage.color }}
-                        />
-                        {stage.name}
-                        <Badge variant="secondary" className="ml-auto">
-                          {leadsByStage[stage.id]?.length || 0}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
+                {pipelineStages.map((stage) => {
+                  const stageLeads = leadsByStage[stage.id] || [];
+                  const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
+                  
+                  return (
+                    <Card key={stage.id} className="bg-gray-50 flex-shrink-0 w-80">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          {stage.name}
+                          <Badge variant="secondary" className="ml-auto">
+                            {stageLeads.length}
+                          </Badge>
+                        </CardTitle>
+                        {totalValue > 0 && (
+                          <div className="flex items-center gap-1 mt-2 text-green-600 font-semibold">
+                            <DollarSign className="w-4 h-4" />
+                            <span>${totalValue.toLocaleString()}</span>
+                            <span className="text-xs text-gray-500 font-normal">potential</span>
+                          </div>
+                        )}
+                      </CardHeader>
                     <CardContent>
                       <Droppable droppableId={stage.id}>
                         {(provided, snapshot) => (
@@ -354,7 +365,8 @@ export default function Leads() {
                       </Droppable>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </DragDropContext>
           )}
