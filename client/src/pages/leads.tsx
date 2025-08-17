@@ -524,12 +524,12 @@ export default function Leads() {
             
             {/* Owner Filter */}
             <div className="min-w-[160px]">
-              <Select value={filterOwner} onValueChange={setFilterOwner}>
+              <Select value={filterOwner || "all"} onValueChange={(value) => setFilterOwner(value === "all" ? "" : value)}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Owner" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Owners</SelectItem>
+                  <SelectItem value="all">All Owners</SelectItem>
                   {staff.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.firstName} {member.lastName}
@@ -593,12 +593,12 @@ export default function Leads() {
 
             {/* Vertical Filter */}
             <div className="min-w-[160px]">
-              <Select value={filterVertical} onValueChange={setFilterVertical}>
+              <Select value={filterVertical || "all"} onValueChange={(value) => setFilterVertical(value === "all" ? "" : value)}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Vertical" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Verticals</SelectItem>
+                  <SelectItem value="all">All Verticals</SelectItem>
                   {uniqueVerticals.map((vertical) => (
                     <SelectItem key={vertical} value={vertical}>
                       {vertical}
