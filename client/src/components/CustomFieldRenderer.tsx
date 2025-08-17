@@ -15,6 +15,7 @@ interface CustomFieldRendererProps {
   value?: any;
   onChange: (value: any) => void;
   disabled?: boolean;
+  showLabel?: boolean;
 }
 
 export default function CustomFieldRenderer({
@@ -23,6 +24,7 @@ export default function CustomFieldRenderer({
   value,
   onChange,
   disabled = false,
+  showLabel = true,
 }: CustomFieldRendererProps) {
   const [localValue, setLocalValue] = useState(value);
 
@@ -232,10 +234,12 @@ export default function CustomFieldRenderer({
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">
-        {field.name}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
-      </Label>
+      {showLabel && (
+        <Label className="text-sm font-medium">
+          {field.name}
+          {field.required && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+      )}
       {renderField()}
     </div>
   );

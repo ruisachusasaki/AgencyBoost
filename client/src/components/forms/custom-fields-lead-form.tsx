@@ -319,15 +319,12 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {fieldsWithoutFolder.map((field) => (
                           <div key={field.id}>
-                            <label className="block text-sm font-medium mb-2">
-                              {field.name}
-                              {field.required && <span className="text-red-500 ml-1">*</span>}
-                            </label>
                             <CustomFieldRenderer
                               field={field}
                               clientId={lead?.id || 'new'}
                               value={customFieldValues[field.id] || ''}
                               onChange={(value) => handleCustomFieldChange(field.id, value)}
+                              showLabel={true}
                             />
                           </div>
                         ))}
@@ -350,15 +347,12 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {folderFields.map((field) => (
                             <div key={field.id}>
-                              <label className="block text-sm font-medium mb-2">
-                                {field.name}
-                                {field.required && <span className="text-red-500 ml-1">*</span>}
-                              </label>
                               <CustomFieldRenderer
                                 field={field}
                                 clientId={lead?.id || 'new'}
                                 value={customFieldValues[field.id] || ''}
                                 onChange={(value) => handleCustomFieldChange(field.id, value)}
+                                showLabel={true}
                               />
                             </div>
                           ))}
