@@ -576,10 +576,10 @@ export default function Leads() {
                                                               >
                                                                 {(() => {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
-                                                                  if (staffMember?.profileImageUrl) {
+                                                                  if (staffMember?.profileImagePath) {
                                                                     return (
                                                                       <img
-                                                                        src={staffMember.profileImageUrl}
+                                                                        src={staffMember.profileImagePath}
                                                                         alt={`${staffMember.firstName} ${staffMember.lastName}`}
                                                                         className="w-6 h-6 rounded-full object-cover"
                                                                       />
