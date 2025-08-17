@@ -120,7 +120,7 @@ Bundle architecture preference: Collection-based bundles.
 - Enhanced search functionality to work within specific folders
 - Improved user experience for organizing and accessing forms
 
-### Horizontal Scrolling Layout Fix (August 2025)
+### Lead Management Enhancement & Staff Assignment (August 2025)
 - **Resolved critical horizontal scrolling issue** where entire screen was scrolling horizontally instead of containing scroll to pipeline view
 - **Complete leads page rebuild** with proper layout structure and overflow controls
 - **Added CSS overflow constraints** to html, body, and #root elements to prevent whole-screen horizontal overflow
@@ -130,4 +130,11 @@ Bundle architecture preference: Collection-based bundles.
 - **Improved leads page header styling** - added UserPlus icon matching navigation, removed white background, fixed tab separators
 - **Enhanced vertical space utilization** - pipeline stages now use calc(100vh - 200px) height with 500px minimum for better screen usage
 - **Removed pipeline container border** for cleaner visual appearance
+- **Implemented comprehensive staff assignment system** with database schema updates and foreign key constraints to users table
+- **Enhanced lead editing modal** with staff assignment dropdown populated from active staff members
+- **Replaced Edit icons with staff profile images** on pipeline cards - displays actual uploaded profile images with fallback to initials
+- **Added profile image tooltip functionality** showing staff member names on hover
+- **Fixed object storage URL conversion** for proper profile image display from `/api/objects` endpoint
+- **Removed redundant assigned staff text** from card bottoms for cleaner visual design
 - Horizontal scrolling now works as intended: only affects the pipeline view area, not the entire application interface
+- Lead ownership and staff assignment fully functional across pipeline and table views
