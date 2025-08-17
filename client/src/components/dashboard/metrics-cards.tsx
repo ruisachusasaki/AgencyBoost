@@ -13,8 +13,7 @@ interface PaginatedClientsResponse {
 
 export default function MetricsCards() {
   const { data: clientsData } = useQuery<PaginatedClientsResponse>({
-    queryKey: ["/api/clients", 1, 1000], // Get a large page to count all clients
-    queryFn: () => apiRequest("GET", "/api/clients?page=1&limit=1000"),
+    queryKey: ["/api/clients"], // Get all clients
   });
 
   const totalClients = clientsData?.pagination?.total || 0;
