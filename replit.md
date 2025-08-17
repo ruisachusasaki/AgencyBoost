@@ -150,3 +150,11 @@ Bundle architecture preference: Collection-based bundles.
 - **Comprehensive field type support** - text, email, phone, url, date, currency, number, dropdown, and file upload fields all functional
 - **Integrated filtering system** - dropdown custom fields (like Client Vertical) now work seamlessly with pipeline and list view filtering
 - Custom field data persistence ensures all 30+ available custom fields save and load correctly across the CRM system
+
+### Lead Profile Image Integration (August 2025)
+- **Fixed staff profile image display** - resolved field name mismatch between `profileImage` and `profileImagePath`
+- **Enhanced visual lead assignment** - staff profile photos now display properly in top right corner of lead cards
+- **Improved fallback system** - shows staff initials in gradient circles when no profile image exists
+- **Optimized UI structure** - simplified profile image rendering with proper tooltip functionality
+- **Enhanced button positioning** - moved Cancel button next to Update Lead button for better UX
+- Staff profile images now fully functional across pipeline and list views with proper error handling
