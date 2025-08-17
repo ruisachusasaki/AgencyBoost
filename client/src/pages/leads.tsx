@@ -161,10 +161,13 @@ export default function Leads() {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden -m-6 mb-0">
       {/* Fixed Header Section */}
-      <div className="flex-shrink-0 p-6 bg-white border-b">
+      <div className="flex-shrink-0 p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
+            <div className="flex items-center gap-3">
+              <Users className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
+            </div>
             <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -189,8 +192,8 @@ export default function Leads() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="border-b border-gray-200">
+        <div className="flex items-center justify-between border-b border-gray-200">
+          <div>
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: "pipeline", name: "Pipeline View", icon: Kanban, count: leads.length },
