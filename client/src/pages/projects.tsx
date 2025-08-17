@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -219,11 +218,25 @@ export default function Projects() {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <Link href={`/projects/${project.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                      <Dialog 
+                        open={editingProject?.id === project.id} 
+                        onOpenChange={(open) => setEditingProject(open ? project : null)}
+                      >
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Edit Project</DialogTitle>
+                          </DialogHeader>
+                          <ProjectForm
+                            project={editingProject}
+                            onSuccess={() => setEditingProject(null)}
+                          />
+                        </DialogContent>
+                      </Dialog>
                       
                       <Button 
                         variant="ghost" 

@@ -8,7 +8,6 @@ import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 import Projects from "@/pages/projects";
-import ProjectDetail from "@/pages/project-detail";
 import Campaigns from "@/pages/campaigns";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
@@ -48,7 +47,6 @@ function Router() {
       <Route path="/clients" component={Clients} />
       <Route path="/clients/:id" component={EnhancedClientDetail} />
       <Route path="/projects" component={Projects} />
-      <Route path="/projects/:id" component={ProjectDetail} />
       <Route path="/marketing" component={Campaigns} />
       <Route path="/leads" component={Leads} />
       <Route path="/tasks" component={Tasks} />

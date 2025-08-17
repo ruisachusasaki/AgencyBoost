@@ -18,8 +18,7 @@ import {
   ChevronRight,
   GitBranch,
   Share2,
-  Settings,
-  Package
+  Settings
 } from "lucide-react";
 
 interface SidebarProps {
