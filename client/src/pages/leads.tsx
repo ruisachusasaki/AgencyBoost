@@ -546,7 +546,7 @@ export default function Leads() {
                                                 ref={provided.innerRef}
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
-                                                className={`cursor-move transition-shadow ${
+                                                className={`cursor-move transition-shadow relative ${
                                                   snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
                                                 }`}
                                               >
@@ -564,17 +564,17 @@ export default function Leads() {
                                                       </div>
                                                     </div>
                                                     <div className="flex items-center gap-1">
-                                                      {lead.assignedTo ? (
-                                                        <TooltipProvider>
-                                                          <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                              <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 w-8 p-0"
-                                                                onClick={() => setEditingLead(lead)}
-                                                              >
-                                                                {(() => {
+                                                      <TooltipProvider>
+                                                        <Tooltip>
+                                                          <TooltipTrigger asChild>
+                                                            <Button
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              className="h-8 w-8 p-0"
+                                                              onClick={() => setEditingLead(lead)}
+                                                            >
+                                                              {(() => {
+                                                                if (lead.assignedTo) {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
                                                                   if (staffMember?.profileImagePath) {
                                                                     // Convert object storage path to proper URL format
@@ -591,30 +591,28 @@ export default function Leads() {
                                                                         }}
                                                                       />
                                                                     );
-                                                                  } else {
+                                                                  } else if (staffMember) {
                                                                     return (
                                                                       <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center">
-                                                                        {staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?'}
+                                                                        {`${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}`}
                                                                       </div>
                                                                     );
                                                                   }
-                                                                })()}
-                                                              </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                              <p>{getStaffName(lead.assignedTo)}</p>
-                                                            </TooltipContent>
-                                                          </Tooltip>
-                                                        </TooltipProvider>
-                                                      ) : (
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="sm"
-                                                          onClick={() => setEditingLead(lead)}
-                                                        >
-                                                          <Edit className="h-3 w-3" />
-                                                        </Button>
-                                                      )}
+                                                                }
+                                                                // Default unassigned user image
+                                                                return (
+                                                                  <div className="w-6 h-6 bg-gray-400 text-white text-xs rounded-full flex items-center justify-center">
+                                                                    <Users className="w-3 h-3" />
+                                                                  </div>
+                                                                );
+                                                              })()}
+                                                            </Button>
+                                                          </TooltipTrigger>
+                                                          <TooltipContent>
+                                                            <p>{lead.assignedTo ? getStaffName(lead.assignedTo) : 'Unassigned - Click to assign'}</p>
+                                                          </TooltipContent>
+                                                        </Tooltip>
+                                                      </TooltipProvider>
                                                     </div>
                                                   </div>
                                                   
@@ -636,6 +634,18 @@ export default function Leads() {
                                                       </div>
                                                     )}
 
+                                                  </div>
+                                                  
+                                                  {/* Edit button moved to bottom left */}
+                                                  <div className="absolute bottom-2 left-2">
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="h-6 w-6 p-0 bg-white/80 hover:bg-white shadow-sm"
+                                                      onClick={() => setEditingLead(lead)}
+                                                    >
+                                                      <Edit className="h-3 w-3" />
+                                                    </Button>
                                                   </div>
                                                 </CardContent>
                                               </Card>
