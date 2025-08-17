@@ -408,7 +408,16 @@ export default function Leads() {
             </div>
             <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
             <Button variant="outline" onClick={() => setShowStageManager(true)}>
               <Settings className="h-4 w-4 mr-2" />
               Manage Pipeline
@@ -455,18 +464,7 @@ export default function Leads() {
           </nav>
         </div>
 
-        {/* Search Section - Below tabs but still in fixed area */}
-        <div className="py-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search leads..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
+
       </div>
 
       {/* Content Area - Maximize Height */}
