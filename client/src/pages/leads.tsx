@@ -230,9 +230,9 @@ export default function Leads() {
             </Card>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+              <div className="flex gap-6 overflow-x-auto pb-4">
                 {pipelineStages.map((stage) => (
-                  <Card key={stage.id} className="bg-gray-50">
+                  <Card key={stage.id} className="bg-gray-50 flex-shrink-0 w-80">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-medium">
                         <div
