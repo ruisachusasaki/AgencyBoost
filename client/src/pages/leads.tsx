@@ -78,9 +78,12 @@ export default function Leads() {
     lead.source?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatDate = (date: string | null) => {
+  const formatDate = (date: string | Date | null) => {
     if (!date) return "Never";
-    return new Date(date).toLocaleDateString();
+    if (typeof date === 'string') {
+      return new Date(date).toLocaleDateString();
+    }
+    return date.toLocaleDateString();
   };
 
   const getLeadInitials = (lead: Lead) => {
@@ -495,7 +498,7 @@ export default function Leads() {
                           <p className="text-xs text-slate-500">Last Contact</p>
                           <p className="font-semibold text-slate-900 flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {formatDate(lead.lastContactDate ? (typeof lead.lastContactDate === 'string' ? lead.lastContactDate : lead.lastContactDate.toISOString()) : null)}
+                            {formatDate(lead.lastContactDate)}
                           </p>
                         </div>
                       </div>
