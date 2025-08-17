@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -50,8 +50,17 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
     },
   });
 
+  // Update form date when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      form.setValue('date', selectedDate);
+    }
+  }, [selectedDate, form]);
+
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
+      console.log("Mutation started with data:", data);
+      
       // Combine date and time
       const [hours, minutes] = data.time.split(':').map(Number);
       const startTime = new Date(data.date);
@@ -60,6 +69,8 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       // Set end time to 1 hour later
       const endTime = new Date(startTime);
       endTime.setHours(endTime.getHours() + 1);
+      
+      console.log("Calculated times - Start:", startTime, "End:", endTime);
 
       const appointmentData: InsertLeadAppointment = {
         leadId: data.leadId,
@@ -106,6 +117,38 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
   });
 
   const onSubmit = (data: AppointmentFormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Selected date:", selectedDate);
+    console.log("Form errors:", form.formState.errors);
+    
+    // Validate all required fields
+    if (!data.calendarId) {
+      toast({
+        title: "Error",
+        description: "Please select a calendar",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.title) {
+      toast({
+        title: "Error", 
+        description: "Please enter a meeting title",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.time) {
+      toast({
+        title: "Error",
+        description: "Please select a time",
+        variant: "destructive", 
+      });
+      return;
+    }
+    
     if (!selectedDate) {
       toast({
         title: "Error",
@@ -115,10 +158,13 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       return;
     }
 
-    createAppointmentMutation.mutate({
+    const submissionData = {
       ...data,
       date: selectedDate,
-    });
+    };
+    
+    console.log("Submitting appointment data:", submissionData);
+    createAppointmentMutation.mutate(submissionData);
   };
 
   // Generate time options (9 AM to 6 PM in 30-minute intervals)
