@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
@@ -189,18 +189,33 @@ export default function Leads() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <div className="w-full">
         <div className="flex items-center justify-between mb-6">
-          <TabsList>
-            <TabsTrigger value="pipeline" className="flex items-center gap-2">
-              <Kanban className="w-4 h-4" />
-              Pipeline View
-            </TabsTrigger>
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              List View
-            </TabsTrigger>
-          </TabsList>
+          {/* Custom Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: "pipeline", name: "Pipeline View", icon: Kanban, count: leads.length },
+                { id: "list", name: "List View", icon: Users, count: leads.length }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.name} {tab.count > 0 && `(${tab.count})`}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
           
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -213,7 +228,8 @@ export default function Leads() {
           </div>
         </div>
 
-        <TabsContent value="pipeline" className="space-y-6">
+        {activeTab === "pipeline" && (
+        <div className="space-y-6">
           {pipelineStages.length === 0 ? (
             <Card className="p-8">
               <div className="text-center">
@@ -342,9 +358,11 @@ export default function Leads() {
               </div>
             </DragDropContext>
           )}
-        </TabsContent>
+        </div>
+        )}
 
-        <TabsContent value="list" className="space-y-4">
+        {activeTab === "list" && (
+        <div className="space-y-4">
           <Card>
             <CardHeader className="border-b border-slate-200">
               <div className="flex items-center justify-between">
@@ -467,8 +485,9 @@ export default function Leads() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+        )}
+      </div>
 
       {/* Edit Lead Dialog */}
       {editingLead && (
