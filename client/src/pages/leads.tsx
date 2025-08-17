@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
 import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
@@ -108,7 +107,6 @@ export default function Leads() {
     const destinationStageId = result.destination.droppableId;
     const leadId = result.draggableId;
 
-    // Only move if the stage actually changed
     if (sourceStageId !== destinationStageId) {
       moveLeadStageMutation.mutate({
         leadId,
@@ -161,7 +159,7 @@ export default function Leads() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 p-6 bg-white border-b">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -170,10 +168,7 @@ export default function Leads() {
             <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowStageManager(true)}
-            >
+            <Button variant="outline" onClick={() => setShowStageManager(true)}>
               <Settings className="h-4 w-4 mr-2" />
               Manage Pipeline
             </Button>
@@ -195,7 +190,6 @@ export default function Leads() {
         </div>
 
         <div className="flex items-center justify-between">
-          {/* Custom Tabs */}
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
@@ -233,8 +227,8 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-auto">
+      {/* Content Area - Fixed Height */}
+      <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === "pipeline" && (
           pipelineStages.length === 0 ? (
             <div className="flex items-center justify-center h-full p-6">
@@ -253,128 +247,130 @@ export default function Leads() {
               </Card>
             </div>
           ) : (
-            <div className="p-6">
-              <div className="border border-gray-200 rounded-lg bg-gray-50">
-                <div className="overflow-x-auto p-4">
+            <div className="h-full p-6 overflow-hidden">
+              <div className="h-full border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
+                <div className="h-full p-4 overflow-x-auto">
                   <DragDropContext onDragEnd={handleDragEnd}>
-                    <div className="flex gap-6 min-w-max">
+                    <div className="flex gap-6 h-full">
                       {pipelineStages.map((stage) => {
                         const stageLeads = leadsByStage[stage.id] || [];
                         const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
                         
                         return (
-                          <Card key={stage.id} className="bg-white flex-shrink-0 w-80">
-                            <CardHeader className="pb-3">
-                              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <div
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: stage.color }}
-                                />
-                                {stage.name}
-                                <Badge variant="secondary" className="ml-auto">
-                                  {stageLeads.length}
-                                </Badge>
-                              </CardTitle>
-                              {totalValue > 0 && (
-                                <div className="flex items-center gap-1 mt-2 text-green-600 font-semibold">
-                                  <DollarSign className="w-4 h-4" />
-                                  <span>${totalValue.toLocaleString()}</span>
-                                </div>
-                              )}
-                            </CardHeader>
-                            <CardContent>
-                              <Droppable droppableId={stage.id}>
-                                {(provided, snapshot) => (
+                          <div key={stage.id} className="flex-shrink-0 w-80">
+                            <Card className="bg-white h-full flex flex-col">
+                              <CardHeader className="pb-3 flex-shrink-0">
+                                <CardTitle className="flex items-center gap-2 text-sm font-medium">
                                   <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    className={`space-y-3 min-h-[400px] ${
-                                      snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
-                                    }`}
-                                  >
-                                    {(leadsByStage[stage.id] || [])
-                                      .filter(lead => 
-                                        !searchTerm || 
-                                        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                        lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
-                                      )
-                                      .map((lead, index) => (
-                                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                                          {(provided, snapshot) => (
-                                            <Card
-                                              ref={provided.innerRef}
-                                              {...provided.draggableProps}
-                                              {...provided.dragHandleProps}
-                                              className={`cursor-move transition-shadow ${
-                                                snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
-                                              }`}
-                                            >
-                                              <CardContent className="p-4">
-                                                <div className="flex items-start justify-between mb-2">
-                                                  <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                                      {getLeadInitials(lead)}
-                                                    </div>
-                                                    <div>
-                                                      <h3 className="font-medium text-sm">{lead.name}</h3>
-                                                      {lead.company && (
-                                                        <p className="text-xs text-gray-600">{lead.company}</p>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                  <div className="flex items-center gap-1">
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      onClick={() => setEditingLead(lead)}
-                                                    >
-                                                      <Edit className="h-3 w-3" />
-                                                    </Button>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      onClick={() => handleDeleteLead(lead.id)}
-                                                    >
-                                                      <Trash2 className="h-3 w-3" />
-                                                    </Button>
-                                                  </div>
-                                                </div>
-                                                
-                                                <div className="space-y-2 text-xs">
-                                                  <div className="flex items-center gap-1 text-gray-600">
-                                                    <Calendar className="w-3 h-3" />
-                                                    {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
-                                                  </div>
-                                                  {lead.value && (
-                                                    <div className="flex items-center gap-1 text-green-600">
-                                                      <DollarSign className="w-3 h-3" />
-                                                      ${Number(lead.value).toLocaleString()}
-                                                    </div>
-                                                  )}
-                                                  {lead.probability && (
-                                                    <div className="flex items-center gap-1 text-blue-600">
-                                                      <Percent className="w-3 h-3" />
-                                                      {lead.probability}%
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              </CardContent>
-                                            </Card>
-                                          )}
-                                        </Draggable>
-                                      ))}
-                                    {provided.placeholder}
-                                    {(!leadsByStage[stage.id] || leadsByStage[stage.id].length === 0) && (
-                                      <div className="text-center py-8 text-gray-400">
-                                        <div className="text-sm">No leads in this stage</div>
-                                      </div>
-                                    )}
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: stage.color }}
+                                  />
+                                  {stage.name}
+                                  <Badge variant="secondary" className="ml-auto">
+                                    {stageLeads.length}
+                                  </Badge>
+                                </CardTitle>
+                                {totalValue > 0 && (
+                                  <div className="flex items-center gap-1 mt-2 text-green-600 font-semibold">
+                                    <DollarSign className="w-4 h-4" />
+                                    <span>${totalValue.toLocaleString()}</span>
                                   </div>
                                 )}
-                              </Droppable>
-                            </CardContent>
-                          </Card>
+                              </CardHeader>
+                              <CardContent className="flex-1 min-h-0 overflow-hidden">
+                                <Droppable droppableId={stage.id}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                      className={`space-y-3 h-full overflow-y-auto ${
+                                        snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
+                                      }`}
+                                    >
+                                      {(leadsByStage[stage.id] || [])
+                                        .filter(lead => 
+                                          !searchTerm || 
+                                          lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                          lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                          lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
+                                        )
+                                        .map((lead, index) => (
+                                          <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                                            {(provided, snapshot) => (
+                                              <Card
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                {...provided.dragHandleProps}
+                                                className={`cursor-move transition-shadow ${
+                                                  snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
+                                                }`}
+                                              >
+                                                <CardContent className="p-4">
+                                                  <div className="flex items-start justify-between mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                                        {getLeadInitials(lead)}
+                                                      </div>
+                                                      <div>
+                                                        <h3 className="font-medium text-sm">{lead.name}</h3>
+                                                        {lead.company && (
+                                                          <p className="text-xs text-gray-600">{lead.company}</p>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setEditingLead(lead)}
+                                                      >
+                                                        <Edit className="h-3 w-3" />
+                                                      </Button>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteLead(lead.id)}
+                                                      >
+                                                        <Trash2 className="h-3 w-3" />
+                                                      </Button>
+                                                    </div>
+                                                  </div>
+                                                  
+                                                  <div className="space-y-2 text-xs">
+                                                    <div className="flex items-center gap-1 text-gray-600">
+                                                      <Calendar className="w-3 h-3" />
+                                                      {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
+                                                    </div>
+                                                    {lead.value && (
+                                                      <div className="flex items-center gap-1 text-green-600">
+                                                        <DollarSign className="w-3 h-3" />
+                                                        ${Number(lead.value).toLocaleString()}
+                                                      </div>
+                                                    )}
+                                                    {lead.probability && (
+                                                      <div className="flex items-center gap-1 text-blue-600">
+                                                        <Percent className="w-3 h-3" />
+                                                        {lead.probability}%
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </CardContent>
+                                              </Card>
+                                            )}
+                                          </Draggable>
+                                        ))}
+                                      {provided.placeholder}
+                                      {(!leadsByStage[stage.id] || leadsByStage[stage.id].length === 0) && (
+                                        <div className="text-center py-8 text-gray-400">
+                                          <div className="text-sm">No leads in this stage</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </Droppable>
+                              </CardContent>
+                            </Card>
+                          </div>
                         );
                       })}
                     </div>
@@ -386,7 +382,7 @@ export default function Leads() {
         )}
 
         {activeTab === "list" && (
-          <div className="space-y-4 p-6">
+          <div className="h-full overflow-y-auto p-6">
             <Card>
               <CardHeader className="border-b border-slate-200">
                 <div className="flex items-center justify-between">
