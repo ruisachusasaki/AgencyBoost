@@ -20,6 +20,7 @@ import {
   Settings
 } from "lucide-react";
 import { Link } from "wouter";
+import { AppointmentModal } from "@/components/AppointmentModal";
 
 interface AppointmentData {
   id: string;
@@ -91,6 +92,7 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCalendar, setSelectedCalendar] = useState("all");
   const [selectedStaff, setSelectedStaff] = useState("all");
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
 
   // Fetch calendars for filter dropdown
   const { data: calendars = [] } = useQuery({
@@ -161,7 +163,10 @@ export default function Calendar() {
                   Settings
                 </Button>
               </Link>
-              <Button className="flex items-center gap-2">
+              <Button 
+                className="flex items-center gap-2"
+                onClick={() => setIsAppointmentModalOpen(true)}
+              >
                 <Plus className="h-4 w-4" />
                 New Appointment
               </Button>
@@ -350,6 +355,16 @@ export default function Calendar() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Appointment Modal */}
+        <AppointmentModal
+          open={isAppointmentModalOpen}
+          onOpenChange={setIsAppointmentModalOpen}
+          onSuccess={() => {
+            // Refetch appointments data when appointment is created
+            setIsAppointmentModalOpen(false);
+          }}
+        />
       </div>
     </div>
   );
