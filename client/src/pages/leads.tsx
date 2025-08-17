@@ -637,7 +637,7 @@ export default function Leads() {
                                                   </div>
                                                   
                                                   {/* Edit button moved to bottom left */}
-                                                  <div className="absolute bottom-2 left-2">
+                                                  <div className="absolute bottom-4 left-2">
                                                     <Button
                                                       variant="ghost"
                                                       size="sm"
