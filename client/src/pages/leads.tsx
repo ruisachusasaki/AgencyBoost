@@ -161,9 +161,9 @@ export default function Leads() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex flex-col h-full">
       {/* Fixed Header Section */}
-      <div className="flex-shrink-0 p-6 bg-white">
+      <div className="flex-shrink-0 p-6 bg-white border-b">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
@@ -233,12 +233,11 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-hidden p-6">
-
+      {/* Content Area */}
+      <div className="flex-1 overflow-auto">
         {activeTab === "pipeline" && (
           pipelineStages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-full p-6">
               <Card className="p-8">
                 <div className="text-center">
                   <Kanban className="w-12 h-12 mx-auto text-gray-400 mb-4" />
@@ -254,267 +253,245 @@ export default function Leads() {
               </Card>
             </div>
           ) : (
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="h-full w-full border border-gray-200 rounded-lg bg-gray-50">
-                <div 
-                  className="h-full overflow-x-auto overflow-y-hidden p-4"
-                  style={{ 
-                    scrollBehavior: 'smooth',
-                    WebkitOverflowScrolling: 'touch'
-                  }}
-                >
-                  <div className="flex gap-6 h-full" style={{ width: 'max-content' }}>
-                {pipelineStages.map((stage) => {
-                  const stageLeads = leadsByStage[stage.id] || [];
-                  const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
-                  
-                  return (
-                    <Card key={stage.id} className="bg-gray-50 flex-shrink-0 w-80">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          {stage.name}
-                          <Badge variant="secondary" className="ml-auto">
-                            {stageLeads.length}
-                          </Badge>
-                        </CardTitle>
-                        {totalValue > 0 && (
-                          <div className="flex items-center gap-1 mt-2 text-green-600 font-semibold">
-                            <DollarSign className="w-4 h-4" />
-                            <span>${totalValue.toLocaleString()}</span>
-                          </div>
-                        )}
-                      </CardHeader>
-                    <CardContent>
-                      <Droppable droppableId={stage.id}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className={`space-y-3 min-h-[200px] ${
-                              snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
-                            }`}
-                          >
-                            {(leadsByStage[stage.id] || [])
-                              .filter(lead => 
-                                !searchTerm || 
-                                lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
-                              )
-                              .map((lead, index) => (
-                                <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                                  {(provided, snapshot) => (
-                                    <Card
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className={`cursor-move transition-shadow ${
-                                        snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
-                                      }`}
-                                    >
-                                      <CardContent className="p-4">
-                                        <div className="flex items-start justify-between mb-2">
-                                          <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                              {getLeadInitials(lead)}
-                                            </div>
-                                            <div>
-                                              <h3 className="font-medium text-sm">{lead.name}</h3>
-                                              {lead.company && (
-                                                <p className="text-xs text-gray-600">{lead.company}</p>
-                                              )}
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => setEditingLead(lead)}
+            <div className="p-6">
+              <div className="border border-gray-200 rounded-lg bg-gray-50">
+                <div className="overflow-x-auto p-4">
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <div className="flex gap-6 min-w-max">
+                      {pipelineStages.map((stage) => {
+                        const stageLeads = leadsByStage[stage.id] || [];
+                        const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
+                        
+                        return (
+                          <Card key={stage.id} className="bg-white flex-shrink-0 w-80">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: stage.color }}
+                                />
+                                {stage.name}
+                                <Badge variant="secondary" className="ml-auto">
+                                  {stageLeads.length}
+                                </Badge>
+                              </CardTitle>
+                              {totalValue > 0 && (
+                                <div className="flex items-center gap-1 mt-2 text-green-600 font-semibold">
+                                  <DollarSign className="w-4 h-4" />
+                                  <span>${totalValue.toLocaleString()}</span>
+                                </div>
+                              )}
+                            </CardHeader>
+                            <CardContent>
+                              <Droppable droppableId={stage.id}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={`space-y-3 min-h-[400px] ${
+                                      snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
+                                    }`}
+                                  >
+                                    {(leadsByStage[stage.id] || [])
+                                      .filter(lead => 
+                                        !searchTerm || 
+                                        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
+                                      )
+                                      .map((lead, index) => (
+                                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                                          {(provided, snapshot) => (
+                                            <Card
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              {...provided.dragHandleProps}
+                                              className={`cursor-move transition-shadow ${
+                                                snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
+                                              }`}
                                             >
-                                              <Edit className="h-3 w-3" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => handleDeleteLead(lead.id)}
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        
-                                        <div className="space-y-2 text-xs">
-                                          <div className="flex items-center gap-1 text-gray-600">
-                                            <Calendar className="w-3 h-3" />
-                                            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
-                                          </div>
-                                          {lead.value && (
-                                            <div className="flex items-center gap-1 text-green-600">
-                                              <DollarSign className="w-3 h-3" />
-                                              ${Number(lead.value).toLocaleString()}
-                                            </div>
+                                              <CardContent className="p-4">
+                                                <div className="flex items-start justify-between mb-2">
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                                      {getLeadInitials(lead)}
+                                                    </div>
+                                                    <div>
+                                                      <h3 className="font-medium text-sm">{lead.name}</h3>
+                                                      {lead.company && (
+                                                        <p className="text-xs text-gray-600">{lead.company}</p>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-1">
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => setEditingLead(lead)}
+                                                    >
+                                                      <Edit className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => handleDeleteLead(lead.id)}
+                                                    >
+                                                      <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                  </div>
+                                                </div>
+                                                
+                                                <div className="space-y-2 text-xs">
+                                                  <div className="flex items-center gap-1 text-gray-600">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
+                                                  </div>
+                                                  {lead.value && (
+                                                    <div className="flex items-center gap-1 text-green-600">
+                                                      <DollarSign className="w-3 h-3" />
+                                                      ${Number(lead.value).toLocaleString()}
+                                                    </div>
+                                                  )}
+                                                  {lead.probability && (
+                                                    <div className="flex items-center gap-1 text-blue-600">
+                                                      <Percent className="w-3 h-3" />
+                                                      {lead.probability}%
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </CardContent>
+                                            </Card>
                                           )}
-                                          {lead.probability && (
-                                            <div className="flex items-center gap-1 text-blue-600">
-                                              <Percent className="w-3 h-3" />
-                                              {lead.probability}%
-                                            </div>
-                                          )}
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  )}
-                                </Draggable>
-                              ))}
-                            {provided.placeholder}
-                            {(!leadsByStage[stage.id] || leadsByStage[stage.id].length === 0) && (
-                              <div className="text-center py-8 text-gray-400">
-                                <div className="text-sm">No leads in this stage</div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Droppable>
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-                  </div>
+                                        </Draggable>
+                                      ))}
+                                    {provided.placeholder}
+                                    {(!leadsByStage[stage.id] || leadsByStage[stage.id].length === 0) && (
+                                      <div className="text-center py-8 text-gray-400">
+                                        <div className="text-sm">No leads in this stage</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </Droppable>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </DragDropContext>
                 </div>
               </div>
-            </DragDropContext>
+            </div>
           )
         )}
 
         {activeTab === "list" && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">All Leads</h3>
-                <div className="text-sm text-slate-600">
-                  {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+          <div className="space-y-4 p-6">
+            <Card>
+              <CardHeader className="border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">All Leads</h3>
+                  <div className="text-sm text-slate-600">
+                    {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {filteredLeads.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-slate-500 mb-4">
-                    {searchTerm ? "No leads found matching your search." : "No leads found."}
-                  </p>
-                  {!searchTerm && (
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      Add Your First Lead
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-200">
-                  {filteredLeads.map((lead) => (
-                    <div key={lead.id} className="p-6 hover:bg-slate-50">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-slate-600">
-                              {getLeadInitials(lead)}
-                            </span>
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold text-slate-900 truncate">{lead.name}</h3>
-                              <Badge className={getStatusColor(lead.status)} variant="outline">
-                                {lead.status}
-                              </Badge>
+              </CardHeader>
+              <CardContent className="p-0">
+                {filteredLeads.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-slate-500 mb-4">
+                      {searchTerm ? "No leads found matching your search." : "No leads found."}
+                    </p>
+                    {!searchTerm && (
+                      <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        Add Your First Lead
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-200">
+                    {filteredLeads.map((lead) => (
+                      <div key={lead.id} className="p-6 hover:bg-slate-50">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-medium text-slate-600">
+                                {getLeadInitials(lead)}
+                              </span>
                             </div>
-                            
-                            <div className="space-y-1">
-                              <p className="text-sm text-slate-600">
-                                📧 {lead.email}
-                              </p>
-                              {lead.phone && (
-                                <p className="text-sm text-slate-600">
-                                  📞 {lead.phone}
-                                </p>
-                              )}
-                              {lead.company && (
-                                <p className="text-sm text-slate-600">
-                                  🏢 {lead.company}
-                                </p>
-                              )}
-                              {lead.source && (
-                                <p className="text-sm text-slate-600">
-                                  📍 Source: {lead.source}
-                                </p>
-                              )}
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h3 className="text-lg font-semibold text-slate-900 mb-1">{lead.name}</h3>
+                                  <p className="text-slate-600 mb-2">{lead.email}</p>
+                                  {lead.company && (
+                                    <p className="text-sm text-slate-500 mb-2">{lead.company}</p>
+                                  )}
+                                  <div className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border-l-4 ${getStatusColor(lead.status)}`}>
+                                    {lead.status}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingLead(lead)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteLead(lead.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingLead(lead)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteLead(lead.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {lead.value && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {lead.value && (
+                            <div>
+                              <p className="text-xs text-slate-500">Potential Value</p>
+                              <p className="font-semibold text-slate-900 flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                ${Number(lead.value).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                          
                           <div>
-                            <p className="text-xs text-slate-500">Potential Value</p>
+                            <p className="text-xs text-slate-500">Probability</p>
                             <p className="font-semibold text-slate-900 flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              ${Number(lead.value).toLocaleString()}
+                              <Percent className="h-3 w-3" />
+                              {lead.probability || 0}%
                             </p>
                           </div>
-                        )}
-                        
-                        <div>
-                          <p className="text-xs text-slate-500">Probability</p>
-                          <p className="font-semibold text-slate-900 flex items-center gap-1">
-                            <Percent className="h-3 w-3" />
-                            {lead.probability || 0}%
-                          </p>
+                          
+                          <div>
+                            <p className="text-xs text-slate-500">Last Contact</p>
+                            <p className="font-semibold text-slate-900 flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(lead.lastContactDate)}
+                            </p>
+                          </div>
                         </div>
-                        
-                        <div>
-                          <p className="text-xs text-slate-500">Last Contact</p>
-                          <p className="font-semibold text-slate-900 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(lead.lastContactDate)}
-                          </p>
-                        </div>
-                      </div>
 
-                      {lead.notes && (
-                        <div className="mt-3 pt-3 border-t border-slate-100">
-                          <p className="text-sm text-slate-600">{lead.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                        {lead.notes && (
+                          <div className="mt-3 pt-3 border-t border-slate-100">
+                            <p className="text-sm text-slate-600">{lead.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
 
