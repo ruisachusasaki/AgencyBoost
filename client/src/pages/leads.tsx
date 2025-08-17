@@ -574,12 +574,24 @@ export default function Leads() {
                                                                 className="h-8 w-8 p-0"
                                                                 onClick={() => setEditingLead(lead)}
                                                               >
-                                                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center">
-                                                                  {(() => {
-                                                                    const staffMember = staff.find(s => s.id === lead.assignedTo);
-                                                                    return staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?';
-                                                                  })()}
-                                                                </div>
+                                                                {(() => {
+                                                                  const staffMember = staff.find(s => s.id === lead.assignedTo);
+                                                                  if (staffMember?.profileImageUrl) {
+                                                                    return (
+                                                                      <img
+                                                                        src={staffMember.profileImageUrl}
+                                                                        alt={`${staffMember.firstName} ${staffMember.lastName}`}
+                                                                        className="w-6 h-6 rounded-full object-cover"
+                                                                      />
+                                                                    );
+                                                                  } else {
+                                                                    return (
+                                                                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs rounded-full flex items-center justify-center">
+                                                                        {staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?'}
+                                                                      </div>
+                                                                    );
+                                                                  }
+                                                                })()}
                                                               </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
@@ -616,17 +628,7 @@ export default function Leads() {
                                                         {lead.probability}%
                                                       </div>
                                                     )}
-                                                    {lead.assignedTo && (
-                                                      <div className="flex items-center gap-1 text-gray-600">
-                                                        <div className="w-3 h-3 bg-green-500 text-white text-[8px] rounded-full flex items-center justify-center">
-                                                          {(() => {
-                                                            const staffMember = staff.find(s => s.id === lead.assignedTo);
-                                                            return staffMember ? `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}` : '?';
-                                                          })()}
-                                                        </div>
-                                                        <span className="truncate">{getStaffName(lead.assignedTo)}</span>
-                                                      </div>
-                                                    )}
+
                                                   </div>
                                                 </CardContent>
                                               </Card>
