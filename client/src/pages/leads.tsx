@@ -124,9 +124,12 @@ export default function Leads() {
     },
   });
 
-  // Get unique client verticals for filtering
+  // Get unique client verticals from custom field data
   const uniqueVerticals = Array.from(new Set(
-    clients.filter(client => client.clientVertical).map(client => client.clientVertical!)
+    leads
+      .filter(lead => lead.customFieldData && (lead.customFieldData as any)['Client Vertical'])
+      .map(lead => (lead.customFieldData as any)['Client Vertical'])
+      .filter(Boolean)
   ));
 
   const filteredAndSortedLeads = leads
@@ -157,8 +160,8 @@ export default function Leads() {
 
       // Client vertical filter
       if (filterVertical) {
-        const client = clients.find(c => c.companyName?.toLowerCase() === lead.company?.toLowerCase());
-        if (!client || client.clientVertical !== filterVertical) {
+        const leadVertical = lead.customFieldData && (lead.customFieldData as any)['Client Vertical'];
+        if (leadVertical !== filterVertical) {
           return false;
         }
       }
@@ -404,8 +407,9 @@ export default function Leads() {
   };
 
   // Group leads by stage for pipeline view
+  // Use filtered leads for both pipeline and list views
   const leadsByStage = pipelineStages.reduce((acc, stage) => {
-    acc[stage.id] = leads.filter(lead => 
+    acc[stage.id] = filteredAndSortedLeads.filter(lead => 
       lead.stageId === stage.id || (!lead.stageId && stage.isDefault)
     );
     return acc;
@@ -595,10 +599,10 @@ export default function Leads() {
             <div className="min-w-[160px]">
               <Select value={filterVertical || "all"} onValueChange={(value) => setFilterVertical(value === "all" ? "" : value)}>
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Vertical" />
+                  <SelectValue placeholder="Client Vertical" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Verticals</SelectItem>
+                  <SelectItem value="all">All Client Verticals</SelectItem>
                   {uniqueVerticals.map((vertical) => (
                     <SelectItem key={vertical} value={vertical}>
                       {vertical}
@@ -741,9 +745,9 @@ export default function Leads() {
                                                               {(() => {
                                                                 if (lead.assignedTo) {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
-                                                                  if (staffMember?.profileImagePath) {
+                                                                  if (staffMember?.profileImage) {
                                                                     // Convert object storage path to proper URL format
-                                                                    const imageUrl = `/objects${staffMember.profileImagePath}`;
+                                                                    const imageUrl = `/objects${staffMember.profileImage}`;
                                                                     return (
                                                                       <img
                                                                         src={imageUrl}
