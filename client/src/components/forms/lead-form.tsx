@@ -216,28 +216,6 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
 
           <FormField
             control={form.control}
-            name="probability"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Probability (%)</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    value={field.value || ""} 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    placeholder="50"
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="assignedTo"
             render={({ field }) => (
               <FormItem>

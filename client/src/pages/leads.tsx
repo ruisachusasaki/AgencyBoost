@@ -32,7 +32,7 @@ const AVAILABLE_COLUMNS: Column[] = [
   { key: 'phone', label: 'Phone', sortable: true, defaultVisible: true },
   { key: 'stage', label: 'Stage', sortable: true, defaultVisible: true },
   { key: 'value', label: 'Value', sortable: true, defaultVisible: true },
-  { key: 'probability', label: 'Probability', sortable: true, defaultVisible: true },
+
   { key: 'source', label: 'Source', sortable: true, defaultVisible: false },
   { key: 'assignedTo', label: 'Assigned To', sortable: true, defaultVisible: false },
   { key: 'lastContactDate', label: 'Last Contact', sortable: true, defaultVisible: false },
@@ -40,7 +40,7 @@ const AVAILABLE_COLUMNS: Column[] = [
   { key: 'actions', label: 'Actions', sortable: false, defaultVisible: true },
 ];
 
-type SortField = 'name' | 'email' | 'company' | 'phone' | 'stage' | 'value' | 'probability' | 'source' | 'assignedTo' | 'lastContactDate' | 'createdAt';
+type SortField = 'name' | 'email' | 'company' | 'phone' | 'stage' | 'value' | 'source' | 'assignedTo' | 'lastContactDate' | 'createdAt';
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -140,10 +140,7 @@ export default function Leads() {
           aValue = Number(a.value) || 0;
           bValue = Number(b.value) || 0;
           break;
-        case 'probability':
-          aValue = a.probability || 0;
-          bValue = b.probability || 0;
-          break;
+
         case 'source':
           aValue = (a.source || '').toLowerCase();
           bValue = (b.source || '').toLowerCase();
@@ -166,7 +163,7 @@ export default function Leads() {
 
       if (sortField === 'createdAt' || sortField === 'lastContactDate') {
         return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      } else if (sortField === 'value' || sortField === 'probability') {
+      } else if (sortField === 'value') {
         return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       } else {
         if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
@@ -254,8 +251,7 @@ export default function Leads() {
         );
       case 'value':
         return lead.value ? `$${Number(lead.value).toLocaleString()}` : '-';
-      case 'probability':
-        return lead.probability ? `${lead.probability}%` : '0%';
+
       case 'source':
         return lead.source || '-';
       case 'assignedTo':
@@ -628,13 +624,6 @@ export default function Leads() {
                                                         ${Number(lead.value).toLocaleString()}
                                                       </div>
                                                     )}
-                                                    {lead.probability && (
-                                                      <div className="flex items-center gap-1 text-blue-600">
-                                                        <Percent className="w-3 h-3" />
-                                                        {lead.probability}%
-                                                      </div>
-                                                    )}
-
                                                   </div>
                                                 </CardContent>
                                               </Card>
