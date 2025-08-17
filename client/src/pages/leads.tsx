@@ -498,7 +498,7 @@ export default function Leads() {
                         const totalValue = stageLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
                         
                         return (
-                          <div key={stage.id} className="flex-shrink-0 w-80 h-full">
+                          <div key={stage.id} className="flex-shrink-0 w-96 h-full">
                             <Card className="bg-white h-full flex flex-col">
                               <CardHeader className="pb-3 flex-shrink-0">
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -524,7 +524,7 @@ export default function Leads() {
                                     <div
                                       ref={provided.innerRef}
                                       {...provided.droppableProps}
-                                      className={`space-y-3 h-full min-h-[500px] overflow-y-auto ${
+                                      className={`space-y-4 h-full min-h-[500px] overflow-y-auto ${
                                         snapshot.isDraggingOver ? "bg-blue-50 rounded-lg p-2" : ""
                                       }`}
                                     >
@@ -548,7 +548,7 @@ export default function Leads() {
                                                 onClick={() => setEditingLead(lead)}
                                               >
                                                 <CardContent className="p-4">
-                                                  <div className="flex items-start justify-between mb-2">
+                                                  <div className="flex items-start justify-between mb-3">
                                                     <div className="flex items-center gap-3">
                                                       <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                                                         {getLeadInitials(lead)}
@@ -613,7 +613,7 @@ export default function Leads() {
                                                     </div>
                                                   </div>
                                                   
-                                                  <div className="space-y-2 text-xs">
+                                                  <div className="space-y-3 text-xs">
                                                     <div className="flex items-center gap-1 text-gray-600">
                                                       <Calendar className="w-3 h-3" />
                                                       {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
