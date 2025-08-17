@@ -50,6 +50,13 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
     queryKey: ["/api/staff"],
   });
 
+  // Initialize custom field values from existing lead data
+  useEffect(() => {
+    if (lead?.customFieldData) {
+      setCustomFieldValues(lead.customFieldData as Record<string, any>);
+    }
+  }, [lead]);
+
   const form = useForm<InsertLead>({
     resolver: zodResolver(insertLeadSchema),
     defaultValues: {
@@ -197,9 +204,13 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
   };
 
   const handleCustomFieldChange = (fieldId: string, value: any) => {
+    // Find the field to get its name
+    const field = customFields.find(f => f.id === fieldId);
+    const fieldKey = field?.name || fieldId;
+    
     setCustomFieldValues(prev => ({
       ...prev,
-      [fieldId]: value
+      [fieldKey]: value
     }));
   };
 
@@ -476,7 +487,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                             <CustomFieldRenderer
                               field={field}
                               clientId={lead?.id || 'new'}
-                              value={customFieldValues[field.id] || ''}
+                              value={customFieldValues[field.name] || ''}
                               onChange={(value) => handleCustomFieldChange(field.id, value)}
                               showLabel={true}
                             />
@@ -504,7 +515,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                               <CustomFieldRenderer
                                 field={field}
                                 clientId={lead?.id || 'new'}
-                                value={customFieldValues[field.id] || ''}
+                                value={customFieldValues[field.name] || ''}
                                 onChange={(value) => handleCustomFieldChange(field.id, value)}
                                 showLabel={true}
                               />
