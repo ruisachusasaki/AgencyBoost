@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import PipelineStageManager from "@/components/pipeline-stage-manager";
@@ -165,7 +165,7 @@ export default function Leads() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3">
-              <Users className="h-6 w-6 text-primary" />
+              <UserPlus className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
             </div>
             <p className="text-slate-600">Total Pipeline Value: ${totalPipelineValue.toLocaleString()}</p>
