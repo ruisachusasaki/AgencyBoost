@@ -33,6 +33,8 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
   const [selectedDate, setSelectedDate] = useState<Date>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  console.log("LeadAppointmentBooking component loaded with leadId:", leadId);
 
   const { data: calendars = [] } = useQuery({
     queryKey: ["/api/calendars"],
@@ -364,13 +366,15 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
               </Button>
               <Button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={createAppointmentMutation.isPending}
                 onClick={(e) => {
                   console.log("Book Appointment button clicked");
+                  console.log("Current form values:", form.getValues());
+                  console.log("Form errors:", form.formState.errors);
                   // Form submission will be handled by onSubmit
                 }}
               >
-                {isLoading ? "Booking..." : "Book Appointment"}
+                {createAppointmentMutation.isPending ? "Booking..." : "Book Appointment"}
               </Button>
             </div>
           </form>
