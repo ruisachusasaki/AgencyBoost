@@ -244,6 +244,14 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Debug Panel */}
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
+          <h4 className="font-semibold mb-2">Debug Info:</h4>
+          <div>Selected Date: {selectedDate ? selectedDate.toDateString() : "None"}</div>
+          <div>Form Valid: {form.formState.isValid ? "Yes" : "No"}</div>
+          <div>Form Values: {JSON.stringify(form.getValues(), null, 2)}</div>
+          <div>Form Errors: {JSON.stringify(form.formState.errors, null, 2)}</div>
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -444,6 +452,28 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
                 data-testid="button-cancel"
               >
                 Cancel
+              </Button>
+              <Button 
+                type="button" 
+                variant="secondary"
+                onClick={() => {
+                  console.log("=== Manual submit test ===");
+                  const formData = form.getValues();
+                  const testData = {
+                    ...formData,
+                    date: selectedDate,
+                  };
+                  console.log("Test data:", testData);
+                  if (selectedDate && formData.calendarId && formData.assignedTo && formData.title && formData.time) {
+                    console.log("All required fields present, calling mutation...");
+                    createAppointmentMutation.mutate(testData as AppointmentFormData);
+                  } else {
+                    console.log("Missing required fields");
+                  }
+                }}
+                data-testid="button-test"
+              >
+                Test Submit
               </Button>
               <Button 
                 type="submit" 
