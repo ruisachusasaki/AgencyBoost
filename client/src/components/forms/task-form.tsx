@@ -44,7 +44,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       description: task?.description || "",
       status: task?.status || "pending",
       priority: task?.priority || "medium",
-      assignedTo: task?.assignedTo || "",
+      assignedTo: task?.assignedTo || "unassigned",
       clientId: task?.clientId || "",
       projectId: task?.projectId || "",
       campaignId: task?.campaignId || "",
@@ -106,6 +106,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
       projectId: data.projectId && data.projectId !== "none" ? data.projectId : null,
       campaignId: data.campaignId && data.campaignId !== "none" ? data.campaignId : null,
+      assignedTo: data.assignedTo && data.assignedTo !== "unassigned" ? data.assignedTo : null,
     };
 
     if (task) {
@@ -202,14 +203,14 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || "unassigned"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select team member" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.firstName} {member.lastName}
