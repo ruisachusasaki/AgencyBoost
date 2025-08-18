@@ -449,7 +449,7 @@ export const tasks = pgTable("tasks", {
   description: text("description"),
   status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
   priority: text("priority").notNull().default("medium"), // low, medium, high
-  assignedTo: varchar("assigned_to").references(() => users.id),
+  assignedTo: uuid("assigned_to").references(() => staff.id),
   clientId: varchar("client_id").references(() => clients.id),
   projectId: varchar("project_id").references(() => projects.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
@@ -953,7 +953,7 @@ export const enhancedTasks = pgTable("enhanced_tasks", {
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   workflowId: varchar("workflow_id").references(() => workflows.id),
   parentTaskId: varchar("parent_task_id"),
-  assignedTo: varchar("assigned_to").references(() => users.id),
+  assignedTo: uuid("assigned_to").references(() => staff.id),
   createdBy: varchar("created_by").notNull().references(() => users.id),
   priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
   status: text("status").notNull().default("todo"), // todo, in_progress, review, blocked, completed, cancelled

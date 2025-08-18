@@ -60,10 +60,11 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       });
       onSuccess?.();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Task creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create task. Please try again.",
+        description: error?.message || "Failed to create task. Please try again.",
         variant: "destructive",
       });
     },
@@ -136,7 +137,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea {...field} placeholder="Task description" rows={3} />
+                <Textarea {...field} value={field.value || ""} placeholder="Task description" rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -198,7 +199,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Team member name" />
+                  <Input {...field} value={field.value || ""} placeholder="Team member name" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
