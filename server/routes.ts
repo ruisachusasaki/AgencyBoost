@@ -4434,7 +4434,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/lead-appointments/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertLeadAppointmentSchema.partial().parse(req.body);
+      
+      // Convert string dates to Date objects if they exist
+      const requestData = { ...req.body };
+      if (requestData.startTime) {
+        requestData.startTime = new Date(requestData.startTime);
+      }
+      if (requestData.endTime) {
+        requestData.endTime = new Date(requestData.endTime);
+      }
+      
+      const validatedData = insertLeadAppointmentSchema.partial().parse(requestData);
       
       const [appointment] = await db.update(leadAppointments)
         .set({ ...validatedData, updatedAt: new Date() })
