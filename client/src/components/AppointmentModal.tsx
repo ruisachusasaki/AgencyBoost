@@ -329,7 +329,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -370,31 +370,37 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
           </div>
 
           {/* Team Member */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-testid="team-member-section">
             <Label htmlFor="assignedTo" className="text-sm font-medium">Team Member *</Label>
-            {isStaffLoading ? (
-              <div>Loading team members...</div>
-            ) : (
-              <Select
-                value={appointmentData.assignedTo}
-                onValueChange={(value) => setAppointmentData(prev => ({ ...prev, assignedTo: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team member..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff.length === 0 ? (
-                    <SelectItem value="" disabled>No team members found</SelectItem>
-                  ) : (
-                    staff.map((member: any) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.firstName} {member.lastName}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            )}
+            <div data-testid="team-member-content">
+              {isStaffLoading ? (
+                <div className="p-2 border rounded">Loading team members...</div>
+              ) : (
+                <Select
+                  value={appointmentData.assignedTo}
+                  onValueChange={(value) => setAppointmentData(prev => ({ ...prev, assignedTo: value }))}
+                  data-testid="select-team-member"
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team member..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.length === 0 ? (
+                      <SelectItem value="" disabled>No team members found</SelectItem>
+                    ) : (
+                      staff.map((member: any) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.firstName} {member.lastName}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              <div className="text-xs text-gray-500 mt-1">
+                Staff count: {staff.length} | Loading: {isStaffLoading ? 'Yes' : 'No'}
+              </div>
+            </div>
           </div>
 
 
