@@ -427,18 +427,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
 
-              resolve(res.json({
+              res.json({
                 imported,
                 errors,
                 total: csvData.length,
                 errorDetails: errorDetails.slice(0, 10) // Limit error details
-              }));
+              });
+              resolve();
             } catch (error) {
-              resolve(res.status(500).json({ message: "Failed to process CSV data", error: error instanceof Error ? error.message : "Unknown error" }));
+              res.status(500).json({ message: "Failed to process CSV data", error: error instanceof Error ? error.message : "Unknown error" });
+              resolve();
             }
           })
           .on('error', (error) => {
-            resolve(res.status(500).json({ message: "Failed to parse CSV", error: error.message }));
+            res.status(500).json({ message: "Failed to parse CSV", error: error.message });
+            resolve();
           });
       });
     } catch (error) {
@@ -922,7 +925,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search, status, priority, assignedTo, clientId, projectId } = req.query;
       
-      let tasksQuery = db.select().from(tasks);
       const conditions = [];
       
       if (search && typeof search === 'string') {
@@ -954,11 +956,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(tasks.projectId, projectId));
       }
       
+      let tasksList;
       if (conditions.length > 0) {
-        tasksQuery = tasksQuery.where(and(...conditions));
+        tasksList = await db.select().from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt));
+      } else {
+        tasksList = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
       }
-      
-      const tasksList = await tasksQuery.orderBy(desc(tasks.createdAt));
       res.json(tasksList);
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -1063,7 +1066,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search, status, clientId, projectId } = req.query;
       
-      let invoicesQuery = db.select().from(invoices);
       const conditions = [];
       
       if (search && typeof search === 'string') {
@@ -1087,11 +1089,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(invoices.projectId, projectId));
       }
       
+      let invoicesList;
       if (conditions.length > 0) {
-        invoicesQuery = invoicesQuery.where(and(...conditions));
+        invoicesList = await db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+      } else {
+        invoicesList = await db.select().from(invoices).orderBy(desc(invoices.createdAt));
       }
-      
-      const invoicesList = await invoicesQuery.orderBy(desc(invoices.createdAt));
       res.json(invoicesList);
     } catch (error) {
       console.error("Error fetching invoices:", error);
@@ -1175,12 +1178,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId } = req.query;
       
-      let query = db.select().from(socialMediaAccounts);
+      let accounts;
       if (clientId && typeof clientId === 'string') {
-        query = query.where(eq(socialMediaAccounts.clientId, clientId));
+        accounts = await db.select().from(socialMediaAccounts).where(eq(socialMediaAccounts.clientId, clientId)).orderBy(desc(socialMediaAccounts.createdAt));
+      } else {
+        accounts = await db.select().from(socialMediaAccounts).orderBy(desc(socialMediaAccounts.createdAt));
       }
-      
-      const accounts = await query.orderBy(desc(socialMediaAccounts.createdAt));
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching social media accounts:", error);
@@ -1278,7 +1281,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId, campaignId, status, accountId } = req.query;
       
-      let query = db.select().from(socialMediaPosts);
       const conditions = [];
       
       if (clientId && typeof clientId === 'string') {
@@ -1297,11 +1299,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(socialMediaPosts.accountId, accountId));
       }
       
+      let posts;
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        posts = await db.select().from(socialMediaPosts).where(and(...conditions)).orderBy(desc(socialMediaPosts.createdAt));
+      } else {
+        posts = await db.select().from(socialMediaPosts).orderBy(desc(socialMediaPosts.createdAt));
       }
-      
-      const posts = await query.orderBy(desc(socialMediaPosts.createdAt));
       res.json(posts);
     } catch (error) {
       console.error("Error fetching social media posts:", error);
@@ -1810,7 +1813,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId, category, status } = req.query;
       
-      let query = db.select().from(workflows);
       const conditions = [];
       
       if (clientId && typeof clientId === 'string') {
@@ -1825,11 +1827,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(workflows.status, status));
       }
       
+      let workflowsList;
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        workflowsList = await db.select().from(workflows).where(and(...conditions)).orderBy(desc(workflows.createdAt));
+      } else {
+        workflowsList = await db.select().from(workflows).orderBy(desc(workflows.createdAt));
       }
-      
-      const workflowsList = await query.orderBy(desc(workflows.createdAt));
       res.json(workflowsList);
     } catch (error) {
       console.error("Error fetching workflows:", error);
