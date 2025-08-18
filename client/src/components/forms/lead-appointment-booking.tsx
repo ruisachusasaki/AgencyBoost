@@ -68,6 +68,9 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
+      console.log("=== Mutation function called ===");
+      console.log("Received data:", data);
+      
       // Validate time format
       if (!data.time || !data.time.includes(':')) {
         throw new Error("Invalid time format");
@@ -98,18 +101,28 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
         createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from auth
       };
 
-      return await fetch("/api/lead-appointments", {
+      console.log("Prepared appointment data:", appointmentData);
+      console.log("Making API request to /api/lead-appointments");
+
+      const response = await fetch("/api/lead-appointments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(appointmentData),
-      }).then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
       });
+
+      console.log("API response status:", response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API error response:", errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log("API success response:", result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lead-appointments"] });
@@ -132,8 +145,13 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
   });
 
   const onSubmit = (data: AppointmentFormData) => {
+    console.log("=== Form submission started ===");
+    console.log("Form data:", data);
+    console.log("Selected date:", selectedDate);
+    
     // Validate all required fields
     if (!data.calendarId) {
+      console.log("Validation failed: No calendar selected");
       toast({
         title: "Error",
         description: "Please select a calendar",
@@ -143,6 +161,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!data.assignedTo) {
+      console.log("Validation failed: No team member selected");
       toast({
         title: "Error",
         description: "Please select a team member",
@@ -152,6 +171,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!data.title?.trim()) {
+      console.log("Validation failed: No title entered");
       toast({
         title: "Error", 
         description: "Please enter a meeting title",
@@ -161,6 +181,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!data.time || !data.time.includes(':')) {
+      console.log("Validation failed: No time selected");
       toast({
         title: "Error",
         description: "Please select a time",
@@ -170,6 +191,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!selectedDate) {
+      console.log("Validation failed: No date selected");
       toast({
         title: "Error",
         description: "Please select a date",
@@ -178,11 +200,13 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
       return;
     }
 
+    console.log("All validations passed, submitting...");
     const submissionData = {
       ...data,
       date: selectedDate,
     };
     
+    console.log("Final submission data:", submissionData);
     createAppointmentMutation.mutate(submissionData);
   };
 
