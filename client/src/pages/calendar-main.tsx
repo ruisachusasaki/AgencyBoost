@@ -301,7 +301,9 @@ export default function CalendarMain() {
         ? `/api/lead-appointments/${appointmentId}`
         : `/api/calendar-appointments/${appointmentId}`;
       console.log('CalendarMain: Deleting appointment', { appointmentId, appointmentType, endpoint });
-      return await apiRequest('DELETE', endpoint);
+      const response = await fetch(endpoint, { method: 'DELETE' });
+      if (!response.ok) throw new Error(`Failed to delete appointment: ${response.statusText}`);
+      return response.status === 204 ? null : await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
