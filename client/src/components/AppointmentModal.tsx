@@ -262,7 +262,17 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
   }, [isEditMode, existingAppointment, open, clientName, clientEmail]);
 
   const handleSubmit = () => {
+    console.log('AppointmentModal handleSubmit called');
+    console.log('Current appointmentData:', appointmentData);
+    
     if (!appointmentData.calendarId || !appointmentData.title || !appointmentData.assignedTo || !appointmentData.date || !appointmentData.time) {
+      console.log('Validation failed:', {
+        calendarId: appointmentData.calendarId,
+        title: appointmentData.title,
+        assignedTo: appointmentData.assignedTo,
+        date: appointmentData.date,
+        time: appointmentData.time
+      });
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields (Calendar, Title, Team Member, Date, and Time).",
@@ -719,6 +729,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
               <Button
                 onClick={handleSubmit}
                 disabled={createAppointmentMutation.isPending}
+                data-testid="button-create-appointment"
               >
                 {createAppointmentMutation.isPending ? "Creating..." : "Create Appointment"}
               </Button>
