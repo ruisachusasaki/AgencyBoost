@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign } from "@shared/schema";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff } from "@shared/schema";
 
 interface TaskFormProps {
   task?: Task | null;
@@ -31,6 +31,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
+  });
+
+  const { data: staff = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
   });
 
   const form = useForm<InsertTask>({
@@ -198,9 +202,22 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <FormControl>
-                  <Input {...field} value={field.value || ""} placeholder="Team member name" />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team member" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                        {member.department && ` (${member.department})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
