@@ -141,9 +141,11 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
   });
 
   const onSubmit = (data: AppointmentFormData) => {
+    console.log("=== onSubmit function called ===");
     console.log("Form submitted with data:", data);
     console.log("Selected date:", selectedDate);
     console.log("Form errors:", form.formState.errors);
+    console.log("Form state:", form.formState);
     
     // Validate all required fields
     if (!data.calendarId) {
@@ -236,8 +238,10 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
         <Form {...form}>
           <form 
             onSubmit={(e) => {
-              console.log("Form onSubmit triggered");
+              console.log("=== Form onSubmit triggered ===");
+              console.log("Event:", e);
               e.preventDefault();
+              console.log("About to call form.handleSubmit with:", form.getValues());
               form.handleSubmit(onSubmit)(e);
             }} 
             className="space-y-4"
@@ -427,10 +431,23 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
                 type="submit" 
                 disabled={createAppointmentMutation.isPending}
                 onClick={(e) => {
-                  console.log("Book Appointment button clicked");
+                  console.log("=== Book Appointment button clicked ===");
                   console.log("Current form values:", form.getValues());
                   console.log("Form errors:", form.formState.errors);
-                  // Form submission will be handled by onSubmit
+                  console.log("Form is valid:", form.formState.isValid);
+                  console.log("Selected date:", selectedDate);
+                  console.log("Staff data:", staff);
+                  console.log("Calendars data:", calendars);
+                  
+                  // Force form validation
+                  form.trigger();
+                  
+                  // Check if form would submit
+                  if (form.formState.isValid) {
+                    console.log("Form is valid, should submit");
+                  } else {
+                    console.log("Form has validation errors, preventing submission");
+                  }
                 }}
               >
                 {createAppointmentMutation.isPending ? "Booking..." : "Book Appointment"}
