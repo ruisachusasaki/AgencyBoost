@@ -57,6 +57,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
       description: "",
       location: "",
       time: "",
+      date: undefined as any, // Will be set when date is selected
     },
   });
 
@@ -448,6 +449,13 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
                 type="submit" 
                 disabled={createAppointmentMutation.isPending}
                 data-testid="button-book"
+                onClick={(e) => {
+                  console.log("=== Book button clicked ===");
+                  console.log("Form values:", form.getValues());
+                  console.log("Selected date:", selectedDate);
+                  console.log("Form valid:", form.formState.isValid);
+                  console.log("Form errors:", form.formState.errors);
+                }}
               >
                 {createAppointmentMutation.isPending ? "Booking..." : "Book Appointment"}
               </Button>
