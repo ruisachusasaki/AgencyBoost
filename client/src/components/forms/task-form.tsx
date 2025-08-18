@@ -54,7 +54,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
-      await apiRequest("POST", "/api/tasks", data);
+      await apiRequest("/api/tasks", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -76,7 +76,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
-      await apiRequest("PUT", `/api/tasks/${task!.id}`, data);
+      await apiRequest(`/api/tasks/${task!.id}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
