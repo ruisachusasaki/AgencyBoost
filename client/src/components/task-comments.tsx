@@ -12,7 +12,11 @@ interface TaskComment {
   id: string;
   taskId: string;
   content: string;
-  author: string;
+  author: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
   createdAt: string;
   mentions: string[];
 }
@@ -40,10 +44,28 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
+      // Extract mentions from content
+      const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
+      const mentionedNames = [];
+      let match;
+      
+      while ((match = mentionRegex.exec(content)) !== null) {
+        mentionedNames.push(match[1]);
+      }
+      
+      // Find staff IDs for mentioned names
+      const mentions = mentionedNames.map(name => {
+        const staff = staffData.find(s => 
+          (s.name && s.name.toLowerCase() === name.toLowerCase()) ||
+          (`${s.firstName} ${s.lastName}`.toLowerCase().trim() === name.toLowerCase())
+        );
+        return staff?.id;
+      }).filter(Boolean);
+      
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, mentions }),
       });
       if (!response.ok) throw new Error('Failed to add comment');
       return response.json();
@@ -127,17 +149,21 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
     const parts = content.split(mentionRegex);
     
-    return parts.map((part, index) => {
-      if (index % 2 === 1) {
-        // This is a mentioned name
-        return (
-          <Badge key={index} variant="secondary" className="mx-1 bg-teal-100 text-teal-800">
-            @{part}
-          </Badge>
-        );
-      }
-      return part;
-    });
+    return (
+      <span>
+        {parts.map((part, index) => {
+          if (index % 2 === 1) {
+            // This is a mentioned name
+            return (
+              <Badge key={index} variant="secondary" className="mx-1 bg-teal-100 text-teal-800">
+                @{part}
+              </Badge>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </span>
+    );
   };
 
   const makeLinksClickable = (text: string) => {
@@ -184,7 +210,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-slate-900">{comment.author}</span>
+                      <span className="font-medium text-slate-900">
+                        {comment.author.firstName} {comment.author.lastName}
+                      </span>
                       <span className="text-xs text-slate-500">
                         {new Date(comment.createdAt).toLocaleString()}
                       </span>
