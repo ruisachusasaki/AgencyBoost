@@ -25,7 +25,7 @@ Bundle architecture preference: Collection-based bundles.
 - **Data Integrity**: System designed to ensure data consistency, standardizing on staff table IDs and resolving storage layer issues. All core entities (Projects, Leads, Tasks, Invoices, Social Media, Workflows, Tags, SMS Templates) are persisted in PostgreSQL.
 - **Unified Template System**: Email and SMS template systems are unified between Marketing and Client communication sections, using dynamic database-driven components.
 - **Lead Management Enhancement**: Includes a rebuilt leads page with proper layout and overflow controls, comprehensive staff assignment system, and enhanced lead card interactions. Staff profile images are displayed on lead cards with fallback to initials.
-- **Appointment Booking System**: Fully functional appointment booking for leads, integrated into the main calendar with visual differentiation and filtering capabilities for both lead and client appointments.
+- **Appointment Booking System**: Fully functional appointment booking for leads, integrated into the main calendar with visual differentiation, filtering capabilities, and complete CRUD operations for both lead and client appointments. Lead appointments display with purple badges and route to correct deletion endpoints.
 
 ## External Dependencies
 
