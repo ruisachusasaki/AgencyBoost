@@ -120,7 +120,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
   });
 
   // Fetch staff members
-  const { data: staff = [] } = useQuery({
+  const { data: staff = [], isLoading: isStaffLoading } = useQuery({
     queryKey: ['/api/staff'],
     queryFn: async () => {
       const response = await fetch('/api/staff');
@@ -128,6 +128,9 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       return response.json();
     }
   });
+
+  console.log('Staff data in AppointmentModal:', staff);
+  console.log('Staff loading:', isStaffLoading);
 
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
@@ -369,21 +372,29 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
           {/* Team Member */}
           <div className="space-y-2">
             <Label htmlFor="assignedTo" className="text-sm font-medium">Team Member *</Label>
-            <Select
-              value={appointmentData.assignedTo}
-              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, assignedTo: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select team member..." />
-              </SelectTrigger>
-              <SelectContent>
-                {staff.map((member: any) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.firstName} {member.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isStaffLoading ? (
+              <div>Loading team members...</div>
+            ) : (
+              <Select
+                value={appointmentData.assignedTo}
+                onValueChange={(value) => setAppointmentData(prev => ({ ...prev, assignedTo: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team member..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.length === 0 ? (
+                    <SelectItem value="" disabled>No team members found</SelectItem>
+                  ) : (
+                    staff.map((member: any) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
 
