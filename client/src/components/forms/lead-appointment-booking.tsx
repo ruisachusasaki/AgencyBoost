@@ -19,6 +19,7 @@ import { z } from "zod";
 
 interface LeadAppointmentBookingProps {
   leadId?: string;
+  editingAppointment?: any;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -36,7 +37,7 @@ const appointmentFormSchema = z.object({
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
 
-export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: LeadAppointmentBookingProps) {
+export default function LeadAppointmentBooking({ leadId, editingAppointment, onSuccess, onCancel }: LeadAppointmentBookingProps) {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -74,6 +75,26 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
   }, [selectedDate, form]);
 
+  // Populate form when editing appointment
+  useEffect(() => {
+    if (editingAppointment) {
+      const startTime = new Date(editingAppointment.startTime);
+      const timeString = startTime.toTimeString().slice(0, 5); // Format as HH:mm
+      
+      form.reset({
+        leadId: leadId || "",
+        calendarId: editingAppointment.calendarId || "",
+        assignedTo: editingAppointment.assignedTo || "",
+        title: editingAppointment.title || "",
+        description: editingAppointment.description || "",
+        location: editingAppointment.location || "",
+        time: timeString,
+        date: startTime,
+      });
+      setSelectedDate(startTime);
+    }
+  }, [editingAppointment, leadId, form]);
+
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
       // Validate time format
@@ -106,8 +127,12 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
         createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from auth
       };
 
-      const response = await fetch("/api/lead-appointments", {
-        method: "POST",
+      const isEditing = !!editingAppointment;
+      const url = isEditing ? `/api/lead-appointments/${editingAppointment.id}` : "/api/lead-appointments";
+      const method = isEditing ? "PATCH" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -126,7 +151,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
       queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments"] });
       toast({
         title: "Success",
-        description: "Appointment booked successfully!",
+        description: editingAppointment ? "Appointment updated successfully!" : "Appointment booked successfully!",
       });
       form.reset();
       setSelectedDate(undefined);
@@ -224,7 +249,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarIcon className="w-5 h-5" />
-          Book Appointment
+          {editingAppointment ? 'Edit Appointment' : 'Book Appointment'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -435,7 +460,10 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
                 disabled={createAppointmentMutation.isPending}
                 data-testid="button-book"
               >
-                {createAppointmentMutation.isPending ? "Booking..." : "Book Appointment"}
+                {createAppointmentMutation.isPending 
+                  ? (editingAppointment ? "Updating..." : "Booking...") 
+                  : (editingAppointment ? "Update Appointment" : "Book Appointment")
+                }
               </Button>
             </div>
           </form>

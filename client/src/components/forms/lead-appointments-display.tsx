@@ -1,11 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, User, Plus } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Plus, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import LeadAppointmentBooking from "./lead-appointment-booking";
+import { useToast } from "@/hooks/use-toast";
 
 interface LeadAppointmentsDisplayProps {
   leadId?: string;
@@ -26,13 +27,53 @@ interface LeadAppointmentData {
 
 export default function LeadAppointmentsDisplay({ leadId }: LeadAppointmentsDisplayProps) {
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<LeadAppointmentData | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: appointments = [], isLoading } = useQuery<LeadAppointmentData[]>({
     queryKey: ["/api/lead-appointments", leadId],
     queryFn: () => fetch(`/api/lead-appointments?leadId=${leadId}`).then(res => res.json()),
     enabled: !!leadId,
   });
+
+  // Delete appointment mutation
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const response = await fetch(`/api/lead-appointments/${appointmentId}`, { 
+        method: 'DELETE' 
+      });
+      if (!response.ok) throw new Error(`Failed to delete appointment: ${response.statusText}`);
+      return response.status === 204 ? null : await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lead-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments-with-leads"] });
+      toast({
+        title: "Appointment deleted",
+        description: "Appointment has been deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting appointment",
+        description: error.message || "Failed to delete appointment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handlers
+  const handleDeleteAppointment = (appointmentId: string, appointmentTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete the appointment "${appointmentTitle}"?`)) {
+      deleteAppointmentMutation.mutate(appointmentId);
+    }
+  };
+
+  const handleEditAppointment = (appointment: LeadAppointmentData) => {
+    setEditingAppointment(appointment);
+    setShowBookingForm(true);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -85,16 +126,24 @@ export default function LeadAppointmentsDisplay({ leadId }: LeadAppointmentsDisp
       {showBookingForm && (
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle className="text-base">Book New Appointment</CardTitle>
+            <CardTitle className="text-base">
+              {editingAppointment ? 'Edit Appointment' : 'Book New Appointment'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <LeadAppointmentBooking 
-              leadId={leadId} 
+              leadId={leadId}
+              editingAppointment={editingAppointment}
               onSuccess={() => {
                 setShowBookingForm(false);
+                setEditingAppointment(null);
                 // Invalidate both lead appointments and calendar appointments
                 queryClient.invalidateQueries({ queryKey: ["/api/lead-appointments"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments-with-leads"] });
+              }}
+              onCancel={() => {
+                setShowBookingForm(false);
+                setEditingAppointment(null);
               }}
             />
           </CardContent>
@@ -130,6 +179,27 @@ export default function LeadAppointmentsDisplay({ leadId }: LeadAppointmentsDisp
                     <Badge className={getStatusColor(appointment.status)} variant="secondary">
                       {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                     </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleEditAppointment(appointment)}
+                      data-testid={`button-edit-appointment-${appointment.id}`}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDeleteAppointment(appointment.id, appointment.title)}
+                      disabled={deleteAppointmentMutation.isPending}
+                      data-testid={`button-delete-appointment-${appointment.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
