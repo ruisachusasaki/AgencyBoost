@@ -76,9 +76,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
-      console.log("=== Mutation function called ===");
-      console.log("Received data:", data);
-      
       // Validate time format
       if (!data.time || !data.time.includes(':')) {
         throw new Error("Invalid time format");
@@ -109,9 +106,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
         createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from auth
       };
 
-      console.log("Prepared appointment data:", appointmentData);
-      console.log("Making API request to /api/lead-appointments");
-
       const response = await fetch("/api/lead-appointments", {
         method: "POST",
         headers: {
@@ -119,18 +113,13 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
         },
         body: JSON.stringify(appointmentData),
       });
-
-      console.log("API response status:", response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("API error response:", errorText);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
       
-      const result = await response.json();
-      console.log("API success response:", result);
-      return result;
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lead-appointments"] });
@@ -153,13 +142,8 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
   });
 
   const onSubmit = (data: AppointmentFormData) => {
-    console.log("=== Form submission started ===");
-    console.log("Form data:", data);
-    console.log("Selected date:", selectedDate);
-    
     // Validate all required fields
     if (!data.calendarId) {
-      console.log("Validation failed: No calendar selected");
       toast({
         title: "Error",
         description: "Please select a calendar",
@@ -169,7 +153,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!data.assignedTo) {
-      console.log("Validation failed: No team member selected");
       toast({
         title: "Error",
         description: "Please select a team member",
@@ -179,7 +162,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!data.title?.trim()) {
-      console.log("Validation failed: No title entered");
       toast({
         title: "Error", 
         description: "Please enter a meeting title",
@@ -189,7 +171,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!data.time || !data.time.includes(':')) {
-      console.log("Validation failed: No time selected");
       toast({
         title: "Error",
         description: "Please select a time",
@@ -199,7 +180,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
     }
     
     if (!selectedDate) {
-      console.log("Validation failed: No date selected");
       toast({
         title: "Error",
         description: "Please select a date",
@@ -208,13 +188,11 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
       return;
     }
 
-    console.log("All validations passed, submitting...");
     const submissionData = {
       ...data,
       date: selectedDate,
     };
     
-    console.log("Final submission data:", submissionData);
     createAppointmentMutation.mutate(submissionData);
   };
 
@@ -250,14 +228,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Debug Panel */}
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
-          <h4 className="font-semibold mb-2">Debug Info:</h4>
-          <div>Selected Date: {selectedDate ? selectedDate.toDateString() : "None"}</div>
-          <div>Form Valid: {form.formState.isValid ? "Yes" : "No"}</div>
-          <div>Form Values: {JSON.stringify(form.getValues(), null, 2)}</div>
-          <div>Form Errors: {JSON.stringify(form.formState.errors, null, 2)}</div>
-        </div>
+
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -346,7 +317,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
                         mode="single"
                         selected={selectedDate}
                         onSelect={(date) => {
-                          console.log("Date selected:", date);
                           setSelectedDate(date);
                           setIsDatePickerOpen(false); // Close the popover
                           if (date) {
@@ -459,39 +429,11 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
               >
                 Cancel
               </Button>
-              <Button 
-                type="button" 
-                variant="secondary"
-                onClick={() => {
-                  console.log("=== Manual submit test ===");
-                  const formData = form.getValues();
-                  const testData = {
-                    ...formData,
-                    date: selectedDate,
-                  };
-                  console.log("Test data:", testData);
-                  if (selectedDate && formData.calendarId && formData.assignedTo && formData.title && formData.time) {
-                    console.log("All required fields present, calling mutation...");
-                    createAppointmentMutation.mutate(testData as AppointmentFormData);
-                  } else {
-                    console.log("Missing required fields");
-                  }
-                }}
-                data-testid="button-test"
-              >
-                Test Submit
-              </Button>
+
               <Button 
                 type="submit" 
                 disabled={createAppointmentMutation.isPending}
                 data-testid="button-book"
-                onClick={(e) => {
-                  console.log("=== Book button clicked ===");
-                  console.log("Form values:", form.getValues());
-                  console.log("Selected date:", selectedDate);
-                  console.log("Form valid:", form.formState.isValid);
-                  console.log("Form errors:", form.formState.errors);
-                }}
               >
                 {createAppointmentMutation.isPending ? "Booking..." : "Book Appointment"}
               </Button>
