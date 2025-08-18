@@ -33,6 +33,7 @@ type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
 
 export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: LeadAppointmentBookingProps) {
   const [selectedDate, setSelectedDate] = useState<Date>();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -213,6 +214,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
   const handleCancel = () => {
     form.reset();
     setSelectedDate(undefined);
+    setIsDatePickerOpen(false);
     onCancel?.();
   };
 
@@ -313,22 +315,34 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
                 {/* Date Selection */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select Date</label>
-                  <Popover>
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={`w-full justify-start text-left font-normal ${!selectedDate && "text-muted-foreground"}`}
+                        data-testid="button-date-picker"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                        onSelect={(date) => {
+                          console.log("Date selected:", date);
+                          setSelectedDate(date);
+                          setIsDatePickerOpen(false); // Close the popover
+                          if (date) {
+                            form.setValue('date', date);
+                          }
+                        }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date < today;
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
