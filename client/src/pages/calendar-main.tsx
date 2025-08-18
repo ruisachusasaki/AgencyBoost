@@ -140,8 +140,16 @@ export default function CalendarMain() {
     queryKey: ["/api/staff"],
   });
 
-  const { data: appointments = [], error: appointmentsError } = useQuery<Appointment[]>({
-    queryKey: ["/api/calendar-appointments"],
+  const { data: appointments = [], error: appointmentsError, refetch: refetchAppointments } = useQuery<Appointment[]>({
+    queryKey: ["/api/calendar-appointments-with-leads"],
+    queryFn: async () => {
+      console.log("CalendarMain: Fetching appointments with lead appointments included");
+      const response = await fetch("/api/calendar-appointments?includeLeadAppointments=true");
+      const data = await response.json();
+      console.log("CalendarMain: Fetched appointments count:", data.length);
+      return data;
+    },
+    staleTime: 0, // Always fetch fresh data
   });
 
   // Fetch clients for linking invitees to their profiles  
@@ -257,7 +265,8 @@ export default function CalendarMain() {
       return await apiRequest('PUT', `/api/calendar-appointments/${appointmentId}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+      refetchAppointments();
       toast({
         title: "Appointment updated",
         description: "Status updated successfully",
@@ -278,7 +287,8 @@ export default function CalendarMain() {
       return await apiRequest('DELETE', `/api/calendar-appointments/${appointmentId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+      refetchAppointments();
       toast({
         title: "Appointment deleted",
         description: "Appointment has been deleted successfully",
@@ -1380,7 +1390,8 @@ export default function CalendarMain() {
         clientName={editingAppointment?.bookerName || editingAppointment?.attendeeName}
         clientEmail={editingAppointment?.bookerEmail || editingAppointment?.attendeeEmail}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+          refetchAppointments();
         }}
       />
     </TooltipProvider>
