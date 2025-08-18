@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, AtSign, User } from "lucide-react";
+import { Send, AtSign, User, Reply } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TaskComment {
@@ -19,6 +19,8 @@ interface TaskComment {
   };
   createdAt: string;
   mentions: string[];
+  parentId?: string;
+  replies?: TaskComment[];
 }
 
 interface TaskCommentsProps {
@@ -30,6 +32,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -43,7 +47,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
       // Extract mentions from content
       const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
       const mentionedNames = [];
@@ -65,7 +69,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, mentions }),
+        body: JSON.stringify({ content, mentions, parentId }),
       });
       if (!response.ok) throw new Error('Failed to add comment');
       return response.json();
@@ -141,7 +145,14 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     e.preventDefault();
     if (!newComment.trim()) return;
     
-    addCommentMutation.mutate(newComment.trim());
+    addCommentMutation.mutate({ content: newComment.trim(), parentId: replyToId || undefined });
+  };
+
+  const handleReplySubmit = (commentId: string, content: string) => {
+    if (!content.trim()) return;
+    
+    addCommentMutation.mutate({ content: content.trim(), parentId: commentId });
+    setReplyInputs(prev => ({ ...prev, [commentId]: "" }));
   };
 
   const formatCommentContent = (content: string) => {
@@ -199,32 +210,120 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           </div>
         ) : (
           comments.map((comment) => (
-            <Card key={comment.id} className="border-l-4 border-l-teal-200">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      <User className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-slate-900">
-                        {comment.author.firstName} {comment.author.lastName}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(comment.createdAt).toLocaleString()}
-                      </span>
-                    </div>
+            <div key={comment.id} className="space-y-3">
+              <Card className="border-l-4 border-l-teal-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
                     
-                    <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                      {formatCommentContent(comment.content)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-slate-900">
+                          {comment.author.firstName} {comment.author.lastName}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {new Date(comment.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      
+                      <div className="text-sm text-slate-700 whitespace-pre-wrap mb-2">
+                        {formatCommentContent(comment.content)}
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setReplyInputs(prev => ({ 
+                            ...prev, 
+                            [comment.id]: prev[comment.id] || "" 
+                          }));
+                        }}
+                        className="text-xs text-slate-500 hover:text-slate-700 h-6 px-2"
+                      >
+                        <Reply className="h-3 w-3 mr-1" />
+                        Reply
+                      </Button>
+                      
+                      {/* Reply Input */}
+                      {replyInputs[comment.id] !== undefined && (
+                        <div className="mt-3 space-y-2">
+                          <Textarea
+                            placeholder="Write a reply..."
+                            value={replyInputs[comment.id]}
+                            onChange={(e) => setReplyInputs(prev => ({ 
+                              ...prev, 
+                              [comment.id]: e.target.value 
+                            }))}
+                            className="min-h-[60px] text-sm"
+                            rows={2}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleReplySubmit(comment.id, replyInputs[comment.id])}
+                              disabled={!replyInputs[comment.id]?.trim() || addCommentMutation.isPending}
+                            >
+                              <Send className="h-3 w-3 mr-1" />
+                              Reply
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setReplyInputs(prev => {
+                                const newInputs = { ...prev };
+                                delete newInputs[comment.id];
+                                return newInputs;
+                              })}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+              
+              {/* Nested Replies */}
+              {comment.replies && comment.replies.length > 0 && (
+                <div className="ml-8 space-y-2">
+                  {comment.replies.map((reply) => (
+                    <Card key={reply.id} className="border-l-4 border-l-blue-200 bg-slate-50">
+                      <CardContent className="p-3">
+                        <div className="flex items-start gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback>
+                              <User className="h-3 w-3" />
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-slate-900">
+                                {reply.author.firstName} {reply.author.lastName}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {new Date(reply.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                              {formatCommentContent(reply.content)}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           ))
         )}
       </div>

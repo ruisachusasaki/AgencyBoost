@@ -4867,11 +4867,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         global.taskComments = {};
       }
       
-      const comments = global.taskComments[taskId] || [];
+      const allComments = global.taskComments[taskId] || [];
       
       // Enrich comments with author information
       const enrichedComments = await Promise.all(
-        comments.map(async (comment: any) => {
+        allComments.map(async (comment: any) => {
           try {
             const authorData = await db.select().from(staff).where(eq(staff.id, comment.authorId)).limit(1);
             return {
@@ -4891,7 +4891,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      res.json(enrichedComments);
+      // Organize comments into threaded structure
+      const topLevelComments = enrichedComments.filter(comment => !comment.parentId);
+      const organizedComments = topLevelComments.map(comment => ({
+        ...comment,
+        replies: enrichedComments.filter(reply => reply.parentId === comment.id)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      }));
+      
+      res.json(organizedComments);
     } catch (error) {
       console.error("Error fetching task comments:", error);
       res.status(500).json({ error: "Failed to fetch comments" });
@@ -4931,6 +4939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorId: userId,
         author: author,
         mentions: mentions || [],
+        parentId: req.body.parentId || null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
