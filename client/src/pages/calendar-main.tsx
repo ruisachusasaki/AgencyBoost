@@ -153,6 +153,12 @@ export default function CalendarMain() {
       const response = await fetch("/api/calendar-appointments?includeLeadAppointments=true");
       const data = await response.json();
       console.log("CalendarMain: Fetched appointments count:", data.length);
+      console.log("CalendarMain: First 3 appointments:", data.slice(0, 3).map(apt => ({ 
+        id: apt.id, 
+        title: apt.title, 
+        type: apt.type, 
+        leadId: apt.leadId 
+      })));
       return data;
     },
     staleTime: 0, // Always fetch fresh data
