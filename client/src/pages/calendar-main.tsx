@@ -100,6 +100,11 @@ interface Appointment {
   // Legacy fields for compatibility
   attendeeEmail?: string;
   attendeeName?: string;
+  // Lead appointment fields
+  type?: 'calendar' | 'lead';
+  leadId?: string;
+  leadName?: string;
+  leadEmail?: string;
 }
 
 // Calendar view types
@@ -117,6 +122,7 @@ export default function CalendarMain() {
   const [userSearch, setUserSearch] = useState("");
   const [calendarSearch, setCalendarSearch] = useState("");
   const [sidebarTab, setSidebarTab] = useState("users");
+  const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'all' | 'lead' | 'client'>('all');
   
   // Appointments table state
   const [appointmentsTab, setAppointmentsTab] = useState<"upcoming" | "cancelled" | "all">("upcoming");
@@ -478,8 +484,17 @@ export default function CalendarMain() {
       });
     }
 
+    // Filter by appointment type (Lead vs Client)
+    if (appointmentTypeFilter !== 'all') {
+      if (appointmentTypeFilter === 'lead') {
+        filtered = filtered.filter(apt => apt.type === 'lead');
+      } else if (appointmentTypeFilter === 'client') {
+        filtered = filtered.filter(apt => apt.type === 'calendar');
+      }
+    }
+
     return filtered;
-  }, [appointments, appointmentsTab, statusFilter, calendarFilter, userFilter, clientFilter, sortField, sortDirection, calendars]);
+  }, [appointments, appointmentsTab, statusFilter, calendarFilter, userFilter, clientFilter, appointmentTypeFilter, sortField, sortDirection, calendars]);
 
   // Sort handler
   const handleSort = (field: string) => {
@@ -1105,6 +1120,17 @@ export default function CalendarMain() {
                   </SelectContent>
                 </Select>
 
+                <Select value={appointmentTypeFilter} onValueChange={setAppointmentTypeFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="lead">Lead</SelectItem>
+                    <SelectItem value="client">Client</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <Select value={calendarFilter} onValueChange={setCalendarFilter}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Calendar" />
@@ -1229,7 +1255,19 @@ export default function CalendarMain() {
                           <TableRow key={appointment.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                             <TableCell className="font-medium">
                               <div>
-                                <div className="font-semibold">{appointment.title}</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="font-semibold">{appointment.title}</div>
+                                  {appointment.type === 'lead' && (
+                                    <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
+                                      Lead
+                                    </Badge>
+                                  )}
+                                  {appointment.type === 'calendar' && (
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                                      Client
+                                    </Badge>
+                                  )}
+                                </div>
                                 {appointment.description && (
                                   <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
                                     {appointment.description}
@@ -1250,6 +1288,13 @@ export default function CalendarMain() {
                                           {appointment.bookerName || appointment.attendeeName || 'Unknown'}
                                         </div>
                                       </Link>
+                                    );
+                                  } else if (appointment.type === 'lead' && appointment.leadId) {
+                                    return (
+                                      <div className="font-medium text-purple-600 dark:text-purple-400">
+                                        {appointment.leadName || appointment.bookerName || appointment.attendeeName || 'Unknown'}
+                                        <span className="ml-2 text-xs text-gray-500">(Lead)</span>
+                                      </div>
                                     );
                                   } else {
                                     return (
