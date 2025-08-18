@@ -20,6 +20,7 @@ import { z } from "zod";
 interface LeadAppointmentBookingProps {
   leadId?: string;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 const appointmentFormSchema = insertLeadAppointmentSchema.extend({
@@ -30,18 +31,12 @@ const appointmentFormSchema = insertLeadAppointmentSchema.extend({
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
 
-export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppointmentBookingProps) {
+export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: LeadAppointmentBookingProps) {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  console.log("LeadAppointmentBooking component loaded with leadId:", leadId);
-  
-  // Add a simple test button to verify the component is working
-  const handleTestClick = () => {
-    console.log("Test button clicked in LeadAppointmentBooking");
-    alert("LeadAppointmentBooking component is working!");
-  };
+
 
   const { data: calendars = [] } = useQuery({
     queryKey: ["/api/calendars"],
@@ -73,8 +68,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: AppointmentFormData) => {
-      console.log("Mutation started with data:", data);
-      
       // Validate time format
       if (!data.time || !data.time.includes(':')) {
         throw new Error("Invalid time format");
@@ -92,8 +85,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       // Set end time to 1 hour later
       const endTime = new Date(startTime);
       endTime.setHours(endTime.getHours() + 1);
-      
-      console.log("Calculated times - Start:", startTime, "End:", endTime);
 
       const appointmentData: InsertLeadAppointment = {
         leadId: data.leadId,
@@ -141,12 +132,6 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
   });
 
   const onSubmit = (data: AppointmentFormData) => {
-    console.log("=== onSubmit function called ===");
-    console.log("Form submitted with data:", data);
-    console.log("Selected date:", selectedDate);
-    console.log("Form errors:", form.formState.errors);
-    console.log("Form state:", form.formState);
-    
     // Validate all required fields
     if (!data.calendarId) {
       toast({
@@ -198,8 +183,13 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       date: selectedDate,
     };
     
-    console.log("Submitting appointment data:", submissionData);
     createAppointmentMutation.mutate(submissionData);
+  };
+
+  const handleCancel = () => {
+    form.reset();
+    setSelectedDate(undefined);
+    onCancel?.();
   };
 
   // Generate time options (9 AM to 6 PM in 30-minute intervals)
@@ -227,25 +217,9 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 p-2 bg-gray-100 rounded">
-          <p className="text-sm">Debug Info:</p>
-          <p className="text-xs">Lead ID: {leadId}</p>
-          <p className="text-xs">Staff count: {(staff as any[]).length} | Loading: No</p>
-          <Button onClick={handleTestClick} variant="outline" size="sm">
-            Test Button
-          </Button>
-        </div>
+
         <Form {...form}>
-          <form 
-            onSubmit={(e) => {
-              console.log("=== Form onSubmit triggered ===");
-              console.log("Event:", e);
-              e.preventDefault();
-              console.log("About to call form.handleSubmit with:", form.getValues());
-              form.handleSubmit(onSubmit)(e);
-            }} 
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Step 1: Select Calendar */}
             <FormField
               control={form.control}
@@ -424,31 +398,18 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={onSuccess}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleCancel}
+                data-testid="button-cancel"
+              >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={createAppointmentMutation.isPending}
-                onClick={(e) => {
-                  console.log("=== Book Appointment button clicked ===");
-                  console.log("Current form values:", form.getValues());
-                  console.log("Form errors:", form.formState.errors);
-                  console.log("Form is valid:", form.formState.isValid);
-                  console.log("Selected date:", selectedDate);
-                  console.log("Staff data:", staff);
-                  console.log("Calendars data:", calendars);
-                  
-                  // Force form validation
-                  form.trigger();
-                  
-                  // Check if form would submit
-                  if (form.formState.isValid) {
-                    console.log("Form is valid, should submit");
-                  } else {
-                    console.log("Form has validation errors, preventing submission");
-                  }
-                }}
+                data-testid="button-book"
               >
                 {createAppointmentMutation.isPending ? "Booking..." : "Book Appointment"}
               </Button>
