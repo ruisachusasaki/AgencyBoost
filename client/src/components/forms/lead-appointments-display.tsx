@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ interface LeadAppointmentData {
 
 export default function LeadAppointmentsDisplay({ leadId }: LeadAppointmentsDisplayProps) {
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: appointments = [], isLoading } = useQuery<LeadAppointmentData[]>({
     queryKey: ["/api/lead-appointments", leadId],
@@ -91,6 +92,9 @@ export default function LeadAppointmentsDisplay({ leadId }: LeadAppointmentsDisp
               leadId={leadId} 
               onSuccess={() => {
                 setShowBookingForm(false);
+                // Invalidate both lead appointments and calendar appointments
+                queryClient.invalidateQueries({ queryKey: ["/api/lead-appointments"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments-with-leads"] });
               }}
             />
           </CardContent>

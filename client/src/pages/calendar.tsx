@@ -59,19 +59,20 @@ export default function Calendar() {
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
 
   // Fetch calendars for filter dropdown
-  const { data: calendars = [] } = useQuery({
+  const { data: calendars = [] } = useQuery<any[]>({
     queryKey: ["/api/calendars"],
   });
 
   // Fetch staff for filter dropdown
-  const { data: staff = [] } = useQuery({
+  const { data: staff = [] } = useQuery<any[]>({
     queryKey: ["/api/staff"],
   });
 
   // Fetch appointments including lead appointments
-  const { data: appointments = [] } = useQuery({
-    queryKey: ["/api/calendar-appointments", { includeLeadAppointments: true }],
+  const { data: appointments = [], refetch: refetchAppointments } = useQuery<AppointmentData[]>({
+    queryKey: ["/api/calendar-appointments-with-leads"],
     queryFn: () => fetch("/api/calendar-appointments?includeLeadAppointments=true").then(res => res.json()),
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const formatTime = (dateString: string) => {
@@ -222,7 +223,7 @@ export default function Calendar() {
 
           <TabsContent value="list" className="space-y-4">
             <div className="grid gap-4">
-              {appointments.map((appointment) => (
+              {appointments.map((appointment: AppointmentData) => (
                 <Card key={appointment.id} className="border-l-4 hover:shadow-md transition-shadow">
                   <div 
                     className="border-l-4 rounded-l-lg"
@@ -283,7 +284,7 @@ export default function Calendar() {
                               <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4" />
                                 <span>
-                                  {staff.find(s => s.id === appointment.assignedTo)?.firstName} {staff.find(s => s.id === appointment.assignedTo)?.lastName}
+                                  {staff.find((s: any) => s.id === appointment.assignedTo)?.firstName} {staff.find((s: any) => s.id === appointment.assignedTo)?.lastName}
                                 </span>
                               </div>
                             )}
@@ -345,6 +346,7 @@ export default function Calendar() {
           onOpenChange={setIsAppointmentModalOpen}
           onSuccess={() => {
             // Refetch appointments data when appointment is created
+            refetchAppointments();
             setIsAppointmentModalOpen(false);
           }}
         />
