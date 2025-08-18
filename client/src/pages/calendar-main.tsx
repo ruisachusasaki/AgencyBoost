@@ -289,8 +289,12 @@ export default function CalendarMain() {
 
   // Mutation for deleting appointment
   const deleteAppointmentMutation = useMutation({
-    mutationFn: async (appointmentId: string) => {
-      return await apiRequest('DELETE', `/api/calendar-appointments/${appointmentId}`);
+    mutationFn: async ({ appointmentId, appointmentType }: { appointmentId: string; appointmentType: 'calendar' | 'lead' }) => {
+      // Route to correct endpoint based on appointment type
+      const endpoint = appointmentType === 'lead' 
+        ? `/api/lead-appointments/${appointmentId}`
+        : `/api/calendar-appointments/${appointmentId}`;
+      return await apiRequest('DELETE', endpoint);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
@@ -315,9 +319,9 @@ export default function CalendarMain() {
   };
 
   // Handler for appointment deletion
-  const handleDeleteAppointment = (appointmentId: string, appointmentTitle: string) => {
+  const handleDeleteAppointment = (appointmentId: string, appointmentTitle: string, appointmentType: 'calendar' | 'lead' = 'calendar') => {
     if (window.confirm(`Are you sure you want to delete the appointment "${appointmentTitle}"?`)) {
-      deleteAppointmentMutation.mutate(appointmentId);
+      deleteAppointmentMutation.mutate({ appointmentId, appointmentType });
     }
   };
 
@@ -1398,7 +1402,7 @@ export default function CalendarMain() {
                                   size="sm"
                                   variant="ghost"
                                   className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => handleDeleteAppointment(appointment.id, appointment.title)}
+                                  onClick={() => handleDeleteAppointment(appointment.id, appointment.title, appointment.type || 'calendar')}
                                   disabled={deleteAppointmentMutation.isPending}
                                 >
                                   <Trash2 className="h-4 w-4" />
