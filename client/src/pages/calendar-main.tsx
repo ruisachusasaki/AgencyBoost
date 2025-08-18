@@ -164,7 +164,7 @@ export default function CalendarMain() {
   });
   
   // Extract clients array from response
-  const clients = clientsResponse?.clients || [];
+  const clients = (clientsResponse as any)?.clients || [];
 
   // Add error handling
   if (calendarsError || staffError || appointmentsError) {
@@ -294,6 +294,7 @@ export default function CalendarMain() {
       const endpoint = appointmentType === 'lead' 
         ? `/api/lead-appointments/${appointmentId}`
         : `/api/calendar-appointments/${appointmentId}`;
+      console.log('CalendarMain: Deleting appointment', { appointmentId, appointmentType, endpoint });
       return await apiRequest('DELETE', endpoint);
     },
     onSuccess: () => {
@@ -1124,7 +1125,7 @@ export default function CalendarMain() {
                   </SelectContent>
                 </Select>
 
-                <Select value={appointmentTypeFilter} onValueChange={setAppointmentTypeFilter}>
+                <Select value={appointmentTypeFilter} onValueChange={(value) => setAppointmentTypeFilter(value as 'all' | 'lead' | 'client')}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
