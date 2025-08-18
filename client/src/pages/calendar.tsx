@@ -70,9 +70,16 @@ export default function Calendar() {
 
   // Fetch appointments including lead appointments
   const { data: appointments = [], refetch: refetchAppointments } = useQuery<AppointmentData[]>({
-    queryKey: ["/api/calendar-appointments-with-leads"],
-    queryFn: () => fetch("/api/calendar-appointments?includeLeadAppointments=true").then(res => res.json()),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    queryKey: ["/api/calendar-appointments-with-leads", "v2"],
+    queryFn: async () => {
+      console.log("Fetching appointments with lead appointments included");
+      const response = await fetch("/api/calendar-appointments?includeLeadAppointments=true");
+      const data = await response.json();
+      console.log("Fetched appointments count:", data.length);
+      return data;
+    },
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
 
   const formatTime = (dateString: string) => {
