@@ -107,6 +107,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       projectId: data.projectId && data.projectId !== "none" ? data.projectId : null,
       campaignId: data.campaignId && data.campaignId !== "none" ? data.campaignId : null,
       assignedTo: data.assignedTo && data.assignedTo !== "unassigned" ? data.assignedTo : null,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
     };
 
     if (task) {
