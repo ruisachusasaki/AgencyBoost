@@ -25,65 +25,29 @@ import { AppointmentModal } from "@/components/AppointmentModal";
 interface AppointmentData {
   id: string;
   title: string;
-  clientName: string;
-  clientEmail?: string;
-  clientPhone?: string;
   startTime: string;
   endTime: string;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'no_show';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'no_show' | 'showed';
   location?: string;
-  staffName: string;
-  calendarName: string;
-  calendarColor: string;
+  bookerName?: string;
+  bookerEmail?: string;
+  bookerPhone?: string;
+  type?: 'calendar' | 'lead';
+  leadId?: string;
+  leadName?: string;
+  leadEmail?: string;
+  assignedTo?: string;
+  calendarId?: string;
 }
 
-const mockAppointments: AppointmentData[] = [
-  {
-    id: "1",
-    title: "Initial Consultation",
-    clientName: "John Smith",
-    clientEmail: "john@example.com",
-    clientPhone: "(555) 123-4567",
-    startTime: "2025-08-12T10:00:00Z",
-    endTime: "2025-08-12T11:00:00Z",
-    status: "confirmed",
-    location: "Conference Room A",
-    staffName: "Sarah Wilson",
-    calendarName: "Sales Consultations",
-    calendarColor: "#3b82f6"
-  },
-  {
-    id: "2",
-    title: "Strategy Review",
-    clientName: "ABC Corporation",
-    clientEmail: "contact@abc.com",
-    startTime: "2025-08-12T14:00:00Z",
-    endTime: "2025-08-12T15:30:00Z",
-    status: "confirmed",
-    staffName: "Mike Johnson",
-    calendarName: "Strategy Sessions",
-    calendarColor: "#10b981"
-  },
-  {
-    id: "3",
-    title: "Follow-up Call",
-    clientName: "Jane Doe",
-    clientEmail: "jane@example.com",
-    clientPhone: "(555) 987-6543",
-    startTime: "2025-08-13T09:00:00Z",
-    endTime: "2025-08-13T09:30:00Z",
-    status: "pending",
-    staffName: "Lisa Chen",
-    calendarName: "Follow-ups",
-    calendarColor: "#f59e0b"
-  }
-];
+
 
 const statusColors = {
   confirmed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
   cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   completed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  showed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
   no_show: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
 };
 
@@ -104,8 +68,11 @@ export default function Calendar() {
     queryKey: ["/api/staff"],
   });
 
-  // In a real implementation, this would fetch appointments based on filters
-  const appointments = mockAppointments;
+  // Fetch appointments including lead appointments
+  const { data: appointments = [] } = useQuery({
+    queryKey: ["/api/calendar-appointments", { includeLeadAppointments: true }],
+    queryFn: () => fetch("/api/calendar-appointments?includeLeadAppointments=true").then(res => res.json()),
+  });
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { 
@@ -259,7 +226,9 @@ export default function Calendar() {
                 <Card key={appointment.id} className="border-l-4 hover:shadow-md transition-shadow">
                   <div 
                     className="border-l-4 rounded-l-lg"
-                    style={{ borderLeftColor: appointment.calendarColor }}
+                    style={{ 
+                      borderLeftColor: appointment.type === 'lead' ? '#8b5cf6' : '#3b82f6'
+                    }}
                   />
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -277,18 +246,28 @@ export default function Calendar() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4" />
-                              <span>{appointment.clientName}</span>
+                              <span>
+                                {appointment.type === 'lead' 
+                                  ? (appointment.leadName || appointment.bookerName || 'Unknown Lead')
+                                  : (appointment.bookerName || 'Unknown Client')
+                                }
+                                {appointment.type === 'lead' && (
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    Lead
+                                  </Badge>
+                                )}
+                              </span>
                             </div>
-                            {appointment.clientEmail && (
+                            {(appointment.bookerEmail || appointment.leadEmail) && (
                               <div className="flex items-center gap-2">
                                 <Mail className="h-4 w-4" />
-                                <span>{appointment.clientEmail}</span>
+                                <span>{appointment.bookerEmail || appointment.leadEmail}</span>
                               </div>
                             )}
-                            {appointment.clientPhone && (
+                            {appointment.bookerPhone && (
                               <div className="flex items-center gap-2">
                                 <Phone className="h-4 w-4" />
-                                <span>{appointment.clientPhone}</span>
+                                <span>{appointment.bookerPhone}</span>
                               </div>
                             )}
                           </div>
@@ -300,10 +279,14 @@ export default function Calendar() {
                                 {formatDate(appointment.startTime)} • {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              <span>{appointment.staffName}</span>
-                            </div>
+                            {appointment.assignedTo && (
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                <span>
+                                  {staff.find(s => s.id === appointment.assignedTo)?.firstName} {staff.find(s => s.id === appointment.assignedTo)?.lastName}
+                                </span>
+                              </div>
+                            )}
                             {appointment.location && (
                               <div className="flex items-center gap-2">
                                 <MapPin className="h-4 w-4" />

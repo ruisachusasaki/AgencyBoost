@@ -23,7 +23,7 @@ import {
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments, customFieldFileUploads,
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions
 } from "@shared/schema";
@@ -5572,22 +5572,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get calendar appointments
-  app.get("/api/calendar-appointments", async (req, res) => {
+  // Get lead appointments
+  app.get("/api/lead-appointments", async (req, res) => {
     try {
-      const { calendarId, staffId, startDate, endDate } = req.query;
+      const { leadId } = req.query;
 
-      const appointments = await db
-        .select()
-        .from(calendarAppointments)
-        .where(
-          calendarId 
-            ? eq(calendarAppointments.calendarId, calendarId as string)
-            : sql`1=1`
-        )
-        .orderBy(asc(calendarAppointments.startTime));
+      let query = db
+        .select({
+          id: leadAppointments.id,
+          leadId: leadAppointments.leadId,
+          calendarId: leadAppointments.calendarId,
+          assignedTo: leadAppointments.assignedTo,
+          title: leadAppointments.title,
+          description: leadAppointments.description,
+          startTime: leadAppointments.startTime,
+          endTime: leadAppointments.endTime,
+          location: leadAppointments.location,
+          status: leadAppointments.status,
+          createdBy: leadAppointments.createdBy,
+          createdAt: leadAppointments.createdAt,
+          updatedAt: leadAppointments.updatedAt,
+          // Lead details
+          leadName: leads.name,
+          leadEmail: leads.email,
+          leadCompany: leads.company,
+          // Staff details
+          staffFirstName: staff.firstName,
+          staffLastName: staff.lastName,
+          staffEmail: staff.email,
+          // Calendar details
+          calendarName: calendars.name,
+        })
+        .from(leadAppointments)
+        .leftJoin(leads, eq(leadAppointments.leadId, leads.id))
+        .leftJoin(staff, eq(leadAppointments.assignedTo, staff.id))
+        .leftJoin(calendars, eq(leadAppointments.calendarId, calendars.id));
+
+      if (leadId) {
+        query = query.where(eq(leadAppointments.leadId, leadId as string));
+      }
+
+      const appointments = await query.orderBy(asc(leadAppointments.startTime));
 
       res.json(appointments);
+    } catch (error) {
+      console.error('Error fetching lead appointments:', error);
+      res.status(500).json({ message: "Failed to fetch lead appointments" });
+    }
+  });
+
+  // Get calendar appointments (modified to include lead appointments)
+  app.get("/api/calendar-appointments", async (req, res) => {
+    try {
+      const { calendarId, staffId, startDate, endDate, includeLeadAppointments } = req.query;
+
+      // Get regular calendar appointments
+      let calendarQuery = db
+        .select({
+          id: calendarAppointments.id,
+          calendarId: calendarAppointments.calendarId,
+          clientId: calendarAppointments.clientId,
+          assignedTo: calendarAppointments.assignedTo,
+          title: calendarAppointments.title,
+          description: calendarAppointments.description,
+          startTime: calendarAppointments.startTime,
+          endTime: calendarAppointments.endTime,
+          status: calendarAppointments.status,
+          location: calendarAppointments.location,
+          locationDetails: calendarAppointments.locationDetails,
+          meetingLink: calendarAppointments.meetingLink,
+          timezone: calendarAppointments.timezone,
+          bookerName: calendarAppointments.bookerName,
+          bookerEmail: calendarAppointments.bookerEmail,
+          bookerPhone: calendarAppointments.bookerPhone,
+          customFieldData: calendarAppointments.customFieldData,
+          externalEventId: calendarAppointments.externalEventId,
+          bookingSource: calendarAppointments.bookingSource,
+          cancelledAt: calendarAppointments.cancelledAt,
+          cancelledBy: calendarAppointments.cancelledBy,
+          cancellationReason: calendarAppointments.cancellationReason,
+          createdAt: calendarAppointments.createdAt,
+          updatedAt: calendarAppointments.updatedAt,
+          type: sql<string>`'calendar'`.as('type'),
+          leadId: sql<string>`null`.as('leadId'),
+          leadName: sql<string>`null`.as('leadName'),
+          leadEmail: sql<string>`null`.as('leadEmail'),
+        })
+        .from(calendarAppointments);
+
+      if (calendarId) {
+        calendarQuery = calendarQuery.where(eq(calendarAppointments.calendarId, calendarId as string));
+      }
+
+      const regularAppointments = await calendarQuery.orderBy(asc(calendarAppointments.startTime));
+
+      // Get lead appointments if requested
+      let allAppointments = regularAppointments;
+      
+      if (includeLeadAppointments === 'true') {
+        let leadQuery = db
+          .select({
+            id: leadAppointments.id,
+            calendarId: leadAppointments.calendarId,
+            clientId: sql<string>`null`.as('clientId'),
+            assignedTo: leadAppointments.assignedTo,
+            title: leadAppointments.title,
+            description: leadAppointments.description,
+            startTime: leadAppointments.startTime,
+            endTime: leadAppointments.endTime,
+            status: leadAppointments.status,
+            location: leadAppointments.location,
+            locationDetails: sql<string>`null`.as('locationDetails'),
+            meetingLink: sql<string>`null`.as('meetingLink'),
+            timezone: sql<string>`'America/New_York'`.as('timezone'),
+            bookerName: leads.name,
+            bookerEmail: leads.email,
+            bookerPhone: leads.phone,
+            customFieldData: sql<any>`null`.as('customFieldData'),
+            externalEventId: sql<string>`null`.as('externalEventId'),
+            bookingSource: sql<string>`'lead'`.as('bookingSource'),
+            cancelledAt: sql<any>`null`.as('cancelledAt'),
+            cancelledBy: sql<string>`null`.as('cancelledBy'),
+            cancellationReason: sql<string>`null`.as('cancellationReason'),
+            createdAt: leadAppointments.createdAt,
+            updatedAt: leadAppointments.updatedAt,
+            type: sql<string>`'lead'`.as('type'),
+            leadId: leadAppointments.leadId,
+            leadName: leads.name,
+            leadEmail: leads.email,
+          })
+          .from(leadAppointments)
+          .leftJoin(leads, eq(leadAppointments.leadId, leads.id));
+
+        if (calendarId) {
+          leadQuery = leadQuery.where(eq(leadAppointments.calendarId, calendarId as string));
+        }
+
+        const leadAppointmentsData = await leadQuery.orderBy(asc(leadAppointments.startTime));
+        
+        // Combine both types of appointments
+        allAppointments = [...regularAppointments, ...leadAppointmentsData];
+        
+        // Sort by start time
+        allAppointments.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      }
+
+      res.json(allAppointments);
     } catch (error) {
       console.error('Error fetching calendar appointments:', error);
       res.status(500).json({ message: "Failed to fetch appointments" });

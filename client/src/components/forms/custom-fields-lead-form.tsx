@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User } from "@shared/schema";
 import { ArrowRight, UserPlus, X, Trash2, User as UserIcon, Calendar, NotebookPen, CheckSquare } from "lucide-react";
 import LeadAppointmentBooking from "@/components/forms/lead-appointment-booking";
+import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
 import { z } from "zod";
 
@@ -594,21 +595,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
         </TabsContent>
 
         <TabsContent value="appointment" className="space-y-4 max-h-[50vh] overflow-y-auto">
-          <div className="p-4 border rounded mb-4">
-            <p>Debug Info:</p>
-            <p>Lead ID: {lead?.id || 'undefined'}</p>
-            <p>Lead Name: {lead?.name || 'undefined'}</p>
-            <Button onClick={() => {
-              console.log("Tab test button clicked - lead:", lead);
-              alert('Test button works!');
-            }}>Test Button</Button>
-          </div>
-          <LeadAppointmentBooking 
-            leadId={lead?.id} 
-            onSuccess={() => {
-              console.log("Appointment booking success callback triggered");
-            }}
-          />
+          <LeadAppointmentsDisplay leadId={lead?.id} />
         </TabsContent>
 
         <TabsContent value="notes" className="space-y-4 max-h-[50vh] overflow-y-auto">
