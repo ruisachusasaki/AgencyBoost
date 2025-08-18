@@ -25,6 +25,7 @@ interface LeadAppointmentBookingProps {
 const appointmentFormSchema = insertLeadAppointmentSchema.extend({
   date: z.date(),
   time: z.string().min(1, "Time is required"),
+  assignedTo: z.string().min(1, "Team member assignment is required"),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
@@ -46,11 +47,16 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
     queryKey: ["/api/calendars"],
   });
 
+  const { data: staff = [] } = useQuery({
+    queryKey: ["/api/staff"],
+  });
+
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
       leadId: leadId || "",
       calendarId: "",
+      assignedTo: "",
       title: "",
       description: "",
       location: "",
@@ -92,6 +98,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       const appointmentData: InsertLeadAppointment = {
         leadId: data.leadId,
         calendarId: data.calendarId,
+        assignedTo: data.assignedTo,
         title: data.title,
         description: data.description || undefined,
         location: data.location || undefined,
@@ -143,6 +150,15 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       toast({
         title: "Error",
         description: "Please select a calendar",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.assignedTo) {
+      toast({
+        title: "Error",
+        description: "Please select a team member",
         variant: "destructive",
       });
       return;
@@ -210,9 +226,11 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
       </CardHeader>
       <CardContent>
         <div className="mb-4 p-2 bg-gray-100 rounded">
-          <p className="text-sm">Component Test:</p>
+          <p className="text-sm">Debug Info:</p>
+          <p className="text-xs">Lead ID: {leadId}</p>
+          <p className="text-xs">Staff count: {(staff as any[]).length} | Loading: No</p>
           <Button onClick={handleTestClick} variant="outline" size="sm">
-            Test Component
+            Test Button
           </Button>
         </div>
         <Form {...form}>
@@ -244,6 +262,35 @@ export default function LeadAppointmentBooking({ leadId, onSuccess }: LeadAppoin
                       {(calendars as any[]).map((calendar: any) => (
                         <SelectItem key={calendar.id} value={calendar.id}>
                           {calendar.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Step 1.5: Assign Team Member */}
+            <FormField
+              control={form.control}
+              name="assignedTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    Team Member *
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select team member" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {(staff as any[]).map((member: any) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.firstName} {member.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>
