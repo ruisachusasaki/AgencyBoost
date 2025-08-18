@@ -4372,6 +4372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: leadAppointments.id,
         leadId: leadAppointments.leadId,
         calendarId: leadAppointments.calendarId,
+        assignedTo: leadAppointments.assignedTo,
         title: leadAppointments.title,
         description: leadAppointments.description,
         startTime: leadAppointments.startTime,

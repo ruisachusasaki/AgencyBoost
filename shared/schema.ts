@@ -1538,6 +1538,7 @@ export const leadAppointments = pgTable("lead_appointments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
   calendarId: varchar("calendar_id").notNull().references(() => calendars.id),
+  assignedTo: uuid("assigned_to").notNull().references(() => staff.id),
   title: text("title").notNull(),
   description: text("description"),
   startTime: timestamp("start_time").notNull(),
