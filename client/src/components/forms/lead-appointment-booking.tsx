@@ -23,10 +23,15 @@ interface LeadAppointmentBookingProps {
   onCancel?: () => void;
 }
 
-const appointmentFormSchema = insertLeadAppointmentSchema.extend({
+const appointmentFormSchema = z.object({
+  leadId: z.string().min(1, "Lead ID is required"),
+  calendarId: z.string().min(1, "Calendar selection is required"),
+  assignedTo: z.string().min(1, "Team member assignment is required"),
+  title: z.string().min(1, "Meeting title is required"),
+  description: z.string().optional(),
+  location: z.string().optional(),
   date: z.date(),
   time: z.string().min(1, "Time is required"),
-  assignedTo: z.string().min(1, "Team member assignment is required"),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
@@ -59,6 +64,7 @@ export default function LeadAppointmentBooking({ leadId, onSuccess, onCancel }: 
       time: "",
       date: undefined as any, // Will be set when date is selected
     },
+    mode: "onChange", // Enable real-time validation
   });
 
   // Update form date when selectedDate changes
