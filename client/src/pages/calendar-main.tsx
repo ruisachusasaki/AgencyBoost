@@ -321,7 +321,9 @@ export default function CalendarMain() {
 
   // Handler for appointment deletion
   const handleDeleteAppointment = (appointmentId: string, appointmentTitle: string, appointmentType: 'calendar' | 'lead' = 'calendar') => {
+    console.log('CalendarMain: Delete button clicked', { appointmentId, appointmentTitle, appointmentType });
     if (window.confirm(`Are you sure you want to delete the appointment "${appointmentTitle}"?`)) {
+      console.log('CalendarMain: Delete confirmed, sending mutation');
       deleteAppointmentMutation.mutate({ appointmentId, appointmentType });
     }
   };
