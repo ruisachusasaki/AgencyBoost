@@ -18,6 +18,8 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
   const [slashFilter, setSlashFilter] = useState('');
+  const [useWysiwyg, setUseWysiwyg] = useState(true);
+  const wysiwygRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Configure display limits
@@ -46,43 +48,149 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     setIsEditing(false);
   };
 
-  // Formatting functions
-  const insertAtCursor = (before: string, after: string = '') => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  // Convert markdown to HTML for WYSIWYG display
+  const markdownToHtml = (text: string) => {
+    return text
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2 text-slate-800">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-2 text-slate-800">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-3 text-slate-800">$1</h1>')
+      .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+      .replace(/^- \[ \] (.*)$/gim, '<div class="flex items-center gap-2 my-1"><input type="checkbox" class="rounded border-slate-300" disabled><span>$1</span></div>')
+      .replace(/^- \[x\] (.*)$/gim, '<div class="flex items-center gap-2 my-1"><input type="checkbox" class="rounded border-slate-300" checked disabled><span class="line-through text-slate-500">$1</span></div>')
+      .replace(/^- (.*)$/gim, '<div class="flex items-start gap-2 my-1"><span class="text-slate-400 mt-1">•</span><span>$1</span></div>')
+      .replace(/^---$/gim, '<hr class="my-4 border-slate-200">')
+      .replace(/\n/g, '<br>');
+  };
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = editValue.substring(start, end);
-    const newText = editValue.substring(0, start) + before + selectedText + after + editValue.substring(end);
-    
-    setEditValue(newText);
-    
-    // Reset cursor position after state update
-    setTimeout(() => {
-      const newCursorPos = start + before.length + selectedText.length + after.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-      textarea.focus();
-    }, 0);
+  // Convert HTML back to markdown
+  const htmlToMarkdown = (html: string) => {
+    return html
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]*>/g, ''); // Remove remaining HTML tags
+  };
+
+  // Formatting functions for WYSIWYG mode
+  const insertAtCursor = (before: string, after: string = '') => {
+    if (useWysiwyg && wysiwygRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const selectedText = range.toString();
+        
+        range.deleteContents();
+        const textNode = document.createTextNode(before + selectedText + after);
+        range.insertNode(textNode);
+        
+        // Update the edit value
+        const newContent = wysiwygRef.current.textContent || '';
+        setEditValue(newContent);
+      }
+    } else {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = editValue.substring(start, end);
+      const newText = editValue.substring(0, start) + before + selectedText + after + editValue.substring(end);
+      
+      setEditValue(newText);
+      
+      // Reset cursor position after state update
+      setTimeout(() => {
+        const newCursorPos = start + before.length + selectedText.length + after.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }, 0);
+    }
   };
 
   const insertAtLineStart = (prefix: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (useWysiwyg && wysiwygRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const textContent = wysiwygRef.current.textContent || '';
+        
+        // Find the start of the current line
+        const beforeCursor = textContent.substring(0, range.startOffset);
+        const lastNewline = beforeCursor.lastIndexOf('\n');
+        const lineStart = lastNewline + 1;
+        
+        // Insert prefix at line start
+        const newText = textContent.substring(0, lineStart) + prefix + textContent.substring(lineStart);
+        setEditValue(newText);
+        
+        // Update the content and set cursor position
+        wysiwygRef.current.innerHTML = markdownToHtml(newText);
+        const newCursorPos = lineStart + prefix.length + (range.startOffset - lineStart);
+        setTimeout(() => {
+          if (wysiwygRef.current) {
+            const textNodes = getTextNodes(wysiwygRef.current);
+            setCaretPosition(textNodes, newCursorPos);
+          }
+        }, 0);
+      }
+    } else {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
 
-    const start = textarea.selectionStart;
-    const lines = editValue.split('\n');
-    const currentLineIndex = editValue.substring(0, start).split('\n').length - 1;
+      const start = textarea.selectionStart;
+      const lines = editValue.split('\n');
+      const currentLineIndex = editValue.substring(0, start).split('\n').length - 1;
+      
+      lines[currentLineIndex] = prefix + lines[currentLineIndex];
+      const newText = lines.join('\n');
+      setEditValue(newText);
+      
+      setTimeout(() => {
+        const newCursorPos = start + prefix.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }, 0);
+    }
+  };
+
+  // Helper functions for WYSIWYG cursor management
+  const getTextNodes = (element: Node): Text[] => {
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+    );
     
-    lines[currentLineIndex] = prefix + lines[currentLineIndex];
-    const newText = lines.join('\n');
-    setEditValue(newText);
+    let node;
+    while (node = walker.nextNode()) {
+      textNodes.push(node as Text);
+    }
+    return textNodes;
+  };
+
+  const setCaretPosition = (textNodes: Text[], targetOffset: number) => {
+    let currentOffset = 0;
     
-    setTimeout(() => {
-      const newCursorPos = start + prefix.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-      textarea.focus();
-    }, 0);
+    for (const textNode of textNodes) {
+      const nodeLength = textNode.textContent?.length || 0;
+      
+      if (currentOffset + nodeLength >= targetOffset) {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        
+        range.setStart(textNode, targetOffset - currentOffset);
+        range.collapse(true);
+        
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        break;
+      }
+      
+      currentOffset += nodeLength;
+    }
   };
 
   // Slash command menu options
@@ -173,6 +281,41 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     } else {
       setShowSlashMenu(false);
       setSlashFilter('');
+    }
+  };
+
+  // Handle WYSIWYG content changes
+  const handleWysiwygInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const content = e.currentTarget.textContent || '';
+    setEditValue(content);
+    
+    // Check for slash commands
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const text = range.startContainer.textContent || '';
+      const cursorPos = range.startOffset;
+      
+      const textBeforeCursor = text.substring(0, cursorPos);
+      const slashMatch = textBeforeCursor.match(/\/(\w*)$/);
+      
+      if (slashMatch) {
+        const filter = slashMatch[1];
+        setSlashFilter(filter);
+        setShowSlashMenu(true);
+        
+        // Calculate position relative to the contentEditable element
+        const rect = range.getBoundingClientRect();
+        const containerRect = e.currentTarget.getBoundingClientRect();
+        
+        setSlashMenuPosition({
+          top: rect.bottom - containerRect.top + 5,
+          left: rect.left - containerRect.left
+        });
+      } else {
+        setShowSlashMenu(false);
+        setSlashFilter('');
+      }
     }
   };
 
@@ -410,15 +553,42 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
               >
                 <Minus className="h-4 w-4" />
               </Button>
+              
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setUseWysiwyg(!useWysiwyg)}
+                  className="h-8 px-2"
+                  title={useWysiwyg ? "Switch to Markdown" : "Switch to WYSIWYG"}
+                >
+                  {useWysiwyg ? "MD" : "📝"}
+                </Button>
+              </div>
             </div>
 
             <div className="relative">
-              <Textarea
-                ref={textareaRef}
-                value={editValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Add a description for this task...
+              {useWysiwyg ? (
+                <div
+                  ref={wysiwygRef}
+                  contentEditable
+                  onInput={handleWysiwygInput}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-[160px] p-3 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent prose prose-sm max-w-none"
+                  style={{ whiteSpace: 'pre-wrap' }}
+                  dangerouslySetInnerHTML={{ __html: markdownToHtml(editValue) }}
+                  data-testid="wysiwyg-description"
+                  suppressContentEditableWarning={true}
+                  data-placeholder={editValue ? "" : "Type / for commands, or just start typing..."}
+                />
+              ) : (
+                <Textarea
+                  ref={textareaRef}
+                  value={editValue}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Add a description for this task...
 
 🎯 SLASH COMMANDS - Type / to see menu:
 • /bold → **bold text**
@@ -428,13 +598,12 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
 • /divider → --- line
 
 ⌨️ KEYBOARD SHORTCUTS:
-• Ctrl+B for bold • Ctrl+1/2/3 for headers • Ctrl+L for bullets
-
-Click description text to edit, then try typing /bold and pressing Enter!"
-                className="min-h-[160px] resize-y font-mono text-sm"
-                autoFocus
-                data-testid="textarea-description"
-              />
+• Ctrl+B for bold • Ctrl+1/2/3 for headers • Ctrl+L for bullets"
+                  className="min-h-[160px] resize-y font-mono text-sm"
+                  autoFocus
+                  data-testid="textarea-description"
+                />
+              )}
               
               {/* Slash Command Menu */}
               {showSlashMenu && (
@@ -498,7 +667,7 @@ Click description text to edit, then try typing /bold and pressing Enter!"
               </div>
               
               <p className="text-xs text-slate-500">
-                Esc to cancel • Ctrl+Enter to save
+                {useWysiwyg ? "WYSIWYG mode • Type / for commands" : "Markdown mode"} • Esc to cancel • Ctrl+Enter to save
               </p>
             </div>
           </div>
