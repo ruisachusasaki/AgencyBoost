@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music } from "lucide-react";
+import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music, Mic, MicOff, Pause, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploader } from "./FileUploader";
 
@@ -53,6 +53,12 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<Array<{url: string, name: string, size: number, type: string}>>([]);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [commentReactions, setCommentReactions] = useState<Record<string, CommentReaction[]>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -115,7 +121,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, mentions, parentId }),
+        body: JSON.stringify({ content, mentions, parentId, fileUrls: pendingFiles }),
       });
       if (!response.ok) throw new Error('Failed to add comment');
       return response.json();
@@ -123,6 +129,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
       setNewComment("");
+      setPendingFiles([]);
+      setShowToolbar(false);
       toast({
         title: "Success",
         description: "Comment added successfully",
@@ -186,6 +194,114 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     staff.firstName?.toLowerCase().includes(mentionQuery.toLowerCase()) ||
     staff.lastName?.toLowerCase().includes(mentionQuery.toLowerCase())
   );
+
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      
+      setMediaRecorder(recorder);
+      setAudioChunks([]);
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          setAudioChunks(prev => [...prev, event.data]);
+        }
+      };
+      
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+      };
+      
+      recorder.start();
+      
+      // Start timer
+      const timer = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+      recorder.addEventListener('stop', () => {
+        clearInterval(timer);
+      });
+      
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast({ 
+        title: "Error", 
+        description: "Could not access microphone", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+    }
+  };
+
+  const handleRecordingComplete = async () => {
+    if (audioChunks.length > 0) {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const fileName = `voice-recording-${Date.now()}.webm`;
+      
+      try {
+        // Get upload URL
+        const uploadResponse = await fetch('/api/comments/upload-url');
+        const { uploadURL } = await uploadResponse.json();
+        
+        // Upload audio file
+        const uploadResult = await fetch(uploadURL, {
+          method: 'PUT',
+          body: audioBlob,
+          headers: {
+            'Content-Type': 'audio/webm',
+          },
+        });
+        
+        if (uploadResult.ok) {
+          // Add to pending files
+          setPendingFiles(prev => [...prev, {
+            url: uploadURL.split('?')[0], // Remove query parameters
+            name: fileName,
+            size: audioBlob.size,
+            type: 'audio/webm'
+          }]);
+          
+          toast({ 
+            title: "Voice recording saved", 
+            description: "Audio will be attached to your comment" 
+          });
+        }
+      } catch (error) {
+        console.error('Error uploading voice recording:', error);
+        toast({ 
+          title: "Error", 
+          description: "Failed to save voice recording", 
+          variant: "destructive" 
+        });
+      }
+      
+      setAudioChunks([]);
+      setRecordingTime(0);
+    }
+  };
+
+  useEffect(() => {
+    if (!isRecording && audioChunks.length > 0) {
+      handleRecordingComplete();
+    }
+  }, [isRecording, audioChunks]);
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,28 +436,45 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                             const isDocument = !isImage && !isAudio;
                             
                             return (
-                              <div key={file.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
-                                <div className="flex-shrink-0">
-                                  {isImage && <Image className="h-5 w-5 text-blue-600" />}
-                                  {isAudio && <Music className="h-5 w-5 text-green-600" />}
-                                  {isDocument && <FileText className="h-5 w-5 text-slate-600" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 truncate">
-                                    {file.fileName}
-                                  </p>
-                                  <p className="text-xs text-slate-500">
-                                    {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                                  </p>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => window.open(file.fileUrl, '_blank')}
-                                  className="flex-shrink-0"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
+                              <div key={file.id} className="mb-2">
+                                {isImage ? (
+                                  // Display image inline for JPG/PNG files
+                                  <div className="space-y-2">
+                                    <img 
+                                      src={file.fileUrl} 
+                                      alt={file.fileName}
+                                      className="max-w-full max-h-64 rounded-lg border shadow-sm cursor-pointer"
+                                      onClick={() => window.open(file.fileUrl, '_blank')}
+                                    />
+                                    <p className="text-xs text-slate-500">
+                                      {file.fileName} • {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                                    </p>
+                                  </div>
+                                ) : (
+                                  // Display file attachment for other file types
+                                  <div className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
+                                    <div className="flex-shrink-0">
+                                      {isAudio && <Music className="h-5 w-5 text-green-600" />}
+                                      {isDocument && <FileText className="h-5 w-5 text-slate-600" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-slate-900 truncate">
+                                        {file.fileName}
+                                      </p>
+                                      <p className="text-xs text-slate-500">
+                                        {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                                      </p>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => window.open(file.fileUrl, '_blank')}
+                                      className="flex-shrink-0"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -556,9 +689,66 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
             placeholder="Add a comment... Use @name to mention someone"
             value={newComment}
             onChange={(e) => handleTextChange(e.target.value)}
+            onFocus={() => setShowToolbar(true)}
             className="min-h-[80px] resize-none"
             rows={3}
           />
+          
+          {/* Comment Input Toolbar */}
+          {showToolbar && (
+            <div className="absolute bottom-2 left-2 flex items-center gap-2">
+              {/* File Upload */}
+              <FileUploader
+                onGetUploadParameters={async () => {
+                  const response = await fetch('/api/comments/upload-url');
+                  const { uploadURL } = await response.json();
+                  return { method: 'PUT', url: uploadURL };
+                }}
+                onComplete={(result) => {
+                  if (result.successful?.[0]?.uploadURL) {
+                    const file = result.successful[0].data;
+                    setPendingFiles(prev => [...prev, {
+                      url: result.successful[0].uploadURL,
+                      name: file.name,
+                      size: file.size,
+                      type: file.type
+                    }]);
+                    toast({ 
+                      title: "File uploaded successfully", 
+                      description: "File will be attached to your comment"
+                    });
+                  }
+                }}
+                maxFileSize={250 * 1024 * 1024} // 250MB
+                buttonClassName="h-8 w-8 p-0 bg-transparent hover:bg-slate-100 border-0 shadow-none"
+              >
+                <Paperclip className="h-4 w-4 text-slate-500" />
+              </FileUploader>
+              
+              {/* Voice Recording */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 bg-transparent hover:bg-slate-100"
+                onClick={isRecording ? stopRecording : startRecording}
+              >
+                {isRecording ? (
+                  <MicOff className="h-4 w-4 text-red-500" />
+                ) : (
+                  <Mic className="h-4 w-4 text-slate-500" />
+                )}
+              </Button>
+              
+              {/* Recording Time Display */}
+              {isRecording && (
+                <div className="flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  {formatRecordingTime(recordingTime)}
+                </div>
+              )}
+            </div>
+          )}
           
           {/* Mention Dropdown */}
           {showMentionDropdown && filteredStaff.length > 0 && (
@@ -578,37 +768,39 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           )}
         </div>
         
+        {/* Pending Files Display */}
+        {pendingFiles.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600">Files to be attached:</p>
+            {pendingFiles.map((file, index) => {
+              const isImage = file.type.startsWith('image/');
+              const isAudio = file.type.startsWith('audio/');
+              return (
+                <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-200">
+                  {isImage && <Image className="h-4 w-4 text-blue-600" />}
+                  {isAudio && <Music className="h-4 w-4 text-green-600" />}
+                  {!isImage && !isAudio && <FileText className="h-4 w-4 text-blue-600" />}
+                  <span className="text-sm text-blue-800">{file.name}</span>
+                  <span className="text-xs text-blue-600">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPendingFiles(prev => prev.filter((_, i) => i !== index))}
+                    className="ml-auto h-6 w-6 p-0 text-blue-600 hover:text-red-600"
+                  >
+                    ✕
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="text-xs text-slate-500">
-              Type @ to mention team members
-            </div>
-            <FileUploader
-              onGetUploadParameters={async () => {
-                const response = await fetch('/api/comments/upload-url');
-                const { uploadURL } = await response.json();
-                return { method: 'PUT', url: uploadURL };
-              }}
-              onComplete={(result) => {
-                if (result.successful?.[0]?.uploadURL) {
-                  toast({ 
-                    title: "File uploaded successfully", 
-                    description: "File will be attached to your comment when you send it"
-                  });
-                }
-              }}
-              maxFileSize={250 * 1024 * 1024} // 250MB
-              acceptedFileTypes={[
-                '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.rtf', '.pages', '.numbers',
-                '.jpeg', '.jpg', '.png', '.gif', '.tiff',
-                '.ppt', '.pptx', '.key',
-                '.mp3', '.wav', '.m4a', '.aac'
-              ]}
-              buttonClassName="h-8 px-3"
-            >
-              <Paperclip className="h-4 w-4 mr-1" />
-              {isUploading ? "Uploading..." : "Attach File"}
-            </FileUploader>
+          <div className="text-xs text-slate-500">
+            Type @ to mention team members
           </div>
           <Button 
             type="submit" 

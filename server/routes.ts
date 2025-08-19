@@ -4956,15 +4956,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { taskId } = req.params;
       
-      if (!global.taskComments) {
-        global.taskComments = {};
-      }
+      // Get comments from database
+      const commentsData = await db
+        .select()
+        .from(taskComments)
+        .where(eq(taskComments.taskId, taskId))
+        .orderBy(asc(taskComments.createdAt));
+
+      // Get files for all comments
+      const commentIds = commentsData.map(c => c.id);
+      const filesData = commentIds.length > 0 
+        ? await db
+            .select()
+            .from(commentFiles)
+            .where(inArray(commentFiles.commentId, commentIds))
+        : [];
+
+      // Group files by comment ID
+      const filesByComment = filesData.reduce((acc, file) => {
+        if (!acc[file.commentId]) acc[file.commentId] = [];
+        acc[file.commentId].push(file);
+        return acc;
+      }, {} as Record<string, any[]>);
       
-      const allComments = global.taskComments[taskId] || [];
-      
-      // Enrich comments with author information
+      // Enrich comments with author information and files
       const enrichedComments = await Promise.all(
-        allComments.map(async (comment: any) => {
+        commentsData.map(async (comment: any) => {
           try {
             const authorData = await db.select().from(staff).where(eq(staff.id, comment.authorId)).limit(1);
             return {
@@ -4973,12 +4990,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 firstName: authorData[0].firstName,
                 lastName: authorData[0].lastName,
                 email: authorData[0].email
-              } : { firstName: "Unknown", lastName: "User", email: "" }
+              } : { firstName: "Unknown", lastName: "User", email: "" },
+              files: filesByComment[comment.id] || []
             };
           } catch (error) {
             return {
               ...comment,
-              author: { firstName: "Unknown", lastName: "User", email: "" }
+              author: { firstName: "Unknown", lastName: "User", email: "" },
+              files: filesByComment[comment.id] || []
             };
           }
         })
@@ -5002,19 +5021,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks/:taskId/comments", async (req, res) => {
     try {
       const { taskId } = req.params;
-      const { content, mentions } = req.body;
+      const { content, mentions, fileUrls } = req.body;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
       if (!content?.trim()) {
         return res.status(400).json({ error: "Comment content is required" });
-      }
-
-      if (!global.taskComments) {
-        global.taskComments = {};
-      }
-      
-      if (!global.taskComments[taskId]) {
-        global.taskComments[taskId] = [];
       }
 
       // Get author information
@@ -5025,45 +5036,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: authorData[0].email
       } : { firstName: "Unknown", lastName: "User", email: "" };
 
-      const newComment = {
-        id: nanoid(),
+      // Create comment in database
+      const [newComment] = await db.insert(taskComments).values({
         taskId: taskId,
         content: content.trim(),
         authorId: userId,
-        author: author,
         mentions: mentions || [],
         parentId: req.body.parentId || null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      }).returning();
 
-      global.taskComments[taskId].push(newComment);
+      // Handle file attachments if provided
+      if (fileUrls && fileUrls.length > 0) {
+        const { ObjectStorageService } = await import("./objectStorage");
+        const objectStorageService = new ObjectStorageService();
+        
+        for (const fileData of fileUrls) {
+          try {
+            // Set ACL policy for the file
+            await objectStorageService.trySetObjectEntityAclPolicy(fileData.url, {
+              owner: userId,
+              visibility: "private"
+            });
+            
+            // Normalize the file URL
+            const normalizedUrl = objectStorageService.normalizeObjectEntityPath(fileData.url);
+            
+            // Create file record
+            await db.insert(commentFiles).values({
+              commentId: newComment.id,
+              fileName: fileData.name,
+              fileType: fileData.type,
+              fileSize: fileData.size,
+              fileUrl: normalizedUrl,
+              uploadedBy: userId,
+            });
+          } catch (error) {
+            console.error("Error processing file attachment:", error);
+          }
+        }
+      }
 
       // Create notifications for mentioned users
       if (mentions && mentions.length > 0) {
-        if (!global.notifications) {
-          global.notifications = {};
-        }
-        
         for (const mentionedUserId of mentions) {
-          if (!global.notifications[mentionedUserId]) {
-            global.notifications[mentionedUserId] = [];
-          }
-          
-          const notification = {
-            id: nanoid(),
-            type: 'mention',
-            title: 'You were mentioned in a task comment',
-            message: `${author.firstName} ${author.lastName} mentioned you in a comment`,
-            entityType: 'task',
-            entityId: taskId,
-            relatedId: newComment.id,
-            isRead: false,
-            createdAt: new Date(),
-            createdBy: userId
-          };
-          
-          global.notifications[mentionedUserId].push(notification);
+          // Add notification logic here if needed
         }
       }
 
@@ -5080,7 +5096,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
-      res.status(201).json(newComment);
+      // Return comment with author info
+      res.status(201).json({
+        ...newComment,
+        author
+      });
     } catch (error) {
       console.error("Error creating task comment:", error);
       res.status(500).json({ error: "Failed to create comment" });
