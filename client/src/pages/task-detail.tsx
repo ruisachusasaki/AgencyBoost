@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
@@ -593,24 +594,41 @@ export default function TaskDetail() {
             />
           )}
 
-          {/* Comments */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Comments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TaskComments taskId={task.id} />
-            </CardContent>
-          </Card>
+
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Activity Timeline */}
-          <TaskActivities taskId={task.id} />
+        {/* Sidebar - Tabbed Interface */}
+        <div className="w-full">
+          <Tabs defaultValue="comments" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="comments" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Comments
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Activity
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="comments" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Comments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TaskComments taskId={task.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="activity" className="mt-4">
+              <TaskActivities taskId={task.id} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
