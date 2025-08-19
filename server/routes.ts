@@ -987,13 +987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", async (req, res) => {
     try {
-      // Convert date strings to Date objects before validation
-      const processedBody = {
-        ...req.body,
-        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
-      };
-      
-      const validatedData = insertTaskSchema.parse(processedBody);
+      const validatedData = insertTaskSchema.parse(req.body);
       
       const [newTask] = await db.insert(tasks)
         .values(validatedData)
@@ -1011,13 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/tasks/:id", async (req, res) => {
     try {
-      // Convert date strings to Date objects before validation
-      const processedBody = {
-        ...req.body,
-        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
-      };
-      
-      const validatedData = insertTaskSchema.partial().parse(processedBody);
+      const validatedData = insertTaskSchema.partial().parse(req.body);
       
       const [updatedTask] = await db.update(tasks)
         .set(validatedData)

@@ -754,6 +754,17 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
   completedAt: true,
+}).extend({
+  startDate: z.union([z.string(), z.date(), z.null()]).optional().transform((val) => {
+    if (!val || val === '' || val === null) return null;
+    if (val instanceof Date) return val;
+    return new Date(val);
+  }),
+  dueDate: z.union([z.string(), z.date(), z.null()]).optional().transform((val) => {
+    if (!val || val === '' || val === null) return null;
+    if (val instanceof Date) return val;
+    return new Date(val);
+  }),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
