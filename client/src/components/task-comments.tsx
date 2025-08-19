@@ -559,15 +559,15 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                           
                           {/* Emoji Picker */}
                           {showEmojiPicker === comment.id && (
-                            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-10">
-                              <div className="grid grid-cols-4 gap-1">
+                            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-10 w-48">
+                              <div className="grid grid-cols-6 gap-2">
                                 {commonEmojis.map((emoji) => (
                                   <Button
                                     key={emoji}
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleEmojiReaction(comment.id, emoji)}
-                                    className="h-8 w-8 p-0 hover:bg-slate-100"
+                                    className="h-8 w-8 p-0 hover:bg-slate-100 text-lg flex items-center justify-center"
                                   >
                                     {emoji}
                                   </Button>
