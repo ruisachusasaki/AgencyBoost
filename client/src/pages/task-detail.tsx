@@ -115,8 +115,8 @@ export default function TaskDetail() {
     }
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "No due date";
+  const formatDate = (date: Date | null, type: 'start' | 'due') => {
+    if (!date) return type === 'start' ? "No start date" : "No due date";
     
     const taskDate = new Date(date);
     const today = new Date();
@@ -124,11 +124,17 @@ export default function TaskDetail() {
     const isTomorrow = taskDate.toDateString() === new Date(today.getTime() + 24 * 60 * 60 * 1000).toDateString();
     const isPast = taskDate < today && !isToday;
     
-    if (isToday) return "Due today";
-    if (isTomorrow) return "Due tomorrow";
-    if (isPast) return `Overdue (${taskDate.toLocaleDateString()})`;
-    
-    return `Due ${taskDate.toLocaleDateString()}`;
+    if (type === 'start') {
+      if (isToday) return "Starting today";
+      if (isTomorrow) return "Starting tomorrow";
+      if (isPast) return `Started ${taskDate.toLocaleDateString()}`;
+      return `Starts ${taskDate.toLocaleDateString()}`;
+    } else {
+      if (isToday) return "Due today";
+      if (isTomorrow) return "Due tomorrow";
+      if (isPast) return `Overdue (${taskDate.toLocaleDateString()})`;
+      return `Due ${taskDate.toLocaleDateString()}`;
+    }
   };
 
   const handleDeleteTask = () => {
@@ -259,18 +265,18 @@ export default function TaskDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {task.description && (
-                  <div>
-                    <h4 className="font-medium text-slate-900 mb-2">Description</h4>
-                    <p className="text-slate-600 whitespace-pre-wrap">{task.description}</p>
-                  </div>
-                )}
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {task.startDate && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm">{formatDate(task.startDate, 'start')}</span>
+                    </div>
+                  )}
+                  
                   {task.dueDate && (
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{formatDate(task.dueDate)}</span>
+                      <span className="text-sm">{formatDate(task.dueDate, 'due')}</span>
                     </div>
                   )}
                   
@@ -307,6 +313,21 @@ export default function TaskDetail() {
                     <span className="text-sm">Created {new Date(task.createdAt || '').toLocaleDateString()}</span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Task Description */}
+          {!isEditing && task.description && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600 whitespace-pre-wrap">{task.description}</p>
               </CardContent>
             </Card>
           )}

@@ -48,6 +48,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       clientId: task?.clientId || "",
       projectId: task?.projectId || "",
       campaignId: task?.campaignId || "",
+      startDate: task?.startDate ? new Date(task.startDate) : undefined,
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
     },
   });
@@ -220,6 +221,25 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Start Date</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    type="date"
+                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
