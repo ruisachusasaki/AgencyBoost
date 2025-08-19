@@ -635,9 +635,7 @@ export default function TaskDetail() {
             )}
             
             {activeTab === "activity" && (
-              <div className="-mx-6 -mt-6">
-                <TaskActivities taskId={task.id} />
-              </div>
+              <TaskActivities taskId={task.id} showCard={false} />
             )}
           </CardContent>
         </Card>

@@ -5,9 +5,10 @@ import { TaskActivity } from "@shared/schema";
 
 interface TaskActivitiesProps {
   taskId: string;
+  showCard?: boolean;
 }
 
-export default function TaskActivities({ taskId }: TaskActivitiesProps) {
+export default function TaskActivities({ taskId, showCard = true }: TaskActivitiesProps) {
   const { data: activities = [], isLoading } = useQuery<TaskActivity[]>({
     queryKey: ["/api/tasks", taskId, "activities"],
   });
@@ -150,7 +151,24 @@ export default function TaskActivities({ taskId }: TaskActivitiesProps) {
     }
   };
 
+  const loadingContent = (
+    <div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse flex-shrink-0"></div>
+          <div className="flex-1">
+            <div className="h-4 bg-slate-200 rounded animate-pulse mb-2"></div>
+            <div className="h-3 bg-slate-200 rounded animate-pulse w-1/3"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   if (isLoading) {
+    if (!showCard) {
+      return loadingContent;
+    }
     return (
       <Card>
         <CardHeader>
@@ -160,20 +178,33 @@ export default function TaskActivities({ taskId }: TaskActivitiesProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse flex-shrink-0"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-slate-200 rounded animate-pulse mb-2"></div>
-                  <div className="h-3 bg-slate-200 rounded animate-pulse w-1/3"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {loadingContent}
         </CardContent>
       </Card>
     );
+  }
+
+  const activityContent = activities.length === 0 ? (
+    <div className="text-center py-8">
+      <Activity className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+      <p className="text-slate-500">No activity yet</p>
+      <p className="text-xs text-slate-400 mt-1">Changes will appear here as you work</p>
+    </div>
+  ) : (
+    <div className="space-y-6">
+      {activities.map((activity) => (
+        <div key={activity.id} className="relative">
+          {formatActivityMessage(activity)}
+          {activity !== activities[activities.length - 1] && (
+            <div className="absolute left-4 top-8 bottom-0 w-px bg-slate-200"></div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  if (!showCard) {
+    return activityContent;
   }
 
   return (
@@ -185,24 +216,7 @@ export default function TaskActivities({ taskId }: TaskActivitiesProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {activities.length === 0 ? (
-          <div className="text-center py-8">
-            <Activity className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500">No activity yet</p>
-            <p className="text-xs text-slate-400 mt-1">Changes will appear here as you work</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {activities.map((activity) => (
-              <div key={activity.id} className="relative">
-                {formatActivityMessage(activity)}
-                {activity !== activities[activities.length - 1] && (
-                  <div className="absolute left-4 top-8 bottom-0 w-px bg-slate-200"></div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {activityContent}
       </CardContent>
     </Card>
   );
