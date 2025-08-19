@@ -611,27 +611,6 @@ export default function TaskDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <Clock className="h-4 w-4 mr-2" />
-                Set Reminder
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <User className="h-4 w-4 mr-2" />
-                Reassign Task
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Target className="h-4 w-4 mr-2" />
-                Change Priority
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* Activity Timeline */}
           <TaskActivities taskId={task.id} />
         </div>
