@@ -12,6 +12,7 @@ import {
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -24,7 +25,7 @@ import {
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, invoices,
+  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions
 } from "@shared/schema";
 import { z } from "zod";
@@ -6778,6 +6779,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating form submission:", error);
       res.status(500).json({ message: "Failed to submit form" });
+    }
+  });
+
+  // File upload routes for task comments
+  app.get("/api/comments/upload-url", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  // File download route for comment files
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(`/objects/${req.params.objectPath}`);
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Add file to comment after upload
+  app.post("/api/comments/:commentId/files", async (req, res) => {
+    try {
+      const { fileName, fileType, fileSize, fileUrl } = req.body;
+      const commentId = req.params.commentId;
+      const userId = req.session?.userId || "system"; // In real app, get from session
+      
+      // Validate file type
+      if (!validateFileType(fileName)) {
+        return res.status(400).json({ error: "File type not allowed" });
+      }
+      
+      if (isForbiddenFileType(fileName)) {
+        return res.status(400).json({ error: "Dangerous file type detected" });
+      }
+      
+      // Sanitize filename
+      const sanitizedFileName = sanitizeFileName(fileName);
+      
+      // Normalize the file URL
+      const objectStorageService = new ObjectStorageService();
+      const normalizedUrl = objectStorageService.normalizeObjectEntityPath(fileUrl);
+      
+      // Set ACL policy for the file
+      await objectStorageService.trySetObjectEntityAclPolicy(fileUrl, {
+        owner: userId,
+        visibility: "private"
+      });
+      
+      // Create file record
+      const [newFile] = await db.insert(commentFiles).values({
+        commentId,
+        fileName: sanitizedFileName,
+        fileType: fileType.toLowerCase(),
+        fileSize,
+        fileUrl: normalizedUrl,
+        uploadedBy: userId,
+      }).returning();
+
+      res.json(newFile);
+    } catch (error) {
+      console.error("Error adding file to comment:", error);
+      res.status(500).json({ error: "Failed to add file" });
     }
   });
 

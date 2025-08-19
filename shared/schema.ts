@@ -480,7 +480,7 @@ export const taskComments = pgTable("task_comments", {
   content: text("content").notNull(),
   authorId: varchar("author_id").notNull().references(() => users.id),
   mentions: text("mentions").array(), // Array of user IDs mentioned in the comment
-  parentId: varchar("parent_id").references(() => taskComments.id), // For threaded replies
+  parentId: varchar("parent_id"), // For threaded replies - will reference task_comments.id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -491,6 +491,18 @@ export const taskCommentReactions = pgTable("task_comment_reactions", {
   commentId: varchar("comment_id").notNull().references(() => taskComments.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   emoji: varchar("emoji").notNull(), // The emoji reaction (👍, ❤️, 😊, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// File uploads for comments
+export const commentFiles = pgTable("comment_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  commentId: varchar("comment_id").notNull().references(() => taskComments.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(), // pdf, doc, docx, jpg, png, etc.
+  fileSize: integer("file_size").notNull(),
+  fileUrl: text("file_url").notNull(), // Object storage URL
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -823,8 +835,31 @@ export const insertSocialMediaAnalyticsSchema = createInsertSchema(socialMediaAn
   createdAt: true,
 });
 
+// Insert schemas for task comments and file uploads
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskCommentReactionSchema = createInsertSchema(taskCommentReactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCommentFileSchema = createInsertSchema(commentFiles).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
+export type TaskComment = typeof taskComments.$inferSelect;
+export type TaskCommentReaction = typeof taskCommentReactions.$inferSelect;
+export type CommentFile = typeof commentFiles.$inferSelect;
+export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+export type InsertTaskCommentReaction = z.infer<typeof insertTaskCommentReactionSchema>;
+export type InsertCommentFile = z.infer<typeof insertCommentFileSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type CustomFieldFolder = typeof customFieldFolders.$inferSelect;
@@ -1493,24 +1528,6 @@ export const insertNotificationSettingsSchema = createInsertSchema(notificationS
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
-
-// Task Comment schema exports
-export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertTaskCommentReactionSchema = createInsertSchema(taskCommentReactions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type TaskComment = typeof taskComments.$inferSelect;
-export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
-
-export type TaskCommentReaction = typeof taskCommentReactions.$inferSelect;
-export type InsertTaskCommentReaction = z.infer<typeof insertTaskCommentReactionSchema>;
 
 // Calendar System Tables
 

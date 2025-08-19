@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, AtSign, User, Reply, Smile } from "lucide-react";
+import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FileUploader } from "./FileUploader";
 
 interface TaskComment {
   id: string;
@@ -22,6 +23,17 @@ interface TaskComment {
   mentions: string[];
   parentId?: string;
   replies?: TaskComment[];
+  files?: CommentFile[];
+}
+
+interface CommentFile {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  fileUrl: string;
+  uploadedBy: string;
+  createdAt: string;
 }
 
 interface CommentReaction {
@@ -43,6 +55,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [commentReactions, setCommentReactions] = useState<Record<string, CommentReaction[]>>({});
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -298,20 +311,57 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                         {formatCommentContent(comment.content)}
                       </div>
                       
+                      {/* Comment Files */}
+                      {comment.files && comment.files.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                          {comment.files.map((file) => {
+                            const isImage = file.fileType.startsWith('image/');
+                            const isAudio = file.fileType.startsWith('audio/');
+                            const isDocument = !isImage && !isAudio;
+                            
+                            return (
+                              <div key={file.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
+                                <div className="flex-shrink-0">
+                                  {isImage && <Image className="h-5 w-5 text-blue-600" />}
+                                  {isAudio && <Music className="h-5 w-5 text-green-600" />}
+                                  {isDocument && <FileText className="h-5 w-5 text-slate-600" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 truncate">
+                                    {file.fileName}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(file.fileUrl, '_blank')}
+                                  className="flex-shrink-0"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
                       {/* Comment Reactions */}
                       {commentReactions[comment.id]?.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
                           {commentReactions[comment.id].map((reaction) => (
                             <Button
                               key={reaction.emoji}
                               variant="outline"
                               size="sm"
-                              className="h-6 px-3 text-xs hover:bg-blue-50 border-blue-200 rounded-full flex items-center gap-1.5"
+                              className="h-7 px-2 text-xs hover:bg-blue-50 border-blue-200 rounded-full flex items-center gap-1 min-w-0"
                               onClick={() => handleEmojiReaction(comment.id, reaction.emoji)}
                               title={`${reaction.users.map(u => u.name).join(', ')}`}
                             >
-                              <span>{reaction.emoji}</span>
-                              <span className="text-xs font-medium">{reaction.count}</span>
+                              <span className="text-sm">{reaction.emoji}</span>
+                              <span className="text-xs font-medium ml-1">{reaction.count}</span>
                             </Button>
                           ))}
                         </div>
@@ -529,8 +579,36 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="text-xs text-slate-500">
-            Type @ to mention team members
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-slate-500">
+              Type @ to mention team members
+            </div>
+            <FileUploader
+              onGetUploadParameters={async () => {
+                const response = await fetch('/api/comments/upload-url');
+                const { uploadURL } = await response.json();
+                return { method: 'PUT', url: uploadURL };
+              }}
+              onComplete={(result) => {
+                if (result.successful?.[0]?.uploadURL) {
+                  toast({ 
+                    title: "File uploaded successfully", 
+                    description: "File will be attached to your comment when you send it"
+                  });
+                }
+              }}
+              maxFileSize={250 * 1024 * 1024} // 250MB
+              acceptedFileTypes={[
+                '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.rtf', '.pages', '.numbers',
+                '.jpeg', '.jpg', '.png', '.gif', '.tiff',
+                '.ppt', '.pptx', '.key',
+                '.mp3', '.wav', '.m4a', '.aac'
+              ]}
+              buttonClassName="h-8 px-3"
+            >
+              <Paperclip className="h-4 w-4 mr-1" />
+              {isUploading ? "Uploading..." : "Attach File"}
+            </FileUploader>
           </div>
           <Button 
             type="submit" 
