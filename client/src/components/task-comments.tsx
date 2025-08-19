@@ -438,7 +438,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                             return (
                               <div key={file.id} className="mb-2">
                                 {isImage ? (
-                                  // Display image inline for JPG/PNG files
+                                  // Display all image types inline (JPG, PNG, WebP, GIF, SVG, etc.)
                                   <div className="space-y-2">
                                     <img 
                                       src={file.fileUrl} 
