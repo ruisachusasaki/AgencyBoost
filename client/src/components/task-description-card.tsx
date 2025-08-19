@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp, Bold, List, ListChecks, Minus, Palette, Type } from "lucide-react";
 import { Task } from "@shared/schema";
 
 interface TaskDescriptionCardProps {
@@ -15,6 +15,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [editValue, setEditValue] = useState(task.description || "");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Configure display limits
   const COLLAPSED_HEIGHT = 120; // pixels
@@ -42,13 +43,86 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     setIsEditing(false);
   };
 
+  // Formatting functions
+  const insertAtCursor = (before: string, after: string = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = editValue.substring(start, end);
+    const newText = editValue.substring(0, start) + before + selectedText + after + editValue.substring(end);
+    
+    setEditValue(newText);
+    
+    // Reset cursor position after state update
+    setTimeout(() => {
+      const newCursorPos = start + before.length + selectedText.length + after.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.focus();
+    }, 0);
+  };
+
+  const insertAtLineStart = (prefix: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const lines = editValue.split('\n');
+    const currentLineIndex = editValue.substring(0, start).split('\n').length - 1;
+    
+    lines[currentLineIndex] = prefix + lines[currentLineIndex];
+    const newText = lines.join('\n');
+    setEditValue(newText);
+    
+    setTimeout(() => {
+      const newCursorPos = start + prefix.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.focus();
+    }, 0);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleCancel();
+      return;
     }
-    // Allow Ctrl/Cmd + Enter to save
+    
+    // Save with Ctrl/Cmd + Enter
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
       handleSave();
+      return;
+    }
+
+    // Formatting shortcuts
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          insertAtCursor('**', '**');
+          break;
+        case '1':
+          e.preventDefault();
+          insertAtLineStart('# ');
+          break;
+        case '2':
+          e.preventDefault();
+          insertAtLineStart('## ');
+          break;
+        case '3':
+          e.preventDefault();
+          insertAtLineStart('### ');
+          break;
+        case 'l':
+          e.preventDefault();
+          insertAtLineStart('- ');
+          break;
+        case 'shift+l':
+          e.preventDefault();
+          insertAtLineStart('- [ ] ');
+          break;
+      }
     }
   };
 
@@ -78,6 +152,61 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     return truncated;
   };
 
+  // Render formatted text (basic markdown-like rendering)
+  const renderFormattedText = (text: string) => {
+    return text
+      .split('\n')
+      .map((line, index) => {
+        // Headers
+        if (line.startsWith('### ')) {
+          return <h3 key={index} className="text-lg font-semibold mt-4 mb-2 text-slate-800">{line.substring(4)}</h3>;
+        }
+        if (line.startsWith('## ')) {
+          return <h2 key={index} className="text-xl font-semibold mt-4 mb-2 text-slate-800">{line.substring(3)}</h2>;
+        }
+        if (line.startsWith('# ')) {
+          return <h1 key={index} className="text-2xl font-bold mt-4 mb-3 text-slate-800">{line.substring(2)}</h1>;
+        }
+        
+        // Checklist items
+        if (line.startsWith('- [ ] ')) {
+          return (
+            <div key={index} className="flex items-center gap-2 my-1">
+              <input type="checkbox" className="rounded border-slate-300" disabled />
+              <span>{line.substring(6)}</span>
+            </div>
+          );
+        }
+        if (line.startsWith('- [x] ')) {
+          return (
+            <div key={index} className="flex items-center gap-2 my-1">
+              <input type="checkbox" className="rounded border-slate-300" checked disabled />
+              <span className="line-through text-slate-500">{line.substring(6)}</span>
+            </div>
+          );
+        }
+        
+        // Bullet points
+        if (line.startsWith('- ')) {
+          return <div key={index} className="flex items-start gap-2 my-1"><span className="text-slate-400 mt-1">•</span><span>{line.substring(2)}</span></div>;
+        }
+        
+        // Dividers
+        if (line.trim() === '---') {
+          return <hr key={index} className="my-4 border-slate-200" />;
+        }
+        
+        // Regular text with bold formatting
+        const boldFormatted = line.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
+        
+        return line.trim() ? (
+          <p key={index} className="mb-2" dangerouslySetInnerHTML={{ __html: boldFormatted }} />
+        ) : (
+          <br key={index} />
+        );
+      });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -102,50 +231,116 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
       <CardContent className="group">
         {isEditing ? (
           <div className="space-y-3">
+            {/* Formatting Toolbar */}
+            <div className="flex items-center gap-1 p-2 bg-slate-50 rounded-md border">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => insertAtCursor('**', '**')}
+                className="h-8 w-8 p-0"
+                title="Bold (Ctrl+B)"
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => insertAtLineStart('# ')}
+                className="h-8 w-8 p-0"
+                title="Header 1 (Ctrl+1)"
+              >
+                <Type className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => insertAtLineStart('- ')}
+                className="h-8 w-8 p-0"
+                title="Bullet List (Ctrl+L)"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => insertAtLineStart('- [ ] ')}
+                className="h-8 w-8 p-0"
+                title="Checklist"
+              >
+                <ListChecks className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => insertAtCursor('\n---\n')}
+                className="h-8 w-8 p-0"
+                title="Divider"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+            </div>
+
             <Textarea
+              ref={textareaRef}
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Add a description for this task..."
-              className="min-h-[120px] resize-y"
+              placeholder="Add a description for this task...
+
+Formatting shortcuts:
+• Ctrl+B for **bold**
+• Ctrl+1/2/3 for # headers
+• Ctrl+L for - bullet points
+• - [ ] for checklist items
+• --- for dividers"
+              className="min-h-[160px] resize-y font-mono text-sm"
               autoFocus
               data-testid="textarea-description"
             />
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving}
-                data-testid="button-save-description"
-              >
-                {isSaving ? (
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-                Save
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSaving}
-                data-testid="button-cancel-description"
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  data-testid="button-save-description"
+                >
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                  data-testid="button-cancel-description"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+              
+              <p className="text-xs text-slate-500">
+                Esc to cancel • Ctrl+Enter to save
+              </p>
             </div>
-            <p className="text-xs text-slate-500">
-              Press Escape to cancel • Ctrl/Cmd + Enter to save
-            </p>
           </div>
         ) : (
           <div className="space-y-3">
             {task.description ? (
               <>
                 <div
-                  className={`text-slate-600 whitespace-pre-wrap cursor-text hover:bg-slate-50 p-2 rounded transition-colors ${
+                  className={`text-slate-600 cursor-text hover:bg-slate-50 p-2 rounded transition-colors ${
                     needsExpansion && !isExpanded ? 'overflow-hidden' : ''
                   }`}
                   style={
@@ -156,7 +351,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                   onClick={() => setIsEditing(true)}
                   data-testid="text-description"
                 >
-                  {displayDescription()}
+                  {renderFormattedText(displayDescription())}
                 </div>
                 
                 {needsExpansion && (
