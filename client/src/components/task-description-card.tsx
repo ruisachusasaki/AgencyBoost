@@ -15,6 +15,9 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [editValue, setEditValue] = useState(task.description || "");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
+  const [slashFilter, setSlashFilter] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Configure display limits
@@ -82,7 +85,98 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     }, 0);
   };
 
+  // Slash command menu options
+  const slashCommands = [
+    { label: 'Bold Text', command: 'bold', action: () => insertAtCursor('**', '**'), icon: Bold },
+    { label: 'Header 1', command: 'h1', action: () => insertAtLineStart('# '), icon: Type },
+    { label: 'Header 2', command: 'h2', action: () => insertAtLineStart('## '), icon: Type },
+    { label: 'Header 3', command: 'h3', action: () => insertAtLineStart('### '), icon: Type },
+    { label: 'Bullet List', command: 'bullet', action: () => insertAtLineStart('- '), icon: List },
+    { label: 'Checklist', command: 'check', action: () => insertAtLineStart('- [ ] '), icon: ListChecks },
+    { label: 'Divider', command: 'divider', action: () => insertAtCursor('\n---\n'), icon: Minus },
+  ];
+
+  const filteredCommands = slashCommands.filter(cmd => 
+    cmd.command.toLowerCase().includes(slashFilter.toLowerCase()) ||
+    cmd.label.toLowerCase().includes(slashFilter.toLowerCase())
+  );
+
+  const handleSlashCommand = (command: typeof slashCommands[0]) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Remove the slash and filter text
+    const start = textarea.selectionStart;
+    const beforeSlash = editValue.substring(0, start - slashFilter.length - 1);
+    const afterCursor = editValue.substring(start);
+    
+    setEditValue(beforeSlash + afterCursor);
+    
+    setTimeout(() => {
+      textarea.setSelectionRange(beforeSlash.length, beforeSlash.length);
+      command.action();
+      setShowSlashMenu(false);
+      setSlashFilter('');
+    }, 0);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setEditValue(newValue);
+
+    // Check for slash commands
+    const textarea = e.target;
+    const cursorPosition = textarea.selectionStart;
+    const textBeforeCursor = newValue.substring(0, cursorPosition);
+    const lastLineStart = textBeforeCursor.lastIndexOf('\n') + 1;
+    const currentLine = textBeforeCursor.substring(lastLineStart);
+    
+    const slashMatch = currentLine.match(/\/(\w*)$/);
+    
+    if (slashMatch) {
+      const filter = slashMatch[1];
+      setSlashFilter(filter);
+      setShowSlashMenu(true);
+      
+      // Calculate menu position
+      const lines = textBeforeCursor.split('\n');
+      const currentLineIndex = lines.length - 1;
+      const approxLineHeight = 20;
+      const approxCharWidth = 8;
+      
+      setSlashMenuPosition({
+        top: (currentLineIndex + 1) * approxLineHeight + 20,
+        left: (currentLine.length - slashMatch[0].length) * approxCharWidth
+      });
+    } else {
+      setShowSlashMenu(false);
+      setSlashFilter('');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle slash menu navigation
+    if (showSlashMenu) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSlashMenu(false);
+        setSlashFilter('');
+        return;
+      }
+      
+      if (e.key === 'Enter' && filteredCommands.length > 0) {
+        e.preventDefault();
+        handleSlashCommand(filteredCommands[0]);
+        return;
+      }
+      
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        // Could implement arrow navigation here
+        return;
+      }
+    }
+
     if (e.key === 'Escape') {
       handleCancel();
       return;
@@ -168,20 +262,31 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
           return <h1 key={index} className="text-2xl font-bold mt-4 mb-3 text-slate-800">{line.substring(2)}</h1>;
         }
         
-        // Checklist items
-        if (line.startsWith('- [ ] ')) {
+        // Checklist items - make them interactive
+        if (line.startsWith('- [ ] ') || line.startsWith('- [x] ')) {
+          const isChecked = line.startsWith('- [x] ');
+          const taskText = line.substring(6);
+          
+          const toggleCheckbox = () => {
+            const newLine = isChecked ? `- [ ] ${taskText}` : `- [x] ${taskText}`;
+            const lines = (task.description || '').split('\n');
+            lines[index] = newLine;
+            const newDescription = lines.join('\n');
+            
+            onUpdate({ description: newDescription });
+          };
+          
           return (
             <div key={index} className="flex items-center gap-2 my-1">
-              <input type="checkbox" className="rounded border-slate-300" disabled />
-              <span>{line.substring(6)}</span>
-            </div>
-          );
-        }
-        if (line.startsWith('- [x] ')) {
-          return (
-            <div key={index} className="flex items-center gap-2 my-1">
-              <input type="checkbox" className="rounded border-slate-300" checked disabled />
-              <span className="line-through text-slate-500">{line.substring(6)}</span>
+              <input 
+                type="checkbox" 
+                className="rounded border-slate-300 cursor-pointer" 
+                checked={isChecked}
+                onChange={toggleCheckbox}
+              />
+              <span className={isChecked ? "line-through text-slate-500" : ""}>
+                {taskText}
+              </span>
             </div>
           );
         }
@@ -285,23 +390,56 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
               </Button>
             </div>
 
-            <Textarea
-              ref={textareaRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Add a description for this task...
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={editValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Add a description for this task...
 
-Formatting shortcuts:
-• Ctrl+B for **bold**
-• Ctrl+1/2/3 for # headers
-• Ctrl+L for - bullet points
-• - [ ] for checklist items
-• --- for dividers"
-              className="min-h-[160px] resize-y font-mono text-sm"
-              autoFocus
-              data-testid="textarea-description"
-            />
+Try typing / for formatting options:
+• /bold for **bold text**
+• /h1, /h2, /h3 for headers
+• /bullet for bullet points
+• /check for checklist items
+• /divider for horizontal lines
+
+Keyboard shortcuts:
+• Ctrl+B for bold • Ctrl+1/2/3 for headers • Ctrl+L for bullets"
+                className="min-h-[160px] resize-y font-mono text-sm"
+                autoFocus
+                data-testid="textarea-description"
+              />
+              
+              {/* Slash Command Menu */}
+              {showSlashMenu && (
+                <div 
+                  className="absolute bg-white border border-slate-200 rounded-md shadow-lg z-10 p-1 min-w-[200px]"
+                  style={{ top: slashMenuPosition.top, left: slashMenuPosition.left }}
+                >
+                  {filteredCommands.length > 0 ? (
+                    filteredCommands.map((cmd, idx) => (
+                      <button
+                        key={cmd.command}
+                        onClick={() => handleSlashCommand(cmd)}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-100 rounded text-sm"
+                      >
+                        <cmd.icon className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <div className="font-medium">{cmd.label}</div>
+                          <div className="text-xs text-slate-500">/{cmd.command}</div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-slate-500">
+                      No matching commands
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
