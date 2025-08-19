@@ -27,6 +27,7 @@ Bundle architecture preference: Collection-based bundles.
 - **Lead Management Enhancement**: Includes a rebuilt leads page with proper layout and overflow controls, comprehensive staff assignment system, and enhanced lead card interactions. Staff profile images are displayed on lead cards with fallback to initials.
 - **Appointment Booking System**: Fully functional appointment booking for leads, integrated into the main calendar with visual differentiation, filtering capabilities, and complete CRUD operations for both lead and client appointments. Lead appointments display with purple badges and route to correct deletion endpoints.
 - **Task Management System**: Complete task creation and management with staff assignment dropdown, proper date handling, and database schema fixes. Tasks can be assigned to any active staff member with department display, includes proper validation and error handling.
+- **Comments System with Threading**: Comprehensive commenting system with nested replies, @mention notifications, and threaded conversations. Comments support replies with visual differentiation, proper indentation, and maintain notification functionality for mentions in both top-level comments and replies.
 
 ## External Dependencies
 
