@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
+import TaskActivities from "@/components/task-activities";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -632,31 +633,7 @@ export default function TaskDetail() {
           </Card>
 
           {/* Activity Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 text-sm">
-                <div className="flex gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Task created</p>
-                    <p className="text-slate-500">{new Date(task.createdAt || '').toLocaleDateString()}</p>
-                  </div>
-                </div>
-                {task.updatedAt && task.updatedAt !== task.createdAt && (
-                  <div className="flex gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Task updated</p>
-                      <p className="text-slate-500">{new Date(task.updatedAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <TaskActivities taskId={task.id} />
         </div>
       </div>
     </div>

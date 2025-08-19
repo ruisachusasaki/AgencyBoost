@@ -484,6 +484,19 @@ export const taskComments = pgTable("task_comments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Task Activities for audit trail
+export const taskActivities = pgTable("task_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  actionType: varchar("action_type").notNull(), // 'status_change', 'date_change', 'assignee_change', 'time_tracking'
+  fieldName: varchar("field_name"), // 'status', 'startDate', 'dueDate', 'assignedTo', 'timeTracked'
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  userId: varchar("user_id"), // who made the change
+  userName: varchar("user_name"), // cached user name for display
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   invoiceNumber: text("invoice_number").notNull().unique(),
@@ -767,6 +780,11 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   }),
 });
 
+export const insertTaskActivitySchema = createInsertSchema(taskActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   id: true,
   createdAt: true,
@@ -852,6 +870,9 @@ export type InsertLead = z.infer<typeof insertLeadSchema>;
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+export type TaskActivity = typeof taskActivities.$inferSelect;
+export type InsertTaskActivity = z.infer<typeof insertTaskActivitySchema>;
 
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;

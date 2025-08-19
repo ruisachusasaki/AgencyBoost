@@ -6,7 +6,7 @@ import { Readable } from "stream";
 import { storage } from "./storage";
 import { 
   insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, 
-  insertTaskSchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
+  insertTaskSchema, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
@@ -24,7 +24,7 @@ import {
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, invoices,
+  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions
 } from "@shared/schema";
 import { z } from "zod";
@@ -1003,18 +1003,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to log task activities
+  const logTaskActivity = async (taskId: string, actionType: string, fieldName: string, oldValue: any, newValue: any, userId: string = 'system', userName: string = 'System') => {
+    try {
+      const formatValue = (value: any) => {
+        if (value === null || value === undefined) return null;
+        if (value instanceof Date) return value.toISOString();
+        if (typeof value === 'object') return JSON.stringify(value);
+        return String(value);
+      };
+
+      const activity = {
+        taskId,
+        actionType,
+        fieldName,
+        oldValue: formatValue(oldValue),
+        newValue: formatValue(newValue),
+        userId,
+        userName
+      };
+
+      await db.insert(taskActivities).values(activity);
+    } catch (error) {
+      console.error("Error logging task activity:", error);
+    }
+  };
+
   app.put("/api/tasks/:id", async (req, res) => {
     try {
+      // Get the current task data first
+      const [currentTask] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, req.params.id));
+      
+      if (!currentTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
       const validatedData = insertTaskSchema.partial().parse(req.body);
       
       const [updatedTask] = await db.update(tasks)
         .set(validatedData)
         .where(eq(tasks.id, req.params.id))
         .returning();
-      
-      if (!updatedTask) {
-        return res.status(404).json({ message: "Task not found" });
+
+      // Log activities for changed fields
+      const currentUser = 'current-user'; // Replace with actual user from session
+      const currentUserName = 'Current User'; // Replace with actual user name
+
+      // Check for status changes
+      if (validatedData.status && validatedData.status !== currentTask.status) {
+        await logTaskActivity(req.params.id, 'status_change', 'status', currentTask.status, validatedData.status, currentUser, currentUserName);
       }
+
+      // Check for assignee changes
+      if (validatedData.assignedTo !== undefined && validatedData.assignedTo !== currentTask.assignedTo) {
+        const getStaffName = async (staffId: string | null) => {
+          if (!staffId) return 'Unassigned';
+          const [staffMember] = await db.select().from(staff).where(eq(staff.id, staffId));
+          return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown User';
+        };
+
+        const oldAssigneeName = await getStaffName(currentTask.assignedTo);
+        const newAssigneeName = await getStaffName(validatedData.assignedTo);
+        
+        await logTaskActivity(req.params.id, 'assignee_change', 'assignedTo', oldAssigneeName, newAssigneeName, currentUser, currentUserName);
+      }
+
+      // Check for date changes
+      if (validatedData.startDate !== undefined) {
+        const oldDate = currentTask.startDate;
+        const newDate = validatedData.startDate;
+        if (JSON.stringify(oldDate) !== JSON.stringify(newDate)) {
+          await logTaskActivity(req.params.id, 'date_change', 'startDate', oldDate, newDate, currentUser, currentUserName);
+        }
+      }
+
+      if (validatedData.dueDate !== undefined) {
+        const oldDate = currentTask.dueDate;
+        const newDate = validatedData.dueDate;
+        if (JSON.stringify(oldDate) !== JSON.stringify(newDate)) {
+          await logTaskActivity(req.params.id, 'date_change', 'dueDate', oldDate, newDate, currentUser, currentUserName);
+        }
+      }
+
+      // Check for time tracking changes
+      if (validatedData.timeTracked !== undefined && validatedData.timeTracked !== currentTask.timeTracked) {
+        await logTaskActivity(req.params.id, 'time_tracking', 'timeTracked', currentTask.timeTracked, validatedData.timeTracked, currentUser, currentUserName);
+      }
+
+      if (validatedData.timeEntries !== undefined) {
+        const oldEntries = currentTask.timeEntries || [];
+        const newEntries = validatedData.timeEntries || [];
+        if (JSON.stringify(oldEntries) !== JSON.stringify(newEntries)) {
+          await logTaskActivity(req.params.id, 'time_tracking', 'timeEntries', 'Time entry updated', 'Time tracking session', currentUser, currentUserName);
+        }
+      }
+      
       res.json(updatedTask);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -1022,6 +1107,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.get("/api/tasks/:id/activities", async (req, res) => {
+    try {
+      const activities = await db.select()
+        .from(taskActivities)
+        .where(eq(taskActivities.taskId, req.params.id))
+        .orderBy(desc(taskActivities.createdAt));
+      
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching task activities:", error);
+      res.status(500).json({ message: "Failed to fetch task activities" });
     }
   });
 
