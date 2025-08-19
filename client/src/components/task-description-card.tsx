@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp, Bold, List, ListChecks, Minus, Palette, Type } from "lucide-react";
+import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Task } from "@shared/schema";
 
 interface TaskDescriptionCardProps {
@@ -15,12 +15,6 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [editValue, setEditValue] = useState(task.description || "");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
-  const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
-  const [slashFilter, setSlashFilter] = useState('');
-  const [useWysiwyg, setUseWysiwyg] = useState(true);
-  const wysiwygRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Configure display limits
   const COLLAPSED_HEIGHT = 120; // pixels
@@ -48,340 +42,13 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     setIsEditing(false);
   };
 
-  // Convert markdown to HTML for WYSIWYG display
-  const markdownToHtml = (text: string) => {
-    return text
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2 text-slate-800">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-2 text-slate-800">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-3 text-slate-800">$1</h1>')
-      .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold">$1</strong>')
-      .replace(/^- \[ \] (.*)$/gim, '<div class="flex items-center gap-2 my-1"><input type="checkbox" class="rounded border-slate-300" disabled><span>$1</span></div>')
-      .replace(/^- \[x\] (.*)$/gim, '<div class="flex items-center gap-2 my-1"><input type="checkbox" class="rounded border-slate-300" checked disabled><span class="line-through text-slate-500">$1</span></div>')
-      .replace(/^- (.*)$/gim, '<div class="flex items-start gap-2 my-1"><span class="text-slate-400 mt-1">•</span><span>$1</span></div>')
-      .replace(/^---$/gim, '<hr class="my-4 border-slate-200">')
-      .replace(/\n/g, '<br>');
-  };
-
-  // Convert HTML back to markdown
-  const htmlToMarkdown = (html: string) => {
-    return html
-      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1')
-      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1')
-      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1')
-      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]*>/g, ''); // Remove remaining HTML tags
-  };
-
-  // Formatting functions for WYSIWYG mode
-  const insertAtCursor = (before: string, after: string = '') => {
-    if (useWysiwyg && wysiwygRef.current) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const selectedText = range.toString();
-        
-        range.deleteContents();
-        const textNode = document.createTextNode(before + selectedText + after);
-        range.insertNode(textNode);
-        
-        // Update the edit value
-        const newContent = wysiwygRef.current.textContent || '';
-        setEditValue(newContent);
-      }
-    } else {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = editValue.substring(start, end);
-      const newText = editValue.substring(0, start) + before + selectedText + after + editValue.substring(end);
-      
-      setEditValue(newText);
-      
-      // Reset cursor position after state update
-      setTimeout(() => {
-        const newCursorPos = start + before.length + selectedText.length + after.length;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        textarea.focus();
-      }, 0);
-    }
-  };
-
-  const insertAtLineStart = (prefix: string) => {
-    if (useWysiwyg && wysiwygRef.current) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const textContent = wysiwygRef.current.textContent || '';
-        
-        // Find the start of the current line
-        const beforeCursor = textContent.substring(0, range.startOffset);
-        const lastNewline = beforeCursor.lastIndexOf('\n');
-        const lineStart = lastNewline + 1;
-        
-        // Insert prefix at line start
-        const newText = textContent.substring(0, lineStart) + prefix + textContent.substring(lineStart);
-        setEditValue(newText);
-        
-        // Update the content and set cursor position
-        wysiwygRef.current.innerHTML = markdownToHtml(newText);
-        const newCursorPos = lineStart + prefix.length + (range.startOffset - lineStart);
-        setTimeout(() => {
-          if (wysiwygRef.current) {
-            const textNodes = getTextNodes(wysiwygRef.current);
-            setCaretPosition(textNodes, newCursorPos);
-          }
-        }, 0);
-      }
-    } else {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const lines = editValue.split('\n');
-      const currentLineIndex = editValue.substring(0, start).split('\n').length - 1;
-      
-      lines[currentLineIndex] = prefix + lines[currentLineIndex];
-      const newText = lines.join('\n');
-      setEditValue(newText);
-      
-      setTimeout(() => {
-        const newCursorPos = start + prefix.length;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        textarea.focus();
-      }, 0);
-    }
-  };
-
-  // Helper functions for WYSIWYG cursor management
-  const getTextNodes = (element: Node): Text[] => {
-    const textNodes: Text[] = [];
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      null,
-    );
-    
-    let node;
-    while (node = walker.nextNode()) {
-      textNodes.push(node as Text);
-    }
-    return textNodes;
-  };
-
-  const setCaretPosition = (textNodes: Text[], targetOffset: number) => {
-    let currentOffset = 0;
-    
-    for (const textNode of textNodes) {
-      const nodeLength = textNode.textContent?.length || 0;
-      
-      if (currentOffset + nodeLength >= targetOffset) {
-        const range = document.createRange();
-        const selection = window.getSelection();
-        
-        range.setStart(textNode, targetOffset - currentOffset);
-        range.collapse(true);
-        
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-        break;
-      }
-      
-      currentOffset += nodeLength;
-    }
-  };
-
-  // Slash command menu options
-  const slashCommands = [
-    { label: 'Bold Text', command: 'bold', action: () => insertAtCursor('**', '**'), icon: Bold },
-    { label: 'Header 1', command: 'h1', action: () => insertAtLineStart('# '), icon: Type },
-    { label: 'Header 2', command: 'h2', action: () => insertAtLineStart('## '), icon: Type },
-    { label: 'Header 3', command: 'h3', action: () => insertAtLineStart('### '), icon: Type },
-    { label: 'Bullet List', command: 'bullet', action: () => insertAtLineStart('- '), icon: List },
-    { label: 'Checklist', command: 'check', action: () => insertAtLineStart('- [ ] '), icon: ListChecks },
-    { label: 'Divider', command: 'divider', action: () => insertAtCursor('\n---\n'), icon: Minus },
-  ];
-
-  const filteredCommands = slashCommands.filter(cmd => 
-    cmd.command.toLowerCase().includes(slashFilter.toLowerCase()) ||
-    cmd.label.toLowerCase().includes(slashFilter.toLowerCase())
-  );
-
-  const handleSlashCommand = (command: typeof slashCommands[0]) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Remove the slash and filter text
-    const start = textarea.selectionStart;
-    const beforeSlash = editValue.substring(0, start - slashFilter.length - 1);
-    const afterCursor = editValue.substring(start);
-    
-    // Update the text without the slash command
-    const newText = beforeSlash + afterCursor;
-    setEditValue(newText);
-    
-    // Hide menu first
-    setShowSlashMenu(false);
-    setSlashFilter('');
-    
-    // Apply the formatting after a brief delay
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.setSelectionRange(beforeSlash.length, beforeSlash.length);
-        textareaRef.current.focus();
-        
-        // Apply the specific command formatting
-        if (command.command === 'bold') {
-          const currentValue = textareaRef.current.value;
-          const cursorPos = textareaRef.current.selectionStart;
-          const newValue = currentValue.substring(0, cursorPos) + '****' + currentValue.substring(cursorPos);
-          setEditValue(newValue);
-          setTimeout(() => {
-            if (textareaRef.current) {
-              textareaRef.current.setSelectionRange(cursorPos + 2, cursorPos + 2);
-            }
-          }, 0);
-        } else {
-          command.action();
-        }
-      }
-    }, 50);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setEditValue(newValue);
-
-    // Check for slash commands
-    const textarea = e.target;
-    const cursorPosition = textarea.selectionStart;
-    const textBeforeCursor = newValue.substring(0, cursorPosition);
-    const lastLineStart = textBeforeCursor.lastIndexOf('\n') + 1;
-    const currentLine = textBeforeCursor.substring(lastLineStart);
-    
-    const slashMatch = currentLine.match(/\/(\w*)$/);
-    
-    if (slashMatch) {
-      const filter = slashMatch[1];
-      setSlashFilter(filter);
-      setShowSlashMenu(true);
-      
-      // Calculate menu position
-      const lines = textBeforeCursor.split('\n');
-      const currentLineIndex = lines.length - 1;
-      const approxLineHeight = 20;
-      const approxCharWidth = 8;
-      
-      setSlashMenuPosition({
-        top: (currentLineIndex + 1) * approxLineHeight + 20,
-        left: (currentLine.length - slashMatch[0].length) * approxCharWidth
-      });
-    } else {
-      setShowSlashMenu(false);
-      setSlashFilter('');
-    }
-  };
-
-  // Handle WYSIWYG content changes
-  const handleWysiwygInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const content = e.currentTarget.textContent || '';
-    setEditValue(content);
-    
-    // Check for slash commands
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const text = range.startContainer.textContent || '';
-      const cursorPos = range.startOffset;
-      
-      const textBeforeCursor = text.substring(0, cursorPos);
-      const slashMatch = textBeforeCursor.match(/\/(\w*)$/);
-      
-      if (slashMatch) {
-        const filter = slashMatch[1];
-        setSlashFilter(filter);
-        setShowSlashMenu(true);
-        
-        // Calculate position relative to the contentEditable element
-        const rect = range.getBoundingClientRect();
-        const containerRect = e.currentTarget.getBoundingClientRect();
-        
-        setSlashMenuPosition({
-          top: rect.bottom - containerRect.top + 5,
-          left: rect.left - containerRect.left
-        });
-      } else {
-        setShowSlashMenu(false);
-        setSlashFilter('');
-      }
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Handle slash menu navigation
-    if (showSlashMenu) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowSlashMenu(false);
-        setSlashFilter('');
-        return;
-      }
-      
-      if (e.key === 'Enter' && filteredCommands.length > 0) {
-        e.preventDefault();
-        handleSlashCommand(filteredCommands[0]);
-        return;
-      }
-      
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        // Could implement arrow navigation here
-        return;
-      }
-    }
-
     if (e.key === 'Escape') {
       handleCancel();
-      return;
     }
-    
-    // Save with Ctrl/Cmd + Enter
+    // Allow Ctrl/Cmd + Enter to save
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
       handleSave();
-      return;
-    }
-
-    // Formatting shortcuts
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'b':
-          e.preventDefault();
-          insertAtCursor('**', '**');
-          break;
-        case '1':
-          e.preventDefault();
-          insertAtLineStart('# ');
-          break;
-        case '2':
-          e.preventDefault();
-          insertAtLineStart('## ');
-          break;
-        case '3':
-          e.preventDefault();
-          insertAtLineStart('### ');
-          break;
-        case 'l':
-          e.preventDefault();
-          insertAtLineStart('- ');
-          break;
-        case 'shift+l':
-          e.preventDefault();
-          insertAtLineStart('- [ ] ');
-          break;
-      }
     }
   };
 
@@ -411,72 +78,6 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     return truncated;
   };
 
-  // Render formatted text (basic markdown-like rendering)
-  const renderFormattedText = (text: string) => {
-    return text
-      .split('\n')
-      .map((line, index) => {
-        // Headers
-        if (line.startsWith('### ')) {
-          return <h3 key={index} className="text-lg font-semibold mt-4 mb-2 text-slate-800">{line.substring(4)}</h3>;
-        }
-        if (line.startsWith('## ')) {
-          return <h2 key={index} className="text-xl font-semibold mt-4 mb-2 text-slate-800">{line.substring(3)}</h2>;
-        }
-        if (line.startsWith('# ')) {
-          return <h1 key={index} className="text-2xl font-bold mt-4 mb-3 text-slate-800">{line.substring(2)}</h1>;
-        }
-        
-        // Checklist items - make them interactive
-        if (line.startsWith('- [ ] ') || line.startsWith('- [x] ')) {
-          const isChecked = line.startsWith('- [x] ');
-          const taskText = line.substring(6);
-          
-          const toggleCheckbox = () => {
-            const newLine = isChecked ? `- [ ] ${taskText}` : `- [x] ${taskText}`;
-            const lines = (task.description || '').split('\n');
-            lines[index] = newLine;
-            const newDescription = lines.join('\n');
-            
-            onUpdate({ description: newDescription });
-          };
-          
-          return (
-            <div key={index} className="flex items-center gap-2 my-1">
-              <input 
-                type="checkbox" 
-                className="rounded border-slate-300 cursor-pointer" 
-                checked={isChecked}
-                onChange={toggleCheckbox}
-              />
-              <span className={isChecked ? "line-through text-slate-500" : ""}>
-                {taskText}
-              </span>
-            </div>
-          );
-        }
-        
-        // Bullet points
-        if (line.startsWith('- ')) {
-          return <div key={index} className="flex items-start gap-2 my-1"><span className="text-slate-400 mt-1">•</span><span>{line.substring(2)}</span></div>;
-        }
-        
-        // Dividers
-        if (line.trim() === '---') {
-          return <hr key={index} className="my-4 border-slate-200" />;
-        }
-        
-        // Regular text with bold formatting
-        const boldFormatted = line.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
-        
-        return line.trim() ? (
-          <p key={index} className="mb-2" dangerouslySetInnerHTML={{ __html: boldFormatted }} />
-        ) : (
-          <br key={index} />
-        );
-      });
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -501,182 +102,50 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
       <CardContent className="group">
         {isEditing ? (
           <div className="space-y-3">
-            {/* Formatting Toolbar */}
-            <div className="flex items-center gap-1 p-2 bg-slate-50 rounded-md border">
+            <Textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Add a description for this task..."
+              className="min-h-[120px] resize-y"
+              autoFocus
+              data-testid="textarea-description"
+            />
+            <div className="flex items-center gap-2">
               <Button
-                type="button"
-                variant="ghost"
                 size="sm"
-                onClick={() => insertAtCursor('**', '**')}
-                className="h-8 w-8 p-0"
-                title="Bold (Ctrl+B)"
+                onClick={handleSave}
+                disabled={isSaving}
+                data-testid="button-save-description"
               >
-                <Bold className="h-4 w-4" />
+                {isSaving ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Save
               </Button>
               <Button
-                type="button"
-                variant="ghost"
                 size="sm"
-                onClick={() => insertAtLineStart('# ')}
-                className="h-8 w-8 p-0"
-                title="Header 1 (Ctrl+1)"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+                data-testid="button-cancel-description"
               >
-                <Type className="h-4 w-4" />
+                <X className="h-4 w-4" />
+                Cancel
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => insertAtLineStart('- ')}
-                className="h-8 w-8 p-0"
-                title="Bullet List (Ctrl+L)"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => insertAtLineStart('- [ ] ')}
-                className="h-8 w-8 p-0"
-                title="Checklist"
-              >
-                <ListChecks className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => insertAtCursor('\n---\n')}
-                className="h-8 w-8 p-0"
-                title="Divider"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setUseWysiwyg(!useWysiwyg)}
-                  className="h-8 px-2"
-                  title={useWysiwyg ? "Switch to Markdown" : "Switch to WYSIWYG"}
-                >
-                  {useWysiwyg ? "MD" : "📝"}
-                </Button>
-              </div>
             </div>
-
-            <div className="relative">
-              {useWysiwyg ? (
-                <div
-                  ref={wysiwygRef}
-                  contentEditable
-                  onInput={handleWysiwygInput}
-                  onKeyDown={handleKeyDown}
-                  className="min-h-[160px] p-3 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent prose prose-sm max-w-none"
-                  style={{ whiteSpace: 'pre-wrap' }}
-                  dangerouslySetInnerHTML={{ __html: markdownToHtml(editValue) }}
-                  data-testid="wysiwyg-description"
-                  suppressContentEditableWarning={true}
-                  data-placeholder={editValue ? "" : "Type / for commands, or just start typing..."}
-                />
-              ) : (
-                <Textarea
-                  ref={textareaRef}
-                  value={editValue}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Add a description for this task...
-
-🎯 SLASH COMMANDS - Type / to see menu:
-• /bold → **bold text**
-• /h1 → # Header 1
-• /bullet → - bullet point  
-• /check → - [ ] checklist
-• /divider → --- line
-
-⌨️ KEYBOARD SHORTCUTS:
-• Ctrl+B for bold • Ctrl+1/2/3 for headers • Ctrl+L for bullets"
-                  className="min-h-[160px] resize-y font-mono text-sm"
-                  autoFocus
-                  data-testid="textarea-description"
-                />
-              )}
-              
-              {/* Slash Command Menu */}
-              {showSlashMenu && (
-                <div 
-                  className="absolute bg-white border border-slate-200 rounded-md shadow-lg z-50 p-1 min-w-[200px] max-h-64 overflow-y-auto"
-                  style={{ top: slashMenuPosition.top, left: slashMenuPosition.left }}
-                >
-                  {filteredCommands.length > 0 ? (
-                    <>
-                      <div className="px-3 py-1 text-xs text-slate-400 border-b border-slate-100 mb-1">
-                        Type /{slashFilter} or click to insert:
-                      </div>
-                      {filteredCommands.map((cmd, idx) => (
-                        <button
-                          key={cmd.command}
-                          onClick={() => handleSlashCommand(cmd)}
-                          className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-100 rounded text-sm transition-colors"
-                        >
-                          <cmd.icon className="h-4 w-4 text-slate-500" />
-                          <div>
-                            <div className="font-medium">{cmd.label}</div>
-                            <div className="text-xs text-slate-500">/{cmd.command}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="px-3 py-2 text-sm text-slate-500">
-                      No matching commands for "/{slashFilter}"
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  data-testid="button-save-description"
-                >
-                  {isSaving ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
-                  Save
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                  data-testid="button-cancel-description"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </Button>
-              </div>
-              
-              <p className="text-xs text-slate-500">
-                {useWysiwyg ? "WYSIWYG mode • Type / for commands" : "Markdown mode"} • Esc to cancel • Ctrl+Enter to save
-              </p>
-            </div>
+            <p className="text-xs text-slate-500">
+              Press Escape to cancel • Ctrl/Cmd + Enter to save
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
             {task.description ? (
               <>
                 <div
-                  className={`text-slate-600 cursor-text hover:bg-slate-50 p-2 rounded transition-colors ${
+                  className={`text-slate-600 whitespace-pre-wrap cursor-text hover:bg-slate-50 p-2 rounded transition-colors ${
                     needsExpansion && !isExpanded ? 'overflow-hidden' : ''
                   }`}
                   style={
@@ -687,7 +156,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                   onClick={() => setIsEditing(true)}
                   data-testid="text-description"
                 >
-                  {renderFormattedText(displayDescription())}
+                  {displayDescription()}
                 </div>
                 
                 {needsExpansion && (
