@@ -5191,6 +5191,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Comment Reactions API
+  app.get("/api/tasks/:taskId/comments/:commentId/reactions", async (req, res) => {
+    try {
+      const { taskId, commentId } = req.params;
+      
+      if (!global.commentReactions) {
+        global.commentReactions = {};
+      }
+      
+      const reactions = global.commentReactions[commentId] || [];
+      
+      // Group reactions by emoji and include user info
+      const groupedReactions: any = {};
+      
+      for (const reaction of reactions) {
+        if (!groupedReactions[reaction.emoji]) {
+          groupedReactions[reaction.emoji] = {
+            emoji: reaction.emoji,
+            count: 0,
+            users: []
+          };
+        }
+        
+        // Get user info for this reaction
+        const userData = await db.select().from(staff).where(eq(staff.id, reaction.userId)).limit(1);
+        const user = userData.length > 0 ? {
+          id: userData[0].id,
+          name: `${userData[0].firstName} ${userData[0].lastName}`
+        } : { id: reaction.userId, name: "Unknown User" };
+        
+        groupedReactions[reaction.emoji].count++;
+        groupedReactions[reaction.emoji].users.push(user);
+      }
+      
+      res.json(Object.values(groupedReactions));
+    } catch (error) {
+      console.error("Error fetching comment reactions:", error);
+      res.status(500).json({ error: "Failed to fetch reactions" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/comments/:commentId/reactions", async (req, res) => {
+    try {
+      const { taskId, commentId } = req.params;
+      const { emoji } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      if (!emoji) {
+        return res.status(400).json({ error: "Emoji is required" });
+      }
+      
+      if (!global.commentReactions) {
+        global.commentReactions = {};
+      }
+      
+      if (!global.commentReactions[commentId]) {
+        global.commentReactions[commentId] = [];
+      }
+      
+      // Check if user already reacted with this emoji
+      const existingReaction = global.commentReactions[commentId].find(
+        (r: any) => r.userId === userId && r.emoji === emoji
+      );
+      
+      if (existingReaction) {
+        // Remove existing reaction (toggle off)
+        global.commentReactions[commentId] = global.commentReactions[commentId].filter(
+          (r: any) => !(r.userId === userId && r.emoji === emoji)
+        );
+        res.json({ action: "removed", emoji });
+      } else {
+        // Add new reaction
+        const newReaction = {
+          id: nanoid(),
+          commentId,
+          userId,
+          emoji,
+          createdAt: new Date().toISOString()
+        };
+        
+        global.commentReactions[commentId].push(newReaction);
+        res.json({ action: "added", emoji });
+      }
+    } catch (error) {
+      console.error("Error handling comment reaction:", error);
+      res.status(500).json({ error: "Failed to handle reaction" });
+    }
+  });
+
   // Notifications endpoints
   app.get("/api/notifications", async (req, res) => {
     try {

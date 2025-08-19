@@ -480,8 +480,18 @@ export const taskComments = pgTable("task_comments", {
   content: text("content").notNull(),
   authorId: varchar("author_id").notNull().references(() => users.id),
   mentions: text("mentions").array(), // Array of user IDs mentioned in the comment
+  parentId: varchar("parent_id").references(() => taskComments.id), // For threaded replies
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Task Comment Reactions
+export const taskCommentReactions = pgTable("task_comment_reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  commentId: varchar("comment_id").notNull().references(() => taskComments.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  emoji: varchar("emoji").notNull(), // The emoji reaction (👍, ❤️, 😊, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Task Activities for audit trail
@@ -1483,6 +1493,24 @@ export const insertNotificationSettingsSchema = createInsertSchema(notificationS
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
+
+// Task Comment schema exports
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskCommentReactionSchema = createInsertSchema(taskCommentReactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TaskComment = typeof taskComments.$inferSelect;
+export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+
+export type TaskCommentReaction = typeof taskCommentReactions.$inferSelect;
+export type InsertTaskCommentReaction = z.infer<typeof insertTaskCommentReactionSchema>;
 
 // Calendar System Tables
 

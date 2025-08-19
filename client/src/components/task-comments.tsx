@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, AtSign, User, Reply } from "lucide-react";
+import { Send, AtSign, User, Reply, Smile } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TaskComment {
@@ -23,6 +23,12 @@ interface TaskComment {
   replies?: TaskComment[];
 }
 
+interface CommentReaction {
+  emoji: string;
+  count: number;
+  users: { id: string; name: string }[];
+}
+
 interface TaskCommentsProps {
   taskId: string;
 }
@@ -34,6 +40,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [commentReactions, setCommentReactions] = useState<Record<string, CommentReaction[]>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -45,6 +53,30 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const { data: staffData = [] } = useQuery<any[]>({
     queryKey: ["/api/staff"],
   });
+
+  // Fetch reactions for all comments
+  const fetchReactions = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}/reactions`);
+      if (response.ok) {
+        const reactions = await response.json();
+        setCommentReactions(prev => ({
+          ...prev,
+          [commentId]: reactions
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch reactions:', error);
+    }
+  };
+
+  // Load reactions when comments change
+  useEffect(() => {
+    comments.forEach(comment => {
+      fetchReactions(comment.id);
+      comment.replies?.forEach(reply => fetchReactions(reply.id));
+    });
+  }, [comments, taskId]);
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
@@ -155,6 +187,31 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     setReplyInputs(prev => ({ ...prev, [commentId]: "" }));
   };
 
+  const handleEmojiReaction = async (commentId: string, emoji: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji }),
+      });
+      
+      if (response.ok) {
+        // Refresh reactions for this comment
+        fetchReactions(commentId);
+        setShowEmojiPicker(null);
+      }
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add reaction",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const commonEmojis = ['👍', '❤️', '😊', '🎉', '👏', '🚀', '👌', '💯'];
+
   const formatCommentContent = (content: string) => {
     // Replace @mentions with styled badges
     const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
@@ -234,20 +291,71 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                         {formatCommentContent(comment.content)}
                       </div>
                       
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setReplyInputs(prev => ({ 
-                            ...prev, 
-                            [comment.id]: prev[comment.id] || "" 
-                          }));
-                        }}
-                        className="text-xs text-slate-500 hover:text-slate-700 h-6 px-2"
-                      >
-                        <Reply className="h-3 w-3 mr-1" />
-                        Reply
-                      </Button>
+                      {/* Comment Reactions */}
+                      {commentReactions[comment.id]?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {commentReactions[comment.id].map((reaction) => (
+                            <Button
+                              key={reaction.emoji}
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-xs hover:bg-blue-50 border-blue-200"
+                              onClick={() => handleEmojiReaction(comment.id, reaction.emoji)}
+                              title={`${reaction.users.map(u => u.name).join(', ')}`}
+                            >
+                              <span className="mr-1">{reaction.emoji}</span>
+                              <span className="text-xs">{reaction.count}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setReplyInputs(prev => ({ 
+                              ...prev, 
+                              [comment.id]: prev[comment.id] || "" 
+                            }));
+                          }}
+                          className="text-xs text-slate-500 hover:text-slate-700 h-6 px-2"
+                        >
+                          <Reply className="h-3 w-3 mr-1" />
+                          Reply
+                        </Button>
+                        
+                        <div className="relative">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowEmojiPicker(showEmojiPicker === comment.id ? null : comment.id)}
+                            className="text-xs text-slate-500 hover:text-slate-700 h-6 px-2"
+                          >
+                            <Smile className="h-3 w-3" />
+                          </Button>
+                          
+                          {/* Emoji Picker */}
+                          {showEmojiPicker === comment.id && (
+                            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-10">
+                              <div className="grid grid-cols-4 gap-1">
+                                {commonEmojis.map((emoji) => (
+                                  <Button
+                                    key={emoji}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEmojiReaction(comment.id, emoji)}
+                                    className="h-8 w-8 p-0 hover:bg-slate-100"
+                                  >
+                                    {emoji}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                       
                       {/* Reply Input */}
                       {replyInputs[comment.id] !== undefined && (
@@ -313,8 +421,57 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                               </span>
                             </div>
                             
-                            <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                            <div className="text-sm text-slate-700 whitespace-pre-wrap mb-2">
                               {formatCommentContent(reply.content)}
+                            </div>
+                            
+                            {/* Reply Reactions */}
+                            {commentReactions[reply.id]?.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {commentReactions[reply.id].map((reaction) => (
+                                  <Button
+                                    key={reaction.emoji}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-5 px-1 text-xs hover:bg-blue-50 border-blue-200"
+                                    onClick={() => handleEmojiReaction(reply.id, reaction.emoji)}
+                                    title={`${reaction.users.map(u => u.name).join(', ')}`}
+                                  >
+                                    <span className="mr-1 text-xs">{reaction.emoji}</span>
+                                    <span className="text-xs">{reaction.count}</span>
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                            
+                            <div className="relative">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowEmojiPicker(showEmojiPicker === reply.id ? null : reply.id)}
+                                className="text-xs text-slate-500 hover:text-slate-700 h-5 px-1"
+                              >
+                                <Smile className="h-3 w-3" />
+                              </Button>
+                              
+                              {/* Emoji Picker for Reply */}
+                              {showEmojiPicker === reply.id && (
+                                <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-10">
+                                  <div className="grid grid-cols-4 gap-1">
+                                    {commonEmojis.map((emoji) => (
+                                      <Button
+                                        key={emoji}
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEmojiReaction(reply.id, emoji)}
+                                        className="h-8 w-8 p-0 hover:bg-slate-100"
+                                      >
+                                        {emoji}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
