@@ -6805,6 +6805,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // File upload routes for task comments
   app.get("/api/comments/upload-url", async (req, res) => {
     try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+  
+  app.post("/api/comments/upload-url", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       res.json({ uploadURL });
