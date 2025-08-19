@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Send, AtSign, User, Reply, Smile } from "lucide-react";
@@ -16,6 +16,7 @@ interface TaskComment {
     firstName: string;
     lastName: string;
     email: string;
+    profileImage?: string;
   };
   createdAt: string;
   mentions: string[];
@@ -272,8 +273,14 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        <User className="h-4 w-4" />
+                      {comment.author.profileImage && (
+                        <AvatarImage 
+                          src={comment.author.profileImage} 
+                          alt={`${comment.author.firstName} ${comment.author.lastName}`}
+                        />
+                      )}
+                      <AvatarFallback className="bg-teal-100 text-teal-700 text-xs font-medium">
+                        {comment.author.firstName[0]}{comment.author.lastName[0]}
                       </AvatarFallback>
                     </Avatar>
                     
@@ -293,17 +300,17 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                       
                       {/* Comment Reactions */}
                       {commentReactions[comment.id]?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
                           {commentReactions[comment.id].map((reaction) => (
                             <Button
                               key={reaction.emoji}
                               variant="outline"
                               size="sm"
-                              className="h-6 px-2 text-xs hover:bg-blue-50 border-blue-200 rounded-full mr-1"
+                              className="h-6 px-3 text-xs hover:bg-blue-50 border-blue-200 rounded-full flex items-center gap-1.5"
                               onClick={() => handleEmojiReaction(comment.id, reaction.emoji)}
                               title={`${reaction.users.map(u => u.name).join(', ')}`}
                             >
-                              <span className="mr-1.5">{reaction.emoji}</span>
+                              <span>{reaction.emoji}</span>
                               <span className="text-xs font-medium">{reaction.count}</span>
                             </Button>
                           ))}
@@ -406,8 +413,14 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                       <CardContent className="p-3">
                         <div className="flex items-start gap-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarFallback>
-                              <User className="h-3 w-3" />
+                            {reply.author.profileImage && (
+                              <AvatarImage 
+                                src={reply.author.profileImage} 
+                                alt={`${reply.author.firstName} ${reply.author.lastName}`}
+                              />
+                            )}
+                            <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-medium">
+                              {reply.author.firstName[0]}{reply.author.lastName[0]}
                             </AvatarFallback>
                           </Avatar>
                           
@@ -427,17 +440,17 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                             
                             {/* Reply Reactions */}
                             {commentReactions[reply.id]?.length > 0 && (
-                              <div className="flex flex-wrap gap-2 mb-2">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
                                 {commentReactions[reply.id].map((reaction) => (
                                   <Button
                                     key={reaction.emoji}
                                     variant="outline"
                                     size="sm"
-                                    className="h-5 px-1.5 text-xs hover:bg-blue-50 border-blue-200 rounded-full"
+                                    className="h-5 px-2 text-xs hover:bg-blue-50 border-blue-200 rounded-full flex items-center gap-1"
                                     onClick={() => handleEmojiReaction(reply.id, reaction.emoji)}
                                     title={`${reaction.users.map(u => u.name).join(', ')}`}
                                   >
-                                    <span className="mr-1 text-xs">{reaction.emoji}</span>
+                                    <span className="text-xs">{reaction.emoji}</span>
                                     <span className="text-xs font-medium">{reaction.count}</span>
                                   </Button>
                                 ))}
