@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
@@ -24,6 +23,7 @@ export default function TaskDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentTimeEntry, setCurrentTimeEntry] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("comments");
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -599,36 +599,51 @@ export default function TaskDetail() {
 
         {/* Sidebar - Tabbed Interface */}
         <div className="w-full">
-          <Tabs defaultValue="comments" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="comments" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Comments
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Activity
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="comments" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Comments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <TaskComments taskId={task.id} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="activity" className="mt-4">
-              <TaskActivities taskId={task.id} />
-            </TabsContent>
-          </Tabs>
+          {/* Tabs Navigation */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: "comments", name: "Comments", icon: MessageSquare },
+                { id: "activity", name: "Activity", icon: Activity }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === "comments" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Comments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TaskComments taskId={task.id} />
+              </CardContent>
+            </Card>
+          )}
+          
+          {activeTab === "activity" && (
+            <TaskActivities taskId={task.id} />
+          )}
         </div>
       </div>
     </div>
