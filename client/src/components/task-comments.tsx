@@ -293,18 +293,18 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                       
                       {/* Comment Reactions */}
                       {commentReactions[comment.id]?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-2">
+                        <div className="flex flex-wrap gap-2 mb-3">
                           {commentReactions[comment.id].map((reaction) => (
                             <Button
                               key={reaction.emoji}
                               variant="outline"
                               size="sm"
-                              className="h-6 px-2 text-xs hover:bg-blue-50 border-blue-200"
+                              className="h-6 px-2 text-xs hover:bg-blue-50 border-blue-200 rounded-full"
                               onClick={() => handleEmojiReaction(comment.id, reaction.emoji)}
                               title={`${reaction.users.map(u => u.name).join(', ')}`}
                             >
-                              <span className="mr-1">{reaction.emoji}</span>
-                              <span className="text-xs">{reaction.count}</span>
+                              <span className="mr-1.5">{reaction.emoji}</span>
+                              <span className="text-xs font-medium">{reaction.count}</span>
                             </Button>
                           ))}
                         </div>
@@ -427,18 +427,18 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                             
                             {/* Reply Reactions */}
                             {commentReactions[reply.id]?.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-2">
+                              <div className="flex flex-wrap gap-2 mb-2">
                                 {commentReactions[reply.id].map((reaction) => (
                                   <Button
                                     key={reaction.emoji}
                                     variant="outline"
                                     size="sm"
-                                    className="h-5 px-1 text-xs hover:bg-blue-50 border-blue-200"
+                                    className="h-5 px-1.5 text-xs hover:bg-blue-50 border-blue-200 rounded-full"
                                     onClick={() => handleEmojiReaction(reply.id, reaction.emoji)}
                                     title={`${reaction.users.map(u => u.name).join(', ')}`}
                                   >
                                     <span className="mr-1 text-xs">{reaction.emoji}</span>
-                                    <span className="text-xs">{reaction.count}</span>
+                                    <span className="text-xs font-medium">{reaction.count}</span>
                                   </Button>
                                 ))}
                               </div>
