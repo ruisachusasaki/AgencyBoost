@@ -450,12 +450,43 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                       {file.fileName} • {(file.fileSize / 1024 / 1024).toFixed(2)} MB
                                     </p>
                                   </div>
+                                ) : isAudio ? (
+                                  // Display inline audio player for audio files
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200">
+                                      <Music className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-green-800 truncate">
+                                          {file.fileName}
+                                        </p>
+                                        <p className="text-xs text-green-600">
+                                          {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => window.open(file.fileUrl, '_blank')}
+                                        className="flex-shrink-0 text-green-600 hover:text-green-700"
+                                        title="Download audio file"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                    <audio 
+                                      controls 
+                                      className="w-full max-w-md"
+                                      preload="metadata"
+                                    >
+                                      <source src={file.fileUrl} type={file.fileType} />
+                                      Your browser does not support the audio element.
+                                    </audio>
+                                  </div>
                                 ) : (
-                                  // Display file attachment for other file types
+                                  // Display file attachment for documents and other file types
                                   <div className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
                                     <div className="flex-shrink-0">
-                                      {isAudio && <Music className="h-5 w-5 text-green-600" />}
-                                      {isDocument && <FileText className="h-5 w-5 text-slate-600" />}
+                                      <FileText className="h-5 w-5 text-slate-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-slate-900 truncate">
