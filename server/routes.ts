@@ -2185,9 +2185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
-      // Use the full path from req.path, but remove the "/objects" prefix
-      const fullPath = req.path.replace('/objects', '');
-      await objectStorageService.downloadObject(fullPath, res);
+      // Get the file object first, then download it
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving object:", error);
       const { ObjectNotFoundError } = await import("./objectStorage");
