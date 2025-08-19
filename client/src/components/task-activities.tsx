@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Clock, User, Calendar, Timer } from "lucide-react";
+import { Activity, Clock, User, Calendar, Timer, Flag } from "lucide-react";
 import { TaskActivity } from "@shared/schema";
 
 interface TaskActivitiesProps {
@@ -92,6 +92,41 @@ export default function TaskActivities({ taskId }: TaskActivitiesProps) {
                 <span className="font-medium">{activity.userName}</span>{' '}
                 {isTimeEntry && 'updated time tracking session'}
                 {isTimeTracked && `updated tracked time from ${activity.oldValue || 0} to ${activity.newValue || 0} minutes`}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'priority_change':
+        const getPriorityColor = (priority: string | null) => {
+          switch (priority) {
+            case 'urgent': return 'text-red-600';
+            case 'high': return 'text-yellow-600';
+            case 'normal': return 'text-blue-600';
+            case 'low': return 'text-gray-600';
+            default: return 'text-gray-600';
+          }
+        };
+        
+        const getPriorityLabel = (priority: string | null) => {
+          return priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : 'Not set';
+        };
+        
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full flex-shrink-0">
+              <Flag className="h-4 w-4 text-yellow-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> changed priority from{' '}
+                <span className={`font-medium ${getPriorityColor(activity.oldValue)}`}>
+                  {getPriorityLabel(activity.oldValue)}
+                </span> to{' '}
+                <span className={`font-medium ${getPriorityColor(activity.newValue)}`}>
+                  {getPriorityLabel(activity.newValue)}
+                </span>
               </p>
               <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
             </div>

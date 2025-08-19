@@ -1087,6 +1087,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Check for priority changes
+      if (validatedData.priority !== undefined && validatedData.priority !== currentTask.priority) {
+        await logTaskActivity(req.params.id, 'priority_change', 'priority', currentTask.priority, validatedData.priority, currentUser, currentUserName);
+      }
+
       // Check for time tracking changes
       if (validatedData.timeTracked !== undefined && validatedData.timeTracked !== currentTask.timeTracked) {
         await logTaskActivity(req.params.id, 'time_tracking', 'timeTracked', currentTask.timeTracked, validatedData.timeTracked, currentUser, currentUserName);
