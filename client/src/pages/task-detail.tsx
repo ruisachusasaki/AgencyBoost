@@ -11,6 +11,7 @@ import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
+import TaskDescriptionCard from "@/components/task-description-card";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -172,6 +173,10 @@ export default function TaskDetail() {
       });
     },
   });
+
+  const updateTask = async (updates: Partial<Task>) => {
+    return updateTaskMutation.mutateAsync(updates);
+  };
 
   const startTimeTracking = () => {
     const now = new Date().toISOString();
@@ -581,18 +586,11 @@ export default function TaskDetail() {
           )}
 
           {/* Task Description */}
-          {!isEditing && task.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="h-5 w-5" />
-                  Description
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600 whitespace-pre-wrap">{task.description}</p>
-              </CardContent>
-            </Card>
+          {!isEditing && (
+            <TaskDescriptionCard 
+              task={task} 
+              onUpdate={updateTask} 
+            />
           )}
 
           {/* Comments */}
