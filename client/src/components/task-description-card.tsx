@@ -110,14 +110,36 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     const beforeSlash = editValue.substring(0, start - slashFilter.length - 1);
     const afterCursor = editValue.substring(start);
     
-    setEditValue(beforeSlash + afterCursor);
+    // Update the text without the slash command
+    const newText = beforeSlash + afterCursor;
+    setEditValue(newText);
     
+    // Hide menu first
+    setShowSlashMenu(false);
+    setSlashFilter('');
+    
+    // Apply the formatting after a brief delay
     setTimeout(() => {
-      textarea.setSelectionRange(beforeSlash.length, beforeSlash.length);
-      command.action();
-      setShowSlashMenu(false);
-      setSlashFilter('');
-    }, 0);
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(beforeSlash.length, beforeSlash.length);
+        textareaRef.current.focus();
+        
+        // Apply the specific command formatting
+        if (command.command === 'bold') {
+          const currentValue = textareaRef.current.value;
+          const cursorPos = textareaRef.current.selectionStart;
+          const newValue = currentValue.substring(0, cursorPos) + '****' + currentValue.substring(cursorPos);
+          setEditValue(newValue);
+          setTimeout(() => {
+            if (textareaRef.current) {
+              textareaRef.current.setSelectionRange(cursorPos + 2, cursorPos + 2);
+            }
+          }, 0);
+        } else {
+          command.action();
+        }
+      }
+    }, 50);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -398,15 +420,17 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                 onKeyDown={handleKeyDown}
                 placeholder="Add a description for this task...
 
-Try typing / for formatting options:
-• /bold for **bold text**
-• /h1, /h2, /h3 for headers
-• /bullet for bullet points
-• /check for checklist items
-• /divider for horizontal lines
+🎯 SLASH COMMANDS - Type / to see menu:
+• /bold → **bold text**
+• /h1 → # Header 1
+• /bullet → - bullet point  
+• /check → - [ ] checklist
+• /divider → --- line
 
-Keyboard shortcuts:
-• Ctrl+B for bold • Ctrl+1/2/3 for headers • Ctrl+L for bullets"
+⌨️ KEYBOARD SHORTCUTS:
+• Ctrl+B for bold • Ctrl+1/2/3 for headers • Ctrl+L for bullets
+
+Click description text to edit, then try typing /bold and pressing Enter!"
                 className="min-h-[160px] resize-y font-mono text-sm"
                 autoFocus
                 data-testid="textarea-description"
@@ -415,26 +439,31 @@ Keyboard shortcuts:
               {/* Slash Command Menu */}
               {showSlashMenu && (
                 <div 
-                  className="absolute bg-white border border-slate-200 rounded-md shadow-lg z-10 p-1 min-w-[200px]"
+                  className="absolute bg-white border border-slate-200 rounded-md shadow-lg z-50 p-1 min-w-[200px] max-h-64 overflow-y-auto"
                   style={{ top: slashMenuPosition.top, left: slashMenuPosition.left }}
                 >
                   {filteredCommands.length > 0 ? (
-                    filteredCommands.map((cmd, idx) => (
-                      <button
-                        key={cmd.command}
-                        onClick={() => handleSlashCommand(cmd)}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-100 rounded text-sm"
-                      >
-                        <cmd.icon className="h-4 w-4 text-slate-500" />
-                        <div>
-                          <div className="font-medium">{cmd.label}</div>
-                          <div className="text-xs text-slate-500">/{cmd.command}</div>
-                        </div>
-                      </button>
-                    ))
+                    <>
+                      <div className="px-3 py-1 text-xs text-slate-400 border-b border-slate-100 mb-1">
+                        Type /{slashFilter} or click to insert:
+                      </div>
+                      {filteredCommands.map((cmd, idx) => (
+                        <button
+                          key={cmd.command}
+                          onClick={() => handleSlashCommand(cmd)}
+                          className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-100 rounded text-sm transition-colors"
+                        >
+                          <cmd.icon className="h-4 w-4 text-slate-500" />
+                          <div>
+                            <div className="font-medium">{cmd.label}</div>
+                            <div className="text-xs text-slate-500">/{cmd.command}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </>
                   ) : (
                     <div className="px-3 py-2 text-sm text-slate-500">
-                      No matching commands
+                      No matching commands for "/{slashFilter}"
                     </div>
                   )}
                 </div>
