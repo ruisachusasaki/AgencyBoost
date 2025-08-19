@@ -5,14 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Camera, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import html2canvas from "html2canvas";
 
 export default function TaskDetail() {
   const { taskId } = useParams();
@@ -22,6 +23,8 @@ export default function TaskDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentTimeEntry, setCurrentTimeEntry] = useState<any>(null);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const taskDetailRef = useRef<HTMLDivElement>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -220,6 +223,64 @@ export default function TaskDetail() {
     }
   };
 
+  const captureTaskScreenshot = async () => {
+    if (!taskDetailRef.current || !task) return;
+
+    setIsCapturingScreenshot(true);
+
+    try {
+      // Hide the screenshot button temporarily to not include it in the screenshot
+      const screenshotButton = document.querySelector('[data-testid="screenshot-button"]') as HTMLElement;
+      const originalDisplay = screenshotButton?.style.display;
+      if (screenshotButton) {
+        screenshotButton.style.display = 'none';
+      }
+
+      const canvas = await html2canvas(taskDetailRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2, // Higher resolution
+        useCORS: true,
+        allowTaint: true,
+        height: taskDetailRef.current.scrollHeight,
+        width: taskDetailRef.current.scrollWidth,
+      });
+
+      // Restore the screenshot button
+      if (screenshotButton) {
+        screenshotButton.style.display = originalDisplay || '';
+      }
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `task-${task.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+      }, 'image/png');
+
+      toast({
+        title: "Screenshot captured",
+        description: "Task screenshot has been downloaded",
+      });
+
+    } catch (error) {
+      console.error("Error capturing screenshot:", error);
+      toast({
+        title: "Error",
+        description: "Failed to capture screenshot",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCapturingScreenshot(false);
+    }
+  };
+
   const getStaffName = (staffId: string | null) => {
     if (!staffId || staffId === 'unassigned') return 'Unassigned';
     const staffMember = staff.find(s => s.id === staffId);
@@ -271,7 +332,7 @@ export default function TaskDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={taskDetailRef}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -293,6 +354,25 @@ export default function TaskDetail() {
         </div>
         
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={captureTaskScreenshot}
+            disabled={isCapturingScreenshot}
+            variant="outline"
+            data-testid="screenshot-button"
+          >
+            {isCapturingScreenshot ? (
+              <>
+                <Download className="h-4 w-4 mr-2 animate-pulse" />
+                Capturing...
+              </>
+            ) : (
+              <>
+                <Camera className="h-4 w-4 mr-2" />
+                Screenshot
+              </>
+            )}
+          </Button>
           <Button 
             variant="outline" 
             size="sm"
