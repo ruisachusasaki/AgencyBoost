@@ -448,13 +448,17 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
-  priority: text("priority").notNull().default("medium"), // low, medium, high
+  priority: text("priority").notNull().default("normal"), // urgent, high, normal, low
   assignedTo: uuid("assigned_to").references(() => staff.id),
   clientId: varchar("client_id").references(() => clients.id),
   projectId: varchar("project_id").references(() => projects.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   dueDate: timestamp("due_date"),
+  startDate: timestamp("start_date"),
   dueTime: text("due_time"), // HH:MM format
+  timeEstimate: integer("time_estimate"), // estimated time in minutes
+  timeTracked: integer("time_tracked").default(0), // actual time tracked in minutes
+  timeEntries: jsonb("time_entries").default(sql`'[]'`), // array of time tracking entries
   
   // Recurring task settings
   isRecurring: boolean("is_recurring").default(false),

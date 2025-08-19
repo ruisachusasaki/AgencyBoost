@@ -3,12 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Task, Client, Project, Campaign } from "@shared/schema";
+import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
 import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function TaskDetail() {
   const { taskId } = useParams();
@@ -16,6 +19,8 @@ export default function TaskDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [currentTimeEntry, setCurrentTimeEntry] = useState<any>(null);
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -33,6 +38,10 @@ export default function TaskDetail() {
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
+  });
+
+  const { data: staff = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
   });
 
   const { data: userPermissions } = useQuery({
@@ -141,6 +150,79 @@ export default function TaskDetail() {
     if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
       deleteTaskMutation.mutate();
     }
+  };
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async (data: Partial<Task>) => {
+      await apiRequest(`/api/tasks/${taskId}`, "PUT", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
+      toast({
+        title: "Task updated",
+        description: "Task has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const startTimeTracking = () => {
+    const now = new Date().toISOString();
+    const timeEntry = {
+      id: Date.now().toString(),
+      startTime: now,
+      userId: 'current-user', // Replace with actual current user ID
+      isRunning: true
+    };
+    setCurrentTimeEntry(timeEntry);
+    setIsTimerRunning(true);
+    
+    // Update task with new time entry
+    const currentEntries = task?.timeEntries || [];
+    updateTaskMutation.mutate({
+      timeEntries: [...currentEntries, timeEntry]
+    });
+  };
+
+  const stopTimeTracking = () => {
+    if (currentTimeEntry) {
+      const now = new Date().toISOString();
+      const updatedEntry = {
+        ...currentTimeEntry,
+        endTime: now,
+        isRunning: false,
+        duration: Math.floor((new Date(now).getTime() - new Date(currentTimeEntry.startTime).getTime()) / 1000 / 60) // minutes
+      };
+      
+      const currentEntries = task?.timeEntries || [];
+      const updatedEntries = currentEntries.map((entry: any) => 
+        entry.id === currentTimeEntry.id ? updatedEntry : entry
+      );
+      
+      const totalTracked = updatedEntries.reduce((total: number, entry: any) => 
+        total + (entry.duration || 0), 0
+      );
+      
+      updateTaskMutation.mutate({
+        timeEntries: updatedEntries,
+        timeTracked: totalTracked
+      });
+      
+      setCurrentTimeEntry(null);
+      setIsTimerRunning(false);
+    }
+  };
+
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId || staffId === 'unassigned') return 'Unassigned';
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown User';
   };
 
   if (isLoading) {
@@ -264,53 +346,233 @@ export default function TaskDetail() {
                   Task Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {task.startDate && (
+              <CardContent className="space-y-6">
+                {/* Row 1: Status and Assignees */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Status - Left Side */}
+                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{formatDate(task.startDate, 'start')}</span>
+                      <Target className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Status</span>
                     </div>
-                  )}
+                    <Select
+                      value={task.status}
+                      onValueChange={(value) => updateTaskMutation.mutate({ status: value })}
+                    >
+                      <SelectTrigger className="w-[140px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
-                  {task.dueDate && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{formatDate(task.dueDate, 'due')}</span>
-                    </div>
-                  )}
-                  
-                  {task.assignedTo && (
+                  {/* Assignees - Right Side */}
+                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{task.assignedTo}</span>
+                      <span className="text-sm font-medium text-slate-700">Assignee</span>
                     </div>
-                  )}
+                    <Select
+                      value={task.assignedTo || "unassigned"}
+                      onValueChange={(value) => updateTaskMutation.mutate({ assignedTo: value === "unassigned" ? null : value })}
+                    >
+                      <SelectTrigger className="w-[180px] h-8">
+                        <SelectValue placeholder="Select assignee">
+                          {getStaffName(task.assignedTo)}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {staff.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.firstName} {member.lastName}
+                            {member.department && ` (${member.department})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Row 2: Dates and Priority */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Dates - Left Side */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Dates</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Start Date */}
+                      <div className="flex items-center gap-1">
+                        {task.startDate ? (
+                          <Input
+                            type="date"
+                            value={task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
+                            onChange={(e) => updateTaskMutation.mutate({ 
+                              startDate: e.target.value ? new Date(e.target.value) : null 
+                            })}
+                            className="w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200"
+                          />
+                        ) : (
+                          <Input
+                            type="date"
+                            placeholder="Start date"
+                            onChange={(e) => updateTaskMutation.mutate({ 
+                              startDate: e.target.value ? new Date(e.target.value) : null 
+                            })}
+                            className="w-32 h-7 text-xs border-dashed border-slate-300 p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-400"
+                          />
+                        )}
+                      </div>
+                      
+                      <ChevronRight className="h-3 w-3 text-slate-400" />
+                      
+                      {/* Due Date */}
+                      <div className="flex items-center gap-1">
+                        {task.dueDate ? (
+                          <Input
+                            type="date"
+                            value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
+                            onChange={(e) => updateTaskMutation.mutate({ 
+                              dueDate: e.target.value ? new Date(e.target.value) : null 
+                            })}
+                            className={`w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200 ${
+                              new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
+                                ? 'text-red-600 font-medium' : ''
+                            }`}
+                          />
+                        ) : (
+                          <Input
+                            type="date"
+                            placeholder="Due date"
+                            onChange={(e) => updateTaskMutation.mutate({ 
+                              dueDate: e.target.value ? new Date(e.target.value) : null 
+                            })}
+                            className="w-32 h-7 text-xs border-dashed border-slate-300 p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-400"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   
-                  {getClientName(task.clientId) && (
+                  {/* Priority - Right Side */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Priority</span>
+                    </div>
+                    <Select
+                      value={task.priority}
+                      onValueChange={(value) => updateTaskMutation.mutate({ priority: value })}
+                    >
+                      <SelectTrigger className="w-[120px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="urgent">
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-3 w-3 text-red-500" />
+                            <span>Urgent</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="high">
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-3 w-3 text-yellow-500" />
+                            <span>High</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="normal">
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-3 w-3 text-blue-500" />
+                            <span>Normal</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="low">
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-3 w-3 text-gray-500" />
+                            <span>Low</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Row 3: Time Estimate and Time Tracking */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Time Estimate - Left Side */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Time Estimate</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={task.timeEstimate || ""}
+                        onChange={(e) => updateTaskMutation.mutate({ timeEstimate: e.target.value ? parseInt(e.target.value) : null })}
+                        className="w-16 h-8 text-sm"
+                        min="0"
+                      />
+                      <span className="text-sm text-slate-500">minutes</span>
+                    </div>
+                  </div>
+                  
+                  {/* Time Tracking - Right Side */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Track Time</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant={isTimerRunning ? "destructive" : "default"}
+                        onClick={isTimerRunning ? stopTimeTracking : startTimeTracking}
+                        className="h-8 px-3"
+                      >
+                        {isTimerRunning ? (
+                          <><Pause className="h-3 w-3 mr-1" />Stop</>
+                        ) : (
+                          <><Play className="h-3 w-3 mr-1" />Start</>
+                        )}
+                      </Button>
+                      <span className="text-sm text-slate-600">
+                        {task.timeTracked ? `${Math.floor(task.timeTracked / 60)}h ${task.timeTracked % 60}m` : '0m'} tracked
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 4: Client and Project */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Client - Left Side */}
+                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Building className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{getClientName(task.clientId)}</span>
+                      <span className="text-sm font-medium text-slate-700">Client</span>
                     </div>
-                  )}
+                    <span className="text-sm text-slate-600">
+                      {getClientName(task.clientId) || "No client assigned"}
+                    </span>
+                  </div>
                   
-                  {getProjectName(task.projectId) && (
+                  {/* Project - Right Side */}
+                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{getProjectName(task.projectId)}</span>
+                      <span className="text-sm font-medium text-slate-700">Project</span>
                     </div>
-                  )}
-                  
-                  {getCampaignName(task.campaignId) && (
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm">{getCampaignName(task.campaignId)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm">Created {new Date(task.createdAt || '').toLocaleDateString()}</span>
+                    <span className="text-sm text-slate-600">
+                      {getProjectName(task.projectId) || "No project assigned"}
+                    </span>
                   </div>
                 </div>
               </CardContent>
