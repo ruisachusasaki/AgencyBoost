@@ -200,6 +200,7 @@ export default function TaskDetail() {
   };
 
   const startTitleEdit = () => {
+    console.log('startTitleEdit called', task);
     if (task) {
       setTitleValue(task.title);
       setEditingTitle(true);
@@ -294,6 +295,7 @@ export default function TaskDetail() {
                 className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-slate-700 transition-colors"
                 onClick={startTitleEdit}
                 title="Click to edit task title"
+                data-testid="task-title-edit"
               >
                 {task.title}
               </h1>
