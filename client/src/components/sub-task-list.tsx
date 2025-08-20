@@ -68,7 +68,13 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
   const createSubTaskMutation = useMutation({
     mutationFn: (data: SubTaskFormData) => {
       console.log("Creating sub-task with data:", data);
-      return apiRequest(`/api/tasks/${parentTaskId}/subtasks`, { method: "POST", body: data });
+      const requestData = {
+        ...data,
+        parentTaskId,
+        level: (level || 0) + 1,
+      };
+      console.log("Sending API request with:", requestData);
+      return apiRequest(`/api/tasks`, "POST", requestData);
     },
     onSuccess: (data) => {
       console.log("Sub-task created successfully:", data);
