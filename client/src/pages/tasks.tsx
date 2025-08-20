@@ -103,6 +103,22 @@ export default function Tasks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     },
+    onError: (error: any) => {
+      // Handle dependency validation errors specially
+      if (error?.isDependencyError) {
+        toast({
+          title: "Cannot Complete Task",
+          description: error.details || error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update task. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
   });
 
   // Helper functions - moved above sorting logic

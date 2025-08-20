@@ -173,11 +173,20 @@ export default function TaskDetail() {
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to update task",
-        variant: "destructive",
-      });
+      // Handle dependency validation errors specially
+      if (error?.isDependencyError) {
+        toast({
+          title: "Cannot Complete Task",
+          description: error.details || error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to update task",
+          variant: "destructive",
+        });
+      }
     },
   });
 
