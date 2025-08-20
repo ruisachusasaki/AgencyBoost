@@ -1188,6 +1188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(taskAttachments.taskId, taskId))
         .orderBy(desc(taskAttachments.createdAt));
       
+      console.log("Returning attachments with URLs:", attachments.map(a => ({ fileName: a.fileName, fileUrl: a.fileUrl })));
       res.json(attachments);
     } catch (error) {
       console.error("Error fetching task attachments:", error);

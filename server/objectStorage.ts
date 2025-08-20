@@ -141,19 +141,33 @@ export class ObjectStorageService {
   // Downloads an object to the response.
   async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
     try {
+      console.log("Downloading file:", file.name);
       // Get file metadata
       const [metadata] = await file.getMetadata();
+      console.log("File metadata:", {
+        contentType: metadata.contentType,
+        size: metadata.size,
+        name: metadata.name
+      });
+      
       // Get the ACL policy for the object.
       const aclPolicy = await getObjectAclPolicy(file);
       const isPublic = aclPolicy?.visibility === "public";
+      
       // Set appropriate headers
-      res.set({
+      const headers = {
         "Content-Type": metadata.contentType || "application/octet-stream",
         "Content-Length": metadata.size,
         "Cache-Control": `${
           isPublic ? "public" : "private"
         }, max-age=${cacheTtlSec}`,
-      });
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      };
+      
+      console.log("Setting headers:", headers);
+      res.set(headers);
 
       // Stream the file to the response
       const stream = file.createReadStream();
@@ -163,6 +177,10 @@ export class ObjectStorageService {
         if (!res.headersSent) {
           res.status(500).json({ error: "Error streaming file" });
         }
+      });
+
+      stream.on("end", () => {
+        console.log("File streaming completed successfully");
       });
 
       stream.pipe(res);
@@ -239,7 +257,9 @@ export class ObjectStorageService {
       const bucket = objectStorageClient.bucket(bucketName);
       const objectFile = bucket.file(objectName);
       const [exists] = await objectFile.exists();
+      console.log("New format - file exists:", exists, "for", objectName);
       if (!exists) {
+        console.error("File not found in bucket:", bucketName, "object:", objectName);
         throw new ObjectNotFoundError();
       }
       return objectFile;
