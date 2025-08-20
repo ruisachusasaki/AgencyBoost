@@ -1168,10 +1168,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Found ${subTasks.length} sub-tasks to delete`);
       
       if (subTasks.length > 0) {
+        // Delete comments for sub-tasks first
+        for (const subTask of subTasks) {
+          await db.delete(taskComments)
+            .where(eq(taskComments.taskId, subTask.id));
+        }
         await db.delete(tasks)
           .where(eq(tasks.parentTaskId, req.params.id));
         console.log(`Deleted ${subTasks.length} sub-tasks`);
       }
+      
+      // Delete task comments before deleting the main task
+      console.log(`Deleting comments for task: ${req.params.id}`);
+      await db.delete(taskComments)
+        .where(eq(taskComments.taskId, req.params.id));
+      
+      // Delete task activities
+      console.log(`Deleting activities for task: ${req.params.id}`);
+      await db.delete(taskActivities)
+        .where(eq(taskActivities.taskId, req.params.id));
       
       // Delete the main task
       console.log(`Deleting main task: ${req.params.id}`);
