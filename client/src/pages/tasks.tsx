@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -21,11 +21,16 @@ interface Column {
   width?: string;
 }
 
+type SortField = 'title' | 'assignedTo' | 'dueDate' | 'priority' | 'clientId' | 'projectId' | 'status' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [columns, setColumns] = useState<Column[]>([
     { id: "name", label: "Task Name", width: "w-1/4" },
     { id: "assignee", label: "Assignee", width: "w-1/6" },
@@ -92,17 +97,73 @@ export default function Tasks() {
     },
   });
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = (
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.assignedTo?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredAndSortedTasks = tasks
+    .filter(task => {
+      const matchesSearch = (
+        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.assignedTo?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      let aValue: any = '';
+      let bValue: any = '';
+
+      switch (sortField) {
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'assignedTo':
+          aValue = getStaffName(a.assignedTo) || '';
+          bValue = getStaffName(b.assignedTo) || '';
+          break;
+        case 'dueDate':
+          aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+          bValue = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+          break;
+        case 'priority':
+          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
+          aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+          break;
+        case 'clientId':
+          aValue = getClientName(a.clientId) || '';
+          bValue = getClientName(b.clientId) || '';
+          break;
+        case 'projectId':
+          aValue = getProjectName(a.projectId) || '';
+          bValue = getProjectName(b.projectId) || '';
+          break;
+        case 'status':
+          aValue = a.status.toLowerCase();
+          bValue = b.status.toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt || 0).getTime();
+          bValue = new Date(b.createdAt || 0).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
@@ -156,14 +217,14 @@ export default function Tasks() {
 
   // Get hierarchical tasks (main tasks + their sub-tasks when expanded)
   const getHierarchicalTasks = () => {
-    const mainTasks = filteredTasks.filter(task => !task.parentTaskId);
+    const mainTasks = filteredAndSortedTasks.filter(task => !task.parentTaskId);
     const result: (Task & { level: number })[] = [];
     
     const addTaskAndSubTasks = (task: Task, level: number = 0) => {
       result.push({ ...task, level });
       
       if (expandedTasks.has(task.id)) {
-        const subTasks = filteredTasks.filter(t => t.parentTaskId === task.id);
+        const subTasks = filteredAndSortedTasks.filter(t => t.parentTaskId === task.id);
         subTasks.forEach(subTask => addTaskAndSubTasks(subTask, level + 1));
       }
     };
@@ -172,11 +233,56 @@ export default function Tasks() {
     return result;
   };
 
+  // SortableHeader component matching leads.tsx style
+  const SortableHeader = ({ column, children, sortField: columnSortField }: { 
+    column: Column; 
+    children: React.ReactNode; 
+    sortField?: SortField;
+  }) => {
+    const isActive = sortField === columnSortField;
+    const canSort = columnSortField && column.id !== "name"; // Don't allow sorting the name column
+    
+    if (!canSort) {
+      return (
+        <TableHead className={column.width}>
+          <span className="font-medium">{children}</span>
+        </TableHead>
+      );
+    }
+    
+    return (
+      <TableHead 
+        className={`${column.width} cursor-pointer hover:bg-slate-50 select-none`}
+        onClick={() => handleSort(columnSortField)}
+      >
+        <div className="flex items-center gap-1">
+          <span className="font-medium">{children}</span>
+          <div className="flex flex-col ml-1">
+            <ChevronUp 
+              className={`h-3 w-3 ${
+                isActive && sortDirection === 'asc' 
+                  ? 'text-blue-600' 
+                  : 'text-gray-400'
+              }`} 
+            />
+            <ChevronDown 
+              className={`h-3 w-3 -mt-1 ${
+                isActive && sortDirection === 'desc' 
+                  ? 'text-blue-600' 
+                  : 'text-gray-400'
+              }`} 
+            />
+          </div>
+        </div>
+      </TableHead>
+    );
+  };
+
   // Render cell content based on column type
   const renderCellContent = (column: Column, task: Task & { level?: number }) => {
     switch (column.id) {
       case "name":
-        const hasSubTasks = filteredTasks.some(t => t.parentTaskId === task.id);
+        const hasSubTasks = filteredAndSortedTasks.some(t => t.parentTaskId === task.id);
         const indentLevel = (task.level || 0) * 24; // 24px per level
         
         return (
@@ -448,13 +554,13 @@ export default function Tasks() {
                 <option value="cancelled">Cancelled</option>
               </select>
               <div className="text-sm text-slate-600">
-                {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+                {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''}
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {filteredTasks.length === 0 ? (
+          {filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
                 {searchTerm || statusFilter !== "all" 
@@ -479,17 +585,34 @@ export default function Tasks() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {columns.map((column) => (
-                    <TableHead key={column.id} className={column.width}>
-                      <span className="font-medium">{column.label}</span>
-                    </TableHead>
-                  ))}
-                  <TableHead className="w-20">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+            <DragDropContext onDragEnd={handleColumnDragEnd}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {columns.map((column) => {
+                      // Map column IDs to their corresponding sort fields
+                      const sortFieldMap: Record<string, SortField> = {
+                        name: 'title',
+                        assignee: 'assignedTo', 
+                        dueDate: 'dueDate',
+                        priority: 'priority',
+                        client: 'clientId',
+                        project: 'projectId'
+                      };
+                      
+                      return (
+                        <SortableHeader 
+                          key={column.id} 
+                          column={column}
+                          sortField={sortFieldMap[column.id]}
+                        >
+                          {column.label}
+                        </SortableHeader>
+                      );
+                    })}
+                    <TableHead className="w-20">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                   {getHierarchicalTasks().map((task) => (
                     <TableRow key={task.id} className="hover:bg-slate-50/50">
@@ -521,6 +644,7 @@ export default function Tasks() {
                   ))}
                 </TableBody>
               </Table>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
