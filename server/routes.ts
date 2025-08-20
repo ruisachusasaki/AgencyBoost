@@ -1033,6 +1033,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/tasks/:id", async (req, res) => {
     try {
+      console.log(`🚀 Task update request for ${req.params.id} with body:`, JSON.stringify(req.body));
+      
       // Get the current task data first
       const [currentTask] = await db.select()
         .from(tasks)
@@ -1042,7 +1044,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
 
+      console.log(`📋 Current task status: "${currentTask.status}"`);
+
       const validatedData = insertTaskSchema.partial().parse(req.body);
+      
+      console.log(`✅ Validated data:`, JSON.stringify(validatedData));
       
       // Check task dependencies before allowing completion
       console.log(`📝 Task update: ${req.params.id} - New status: "${validatedData.status}", Current status: "${currentTask.status}"`);
