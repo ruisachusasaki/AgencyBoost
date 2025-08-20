@@ -1166,6 +1166,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Task Attachments API
+  app.get("/api/tasks/:taskId/attachments", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      
+      const attachments = await db
+        .select({
+          id: taskAttachments.id,
+          taskId: taskAttachments.taskId,
+          fileName: taskAttachments.fileName,
+          fileType: taskAttachments.fileType,
+          fileSize: taskAttachments.fileSize,
+          fileUrl: taskAttachments.fileUrl,
+          uploadedBy: taskAttachments.uploadedBy,
+          createdAt: taskAttachments.createdAt,
+          uploaderName: sql<string>`concat(${staff.firstName}, ' ', ${staff.lastName})`
+        })
+        .from(taskAttachments)
+        .leftJoin(staff, eq(taskAttachments.uploadedBy, staff.id))
+        .where(eq(taskAttachments.taskId, taskId))
+        .orderBy(desc(taskAttachments.createdAt));
+      
+      res.json(attachments);
+    } catch (error) {
+      console.error("Error fetching task attachments:", error);
+      res.status(500).json({ message: "Failed to fetch attachments" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/attachments", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      const { fileName, fileType, fileSize, fileUrl } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const [attachment] = await db
+        .insert(taskAttachments)
+        .values({
+          taskId,
+          fileName,
+          fileType,
+          fileSize,
+          fileUrl,
+          uploadedBy: userId,
+        })
+        .returning();
+
+      // Log activity for file upload
+      await db.insert(taskActivities).values({
+        taskId,
+        action: "file_uploaded",
+        description: `Uploaded file: ${fileName}`,
+        userId,
+        details: {
+          fileName,
+          fileType,
+          fileSize,
+          fileUrl,
+        },
+      });
+
+      res.json(attachment);
+    } catch (error) {
+      console.error("Error creating task attachment:", error);
+      res.status(500).json({ message: "Failed to create attachment" });
+    }
+  });
+
+  app.delete("/api/tasks/:taskId/attachments/:attachmentId", async (req, res) => {
+    try {
+      const { taskId, attachmentId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Get attachment details before deletion for activity log
+      const [attachment] = await db
+        .select()
+        .from(taskAttachments)
+        .where(and(
+          eq(taskAttachments.id, attachmentId),
+          eq(taskAttachments.taskId, taskId)
+        ));
+
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Delete the attachment
+      await db
+        .delete(taskAttachments)
+        .where(and(
+          eq(taskAttachments.id, attachmentId),
+          eq(taskAttachments.taskId, taskId)
+        ));
+
+      // Log activity for file deletion
+      await db.insert(taskActivities).values({
+        taskId,
+        action: "file_deleted",
+        description: `Deleted file: ${attachment.fileName}`,
+        userId,
+        details: {
+          fileName: attachment.fileName,
+          fileType: attachment.fileType,
+          fileSize: attachment.fileSize,
+        },
+      });
+
+      res.json({ message: "Attachment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting task attachment:", error);
+      res.status(500).json({ message: "Failed to delete attachment" });
+    }
+  });
+
   // Invoice routes - Database Storage
   app.get("/api/invoices", async (req, res) => {
     try {

@@ -12,6 +12,7 @@ import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
 import TaskDescriptionCard from "@/components/task-description-card";
+import TaskAttachments from "@/components/task-attachments";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -594,6 +595,10 @@ export default function TaskDetail() {
             />
           )}
 
+          {/* Task Attachments */}
+          {!isEditing && (
+            <TaskAttachments taskId={task.id} />
+          )}
 
         </div>
 

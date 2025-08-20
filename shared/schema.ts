@@ -1819,6 +1819,26 @@ export const insertCustomFieldFileUploadSchema = createInsertSchema(customFieldF
 export type CustomFieldFileUpload = typeof customFieldFileUploads.$inferSelect;
 export type InsertCustomFieldFileUpload = z.infer<typeof insertCustomFieldFileUploadSchema>;
 
+// Task attachments - for file attachments to tasks
+export const taskAttachments = pgTable("task_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileUrl: text("file_url").notNull(), // Object storage URL
+  uploadedBy: uuid("uploaded_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TaskAttachment = typeof taskAttachments.$inferSelect;
+export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
+
 // Form folders - for organizing forms
 export const formFolders = pgTable("form_folders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
