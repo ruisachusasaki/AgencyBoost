@@ -2200,13 +2200,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Image Annotation endpoints
   
+  // Simple test endpoint
+  app.get("/api/test-annotations", async (req, res) => {
+    console.log("Test endpoint hit");
+    res.json({ message: "Test endpoint working" });
+  });
+  
   // Get annotations for a specific image file
   app.get("/api/files/:fileId/annotations", async (req, res) => {
     try {
-      const annotations = await storage.getImageAnnotations(req.params.fileId);
+      console.log("Attempting to fetch annotations for file:", req.params.fileId);
+      
+      // Test direct database query instead of storage
+      const { db } = await import("./db");
+      const { imageAnnotations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const annotations = await db.select()
+        .from(imageAnnotations)
+        .where(eq(imageAnnotations.fileId, req.params.fileId));
+      
+      console.log("Successfully fetched annotations:", annotations);
       res.json(annotations);
     } catch (error) {
       console.error("Error fetching image annotations:", error);
+      console.error("Error details:", error.stack);
       res.status(500).json({ error: "Failed to fetch image annotations" });
     }
   });
@@ -2214,16 +2232,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new image annotation
   app.post("/api/files/:fileId/annotations", async (req, res) => {
     try {
+      const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+      
       const insertAnnotation = insertImageAnnotationSchema.parse({
-        ...req.body,
+        id: nanoid(),
         fileId: req.params.fileId,
-        authorId: req.session.user?.id,
+        x: req.body.x.toString(),
+        y: req.body.y.toString(),
+        content: req.body.content,
+        authorId: userId,  // Use authorId instead of userId
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
-      const annotation = await storage.createImageAnnotation(insertAnnotation);
+      // Direct database insertion
+      const { db } = await import("./db");
+      const { imageAnnotations } = await import("@shared/schema");
+      
+      const result = await db.insert(imageAnnotations).values(insertAnnotation).returning();
+      const annotation = result[0];
+      
+
       res.status(201).json(annotation);
     } catch (error) {
       console.error("Error creating image annotation:", error);
+      console.error("Error details:", error.stack);
       res.status(500).json({ error: "Failed to create image annotation" });
     }
   });
@@ -2236,11 +2269,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date(),
       };
 
-      const annotation = await storage.updateImageAnnotation(req.params.annotationId, updateData);
-      if (!annotation) {
+      // Direct database update
+      const { db } = await import("./db");
+      const { imageAnnotations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const result = await db
+        .update(imageAnnotations)
+        .set(updateData)
+        .where(eq(imageAnnotations.id, req.params.annotationId))
+        .returning();
+      
+      if (result.length === 0) {
         return res.status(404).json({ error: "Annotation not found" });
       }
-      res.json(annotation);
+      
+      res.json(result[0]);
     } catch (error) {
       console.error("Error updating image annotation:", error);
       res.status(500).json({ error: "Failed to update image annotation" });
@@ -2250,10 +2294,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete an image annotation
   app.delete("/api/annotations/:annotationId", async (req, res) => {
     try {
-      const success = await storage.deleteImageAnnotation(req.params.annotationId);
-      if (!success) {
+      // Direct database deletion
+      const { db } = await import("./db");
+      const { imageAnnotations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const result = await db
+        .delete(imageAnnotations)
+        .where(eq(imageAnnotations.id, req.params.annotationId))
+        .returning();
+      
+      if (result.length === 0) {
         return res.status(404).json({ error: "Annotation not found" });
       }
+      
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting image annotation:", error);
@@ -5452,144 +5506,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== IMAGE ANNOTATION SYSTEM =====
 
-  // Get all annotations for a specific file
-  app.get("/api/files/:fileId/annotations", async (req, res) => {
-    try {
-      const { fileId } = req.params;
-      const annotations = await storage.getImageAnnotations(fileId);
-      res.json(annotations);
-    } catch (error) {
-      console.error("Error fetching image annotations:", error);
-      res.status(500).json({ error: "Failed to fetch annotations" });
-    }
-  });
 
-  // Create a new annotation for a file
-  app.post("/api/files/:fileId/annotations", async (req, res) => {
-    try {
-      const { fileId } = req.params;
-      const { x, y, content } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
-      if (!content?.trim()) {
-        return res.status(400).json({ error: "Annotation content is required" });
-      }
-
-      if (x === undefined || y === undefined) {
-        return res.status(400).json({ error: "X and Y coordinates are required" });
-      }
-
-      const validatedData = insertImageAnnotationSchema.parse({
-        id: nanoid(),
-        fileId,
-        x: x.toString(),
-        y: y.toString(),
-        content: content.trim(),
-        userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      const annotation = await storage.createImageAnnotation(validatedData);
-
-      // Log the creation
-      await createAuditLog(
-        "created",
-        "image_annotation",
-        annotation.id,
-        `Image annotation`,
-        userId,
-        `Created annotation on image: ${content.substring(0, 50)}...`,
-        null,
-        annotation,
-        req
-      );
-
-      res.status(201).json(annotation);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid data", details: error.errors });
-      }
-      console.error("Error creating image annotation:", error);
-      res.status(500).json({ error: "Failed to create annotation" });
-    }
-  });
-
-  // Update an existing annotation
-  app.put("/api/annotations/:annotationId", async (req, res) => {
-    try {
-      const { annotationId } = req.params;
-      const { content } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
-
-      if (!content?.trim()) {
-        return res.status(400).json({ error: "Annotation content is required" });
-      }
-
-      const updates = {
-        content: content.trim(),
-        updatedAt: new Date(),
-      };
-
-      const annotation = await storage.updateImageAnnotation(annotationId, updates);
-
-      if (!annotation) {
-        return res.status(404).json({ error: "Annotation not found" });
-      }
-
-      // Log the update
-      await createAuditLog(
-        "updated",
-        "image_annotation",
-        annotationId,
-        `Image annotation`,
-        userId,
-        `Updated annotation: ${content.substring(0, 50)}...`,
-        null,
-        annotation,
-        req
-      );
-
-      res.json(annotation);
-    } catch (error) {
-      console.error("Error updating image annotation:", error);
-      res.status(500).json({ error: "Failed to update annotation" });
-    }
-  });
-
-  // Delete an annotation
-  app.delete("/api/annotations/:annotationId", async (req, res) => {
-    try {
-      const { annotationId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
-
-      const success = await storage.deleteImageAnnotation(annotationId);
-
-      if (!success) {
-        return res.status(404).json({ error: "Annotation not found" });
-      }
-
-      // Log the deletion
-      await createAuditLog(
-        "deleted",
-        "image_annotation",
-        annotationId,
-        `Image annotation`,
-        userId,
-        `Deleted image annotation`,
-        null,
-        null,
-        req
-      );
-
-      res.json({ message: "Annotation deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting image annotation:", error);
-      res.status(500).json({ error: "Failed to delete annotation" });
-    }
-  });
 
   // ===== SECURE DOCUMENT MANAGEMENT SYSTEM =====
   
