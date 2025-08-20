@@ -8,14 +8,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, BarChart3 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 
 interface Column {
   id: string;
@@ -25,7 +25,7 @@ interface Column {
 
 type SortField = 'title' | 'assignedTo' | 'dueDate' | 'priority' | 'clientId' | 'projectId' | 'status' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
-type ViewMode = 'table' | 'kanban' | 'gantt';
+type ViewMode = 'table' | 'kanban';
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -630,100 +630,7 @@ export default function Tasks() {
     );
   };
 
-  // Gantt View Component
-  const GanttView = ({ tasks, staff, clients, projects }: {
-    tasks: Task[];
-    staff: Staff[];
-    clients: Client[];
-    projects: Project[];
-  }) => {
-    const ganttData = tasks
-      .filter(task => task.dueDate)
-      .map(task => {
-        const startDate = task.startDate ? new Date(task.startDate) : new Date();
-        const dueDate = new Date(task.dueDate!);
-        const duration = Math.max(1, Math.ceil((dueDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-        
-        return {
-          name: task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title,
-          start: startDate.toISOString().split('T')[0],
-          duration,
-          priority: task.priority,
-          assignee: getStaffName(task.assignedTo),
-          status: task.status
-        };
-      })
-      .slice(0, 20); // Limit to 20 tasks for readability
 
-    if (ganttData.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-slate-500 mb-4">No tasks with due dates found for Gantt chart.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="p-4">
-        <div className="mb-4">
-          <h3 className="text-lg font-medium text-slate-900 mb-2">Project Timeline</h3>
-          <p className="text-sm text-slate-600">Tasks shown by duration and timeline</p>
-        </div>
-        
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <ResponsiveContainer width="100%" height={Math.max(400, ganttData.length * 40)}>
-            <BarChart
-              layout="horizontal"
-              data={ganttData}
-              margin={{ top: 20, right: 30, left: 200, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" width={180} />
-              <Tooltip 
-                formatter={(value, name, props) => [
-                  `${value} days`,
-                  'Duration'
-                ]}
-                labelFormatter={(label) => `Task: ${label}`}
-              />
-              <Bar 
-                dataKey="duration" 
-                fill="#3b82f6"
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded"></div>
-              <span className="text-sm font-medium">Urgent</span>
-            </div>
-          </div>
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-orange-500 rounded"></div>
-              <span className="text-sm font-medium">High</span>
-            </div>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded"></div>
-              <span className="text-sm font-medium">Normal</span>
-            </div>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span className="text-sm font-medium">Low</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -803,34 +710,29 @@ export default function Tasks() {
             </div>
             
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2 border border-slate-200 rounded-lg p-1">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
+            <div className="flex items-center gap-0 bg-gray-100 rounded-lg p-1">
+              <button
                 onClick={() => setViewMode("table")}
-                className="h-8"
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  viewMode === "table"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
               >
-                <TableIcon className="h-4 w-4 mr-1" />
+                <TableIcon className="h-4 w-4" />
                 Table
-              </Button>
-              <Button
-                variant={viewMode === "kanban" ? "default" : "ghost"}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setViewMode("kanban")}
-                className="h-8"
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  viewMode === "kanban"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
               >
-                <Columns className="h-4 w-4 mr-1" />
+                <Columns className="h-4 w-4" />
                 Kanban
-              </Button>
-              <Button
-                variant={viewMode === "gantt" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("gantt")}
-                className="h-8"
-              >
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Gantt
-              </Button>
+              </button>
             </div>
             
             {/* Filter Controls */}
@@ -1052,7 +954,7 @@ export default function Tasks() {
                 </TableBody>
               </Table>
             </DragDropContext>
-          ) : viewMode === "kanban" ? (
+          ) : (
             <KanbanView 
               tasks={filteredAndSortedTasks}
               staff={staff}
@@ -1061,13 +963,6 @@ export default function Tasks() {
               onDragEnd={handleKanbanDragEnd}
               onDeleteTask={handleDeleteTask}
               deleteTaskMutation={deleteTaskMutation}
-            />
-          ) : (
-            <GanttView 
-              tasks={filteredAndSortedTasks}
-              staff={staff}
-              clients={clients}
-              projects={projects}
             />
           )}
         </CardContent>
