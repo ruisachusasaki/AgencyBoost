@@ -7,17 +7,33 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, Client, Project, Campaign } from "@shared/schema";
+import type { Task, Client, Project, Campaign, Staff } from "@shared/schema";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface Column {
+  id: string;
+  label: string;
+  width?: string;
+}
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [columns, setColumns] = useState<Column[]>([
+    { id: "name", label: "Task Name", width: "w-1/4" },
+    { id: "assignee", label: "Assignee", width: "w-1/6" },
+    { id: "dueDate", label: "Due Date", width: "w-1/6" },
+    { id: "priority", label: "Priority", width: "w-1/8" },
+    { id: "client", label: "Client", width: "w-1/6" },
+    { id: "project", label: "Project", width: "w-1/6" },
+  ]);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -37,6 +53,11 @@ export default function Tasks() {
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
+  });
+
+  // Fetch staff for assignee names
+  const { data: staff = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
   });
 
   const deleteTaskMutation = useMutation({
@@ -96,6 +117,98 @@ export default function Tasks() {
     if (!campaignId) return null;
     const campaign = campaigns.find(c => c.id === campaignId);
     return campaign?.name || "Unknown Campaign";
+  };
+
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return null;
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+  };
+
+  // Handle column reordering
+  const handleColumnDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(columns);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setColumns(items);
+  };
+
+  // Render cell content based on column type
+  const renderCellContent = (column: Column, task: Task) => {
+    switch (column.id) {
+      case "name":
+        return (
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              checked={task.status === "completed"}
+              onCheckedChange={(checked) => handleTaskToggle(task.id, !!checked)}
+              className="flex-shrink-0"
+            />
+            <Link href={`/tasks/${task.id}`}>
+              <span className={`font-medium hover:text-blue-600 cursor-pointer ${
+                task.status === "completed" 
+                  ? "text-slate-500 line-through" 
+                  : "text-slate-900"
+              }`}>
+                {task.title}
+              </span>
+            </Link>
+          </div>
+        );
+      
+      case "assignee":
+        return task.assignedTo ? (
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-slate-400" />
+            <span className="text-sm">{getStaffName(task.assignedTo)}</span>
+          </div>
+        ) : (
+          <span className="text-slate-400 text-sm">Unassigned</span>
+        );
+      
+      case "dueDate":
+        return task.dueDate ? (
+          <span className={`text-sm ${
+            new Date(task.dueDate) < new Date() && task.status !== "completed"
+              ? "text-red-600 font-medium"
+              : "text-slate-600"
+          }`}>
+            {formatDate(task.dueDate)}
+          </span>
+        ) : (
+          <span className="text-slate-400 text-sm">No due date</span>
+        );
+      
+      case "priority":
+        return (
+          <div className="flex items-center gap-1">
+            <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
+            <Badge className={getPriorityColor(task.priority)} variant="outline">
+              {task.priority}
+            </Badge>
+          </div>
+        );
+      
+      case "client":
+        return task.clientId ? (
+          <span className="text-sm">{getClientName(task.clientId)}</span>
+        ) : (
+          <span className="text-slate-400 text-sm">No client</span>
+        );
+      
+      case "project":
+        return task.projectId ? (
+          <span className="text-sm">{getProjectName(task.projectId)}</span>
+        ) : (
+          <span className="text-slate-400 text-sm">No project</span>
+        );
+      
+      default:
+        return null;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -308,92 +421,72 @@ export default function Tasks() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-slate-200">
-              {filteredTasks.map((task) => (
-                <div key={task.id} className="p-6 hover:bg-slate-50">
-                  <div className="flex items-start gap-4">
-                    <Checkbox 
-                      checked={task.status === "completed"}
-                      onCheckedChange={(checked) => handleTaskToggle(task.id, !!checked)}
-                      className="mt-1"
-                    />
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className={`font-semibold truncate ${
-                          task.status === "completed" 
-                            ? "text-slate-500 line-through" 
-                            : "text-slate-900"
-                        }`}>
-                          {task.title}
-                        </h3>
-                        <Badge className={getStatusColor(task.status)}>
-                          {task.status.replace('_', ' ')}
-                        </Badge>
-                        <Badge className={getPriorityColor(task.priority)}>
-                          {task.priority}
-                        </Badge>
-                      </div>
-                      
-                      {task.description && (
-                        <p className="text-sm text-slate-600 mb-2 line-clamp-2">
-                          {task.description}
-                        </p>
+            <DragDropContext onDragEnd={handleColumnDragEnd}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <Droppable droppableId="columns" direction="horizontal">
+                      {(provided) => (
+                        <tr ref={provided.innerRef} {...provided.droppableProps}>
+                          {columns.map((column, index) => (
+                            <Draggable key={column.id} draggableId={column.id} index={index}>
+                              {(provided, snapshot) => (
+                                <TableHead
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={`${column.width} select-none ${
+                                    snapshot.isDragging ? 'bg-slate-100' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{column.label}</span>
+                                    <div {...provided.dragHandleProps}>
+                                      <GripVertical className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-grab" />
+                                    </div>
+                                  </div>
+                                </TableHead>
+                              )}
+                            </Draggable>
+                          ))}
+                          <TableHead className="w-20">Actions</TableHead>
+                          {provided.placeholder}
+                        </tr>
                       )}
-                      
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                        {task.assignedTo && (
-                          <span>Assigned to: {task.assignedTo}</span>
-                        )}
-                        
-                        {task.clientId && (
-                          <span>Client: {getClientName(task.clientId)}</span>
-                        )}
-                        
-                        {task.projectId && (
-                          <span>Project: {getProjectName(task.projectId)}</span>
-                        )}
-                        
-                        {task.campaignId && (
-                          <span>Campaign: {getCampaignName(task.campaignId)}</span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-1 mt-2">
-                        <Calendar className="h-3 w-3" />
-                        <span className={`text-sm ${
-                          task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "completed"
-                            ? "text-red-600 font-medium"
-                            : "text-slate-600"
-                        }`}>
-                          {task.status === "completed" && task.completedAt
-                            ? `Completed: ${new Date(task.completedAt).toLocaleDateString()}`
-                            : formatDate(task.dueDate)
-                          }
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Link href={`/tasks/${task.id}`}>
-                        <Button variant="ghost" size="sm" title="Edit task">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteTask(task.id)}
-                        disabled={deleteTaskMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </Droppable>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTasks.map((task) => (
+                    <TableRow key={task.id} className="hover:bg-slate-50/50">
+                      {columns.map((column) => (
+                        <TableCell key={column.id} className="py-3">
+                          {renderCellContent(column, task)}
+                        </TableCell>
+                      ))}
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-1">
+                          <Link href={`/tasks/${task.id}`}>
+                            <Button variant="ghost" size="sm" title="Edit task">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteTask(task.id)}
+                            disabled={deleteTaskMutation.isPending}
+                            title="Delete task"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
