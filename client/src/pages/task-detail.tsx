@@ -387,7 +387,6 @@ export default function TaskDetail() {
                         {staff.map((member) => (
                           <SelectItem key={member.id} value={member.id}>
                             {member.firstName} {member.lastName}
-                            {member.department && ` (${member.department})`}
                           </SelectItem>
                         ))}
                       </SelectContent>

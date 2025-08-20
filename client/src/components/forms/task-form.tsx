@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Flag } from "lucide-react";
 import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff } from "@shared/schema";
 
 interface TaskFormProps {
@@ -43,7 +44,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       title: task?.title || "",
       description: task?.description || "",
       status: task?.status || "pending",
-      priority: task?.priority || "medium",
+      priority: task?.priority || "normal",
       assignedTo: task?.assignedTo || "unassigned",
       clientId: task?.clientId || "",
       projectId: task?.projectId || "",
@@ -189,9 +190,30 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">
+                      <div className="flex items-center gap-2">
+                        <Flag className="h-3 w-3 text-red-500" />
+                        <span>Urgent</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="high">
+                      <div className="flex items-center gap-2">
+                        <Flag className="h-3 w-3 text-yellow-500" />
+                        <span>High</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="normal">
+                      <div className="flex items-center gap-2">
+                        <Flag className="h-3 w-3 text-blue-500" />
+                        <span>Normal</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="low">
+                      <div className="flex items-center gap-2">
+                        <Flag className="h-3 w-3 text-gray-500" />
+                        <span>Low</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -216,7 +238,6 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.firstName} {member.lastName}
-                        {member.department && ` (${member.department})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
