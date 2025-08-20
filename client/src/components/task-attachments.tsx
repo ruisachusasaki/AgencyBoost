@@ -330,11 +330,16 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                                 ? 'bg-green-100 text-green-600 hover:bg-green-200' 
                                 : 'bg-white/90 text-slate-600 hover:bg-white'
                             }`}
-                            onClick={() => setSelectedImage({
-                              url: attachment.fileUrl,
-                              fileId: attachment.id,
-                              fileName: attachment.fileName
-                            })}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log("Opening annotation modal for:", attachment.fileName, attachment.fileType);
+                              setSelectedImage({
+                                url: attachment.fileUrl,
+                                fileId: attachment.id,
+                                fileName: attachment.fileName
+                              });
+                            }}
                             title={fileAnnotations[attachment.id] ? "View/edit annotations" : "Add annotation"}
                             data-testid={`button-annotate-${attachment.id}`}
                           >

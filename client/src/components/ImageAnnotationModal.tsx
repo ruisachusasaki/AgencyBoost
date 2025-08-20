@@ -34,6 +34,8 @@ export function ImageAnnotationModal({
   fileName,
   fileType = 'image'
 }: ImageAnnotationModalProps) {
+  console.log("ImageAnnotationModal rendered", { isOpen, fileType, fileName, imageUrl });
+  
   const [annotations, setAnnotations] = useState<AnnotationPin[]>([]);
   const [selectedAnnotation, setSelectedAnnotation] = useState<AnnotationPin | null>(null);
   const [isAddingAnnotation, setIsAddingAnnotation] = useState(false);
@@ -200,7 +202,7 @@ export function ImageAnnotationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Annotate Image: {fileName}
+            Annotate {fileType?.includes('pdf') ? 'PDF' : 'Image'}: {fileName}
           </DialogTitle>
         </DialogHeader>
 
@@ -218,26 +220,39 @@ export function ImageAnnotationModal({
                 Add Annotation
               </Button>
               {isAddingAnnotation && (
-                <Badge variant="secondary">Click on the image to add annotation</Badge>
+                <Badge variant="secondary">
+                  Click on the {fileType?.includes('pdf') ? 'PDF' : 'image'} to add annotation
+                </Badge>
               )}
             </div>
 
             <div className="w-full h-full flex items-center justify-center p-8">
-              <div className="relative">
-                <img
-                  ref={imageRef}
-                  src={imageUrl}
-                  alt={fileName}
-                  className="max-w-full max-h-full object-contain cursor-crosshair"
-                  onClick={handleImageClick}
-                  data-testid="annotation-image"
-                />
+              <div className="relative w-full h-full">
+                {fileType?.includes('pdf') ? (
+                  <iframe
+                    ref={imageRef as any}
+                    src={imageUrl}
+                    className="w-full h-full border border-gray-300 rounded cursor-crosshair"
+                    onClick={handleImageClick}
+                    data-testid="annotation-pdf"
+                    style={{ minHeight: '600px' }}
+                  />
+                ) : (
+                  <img
+                    ref={imageRef}
+                    src={imageUrl}
+                    alt={fileName}
+                    className="max-w-full max-h-full object-contain cursor-crosshair mx-auto"
+                    onClick={handleImageClick}
+                    data-testid="annotation-image"
+                  />
+                )}
 
                 {/* Annotation Pins */}
                 {annotations.map((annotation, index) => (
                   <div
                     key={annotation.id || `temp-${index}`}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
                     style={{
                       left: `${annotation.x}%`,
                       top: `${annotation.y}%`,
@@ -249,7 +264,7 @@ export function ImageAnnotationModal({
                     data-testid={`annotation-pin-${annotation.id || index}`}
                   >
                     <div 
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white ${
                         selectedAnnotation === annotation 
                           ? 'bg-blue-600 ring-2 ring-blue-300' 
                           : annotation.isNew 
