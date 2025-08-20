@@ -1133,6 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/tasks/:id", async (req, res) => {
     try {
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      console.log(`DELETE task request - Task ID: ${req.params.id}, User ID: ${userId}`);
       
       // Check if task exists and get its details
       const taskToDelete = await db.select()
@@ -1141,16 +1142,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
       
       if (taskToDelete.length === 0) {
+        console.log(`Task not found: ${req.params.id}`);
         return res.status(404).json({ message: "Task not found" });
       }
       
       const task = taskToDelete[0];
+      console.log(`Task found:`, { id: task.id, title: task.title, createdBy: task.createdBy, assignedTo: task.assignedTo });
       
       // Check if user has permission to delete tasks (admin or task creator/assignee)
       const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
       const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
       
+      console.log(`Permission check - canDelete: ${canDelete}, isTaskOwner: ${isTaskOwner}`);
+      
       if (!canDelete && !isTaskOwner) {
+        console.log(`Access denied for user ${userId} to delete task ${req.params.id}`);
         return res.status(403).json({ message: "Access denied. You can only delete tasks you created or are assigned to." });
       }
 
@@ -1159,14 +1165,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(tasks)
         .where(eq(tasks.parentTaskId, req.params.id));
       
+      console.log(`Found ${subTasks.length} sub-tasks to delete`);
+      
       if (subTasks.length > 0) {
         await db.delete(tasks)
           .where(eq(tasks.parentTaskId, req.params.id));
+        console.log(`Deleted ${subTasks.length} sub-tasks`);
       }
       
       // Delete the main task
+      console.log(`Deleting main task: ${req.params.id}`);
       const deletedRows = await db.delete(tasks)
         .where(eq(tasks.id, req.params.id));
+      
+      console.log(`Main task deletion result:`, deletedRows);
 
       // Log the deletion
       await createAuditLog(
@@ -1181,9 +1193,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
+      console.log(`Task deletion successful: ${req.params.id}`);
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete task" });
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task", error: error.message });
     }
   });
 
