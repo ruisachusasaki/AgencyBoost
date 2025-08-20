@@ -715,9 +715,10 @@ export default function Tasks() {
                 onClick={() => setViewMode("table")}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                   viewMode === "table"
-                    ? "bg-white text-gray-900 shadow-sm"
+                    ? "text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
+                style={viewMode === "table" ? { backgroundColor: "#44a1a0" } : {}}
               >
                 <TableIcon className="h-4 w-4" />
                 Table
@@ -726,9 +727,10 @@ export default function Tasks() {
                 onClick={() => setViewMode("kanban")}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                   viewMode === "kanban"
-                    ? "bg-white text-gray-900 shadow-sm"
+                    ? "text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
+                style={viewMode === "kanban" ? { backgroundColor: "#44a1a0" } : {}}
               >
                 <Columns className="h-4 w-4" />
                 Kanban
