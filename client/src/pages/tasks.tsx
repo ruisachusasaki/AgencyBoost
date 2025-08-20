@@ -125,15 +125,18 @@ export default function Tasks() {
     return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
   };
 
-  // Handle column reordering
+  // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
     if (!result.destination) return;
 
-    const items = Array.from(columns);
+    // Don't allow reordering if trying to move the name column
+    const reorderableColumns = columns.slice(1); // Exclude first column (name)
+    const items = Array.from(reorderableColumns);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    setColumns(items);
+    // Reconstruct the full columns array with name always first
+    setColumns([columns[0], ...items]);
   };
 
   // Render cell content based on column type
@@ -425,10 +428,16 @@ export default function Tasks() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {/* Fixed Name column - not draggable */}
+                    <TableHead className={columns[0].width}>
+                      <span className="font-medium">{columns[0].label}</span>
+                    </TableHead>
+                    
+                    {/* Draggable columns (excluding name) */}
                     <Droppable droppableId="columns" direction="horizontal">
                       {(provided) => (
-                        <tr ref={provided.innerRef} {...provided.droppableProps}>
-                          {columns.map((column, index) => (
+                        <div ref={provided.innerRef} {...provided.droppableProps} className="contents">
+                          {columns.slice(1).map((column, index) => (
                             <Draggable key={column.id} draggableId={column.id} index={index}>
                               {(provided, snapshot) => (
                                 <TableHead
@@ -448,11 +457,13 @@ export default function Tasks() {
                               )}
                             </Draggable>
                           ))}
-                          <TableHead className="w-20">Actions</TableHead>
                           {provided.placeholder}
-                        </tr>
+                        </div>
                       )}
                     </Droppable>
+                    
+                    {/* Fixed Actions column */}
+                    <TableHead className="w-20">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
