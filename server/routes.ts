@@ -1205,6 +1205,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not authenticated" });
       }
 
+      // Normalize the file URL using ObjectStorageService
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const normalizedFileUrl = objectStorageService.normalizeObjectEntityPath(fileUrl);
+
       const [attachment] = await db
         .insert(taskAttachments)
         .values({
@@ -1212,7 +1217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileName,
           fileType,
           fileSize,
-          fileUrl,
+          fileUrl: normalizedFileUrl,
           uploadedBy: userId,
         })
         .returning();
@@ -1227,7 +1232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileName,
           fileType,
           fileSize,
-          fileUrl,
+          fileUrl: normalizedFileUrl,
         },
       });
 
@@ -2305,6 +2310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
+      console.log("Serving object for path:", req.path);
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
       // Get the file object first, then download it

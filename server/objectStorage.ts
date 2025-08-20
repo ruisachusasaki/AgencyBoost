@@ -226,25 +226,39 @@ export class ObjectStorageService {
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
+    console.log("Normalizing path:", rawPath);
+    
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
+      console.log("Path doesn't start with googleapis, returning as-is:", rawPath);
       return rawPath;
     }
   
     // Extract the path from the URL by removing query parameters and domain
     const url = new URL(rawPath);
     const rawObjectPath = url.pathname;
+    console.log("Extracted pathname:", rawObjectPath);
   
     let objectEntityDir = this.getPrivateObjectDir();
     if (!objectEntityDir.endsWith("/")) {
       objectEntityDir = `${objectEntityDir}/`;
     }
+    console.log("Private object dir:", objectEntityDir);
   
     if (!rawObjectPath.startsWith(objectEntityDir)) {
+      console.log("Path doesn't start with entity dir, extracting from raw path");
+      // Try to extract the uploads/ part and everything after bucket name
+      const pathParts = rawObjectPath.split('/');
+      if (pathParts.length >= 3) {
+        // Format: /bucket-name/uploads/uuid
+        const entityPath = pathParts.slice(2).join('/'); // uploads/uuid
+        return `/objects/${entityPath}`;
+      }
       return rawObjectPath;
     }
   
     // Extract the entity ID from the path
     const entityId = rawObjectPath.slice(objectEntityDir.length);
+    console.log("Extracted entity ID:", entityId);
     return `/objects/${entityId}`;
   }
 

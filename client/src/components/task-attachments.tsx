@@ -125,10 +125,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
   const handleFileUpload = async (files: Array<{url: string, name: string, size: number, type: string}>) => {
     try {
       // Upload each file to the backend
-      for (const file of files) {
-        // Normalize the file URL to /objects/ format
-        const normalizedUrl = file.url.replace('https://storage.googleapis.com/', '/objects/');
-        
+      for (const file of files) {        
         // Create attachment record in database
         const response = await fetch(`/api/tasks/${taskId}/attachments`, {
           method: 'POST',
@@ -139,7 +136,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
             fileName: file.name,
             fileType: file.type,
             fileSize: file.size,
-            fileUrl: normalizedUrl,
+            fileUrl: file.url, // Keep the original upload URL for server-side normalization
           }),
         });
         
