@@ -1045,7 +1045,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertTaskSchema.partial().parse(req.body);
       
       // Check task dependencies before allowing completion
+      console.log(`📝 Task update: ${req.params.id} - New status: "${validatedData.status}", Current status: "${currentTask.status}"`);
+      
       if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
+        console.log(`🔍 Checking dependencies for task ${req.params.id} being marked as completed...`);
+        
         // Get all dependencies for this task
         const dependencies = await db
           .select({
@@ -1060,6 +1064,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(taskDependencies)
           .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
           .where(eq(taskDependencies.taskId, req.params.id));
+          
+        console.log(`📋 Found ${dependencies.length} dependencies:`, dependencies);
 
         // Check if all dependencies are satisfied
         const unsatisfiedDependencies = [];
@@ -1067,28 +1073,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const dep of dependencies) {
           const { dependencyType, dependsOnTask } = dep;
           let isSatisfied = false;
+          
+          console.log(`🔗 Checking dependency: "${dependsOnTask.title}" (${dependencyType}) - Status: ${dependsOnTask.status}`);
 
           switch (dependencyType) {
             case 'finish_to_start':
             case 'finish_to_finish':
               // Dependency task must be completed
               isSatisfied = dependsOnTask.status === 'completed' || dependsOnTask.completedAt !== null;
+              console.log(`  ✓ ${dependencyType}: requires completion, satisfied = ${isSatisfied}`);
               break;
             case 'start_to_start':
             case 'start_to_finish':
               // Dependency task must be started (not in todo status)
               isSatisfied = dependsOnTask.status !== 'todo';
+              console.log(`  ✓ ${dependencyType}: requires started, satisfied = ${isSatisfied}`);
               break;
           }
 
           if (!isSatisfied) {
+            console.log(`  ❌ Dependency NOT satisfied: "${dependsOnTask.title}"`);
             unsatisfiedDependencies.push({
               taskTitle: dependsOnTask.title,
               dependencyType,
               currentStatus: dependsOnTask.status
             });
+          } else {
+            console.log(`  ✅ Dependency satisfied: "${dependsOnTask.title}"`);
           }
         }
+        
+        console.log(`📊 Unsatisfied dependencies: ${unsatisfiedDependencies.length}`);
 
         if (unsatisfiedDependencies.length > 0) {
           const dependencyMessages = unsatisfiedDependencies.map(dep => {
@@ -1102,10 +1117,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return `"${dep.taskTitle}" ${typeLabel} (currently ${dep.currentStatus})`;
           });
 
+          const errorMessage = `Cannot complete this task. The following dependencies must be satisfied first:\n\n${dependencyMessages.join('\n')}`;
+          console.log(`🚫 BLOCKING TASK COMPLETION:`, errorMessage);
+          
           return res.status(400).json({ 
-            message: `Cannot complete this task. The following dependencies must be satisfied first:\n\n${dependencyMessages.join('\n')}`,
+            message: errorMessage,
             unsatisfiedDependencies 
           });
+        } else {
+          console.log(`✅ All dependencies satisfied, allowing task completion`);
         }
       }
       
