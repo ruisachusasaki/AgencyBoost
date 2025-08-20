@@ -2200,18 +2200,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Image Annotation endpoints
   
-  // Simple test endpoint
-  app.get("/api/test-annotations", async (req, res) => {
-    console.log("Test endpoint hit");
-    res.json({ message: "Test endpoint working" });
-  });
+
   
   // Get annotations for a specific image file
   app.get("/api/files/:fileId/annotations", async (req, res) => {
     try {
-      console.log("Attempting to fetch annotations for file:", req.params.fileId);
-      
-      // Test direct database query instead of storage
       const { db } = await import("./db");
       const { imageAnnotations } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
@@ -2220,11 +2213,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(imageAnnotations)
         .where(eq(imageAnnotations.fileId, req.params.fileId));
       
-      console.log("Successfully fetched annotations:", annotations);
       res.json(annotations);
     } catch (error) {
       console.error("Error fetching image annotations:", error);
-      console.error("Error details:", error.stack);
       res.status(500).json({ error: "Failed to fetch image annotations" });
     }
   });
@@ -2256,7 +2247,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(annotation);
     } catch (error) {
       console.error("Error creating image annotation:", error);
-      console.error("Error details:", error.stack);
       res.status(500).json({ error: "Failed to create image annotation" });
     }
   });
