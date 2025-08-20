@@ -147,10 +147,16 @@ export default function Tasks() {
       );
       
       const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-      const matchesAssignee = assigneeFilter === "all" || task.assignedTo === assigneeFilter;
+      const matchesAssignee = assigneeFilter === "all" || 
+        (assigneeFilter === "unassigned" && !task.assignedTo) ||
+        task.assignedTo === assigneeFilter;
       const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
-      const matchesClient = clientFilter === "all" || task.clientId === clientFilter;
-      const matchesProject = projectFilter === "all" || task.projectId === projectFilter;
+      const matchesClient = clientFilter === "all" || 
+        (clientFilter === "none" && !task.clientId) ||
+        task.clientId === clientFilter;
+      const matchesProject = projectFilter === "all" || 
+        (projectFilter === "none" && !task.projectId) ||
+        task.projectId === projectFilter;
       
       return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject;
     })
@@ -583,7 +589,7 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Assignees</SelectItem>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {staff.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.firstName} {member.lastName}
@@ -613,7 +619,7 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Clients</SelectItem>
-                  <SelectItem value="">No Client</SelectItem>
+                  <SelectItem value="none">No Client</SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
@@ -629,7 +635,7 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Projects</SelectItem>
-                  <SelectItem value="">No Project</SelectItem>
+                  <SelectItem value="none">No Project</SelectItem>
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
