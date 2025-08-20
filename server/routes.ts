@@ -7189,6 +7189,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Timer endpoints for global timer functionality
+  app.get("/api/time-entries/running", async (req, res) => {
+    try {
+      // Check all tasks for incomplete time entries (running timers)
+      const allTasks = await storage.getTasks();
+      
+      for (const task of allTasks) {
+        if (task.timeEntries && Array.isArray(task.timeEntries)) {
+          const runningEntry = task.timeEntries.find((entry: any) => entry.isRunning);
+          if (runningEntry) {
+            res.json({
+              ...runningEntry,
+              taskId: task.id,
+              taskTitle: task.title
+            });
+            return;
+          }
+        }
+      }
+      
+      res.json(null); // No running timer found
+    } catch (error) {
+      console.error("Error checking for running timer:", error);
+      res.status(500).json({ error: "Failed to check for running timer" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

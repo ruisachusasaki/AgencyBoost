@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import TimerIndicator from "@/components/timer-indicator";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -219,6 +221,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Timer indicator */}
+          <TimerIndicator />
+          
           <div className="relative hidden md:block">
             <Input
               type="search"

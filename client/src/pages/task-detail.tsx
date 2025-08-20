@@ -13,8 +13,9 @@ import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
 import TaskDescriptionCard from "@/components/task-description-card";
 import TaskAttachments from "@/components/task-attachments";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import { useTimer } from "@/contexts/TimerContext";
 
 export default function TaskDetail() {
   const { taskId } = useParams();
@@ -22,9 +23,8 @@ export default function TaskDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [currentTimeEntry, setCurrentTimeEntry] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("comments");
+  const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -180,53 +180,16 @@ export default function TaskDetail() {
     return updateTaskMutation.mutateAsync(updates);
   };
 
+  // Check if this task has the running timer
+  const isThisTaskTimerRunning = isTimerRunning && currentTimer?.taskId === taskId;
+
   const startTimeTracking = () => {
     if (!task) return;
-    
-    const now = new Date().toISOString();
-    const timeEntry = {
-      id: Date.now().toString(),
-      startTime: now,
-      userId: 'current-user', // Replace with actual current user ID
-      isRunning: true
-    };
-    setCurrentTimeEntry(timeEntry);
-    setIsTimerRunning(true);
-    
-    // Update task with new time entry
-    const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-    updateTaskMutation.mutate({
-      timeEntries: [...currentEntries, timeEntry]
-    });
+    startTimer(task.id, task.title);
   };
 
   const stopTimeTracking = () => {
-    if (currentTimeEntry && task) {
-      const now = new Date().toISOString();
-      const updatedEntry = {
-        ...currentTimeEntry,
-        endTime: now,
-        isRunning: false,
-        duration: Math.floor((new Date(now).getTime() - new Date(currentTimeEntry.startTime).getTime()) / 1000 / 60) // minutes
-      };
-      
-      const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const updatedEntries = currentEntries.map((entry: any) => 
-        entry.id === currentTimeEntry.id ? updatedEntry : entry
-      );
-      
-      const totalTracked = updatedEntries.reduce((total: number, entry: any) => 
-        total + (entry.duration || 0), 0
-      );
-      
-      updateTaskMutation.mutate({
-        timeEntries: updatedEntries,
-        timeTracked: totalTracked
-      });
-      
-      setCurrentTimeEntry(null);
-      setIsTimerRunning(false);
-    }
+    stopTimer();
   };
 
   const getStaffName = (staffId: string | null) => {
@@ -544,14 +507,15 @@ export default function TaskDetail() {
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        variant={isTimerRunning ? "destructive" : "default"}
-                        onClick={isTimerRunning ? stopTimeTracking : startTimeTracking}
+                        variant={isThisTaskTimerRunning ? "destructive" : "default"}
+                        onClick={isThisTaskTimerRunning ? stopTimeTracking : startTimeTracking}
                         className="h-8 px-3"
+                        disabled={isTimerRunning && !isThisTaskTimerRunning}
                       >
-                        {isTimerRunning ? (
+                        {isThisTaskTimerRunning ? (
                           <><Pause className="h-3 w-3 mr-1" />Stop</>
                         ) : (
-                          <><Play className="h-3 w-3 mr-1" />Start</>
+                          <><Play className="h-3 w-3 mr-1" />{isTimerRunning ? "Switch" : "Start"}</>
                         )}
                       </Button>
                       <span className="text-sm text-slate-600">
