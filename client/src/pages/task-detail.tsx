@@ -23,6 +23,8 @@ export default function TaskDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("comments");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState("");
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -197,6 +199,33 @@ export default function TaskDetail() {
     return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown User';
   };
 
+  const startTitleEdit = () => {
+    if (task) {
+      setTitleValue(task.title);
+      setEditingTitle(true);
+    }
+  };
+
+  const saveTitleEdit = () => {
+    if (titleValue.trim() && titleValue !== task?.title) {
+      updateTaskMutation.mutate({ title: titleValue.trim() });
+    }
+    setEditingTitle(false);
+  };
+
+  const cancelTitleEdit = () => {
+    setEditingTitle(false);
+    setTitleValue("");
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveTitleEdit();
+    } else if (e.key === 'Escape') {
+      cancelTitleEdit();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -251,7 +280,24 @@ export default function TaskDetail() {
             Back to Tasks
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{task.title}</h1>
+            {editingTitle ? (
+              <Input
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onBlur={saveTitleEdit}
+                onKeyDown={handleTitleKeyDown}
+                className="text-2xl font-bold bg-transparent border-0 shadow-none p-0 h-auto focus-visible:ring-1 focus-visible:ring-primary"
+                autoFocus
+              />
+            ) : (
+              <h1 
+                className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-slate-700 transition-colors"
+                onClick={startTitleEdit}
+                title="Click to edit task title"
+              >
+                {task.title}
+              </h1>
+            )}
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary" className={getStatusColor(task.status)}>
                 {task.status.replace('_', ' ')}
