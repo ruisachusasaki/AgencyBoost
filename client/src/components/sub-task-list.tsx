@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "wouter";
@@ -127,12 +128,23 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'text-red-600 dark:text-red-400';
-      case 'high': return 'text-yellow-600 dark:text-yellow-400';
-      case 'normal': return 'text-blue-600 dark:text-blue-400';
-      case 'low': return 'text-gray-600 dark:text-gray-400';
-      default: return 'text-gray-600 dark:text-gray-400';
+      case 'urgent': return 'text-red-600';
+      case 'high': return 'text-orange-600';
+      case 'normal': return 'text-blue-600';
+      case 'low': return 'text-gray-600';
+      default: return 'text-gray-600';
     }
+  };
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return '';
+    return format(new Date(date), 'MMM dd, yyyy');
+  };
+
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return 'Unassigned';
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown';
   };
 
   const getStatusColor = (status: string) => {
@@ -155,96 +167,97 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
   }
 
   return (
-    <div className={`ml-${level * 4} space-y-2`}>
-      {subTasks.map((task: Task) => (
-        <Card key={task.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-          <Link href={`/tasks/${task.id}`} className="block">
-            <CardContent className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 flex-1">
-                  {task.hasSubTasks && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleTaskExpansion(task.id);
-                      }}
-                      className="p-1"
-                      data-testid={`toggle-subtasks-${task.id}`}
-                    >
-                      {expandedTasks.has(task.id) ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                  
-                  <div className="flex-1">
-                    <div className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-2" 
-                         data-testid={`subtask-title-${task.id}`}>
-                      {task.title}
-                      <ExternalLink className="h-3 w-3 opacity-50" />
-                    </div>
-                  
-                  {task.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {task.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center space-x-4 mt-2 text-sm">
-                    <Badge className={getStatusColor(task.status)} data-testid={`subtask-status-${task.id}`}>
-                      {task.status.replace('_', ' ')}
-                    </Badge>
-                    
-                    <div className="flex items-center space-x-1">
-                      <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
-                      <span className={getPriorityColor(task.priority)}>
-                        {task.priority}
+    <div className={`${level > 0 ? 'ml-6' : ''}`}>
+      {subTasks.length > 0 && (
+        <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="w-[40%]">Task Name</TableHead>
+                <TableHead className="w-[20%]">Assignee</TableHead>
+                <TableHead className="w-[20%]">Due Date</TableHead>
+                <TableHead className="w-[20%]">Priority</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {subTasks.map((task: Task) => (
+                <>
+                  <TableRow key={task.id} className="hover:bg-slate-50">
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-2">
+                        {task.hasSubTasks && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleTaskExpansion(task.id)}
+                            className="h-6 w-6 p-0"
+                            data-testid={`toggle-subtasks-${task.id}`}
+                          >
+                            {expandedTasks.has(task.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        <div className={`${level > 0 ? 'ml-4' : ''}`}>
+                          <Link href={`/tasks/${task.id}`}>
+                            <span className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-1" 
+                                  data-testid={`subtask-title-${task.id}`}>
+                              {task.title}
+                              <ExternalLink className="h-3 w-3 opacity-50" />
+                            </span>
+                          </Link>
+                          {task.description && (
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <span className="text-sm text-gray-700">
+                        {getStaffName(task.assignedTo)}
                       </span>
-                    </div>
-                    
-                    {task.assignedTo && (
-                      <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                        <User className="h-3 w-3" />
-                        <span>
-                          {staff.find(s => s.id === task.assignedTo)?.firstName || 'Assigned'}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <span className={`text-sm ${
+                        task.dueDate && new Date(task.dueDate) < new Date() 
+                          ? 'text-red-600 font-medium' 
+                          : 'text-gray-700'
+                      }`}>
+                        {formatDate(task.dueDate)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-1">
+                        <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
+                        <span className={`text-sm capitalize ${getPriorityColor(task.priority)}`}>
+                          {task.priority}
                         </span>
                       </div>
-                    )}
-                    
-                    {task.dueDate && (
-                      <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                        <Calendar className="h-3 w-3" />
-                        <span>{format(new Date(task.dueDate), 'MMM dd')}</span>
-                      </div>
-                    )}
-                    
-                    <div className="text-gray-500 dark:text-gray-500 text-xs">
-                      Level {task.level! + 1}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Nested sub-tasks */}
-            {task.hasSubTasks && expandedTasks.has(task.id) && task.level! < maxLevel - 1 && (
-              <div className="mt-4">
-                <SubTaskList 
-                  parentTaskId={task.id} 
-                  level={level + 1}
-                  maxLevel={maxLevel}
-                />
-              </div>
-            )}
-          </CardContent>
-          </Link>
-        </Card>
-      ))}
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Nested sub-tasks */}
+                  {task.hasSubTasks && expandedTasks.has(task.id) && task.level! < maxLevel - 1 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="p-0">
+                        <SubTaskList 
+                          parentTaskId={task.id} 
+                          level={level + 1}
+                          maxLevel={maxLevel}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Add Sub-task Button */}
       {level < maxLevel - 1 && (
