@@ -65,10 +65,10 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
     }
   };
 
-  // Load annotations for image files
+  // Load annotations for image and PDF files
   useState(() => {
     attachments.forEach(file => {
-      if (file.fileType.startsWith('image/')) {
+      if (file.fileType.startsWith('image/') || file.fileType.includes('pdf')) {
         checkFileAnnotations(file.id);
       }
     });
@@ -240,13 +240,17 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                     return { method: 'PUT' as const, url: data.uploadURL };
                   }}
                   onComplete={(result) => {
-                    const files = result.successful.map(file => ({
-                      url: file.uploadURL,
-                      name: file.name || 'Untitled',
-                      size: file.size || 0,
-                      type: file.type || 'application/octet-stream'
-                    }));
-                    handleFileUpload(files);
+                    if (result.successful && result.successful.length > 0) {
+                      const files = result.successful.map(file => ({
+                        url: file.uploadURL || '',
+                        name: file.name || 'Untitled',
+                        size: file.size || 0,
+                        type: file.type || 'application/octet-stream'
+                      })).filter(file => file.url !== '');
+                      if (files.length > 0) {
+                        handleFileUpload(files);
+                      }
+                    }
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -281,9 +285,28 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                             fileName: attachment.fileName
                           })}
                           data-testid={`image-preview-${attachment.id}`}
+                          onError={(e) => {
+                            // Fallback to icon if image fails to load
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
                         />
+                      ) : attachment.fileType.includes('pdf') ? (
+                        <div 
+                          className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => setSelectedImage({
+                            url: attachment.fileUrl,
+                            fileId: attachment.id,
+                            fileName: attachment.fileName
+                          })}
+                        >
+                          <FileIconComponent className="h-12 w-12 text-red-500" />
+                        </div>
                       ) : (
                         <FileIconComponent className="h-12 w-12 text-slate-400" />
+                      )}
+                      {isImage && (
+                        <FileIconComponent className="h-12 w-12 text-slate-400 hidden" />
                       )}
                     </div>
                     
@@ -301,7 +324,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                     {/* Action Buttons */}
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex gap-1">
-                        {isImage && (
+                        {(isImage || attachment.fileType.includes('pdf')) && (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -365,6 +388,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
           imageUrl={selectedImage.url}
           fileId={selectedImage.fileId}
           fileName={selectedImage.fileName}
+          fileType={attachments.find(a => a.id === selectedImage.fileId)?.fileType}
         />
       )}
     </Card>

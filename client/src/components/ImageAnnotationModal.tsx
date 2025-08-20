@@ -15,6 +15,7 @@ interface ImageAnnotationModalProps {
   imageUrl: string;
   fileId: string;
   fileName: string;
+  fileType?: string;
 }
 
 interface AnnotationPin {
@@ -30,7 +31,8 @@ export function ImageAnnotationModal({
   onClose, 
   imageUrl, 
   fileId, 
-  fileName 
+  fileName,
+  fileType = 'image'
 }: ImageAnnotationModalProps) {
   const [annotations, setAnnotations] = useState<AnnotationPin[]>([]);
   const [selectedAnnotation, setSelectedAnnotation] = useState<AnnotationPin | null>(null);
