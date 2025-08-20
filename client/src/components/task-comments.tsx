@@ -5,9 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music, Mic, MicOff, Pause, Play } from "lucide-react";
+import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music, Mic, MicOff, Pause, Play, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploader } from "./FileUploader";
+import { ImageAnnotationModal } from "./ImageAnnotationModal";
 
 interface TaskComment {
   id: string;
@@ -62,6 +63,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [commentReactions, setCommentReactions] = useState<Record<string, CommentReaction[]>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; fileId: string; fileName: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -443,12 +445,44 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                     <img 
                                       src={file.fileUrl} 
                                       alt={file.fileName}
-                                      className="max-w-full max-h-64 rounded-lg border shadow-sm cursor-pointer"
-                                      onClick={() => window.open(file.fileUrl, '_blank')}
+                                      className="max-w-full max-h-64 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                      onClick={() => setSelectedImage({ 
+                                        url: file.fileUrl, 
+                                        fileId: file.id, 
+                                        fileName: file.fileName 
+                                      })}
+                                      data-testid={`image-${file.id}`}
+                                      title="Click to annotate image"
                                     />
-                                    <p className="text-xs text-slate-500">
-                                      {file.fileName} • {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                                    </p>
+                                    <div className="flex items-center justify-between text-xs text-slate-500">
+                                      <span>{file.fileName} • {(file.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                      <div className="flex gap-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 px-2 text-blue-600 hover:text-blue-700"
+                                          onClick={() => setSelectedImage({ 
+                                            url: file.fileUrl, 
+                                            fileId: file.id, 
+                                            fileName: file.fileName 
+                                          })}
+                                          data-testid={`button-annotate-${file.id}`}
+                                          title="Annotate image"
+                                        >
+                                          <MessageSquare className="h-3 w-3" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 px-2"
+                                          onClick={() => window.open(file.fileUrl, '_blank')}
+                                          data-testid={`button-view-${file.id}`}
+                                          title="View full size"
+                                        >
+                                          <Image className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
                                   </div>
                                 ) : isAudio ? (
                                   // Display inline audio player for audio files
@@ -843,6 +877,17 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           </Button>
         </div>
       </form>
+
+      {/* Image Annotation Modal */}
+      {selectedImage && (
+        <ImageAnnotationModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          imageUrl={selectedImage.url}
+          fileId={selectedImage.fileId}
+          fileName={selectedImage.fileName}
+        />
+      )}
     </div>
   );
 }

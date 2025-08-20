@@ -43,6 +43,11 @@ import {
   type CustomFieldFileUpload, type InsertCustomFieldFileUpload,
   type Form, type InsertForm, type FormField, type InsertFormField,
   type FormSubmission, type InsertFormSubmission,
+  type CommentFile, type InsertCommentFile, commentFiles,
+  type TaskComment, type InsertTaskComment, taskComments,
+  type TaskCommentReaction, type InsertTaskCommentReaction, taskCommentReactions,
+  type ImageAnnotation, type InsertImageAnnotation, imageAnnotations,
+  type TaskActivity, type InsertTaskActivity, taskActivities,
   customFieldFileUploads, forms, formFields, formSubmissions, tags
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -380,6 +385,12 @@ export interface IStorage {
   createTaskComment(comment: any): Promise<any>;
   updateTaskComment(id: string, comment: any): Promise<any>;
   deleteTaskComment(id: string): Promise<boolean>;
+
+  // Image Annotations
+  getImageAnnotations(fileId: string): Promise<ImageAnnotation[]>;
+  createImageAnnotation(annotation: InsertImageAnnotation): Promise<ImageAnnotation>;
+  updateImageAnnotation(annotationId: string, updates: { content: string; updatedAt: Date }): Promise<ImageAnnotation | undefined>;
+  deleteImageAnnotation(annotationId: string): Promise<boolean>;
   getProduct(id: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
@@ -3254,6 +3265,52 @@ class MinimalStorage implements Partial<IStorage> {
     } catch (error) {
       console.error("Error creating form submission:", error);
       throw error;
+    }
+  }
+
+  // Image Annotations
+  async getImageAnnotations(fileId: string): Promise<ImageAnnotation[]> {
+    try {
+      return await db.select()
+        .from(imageAnnotations)
+        .where(eq(imageAnnotations.fileId, fileId))
+        .orderBy(desc(imageAnnotations.createdAt));
+    } catch (error) {
+      console.error("Error getting image annotations:", error);
+      return [];
+    }
+  }
+
+  async createImageAnnotation(annotation: InsertImageAnnotation): Promise<ImageAnnotation> {
+    try {
+      const result = await db.insert(imageAnnotations).values(annotation).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating image annotation:", error);
+      throw error;
+    }
+  }
+
+  async updateImageAnnotation(annotationId: string, updates: { content: string; updatedAt: Date }): Promise<ImageAnnotation | undefined> {
+    try {
+      const result = await db.update(imageAnnotations)
+        .set(updates)
+        .where(eq(imageAnnotations.id, annotationId))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating image annotation:", error);
+      return undefined;
+    }
+  }
+
+  async deleteImageAnnotation(annotationId: string): Promise<boolean> {
+    try {
+      await db.delete(imageAnnotations).where(eq(imageAnnotations.id, annotationId));
+      return true;
+    } catch (error) {
+      console.error("Error deleting image annotation:", error);
+      return false;
     }
   }
 

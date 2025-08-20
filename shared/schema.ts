@@ -506,6 +506,18 @@ export const commentFiles = pgTable("comment_files", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Image annotations for collaborative feedback on uploaded images
+export const imageAnnotations = pgTable("image_annotations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fileId: varchar("file_id").notNull().references(() => commentFiles.id, { onDelete: "cascade" }),
+  x: decimal("x", { precision: 5, scale: 2 }).notNull(), // X coordinate as percentage (0-100)
+  y: decimal("y", { precision: 5, scale: 2 }).notNull(), // Y coordinate as percentage (0-100)
+  content: text("content").notNull(), // Annotation text/comment
+  authorId: varchar("author_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Task Activities for audit trail
 export const taskActivities = pgTable("task_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -852,14 +864,22 @@ export const insertCommentFileSchema = createInsertSchema(commentFiles).omit({
   createdAt: true,
 });
 
+export const insertImageAnnotationSchema = createInsertSchema(imageAnnotations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type TaskComment = typeof taskComments.$inferSelect;
 export type TaskCommentReaction = typeof taskCommentReactions.$inferSelect;
 export type CommentFile = typeof commentFiles.$inferSelect;
+export type ImageAnnotation = typeof imageAnnotations.$inferSelect;
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type InsertTaskCommentReaction = z.infer<typeof insertTaskCommentReactionSchema>;
 export type InsertCommentFile = z.infer<typeof insertCommentFileSchema>;
+export type InsertImageAnnotation = z.infer<typeof insertImageAnnotationSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type CustomFieldFolder = typeof customFieldFolders.$inferSelect;
