@@ -1631,18 +1631,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { taskId } = req.params;
       
+      console.log("Debug - taskId from params:", taskId);
+      console.log("Debug - req.body:", JSON.stringify(req.body));
+      
       // Validate the request body manually first
       if (!req.body.dependsOnTaskId) {
         return res.status(400).json({ message: "dependsOnTaskId is required" });
       }
       
-      // Add taskId from URL params to the request body for validation
-      const dataToValidate = {
-        ...req.body,
+      // Create a schema that doesn't require taskId for validation
+      const requestBodySchema = insertTaskDependencySchema.omit({ taskId: true });
+      const validatedBody = requestBodySchema.parse(req.body);
+      
+      // Add taskId manually
+      const dependencyData = {
+        ...validatedBody,
         taskId
       };
-      
-      const dependencyData = insertTaskDependencySchema.parse(dataToValidate);
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
       // Validate that the dependency task exists
