@@ -97,6 +97,31 @@ export default function Tasks() {
     },
   });
 
+  // Helper functions - moved above sorting logic
+  const getClientName = (clientId: string | null) => {
+    if (!clientId) return null;
+    const client = clients.find((c: Client) => c.id === clientId);
+    return client?.name || "Unknown Client";
+  };
+
+  const getProjectName = (projectId: string | null) => {
+    if (!projectId) return null;
+    const project = projects.find(p => p.id === projectId);
+    return project?.name || "Unknown Project";
+  };
+
+  const getCampaignName = (campaignId: string | null) => {
+    if (!campaignId) return null;
+    const campaign = campaigns.find(c => c.id === campaignId);
+    return campaign?.name || "Unknown Campaign";
+  };
+
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return null;
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -128,8 +153,8 @@ export default function Tasks() {
           bValue = b.title.toLowerCase();
           break;
         case 'assignedTo':
-          aValue = getStaffName(a.assignedTo) || '';
-          bValue = getStaffName(b.assignedTo) || '';
+          aValue = (getStaffName(a.assignedTo) || 'Unassigned').toLowerCase();
+          bValue = (getStaffName(b.assignedTo) || 'Unassigned').toLowerCase();
           break;
         case 'dueDate':
           aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0;
@@ -141,12 +166,12 @@ export default function Tasks() {
           bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
           break;
         case 'clientId':
-          aValue = getClientName(a.clientId) || '';
-          bValue = getClientName(b.clientId) || '';
+          aValue = (getClientName(a.clientId) || 'No client').toLowerCase();
+          bValue = (getClientName(b.clientId) || 'No client').toLowerCase();
           break;
         case 'projectId':
-          aValue = getProjectName(a.projectId) || '';
-          bValue = getProjectName(b.projectId) || '';
+          aValue = (getProjectName(a.projectId) || 'No project').toLowerCase();
+          bValue = (getProjectName(b.projectId) || 'No project').toLowerCase();
           break;
         case 'status':
           aValue = a.status.toLowerCase();
@@ -164,30 +189,6 @@ export default function Tasks() {
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-
-  const getClientName = (clientId: string | null) => {
-    if (!clientId) return null;
-    const client = clients.find((c: Client) => c.id === clientId);
-    return client?.name || "Unknown Client";
-  };
-
-  const getProjectName = (projectId: string | null) => {
-    if (!projectId) return null;
-    const project = projects.find(p => p.id === projectId);
-    return project?.name || "Unknown Project";
-  };
-
-  const getCampaignName = (campaignId: string | null) => {
-    if (!campaignId) return null;
-    const campaign = campaigns.find(c => c.id === campaignId);
-    return campaign?.name || "Unknown Campaign";
-  };
-
-  const getStaffName = (staffId: string | null) => {
-    if (!staffId) return null;
-    const staffMember = staff.find(s => s.id === staffId);
-    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
-  };
 
   // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
