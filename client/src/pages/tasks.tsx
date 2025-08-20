@@ -589,30 +589,83 @@ export default function Tasks() {
             <DragDropContext onDragEnd={handleColumnDragEnd}>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    {columns.map((column) => {
-                      // Map column IDs to their corresponding sort fields
-                      const sortFieldMap: Record<string, SortField> = {
-                        name: 'title',
-                        assignee: 'assignedTo', 
-                        dueDate: 'dueDate',
-                        priority: 'priority',
-                        client: 'clientId',
-                        project: 'projectId'
-                      };
-                      
-                      return (
+                  <Droppable droppableId="table-headers" direction="horizontal">
+                    {(provided) => (
+                      <TableRow ref={provided.innerRef} {...provided.droppableProps}>
+                        {/* Fixed Task Name column (non-draggable) */}
                         <SortableHeader 
-                          key={column.id} 
-                          column={column}
-                          sortField={sortFieldMap[column.id]}
+                          column={columns[0]}
+                          sortField="title"
                         >
-                          {column.label}
+                          {columns[0].label}
                         </SortableHeader>
-                      );
-                    })}
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
+                        
+                        {/* Draggable columns (all except Task Name) */}
+                        {columns.slice(1).map((column, index) => {
+                          // Map column IDs to their corresponding sort fields
+                          const sortFieldMap: Record<string, SortField> = {
+                            name: 'title',
+                            assignee: 'assignedTo', 
+                            dueDate: 'dueDate',
+                            priority: 'priority',
+                            client: 'clientId',
+                            project: 'projectId'
+                          };
+                          
+                          return (
+                            <Draggable
+                              key={column.id}
+                              draggableId={column.id}
+                              index={index}
+                            >
+                              {(provided, snapshot) => (
+                                <TableHead
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={`${column.width} ${
+                                    snapshot.isDragging ? 'bg-blue-50 shadow-lg z-50' : ''
+                                  }`}
+                                >
+                                  <div
+                                    {...provided.dragHandleProps}
+                                    className="flex items-center gap-1 cursor-pointer hover:bg-slate-50 select-none p-1 rounded"
+                                    onClick={() => {
+                                      const sortField = sortFieldMap[column.id];
+                                      if (sortField) handleSort(sortField);
+                                    }}
+                                  >
+                                    <GripVertical className="h-4 w-4 text-gray-400" />
+                                    <span className="font-medium">{column.label}</span>
+                                    {sortFieldMap[column.id] && (
+                                      <div className="flex flex-col ml-1">
+                                        <ChevronUp 
+                                          className={`h-3 w-3 ${
+                                            sortField === sortFieldMap[column.id] && sortDirection === 'asc' 
+                                              ? 'text-blue-600' 
+                                              : 'text-gray-400'
+                                          }`} 
+                                        />
+                                        <ChevronDown 
+                                          className={`h-3 w-3 -mt-1 ${
+                                            sortField === sortFieldMap[column.id] && sortDirection === 'desc' 
+                                              ? 'text-blue-600' 
+                                              : 'text-gray-400'
+                                          }`} 
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableHead>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        
+                        {provided.placeholder}
+                        <TableHead className="w-20">Actions</TableHead>
+                      </TableRow>
+                    )}
+                  </Droppable>
                 </TableHeader>
               <TableBody>
                   {getHierarchicalTasks().map((task) => (
