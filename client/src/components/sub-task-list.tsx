@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, ChevronDown, Plus, Calendar, User, Clock, Flag } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Calendar, User, Clock, Flag, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -148,33 +148,37 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
   return (
     <div className={`ml-${level * 4} space-y-2`}>
       {subTasks.map((task: Task) => (
-        <Card key={task.id} className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 flex-1">
-                {task.hasSubTasks && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleTaskExpansion(task.id)}
-                    className="p-1"
-                    data-testid={`toggle-subtasks-${task.id}`}
-                  >
-                    {expandedTasks.has(task.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-                
-                <div className="flex-1">
-                  <Link href={`/tasks/${task.id}`}>
-                    <div className="font-medium hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer" 
+        <Card key={task.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+          <Link href={`/tasks/${task.id}`} className="block">
+            <CardContent className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 flex-1">
+                  {task.hasSubTasks && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleTaskExpansion(task.id);
+                      }}
+                      className="p-1"
+                      data-testid={`toggle-subtasks-${task.id}`}
+                    >
+                      {expandedTasks.has(task.id) ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  
+                  <div className="flex-1">
+                    <div className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-2" 
                          data-testid={`subtask-title-${task.id}`}>
                       {task.title}
+                      <ExternalLink className="h-3 w-3 opacity-50" />
                     </div>
-                  </Link>
                   
                   {task.description && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -229,6 +233,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
               </div>
             )}
           </CardContent>
+          </Link>
         </Card>
       ))}
 
