@@ -181,6 +181,8 @@ export default function TaskDetail() {
   };
 
   const startTimeTracking = () => {
+    if (!task) return;
+    
     const now = new Date().toISOString();
     const timeEntry = {
       id: Date.now().toString(),
@@ -192,14 +194,14 @@ export default function TaskDetail() {
     setIsTimerRunning(true);
     
     // Update task with new time entry
-    const currentEntries = task?.timeEntries || [];
+    const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
     updateTaskMutation.mutate({
       timeEntries: [...currentEntries, timeEntry]
     });
   };
 
   const stopTimeTracking = () => {
-    if (currentTimeEntry) {
+    if (currentTimeEntry && task) {
       const now = new Date().toISOString();
       const updatedEntry = {
         ...currentTimeEntry,
@@ -208,7 +210,7 @@ export default function TaskDetail() {
         duration: Math.floor((new Date(now).getTime() - new Date(currentTimeEntry.startTime).getTime()) / 1000 / 60) // minutes
       };
       
-      const currentEntries = task?.timeEntries || [];
+      const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
       const updatedEntries = currentEntries.map((entry: any) => 
         entry.id === currentTimeEntry.id ? updatedEntry : entry
       );
