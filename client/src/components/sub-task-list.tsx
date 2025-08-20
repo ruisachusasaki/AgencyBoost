@@ -188,7 +188,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
                     )}
                   </Button>
                 )}
-                <div className={`${level > 0 ? `ml-${level * 6}` : ''}`}>
+                <div style={{ marginLeft: `${level * 24}px` }}>
                   <Link href={`/tasks/${task.id}`}>
                     <span className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-1" 
                           data-testid={`subtask-title-${task.id}`}>
