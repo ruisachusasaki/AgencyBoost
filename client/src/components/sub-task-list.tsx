@@ -11,8 +11,6 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskSchema } from "@shared/schema";
-import { z } from "zod";
 import { Link } from "wouter";
 import { apiRequest } from "../lib/queryClient";
 import { format } from "date-fns";
@@ -42,7 +40,13 @@ interface SubTaskListProps {
   maxLevel?: number;
 }
 
-type SubTaskFormData = z.infer<typeof insertTaskSchema>;
+interface SubTaskFormData {
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  assignedTo?: string;
+}
 
 export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -62,25 +66,31 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
 
   // Create sub-task mutation
   const createSubTaskMutation = useMutation({
-    mutationFn: (data: SubTaskFormData) => 
-      apiRequest(`/api/tasks/${parentTaskId}/subtasks`, { method: "POST", body: data }),
-    onSuccess: () => {
+    mutationFn: (data: SubTaskFormData) => {
+      console.log("Creating sub-task with data:", data);
+      return apiRequest(`/api/tasks/${parentTaskId}/subtasks`, { method: "POST", body: data });
+    },
+    onSuccess: (data) => {
+      console.log("Sub-task created successfully:", data);
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${parentTaskId}/subtasks`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${parentTaskId}`] });
       setShowAddForm(false);
       form.reset();
+    },
+    onError: (error) => {
+      console.error("Failed to create sub-task:", error);
+      // You can add toast notification here later
     }
   });
 
   const form = useForm<SubTaskFormData>({
-    resolver: zodResolver(insertTaskSchema),
     defaultValues: {
       title: "",
       description: "",
       status: "pending",
       priority: "normal",
-      assignedTo: undefined,
+      assignedTo: "",
     }
   });
 
