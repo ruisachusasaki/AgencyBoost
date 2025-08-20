@@ -1244,7 +1244,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(tasks.parentTaskId, req.params.taskId))
         .orderBy(asc(tasks.createdAt));
       
-      res.json(subTasks);
+      // For each subtask, check if it has its own subtasks
+      const subTasksWithFlags = await Promise.all(
+        subTasks.map(async (task) => {
+          const childTasks = await db.select({ id: tasks.id })
+            .from(tasks)
+            .where(eq(tasks.parentTaskId, task.id))
+            .limit(1);
+          
+          return {
+            ...task,
+            hasSubTasks: childTasks.length > 0
+          };
+        })
+      );
+      
+      res.json(subTasksWithFlags);
     } catch (error) {
       console.error("Error fetching sub-tasks:", error);
       res.status(500).json({ message: "Failed to fetch sub-tasks" });

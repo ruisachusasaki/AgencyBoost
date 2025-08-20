@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, ChevronDown, Plus, Calendar, User, Clock, Flag, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
@@ -136,12 +136,12 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
     }
   };
 
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date: Date | null | undefined) => {
     if (!date) return '';
     return format(new Date(date), 'MMM dd, yyyy');
   };
 
-  const getStaffName = (staffId: string | null) => {
+  const getStaffName = (staffId: string | null | undefined) => {
     if (!staffId) return 'Unassigned';
     const staffMember = staff.find(s => s.id === staffId);
     return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown';
@@ -181,8 +181,8 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
             </TableHeader>
             <TableBody>
               {subTasks.map((task: Task) => (
-                <>
-                  <TableRow key={task.id} className="hover:bg-slate-50">
+                <React.Fragment key={task.id}>
+                  <TableRow className="hover:bg-slate-50">
                     <TableCell className="py-3">
                       <div className="flex items-center gap-2">
                         {task.hasSubTasks && (
@@ -247,7 +247,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
