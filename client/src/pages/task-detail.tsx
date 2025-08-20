@@ -201,10 +201,13 @@ export default function TaskDetail() {
 
   const startTitleEdit = () => {
     console.log('startTitleEdit called', task);
+    console.log('Current editingTitle state:', editingTitle);
+    console.log('Setting titleValue to:', task?.title);
     if (task) {
       setTitleValue(task.title);
       setEditingTitle(true);
     }
+    console.log('After setting editingTitle to true');
   };
 
   const saveTitleEdit = () => {
@@ -292,12 +295,16 @@ export default function TaskDetail() {
               />
             ) : (
               <h1 
-                className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-slate-700 transition-colors"
-                onClick={startTitleEdit}
+                className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-slate-700 transition-colors hover:bg-slate-100 p-1 rounded"
+                onClick={(e) => {
+                  console.log('H1 clicked!', e);
+                  startTitleEdit();
+                }}
                 title="Click to edit task title"
                 data-testid="task-title-edit"
               >
                 {task.title}
+                <span className="text-xs text-slate-400 ml-2">(Click to edit)</span>
               </h1>
             )}
             <div className="flex items-center gap-2 mt-1">
