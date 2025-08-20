@@ -54,7 +54,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
   const queryClient = useQueryClient();
 
   // Fetch sub-tasks for the parent task
-  const { data: subTasks = [], isLoading } = useQuery({
+  const { data: subTasks = [], isLoading } = useQuery<Task[]>({
     queryKey: [`/api/tasks/${parentTaskId}/subtasks`],
     enabled: !!parentTaskId
   });
