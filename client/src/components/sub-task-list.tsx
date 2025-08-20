@@ -167,226 +167,72 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
   }
 
   return (
-    <div className={`${level > 0 ? 'ml-6' : ''}`}>
-      {subTasks.length > 0 && (
-        <div className="border border-slate-200 rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="w-[40%]">Task Name</TableHead>
-                <TableHead className="w-[20%]">Assignee</TableHead>
-                <TableHead className="w-[20%]">Due Date</TableHead>
-                <TableHead className="w-[20%]">Priority</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {subTasks.map((task: Task) => (
-                <React.Fragment key={task.id}>
-                  <TableRow className="hover:bg-slate-50">
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-2">
-                        {task.hasSubTasks && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleTaskExpansion(task.id)}
-                            className="h-6 w-6 p-0"
-                            data-testid={`toggle-subtasks-${task.id}`}
-                          >
-                            {expandedTasks.has(task.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-                        <div className={`${level > 0 ? 'ml-4' : ''}`}>
-                          <Link href={`/tasks/${task.id}`}>
-                            <span className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-1" 
-                                  data-testid={`subtask-title-${task.id}`}>
-                              {task.title}
-                              <ExternalLink className="h-3 w-3 opacity-50" />
-                            </span>
-                          </Link>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <span className="text-sm text-gray-700">
-                        {getStaffName(task.assignedTo)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <span className={`text-sm ${
-                        task.dueDate && new Date(task.dueDate) < new Date() 
-                          ? 'text-red-600 font-medium' 
-                          : 'text-gray-700'
-                      }`}>
-                        {formatDate(task.dueDate)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-1">
-                        <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
-                        <span className={`text-sm capitalize ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  
-                  {/* Nested sub-tasks */}
-                  {task.hasSubTasks && expandedTasks.has(task.id) && task.level! < maxLevel - 1 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="p-0">
-                        <SubTaskList 
-                          parentTaskId={task.id} 
-                          level={level + 1}
-                          maxLevel={maxLevel}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Add Sub-task Button */}
-      {level < maxLevel - 1 && (
-        <div className="mt-4">
-          <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-            <DialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-                data-testid={`add-subtask-${parentTaskId}`}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Sub-task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Sub-task</DialogTitle>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter sub-task title..." 
-                            {...field} 
-                            data-testid="subtask-title-input"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+    <>
+      {subTasks.map((task: Task) => (
+        <React.Fragment key={task.id}>
+          <TableRow className="hover:bg-slate-50">
+            <TableCell className="py-3">
+              <div className="flex items-center gap-2">
+                {task.hasSubTasks && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleTaskExpansion(task.id)}
+                    className="h-6 w-6 p-0"
+                    data-testid={`toggle-subtasks-${task.id}`}
+                  >
+                    {expandedTasks.has(task.id) ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
                     )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Enter sub-task description..."
-                            {...field}
-                            value={field.value || ""}
-                            data-testid="subtask-description-input"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Priority</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="subtask-priority-select">
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="assignedTo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assignee</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="subtask-assignee-select">
-                                <SelectValue placeholder="Select assignee" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {staff.map((member) => (
-                                <SelectItem key={member.id} value={member.id}>
-                                  {member.firstName} {member.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setShowAddForm(false)}
-                      data-testid="cancel-subtask-button"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={createSubTaskMutation.isPending}
-                      data-testid="create-subtask-button"
-                    >
-                      {createSubTaskMutation.isPending ? "Creating..." : "Create Sub-task"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
-    </div>
+                  </Button>
+                )}
+                <div className={`${level > 0 ? `ml-${level * 6}` : ''}`}>
+                  <Link href={`/tasks/${task.id}`}>
+                    <span className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-1" 
+                          data-testid={`subtask-title-${task.id}`}>
+                      {task.title}
+                      <ExternalLink className="h-3 w-3 opacity-50" />
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell className="py-3">
+              <span className="text-sm text-gray-700">
+                {getStaffName(task.assignedTo)}
+              </span>
+            </TableCell>
+            <TableCell className="py-3">
+              <span className={`text-sm ${
+                task.dueDate && new Date(task.dueDate) < new Date() 
+                  ? 'text-red-600 font-medium' 
+                  : 'text-gray-700'
+              }`}>
+                {formatDate(task.dueDate)}
+              </span>
+            </TableCell>
+            <TableCell className="py-3">
+              <div className="flex items-center gap-1">
+                <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
+                <span className={`text-sm capitalize ${getPriorityColor(task.priority)}`}>
+                  {task.priority}
+                </span>
+              </div>
+            </TableCell>
+          </TableRow>
+          
+          {/* Nested sub-tasks */}
+          {task.hasSubTasks && expandedTasks.has(task.id) && task.level! < maxLevel - 1 && (
+            <SubTaskList 
+              parentTaskId={task.id} 
+              level={level + 1}
+              maxLevel={maxLevel}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </>
   );
 }
