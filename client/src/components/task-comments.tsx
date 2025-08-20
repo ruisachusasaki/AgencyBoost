@@ -64,6 +64,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [commentReactions, setCommentReactions] = useState<Record<string, CommentReaction[]>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ url: string; fileId: string; fileName: string } | null>(null);
+  const [fileAnnotations, setFileAnnotations] = useState<Record<string, boolean>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -92,11 +93,34 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     }
   };
 
-  // Load reactions when comments change
+  // Check for annotations on image files
+  const checkFileAnnotations = async (fileId: string) => {
+    try {
+      const response = await fetch(`/api/files/${fileId}/annotations`);
+      if (response.ok) {
+        const annotations = await response.json();
+        setFileAnnotations(prev => ({
+          ...prev,
+          [fileId]: annotations.length > 0
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch annotations:', error);
+    }
+  };
+
+  // Load reactions and annotations when comments change
   useEffect(() => {
     comments.forEach(comment => {
       fetchReactions(comment.id);
       comment.replies?.forEach(reply => fetchReactions(reply.id));
+      
+      // Check annotations for image files
+      comment.files?.forEach(file => {
+        if (file.fileType.startsWith('image/')) {
+          checkFileAnnotations(file.id);
+        }
+      });
     });
   }, [comments, taskId]);
 
@@ -460,26 +484,20 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                         <Button 
                                           variant="ghost" 
                                           size="sm" 
-                                          className="h-6 px-2 text-blue-600 hover:text-blue-700"
+                                          className={`h-6 px-2 ${
+                                            fileAnnotations[file.id] 
+                                              ? 'text-green-600 hover:text-green-700 bg-green-50' 
+                                              : 'text-blue-600 hover:text-blue-700'
+                                          }`}
                                           onClick={() => setSelectedImage({ 
                                             url: file.fileUrl, 
                                             fileId: file.id, 
                                             fileName: file.fileName 
                                           })}
                                           data-testid={`button-annotate-${file.id}`}
-                                          title="Annotate image"
+                                          title={fileAnnotations[file.id] ? "View/edit annotations" : "Add annotation"}
                                         >
                                           <MessageSquare className="h-3 w-3" />
-                                        </Button>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm" 
-                                          className="h-6 px-2"
-                                          onClick={() => window.open(file.fileUrl, '_blank')}
-                                          data-testid={`button-view-${file.id}`}
-                                          title="View full size"
-                                        >
-                                          <Image className="h-3 w-3" />
                                         </Button>
                                       </div>
                                     </div>
@@ -882,7 +900,13 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       {selectedImage && (
         <ImageAnnotationModal
           isOpen={!!selectedImage}
-          onClose={() => setSelectedImage(null)}
+          onClose={() => {
+            setSelectedImage(null);
+            // Refresh annotation status after closing modal
+            if (selectedImage.fileId) {
+              checkFileAnnotations(selectedImage.fileId);
+            }
+          }}
           imageUrl={selectedImage.url}
           fileId={selectedImage.fileId}
           fileName={selectedImage.fileName}
