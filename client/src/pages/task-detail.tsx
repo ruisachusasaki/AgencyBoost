@@ -594,26 +594,24 @@ export default function TaskDetail() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead className="w-[40%]">Task Name</TableHead>
-                      <TableHead className="w-[20%]">Assignee</TableHead>
-                      <TableHead className="w-[20%]">Due Date</TableHead>
-                      <TableHead className="w-[20%]">Priority</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <SubTaskList 
-                      parentTaskId={task.id}
-                      level={0}
-                      maxLevel={5}
-                    />
-                  </TableBody>
-                </Table>
-              </div>
+            <CardContent className="p-6">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="w-[40%]">Task Name</TableHead>
+                    <TableHead className="w-[20%]">Assignee</TableHead>
+                    <TableHead className="w-[20%]">Due Date</TableHead>
+                    <TableHead className="w-[20%]">Priority</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <SubTaskList 
+                    parentTaskId={task.id}
+                    level={0}
+                    maxLevel={5}
+                  />
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
 
