@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
@@ -593,12 +594,26 @@ export default function TaskDetail() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <SubTaskList 
-                parentTaskId={task.id}
-                level={task.level || 0}
-                maxLevel={5}
-              />
+            <CardContent className="p-0">
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50">
+                      <TableHead className="w-[40%]">Task Name</TableHead>
+                      <TableHead className="w-[20%]">Assignee</TableHead>
+                      <TableHead className="w-[20%]">Due Date</TableHead>
+                      <TableHead className="w-[20%]">Priority</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <SubTaskList 
+                      parentTaskId={task.id}
+                      level={0}
+                      maxLevel={5}
+                    />
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
