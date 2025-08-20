@@ -1166,6 +1166,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sub-task Hierarchy API (ClickUp-style up to 5 levels deep)
+  app.get("/api/tasks/:taskId/subtasks", async (req, res) => {
+    try {
+      const subTasks = await db.select()
+        .from(tasks)
+        .where(eq(tasks.parentTaskId, req.params.taskId))
+        .orderBy(asc(tasks.createdAt));
+      
+      res.json(subTasks);
+    } catch (error) {
+      console.error("Error fetching sub-tasks:", error);
+      res.status(500).json({ message: "Failed to fetch sub-tasks" });
+    }
+  });
+
+  app.get("/api/tasks/root", async (req, res) => {
+    try {
+      const rootTasks = await db.select()
+        .from(tasks)
+        .where(sql`${tasks.parentTaskId} IS NULL OR ${tasks.level} = 0`)
+        .orderBy(asc(tasks.createdAt));
+      
+      res.json(rootTasks);
+    } catch (error) {
+      console.error("Error fetching root tasks:", error);
+      res.status(500).json({ message: "Failed to fetch root tasks" });
+    }
+  });
+
+  app.get("/api/tasks/:taskId/hierarchy", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      
+      // Get root task first
+      const [rootTask] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, taskId));
+      
+      if (!rootTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Get all tasks in hierarchy using task path
+      const hierarchyTasks = await db.select()
+        .from(tasks)
+        .where(sql`${tasks.taskPath} LIKE ${rootTask.taskPath + '%'}`)
+        .orderBy(asc(tasks.level), asc(tasks.createdAt));
+      
+      res.json(hierarchyTasks);
+    } catch (error) {
+      console.error("Error fetching task hierarchy:", error);
+      res.status(500).json({ message: "Failed to fetch task hierarchy" });
+    }
+  });
+
+  app.post("/api/tasks/:parentTaskId/subtasks", async (req, res) => {
+    try {
+      const { parentTaskId } = req.params;
+      
+      // Check if parent task exists and get its level
+      const [parentTask] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, parentTaskId));
+      
+      if (!parentTask) {
+        return res.status(404).json({ message: "Parent task not found" });
+      }
+
+      if (parentTask.level! >= 4) {
+        return res.status(400).json({ message: "Maximum task nesting level (5) reached" });
+      }
+
+      // Validate sub-task data
+      const validatedData = insertTaskSchema.parse({
+        ...req.body,
+        parentTaskId: parentTaskId
+      });
+
+      // Calculate hierarchy fields
+      const level = parentTask.level! + 1;
+      
+      // Create sub-task first to get the ID
+      const [newSubTask] = await db.insert(tasks)
+        .values({
+          ...validatedData,
+          parentTaskId: parentTaskId,
+          level: level,
+          taskPath: '', // Will update after getting the ID
+          hasSubTasks: false
+        })
+        .returning();
+
+      // Update the task path now that we have the ID
+      const updatedTaskPath = `${parentTask.taskPath}/${newSubTask.id}`;
+      await db.update(tasks)
+        .set({ taskPath: updatedTaskPath })
+        .where(eq(tasks.id, newSubTask.id));
+
+      // Update parent task to mark it as having sub-tasks
+      await db.update(tasks)
+        .set({ hasSubTasks: true })
+        .where(eq(tasks.id, parentTaskId));
+      
+      // Return the updated task with correct path
+      const [finalSubTask] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, newSubTask.id));
+      
+      res.status(201).json(finalSubTask);
+    } catch (error) {
+      console.error("Error creating sub-task:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create sub-task" });
+    }
+  });
+
+  app.get("/api/tasks/:taskId/parent", async (req, res) => {
+    try {
+      const [task] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, req.params.taskId));
+      
+      if (!task || !task.parentTaskId) {
+        return res.status(404).json({ message: "Parent task not found" });
+      }
+
+      const [parentTask] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, task.parentTaskId));
+      
+      if (!parentTask) {
+        return res.status(404).json({ message: "Parent task not found" });
+      }
+
+      res.json(parentTask);
+    } catch (error) {
+      console.error("Error fetching parent task:", error);
+      res.status(500).json({ message: "Failed to fetch parent task" });
+    }
+  });
+
+  app.get("/api/tasks/:taskId/path", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      const path = [];
+      
+      let currentTaskId = taskId;
+      while (currentTaskId) {
+        const [task] = await db.select()
+          .from(tasks)
+          .where(eq(tasks.id, currentTaskId));
+        
+        if (!task) break;
+        
+        path.unshift(task);
+        currentTaskId = task.parentTaskId;
+      }
+      
+      res.json(path);
+    } catch (error) {
+      console.error("Error fetching task path:", error);
+      res.status(500).json({ message: "Failed to fetch task path" });
+    }
+  });
+
   // Task Attachments API
   app.get("/api/tasks/:taskId/attachments", async (req, res) => {
     try {

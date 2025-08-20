@@ -103,6 +103,14 @@ export interface IStorage {
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
   
+  // Sub-task hierarchy methods (ClickUp-style up to 5 levels deep)
+  getSubTasks(parentTaskId: string): Promise<Task[]>;
+  getRootTasks(): Promise<Task[]>; // Tasks with no parent (level 0)
+  getTaskHierarchy(rootTaskId: string): Promise<Task[]>; // Complete hierarchy tree
+  createSubTask(parentTaskId: string, task: InsertTask): Promise<Task>;
+  getParentTask(taskId: string): Promise<Task | undefined>;
+  getTaskPath(taskId: string): Promise<Task[]>; // Breadcrumb path from root to task
+  
   // Invoices
   getInvoices(): Promise<Invoice[]>;
   getInvoice(id: string): Promise<Invoice | undefined>;
@@ -1348,18 +1356,45 @@ export class MemStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = randomUUID();
     const now = new Date();
+    
+    // Calculate hierarchy fields
+    let level = 0;
+    let taskPath = id;
+    
+    if (insertTask.parentTaskId) {
+      const parentTask = this.tasks.get(insertTask.parentTaskId);
+      if (parentTask) {
+        level = parentTask.level! + 1;
+        taskPath = parentTask.taskPath + "/" + id;
+        
+        // Update parent task to mark it as having sub-tasks
+        const updatedParent = { ...parentTask, hasSubTasks: true };
+        this.tasks.set(insertTask.parentTaskId, updatedParent);
+      }
+    }
+    
     const task: Task = { 
       id,
       title: insertTask.title,
       description: insertTask.description || null,
       status: insertTask.status || "pending",
-      priority: insertTask.priority || "medium",
+      priority: insertTask.priority || "normal",
       assignedTo: insertTask.assignedTo || null,
       clientId: insertTask.clientId || null,
       projectId: insertTask.projectId || null,
       campaignId: insertTask.campaignId || null,
       dueDate: insertTask.dueDate || null,
+      startDate: insertTask.startDate || null,
       dueTime: insertTask.dueTime || null,
+      timeEstimate: insertTask.timeEstimate || null,
+      timeTracked: insertTask.timeTracked || 0,
+      timeEntries: insertTask.timeEntries || [],
+      
+      // Sub-task hierarchy fields
+      parentTaskId: insertTask.parentTaskId || null,
+      level,
+      taskPath,
+      hasSubTasks: false,
       
       // Recurring task settings
       isRecurring: insertTask.isRecurring || false,
@@ -1391,7 +1426,114 @@ export class MemStorage implements IStorage {
   }
 
   async deleteTask(id: string): Promise<boolean> {
+    const task = this.tasks.get(id);
+    if (!task) return false;
+    
+    // If this task has sub-tasks, also delete them
+    if (task.hasSubTasks) {
+      const subTasks = await this.getSubTasks(id);
+      for (const subTask of subTasks) {
+        await this.deleteTask(subTask.id);
+      }
+    }
+    
+    // If this task has a parent, update parent's hasSubTasks flag
+    if (task.parentTaskId) {
+      const parentTask = this.tasks.get(task.parentTaskId);
+      if (parentTask) {
+        const remainingSiblings = Array.from(this.tasks.values())
+          .filter(t => t.parentTaskId === task.parentTaskId && t.id !== id);
+        
+        if (remainingSiblings.length === 0) {
+          const updatedParent = { ...parentTask, hasSubTasks: false };
+          this.tasks.set(task.parentTaskId, updatedParent);
+        }
+      }
+    }
+    
     return this.tasks.delete(id);
+  }
+
+  // Sub-task hierarchy methods (ClickUp-style up to 5 levels deep)
+  async getSubTasks(parentTaskId: string): Promise<Task[]> {
+    return Array.from(this.tasks.values())
+      .filter(task => task.parentTaskId === parentTaskId)
+      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+  }
+
+  async getRootTasks(): Promise<Task[]> {
+    return Array.from(this.tasks.values())
+      .filter(task => !task.parentTaskId || task.level === 0)
+      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+  }
+
+  async getTaskHierarchy(rootTaskId: string): Promise<Task[]> {
+    const hierarchy: Task[] = [];
+    const root = this.tasks.get(rootTaskId);
+    
+    if (!root) return hierarchy;
+    
+    // Add root task
+    hierarchy.push(root);
+    
+    // Recursively get all descendants
+    const addDescendants = async (parentId: string) => {
+      const subTasks = await this.getSubTasks(parentId);
+      for (const subTask of subTasks) {
+        hierarchy.push(subTask);
+        if (subTask.hasSubTasks) {
+          await addDescendants(subTask.id);
+        }
+      }
+    };
+    
+    if (root.hasSubTasks) {
+      await addDescendants(rootTaskId);
+    }
+    
+    return hierarchy;
+  }
+
+  async createSubTask(parentTaskId: string, task: InsertTask): Promise<Task> {
+    const parentTask = this.tasks.get(parentTaskId);
+    if (!parentTask) {
+      throw new Error('Parent task not found');
+    }
+    
+    if (parentTask.level! >= 4) { // Max 5 levels (0-4)
+      throw new Error('Maximum task nesting level (5) reached');
+    }
+    
+    // Create sub-task with parent reference
+    const subTaskData: InsertTask = {
+      ...task,
+      parentTaskId: parentTaskId
+    };
+    
+    return this.createTask(subTaskData);
+  }
+
+  async getParentTask(taskId: string): Promise<Task | undefined> {
+    const task = this.tasks.get(taskId);
+    if (!task || !task.parentTaskId) return undefined;
+    
+    return this.tasks.get(task.parentTaskId);
+  }
+
+  async getTaskPath(taskId: string): Promise<Task[]> {
+    const path: Task[] = [];
+    let currentTask = this.tasks.get(taskId);
+    
+    while (currentTask) {
+      path.unshift(currentTask);
+      if (currentTask.parentTaskId) {
+        currentTask = this.tasks.get(currentTask.parentTaskId);
+      } else {
+        break;
+      }
+    }
+    
+    return path;
   }
 
   // Invoices

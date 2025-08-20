@@ -13,6 +13,8 @@ import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
 import TaskDescriptionCard from "@/components/task-description-card";
 import TaskAttachments from "@/components/task-attachments";
+import { SubTaskList } from "@/components/sub-task-list";
+import { TaskPath } from "@/components/task-path";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useTimer } from "@/contexts/TimerContext";
@@ -326,6 +328,9 @@ export default function TaskDetail() {
         </div>
       </div>
 
+      {/* Task Path - Breadcrumb Navigation for Sub-tasks */}
+      <TaskPath taskId={taskId!} className="mb-4" />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -575,6 +580,28 @@ export default function TaskDetail() {
             task={task} 
             onUpdate={updateTask} 
           />
+
+          {/* Sub-tasks - ClickUp-style hierarchical tasks (up to 5 levels deep) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Sub-tasks
+                {task.hasSubTasks && (
+                  <Badge variant="secondary" className="ml-2">
+                    Has sub-tasks
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SubTaskList 
+                parentTaskId={task.id}
+                level={task.level || 0}
+                maxLevel={5}
+              />
+            </CardContent>
+          </Card>
 
           {/* Task Attachments */}
           <TaskAttachments taskId={task.id} />
