@@ -1220,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log activity for file upload
       await db.insert(taskActivities).values({
         taskId,
-        action: "file_uploaded",
+        actionType: "file_uploaded",
         description: `Uploaded file: ${fileName}`,
         userId,
         details: {
@@ -1271,7 +1271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log activity for file deletion
       await db.insert(taskActivities).values({
         taskId,
-        action: "file_deleted",
+        actionType: "file_deleted",
         description: `Deleted file: ${attachment.fileName}`,
         userId,
         details: {
