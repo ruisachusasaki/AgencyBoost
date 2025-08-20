@@ -48,7 +48,7 @@ export function ImageAnnotationModal({
 
   // Load existing annotations when data changes
   useEffect(() => {
-    if (existingAnnotations) {
+    if (existingAnnotations && Array.isArray(existingAnnotations)) {
       const formattedAnnotations: AnnotationPin[] = existingAnnotations.map((ann: ImageAnnotation) => ({
         id: ann.id,
         x: parseFloat(ann.x),
@@ -62,10 +62,7 @@ export function ImageAnnotationModal({
   // Create annotation mutation
   const createAnnotationMutation = useMutation({
     mutationFn: async (data: { x: number; y: number; content: string }) => {
-      return apiRequest(`/api/files/${fileId}/annotations`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest(`/api/files/${fileId}/annotations`, "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
@@ -86,10 +83,7 @@ export function ImageAnnotationModal({
   // Update annotation mutation
   const updateAnnotationMutation = useMutation({
     mutationFn: async (data: { id: string; content: string }) => {
-      return apiRequest(`/api/annotations/${data.id}`, {
-        method: "PUT",
-        body: JSON.stringify({ content: data.content }),
-      });
+      return apiRequest(`/api/annotations/${data.id}`, "PUT", { content: data.content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
@@ -110,9 +104,7 @@ export function ImageAnnotationModal({
   // Delete annotation mutation
   const deleteAnnotationMutation = useMutation({
     mutationFn: async (annotationId: string) => {
-      return apiRequest(`/api/annotations/${annotationId}`, {
-        method: "DELETE",
-      });
+      return apiRequest(`/api/annotations/${annotationId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
