@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ export default function Tasks() {
     { id: "client", label: "Client", width: "w-1/6" },
     { id: "project", label: "Project", width: "w-1/6" },
   ]);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -139,12 +140,64 @@ export default function Tasks() {
     setColumns([columns[0], ...items]);
   };
 
+  const toggleTaskExpansion = (taskId: string) => {
+    setExpandedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  // Get hierarchical tasks (main tasks + their sub-tasks when expanded)
+  const getHierarchicalTasks = () => {
+    const mainTasks = filteredTasks.filter(task => !task.parentTaskId);
+    const result: (Task & { level: number })[] = [];
+    
+    const addTaskAndSubTasks = (task: Task, level: number = 0) => {
+      result.push({ ...task, level });
+      
+      if (expandedTasks.has(task.id)) {
+        const subTasks = filteredTasks.filter(t => t.parentTaskId === task.id);
+        subTasks.forEach(subTask => addTaskAndSubTasks(subTask, level + 1));
+      }
+    };
+    
+    mainTasks.forEach(task => addTaskAndSubTasks(task));
+    return result;
+  };
+
   // Render cell content based on column type
-  const renderCellContent = (column: Column, task: Task) => {
+  const renderCellContent = (column: Column, task: Task & { level?: number }) => {
     switch (column.id) {
       case "name":
+        const hasSubTasks = filteredTasks.some(t => t.parentTaskId === task.id);
+        const indentLevel = (task.level || 0) * 24; // 24px per level
+        
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2" style={{ paddingLeft: `${indentLevel}px` }}>
+            {hasSubTasks && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTaskExpansion(task.id);
+                }}
+                className="p-1 h-6 w-6"
+              >
+                {expandedTasks.has(task.id) ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </Button>
+            )}
+            {!hasSubTasks && <div className="w-6" />}
+            
             <Checkbox 
               checked={task.status === "completed"}
               onCheckedChange={(checked) => handleTaskToggle(task.id, !!checked)}
@@ -424,50 +477,19 @@ export default function Tasks() {
               )}
             </div>
           ) : (
-            <DragDropContext onDragEnd={handleColumnDragEnd}>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {/* Fixed Name column - not draggable */}
-                    <TableHead className={columns[0].width}>
-                      <span className="font-medium">{columns[0].label}</span>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {columns.map((column) => (
+                    <TableHead key={column.id} className={column.width}>
+                      <span className="font-medium">{column.label}</span>
                     </TableHead>
-                    
-                    {/* Draggable columns (excluding name) */}
-                    <Droppable droppableId="columns" direction="horizontal">
-                      {(provided) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className="contents">
-                          {columns.slice(1).map((column, index) => (
-                            <Draggable key={column.id} draggableId={column.id} index={index}>
-                              {(provided, snapshot) => (
-                                <TableHead
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  className={`${column.width} select-none ${
-                                    snapshot.isDragging ? 'bg-slate-100' : ''
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{column.label}</span>
-                                    <div {...provided.dragHandleProps}>
-                                      <GripVertical className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-grab" />
-                                    </div>
-                                  </div>
-                                </TableHead>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                    
-                    {/* Fixed Actions column */}
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTasks.map((task) => (
+                  ))}
+                  <TableHead className="w-20">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {getHierarchicalTasks().map((task) => (
                     <TableRow key={task.id} className="hover:bg-slate-50/50">
                       {columns.map((column) => (
                         <TableCell key={column.id} className="py-3">
@@ -497,7 +519,6 @@ export default function Tasks() {
                   ))}
                 </TableBody>
               </Table>
-            </DragDropContext>
           )}
         </CardContent>
       </Card>

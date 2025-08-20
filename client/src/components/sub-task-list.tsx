@@ -53,6 +53,12 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
   const [showAddForm, setShowAddForm] = useState(false);
   const queryClient = useQueryClient();
 
+  // Fetch parent task to inherit client and project information
+  const { data: parentTask } = useQuery<Task & { clientId?: string; projectId?: string }>({
+    queryKey: [`/api/tasks/${parentTaskId}`],
+    enabled: !!parentTaskId
+  });
+
   // Fetch sub-tasks for the parent task
   const { data: subTasks = [], isLoading } = useQuery<Task[]>({
     queryKey: [`/api/tasks/${parentTaskId}/subtasks`],
@@ -72,6 +78,9 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
         ...data,
         parentTaskId,
         level: (level || 0) + 1,
+        // Inherit client and project from parent task
+        clientId: parentTask?.clientId || null,
+        projectId: parentTask?.projectId || null,
       };
       console.log("Sending API request with:", requestData);
       return apiRequest(`/api/tasks`, "POST", requestData);
