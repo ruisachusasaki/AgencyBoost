@@ -1036,10 +1036,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🚀 Task update request for ${req.params.id} with body:`, JSON.stringify(req.body));
       
       // Get the current task data first
-      const [currentTask] = await db.select()
+      const currentTaskResult = await db.select()
         .from(tasks)
         .where(eq(tasks.id, req.params.id));
       
+      const currentTask = currentTaskResult[0];
       if (!currentTask) {
         return res.status(404).json({ message: "Task not found" });
       }
