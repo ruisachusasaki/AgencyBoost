@@ -22,7 +22,6 @@ export default function TaskDetail() {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("comments");
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
 
@@ -265,16 +264,7 @@ export default function TaskDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            {isEditing ? "Cancel Edit" : "Edit Task"}
-          </Button>
-          
-          {userPermissions?.tasks?.canDelete && (
+          {(userPermissions as any)?.tasks?.canDelete && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -292,27 +282,8 @@ export default function TaskDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Task Details or Edit Form */}
-          {isEditing ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Edit className="h-5 w-5" />
-                  Edit Task
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TaskForm
-                  task={task}
-                  onSuccess={() => {
-                    setIsEditing(false);
-                    queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
-                  }}
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
+          {/* Task Details */}
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FolderOpen className="h-5 w-5" />
@@ -551,20 +522,15 @@ export default function TaskDetail() {
                 </div>
               </CardContent>
             </Card>
-          )}
 
           {/* Task Description */}
-          {!isEditing && (
-            <TaskDescriptionCard 
-              task={task} 
-              onUpdate={updateTask} 
-            />
-          )}
+          <TaskDescriptionCard 
+            task={task} 
+            onUpdate={updateTask} 
+          />
 
           {/* Task Attachments */}
-          {!isEditing && (
-            <TaskAttachments taskId={task.id} />
-          )}
+          <TaskAttachments taskId={task.id} />
 
         </div>
 
