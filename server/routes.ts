@@ -1134,18 +1134,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
-      // Check if user has permission to delete tasks
-      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
-      if (!canDelete) {
-        return res.status(403).json({ message: "Access denied. Only administrators can delete tasks." });
-      }
-
-      const deletedRows = await db.delete(tasks)
-        .where(eq(tasks.id, req.params.id));
+      // Check if task exists and get its details
+      const taskToDelete = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, req.params.id))
+        .limit(1);
       
-      if (deletedRows.rowCount === 0) {
+      if (taskToDelete.length === 0) {
         return res.status(404).json({ message: "Task not found" });
       }
+      
+      const task = taskToDelete[0];
+      
+      // Check if user has permission to delete tasks (admin or task creator/assignee)
+      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
+      const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
+      
+      if (!canDelete && !isTaskOwner) {
+        return res.status(403).json({ message: "Access denied. You can only delete tasks you created or are assigned to." });
+      }
+
+      // Delete sub-tasks first if any exist
+      const subTasks = await db.select()
+        .from(tasks)
+        .where(eq(tasks.parentTaskId, req.params.id));
+      
+      if (subTasks.length > 0) {
+        await db.delete(tasks)
+          .where(eq(tasks.parentTaskId, req.params.id));
+      }
+      
+      // Delete the main task
+      const deletedRows = await db.delete(tasks)
+        .where(eq(tasks.id, req.params.id));
 
       // Log the deletion
       await createAuditLog(
