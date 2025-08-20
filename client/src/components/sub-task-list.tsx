@@ -172,13 +172,13 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
         <React.Fragment key={task.id}>
           <TableRow className="hover:bg-slate-50">
             <TableCell className="py-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
                 {task.hasSubTasks && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleTaskExpansion(task.id)}
-                    className="h-6 w-6 p-0"
+                    className="h-6 w-6 p-0 shrink-0"
                     data-testid={`toggle-subtasks-${task.id}`}
                   >
                     {expandedTasks.has(task.id) ? (
@@ -188,7 +188,10 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
                     )}
                   </Button>
                 )}
-                <div style={{ marginLeft: `${level * 24}px` }}>
+                {!task.hasSubTasks && (
+                  <div className="w-6 h-6 shrink-0"></div>
+                )}
+                <div>
                   <Link href={`/tasks/${task.id}`}>
                     <span className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-1" 
                           data-testid={`subtask-title-${task.id}`}>
