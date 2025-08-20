@@ -1630,6 +1630,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks/:taskId/dependencies", async (req, res) => {
     try {
       const { taskId } = req.params;
+      console.log("Adding dependency - taskId:", taskId);
+      console.log("Adding dependency - req.body:", req.body);
+      
+      // Validate the request body manually first
+      if (!req.body.dependsOnTaskId) {
+        return res.status(400).json({ message: "dependsOnTaskId is required" });
+      }
+      
       const dependencyData = insertTaskDependencySchema.parse(req.body);
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
 
