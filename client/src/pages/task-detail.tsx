@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity } from "lucide-react";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
@@ -16,6 +16,7 @@ import TaskDescriptionCard from "@/components/task-description-card";
 import TaskAttachments from "@/components/task-attachments";
 import { SubTaskList } from "@/components/sub-task-list";
 import { TaskPath } from "@/components/task-path";
+import { TaskDependencies } from "@/components/task-dependencies";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useTimer } from "@/contexts/TimerContext";
@@ -628,7 +629,8 @@ export default function TaskDetail() {
               <nav className="-mb-px flex space-x-8">
                 {[
                   { id: "comments", name: "Comments", icon: MessageSquare },
-                  { id: "activity", name: "Activity", icon: Activity }
+                  { id: "activity", name: "Activity", icon: Activity },
+                  { id: "dependencies", name: "Dependencies", icon: Link2 }
                 ].map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -659,6 +661,10 @@ export default function TaskDetail() {
             
             {activeTab === "activity" && (
               <TaskActivities taskId={task.id} showCard={false} />
+            )}
+            
+            {activeTab === "dependencies" && (
+              <TaskDependencies taskId={task.id} />
             )}
           </CardContent>
         </Card>

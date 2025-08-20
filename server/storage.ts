@@ -48,6 +48,7 @@ import {
   type TaskCommentReaction, type InsertTaskCommentReaction, taskCommentReactions,
   type ImageAnnotation, type InsertImageAnnotation, imageAnnotations,
   type TaskActivity, type InsertTaskActivity, taskActivities,
+  type TaskDependency, type InsertTaskDependency, taskDependencies,
   customFieldFileUploads, forms, formFields, formSubmissions, tags
 } from "@shared/schema";
 import { randomUUID } from "crypto";

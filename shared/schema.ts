@@ -479,6 +479,15 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Task Dependencies - Define prerequisite relationships between tasks
+export const taskDependencies = pgTable("task_dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  dependsOnTaskId: varchar("depends_on_task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  dependencyType: text("dependency_type").notNull().default("finish_to_start"), // finish_to_start, start_to_start, finish_to_finish, start_to_finish
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Task Comments
 export const taskComments = pgTable("task_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1932,5 +1941,14 @@ export type InsertFormField = z.infer<typeof insertFormFieldSchema>;
 
 export type FormSubmission = typeof formSubmissions.$inferSelect;
 export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
+
+// Task Dependencies schema exports
+export const insertTaskDependencySchema = createInsertSchema(taskDependencies).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TaskDependency = typeof taskDependencies.$inferSelect;
+export type InsertTaskDependency = z.infer<typeof insertTaskDependencySchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one

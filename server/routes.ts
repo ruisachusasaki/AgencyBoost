@@ -21,12 +21,13 @@ import {
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
+  insertTaskDependencySchema,
   users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
-  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations
+  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -1564,6 +1565,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete attachment" });
     }
   });
+
+  // Task Dependencies routes - Database Storage
+  // Get dependencies for a specific task
+  app.get("/api/tasks/:taskId/dependencies", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+
+      // Get dependencies (tasks that this task depends on)
+      const dependencies = await db
+        .select({
+          id: taskDependencies.id,
+          dependsOnTaskId: taskDependencies.dependsOnTaskId,
+          dependencyType: taskDependencies.dependencyType,
+          createdAt: taskDependencies.createdAt,
+          task: {
+            id: tasks.id,
+            title: tasks.title,
+            status: tasks.status,
+            priority: tasks.priority,
+            assignedTo: tasks.assignedTo,
+            dueDate: tasks.dueDate,
+            completedAt: tasks.completedAt,
+          }
+        })
+        .from(taskDependencies)
+        .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
+        .where(eq(taskDependencies.taskId, taskId))
+        .orderBy(asc(taskDependencies.createdAt));
+
+      // Get dependent tasks (tasks that depend on this task)
+      const dependentTasks = await db
+        .select({
+          id: taskDependencies.id,
+          taskId: taskDependencies.taskId,
+          dependencyType: taskDependencies.dependencyType,
+          createdAt: taskDependencies.createdAt,
+          task: {
+            id: tasks.id,
+            title: tasks.title,
+            status: tasks.status,
+            priority: tasks.priority,
+            assignedTo: tasks.assignedTo,
+            dueDate: tasks.dueDate,
+            completedAt: tasks.completedAt,
+          }
+        })
+        .from(taskDependencies)
+        .innerJoin(tasks, eq(taskDependencies.taskId, tasks.id))
+        .where(eq(taskDependencies.dependsOnTaskId, taskId))
+        .orderBy(asc(taskDependencies.createdAt));
+
+      res.json({
+        dependencies,
+        dependentTasks
+      });
+    } catch (error) {
+      console.error("Error fetching task dependencies:", error);
+      res.status(500).json({ message: "Failed to fetch task dependencies" });
+    }
+  });
+
+  // Add a dependency to a task
+  app.post("/api/tasks/:taskId/dependencies", async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      const dependencyData = insertTaskDependencySchema.parse(req.body);
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      // Validate that the dependency task exists
+      const [dependsOnTask] = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, dependencyData.dependsOnTaskId));
+
+      if (!dependsOnTask) {
+        return res.status(404).json({ message: "Dependency task not found" });
+      }
+
+      // Check if this would create a circular dependency
+      const wouldCreateCircularDependency = await checkCircularDependency(taskId, dependencyData.dependsOnTaskId);
+      if (wouldCreateCircularDependency) {
+        return res.status(400).json({ 
+          message: "Cannot create dependency: This would create a circular dependency loop" 
+        });
+      }
+
+      // Check if dependency already exists
+      const [existingDependency] = await db
+        .select()
+        .from(taskDependencies)
+        .where(and(
+          eq(taskDependencies.taskId, taskId),
+          eq(taskDependencies.dependsOnTaskId, dependencyData.dependsOnTaskId)
+        ));
+
+      if (existingDependency) {
+        return res.status(400).json({ message: "Dependency already exists" });
+      }
+
+      // Create the dependency
+      const [dependency] = await db
+        .insert(taskDependencies)
+        .values({
+          ...dependencyData,
+          taskId,
+        })
+        .returning();
+
+      // Get the task title for activity log
+      const [task] = await db.select({ title: tasks.title }).from(tasks).where(eq(tasks.id, taskId));
+
+      // Log activity for dependency creation
+      await db.insert(taskActivities).values({
+        taskId,
+        actionType: "dependency_added",
+        description: `Added dependency on "${dependsOnTask.title}"`,
+        userId,
+        details: {
+          dependsOnTaskId: dependencyData.dependsOnTaskId,
+          dependsOnTaskTitle: dependsOnTask.title,
+          dependencyType: dependencyData.dependencyType,
+        },
+      });
+
+      res.json(dependency);
+    } catch (error) {
+      console.error("Error creating task dependency:", error);
+      res.status(500).json({ message: "Failed to create task dependency" });
+    }
+  });
+
+  // Remove a task dependency
+  app.delete("/api/dependencies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      // Get dependency details before deletion for activity log
+      const [dependency] = await db
+        .select({
+          id: taskDependencies.id,
+          taskId: taskDependencies.taskId,
+          dependsOnTaskId: taskDependencies.dependsOnTaskId,
+          dependencyType: taskDependencies.dependencyType,
+          task: tasks.title,
+          dependsOnTask: tasks.title,
+        })
+        .from(taskDependencies)
+        .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
+        .where(eq(taskDependencies.id, id));
+
+      if (!dependency) {
+        return res.status(404).json({ message: "Dependency not found" });
+      }
+
+      // Delete the dependency
+      await db.delete(taskDependencies).where(eq(taskDependencies.id, id));
+
+      // Log activity for dependency removal
+      await db.insert(taskActivities).values({
+        taskId: dependency.taskId,
+        actionType: "dependency_removed",
+        description: `Removed dependency on "${dependency.dependsOnTask}"`,
+        userId,
+        details: {
+          dependsOnTaskId: dependency.dependsOnTaskId,
+          dependsOnTaskTitle: dependency.dependsOnTask,
+          dependencyType: dependency.dependencyType,
+        },
+      });
+
+      res.json({ message: "Dependency removed successfully" });
+    } catch (error) {
+      console.error("Error deleting task dependency:", error);
+      res.status(500).json({ message: "Failed to delete task dependency" });
+    }
+  });
+
+  // Validate if adding a dependency would create a circular dependency
+  app.post("/api/dependencies/validate", async (req, res) => {
+    try {
+      const { taskId, dependsOnTaskId } = req.body;
+
+      if (!taskId || !dependsOnTaskId) {
+        return res.status(400).json({ message: "taskId and dependsOnTaskId are required" });
+      }
+
+      const wouldCreateCircularDependency = await checkCircularDependency(taskId, dependsOnTaskId);
+      
+      res.json({ 
+        isValid: !wouldCreateCircularDependency,
+        wouldCreateCircularDependency 
+      });
+    } catch (error) {
+      console.error("Error validating task dependency:", error);
+      res.status(500).json({ message: "Failed to validate task dependency" });
+    }
+  });
+
+  // Helper function to check for circular dependencies
+  async function checkCircularDependency(taskId: string, dependsOnTaskId: string): Promise<boolean> {
+    // If task depends on itself, it's circular
+    if (taskId === dependsOnTaskId) {
+      return true;
+    }
+
+    // Get all dependencies of the dependsOnTaskId
+    const visited = new Set<string>();
+    const toCheck = [dependsOnTaskId];
+
+    while (toCheck.length > 0) {
+      const currentTaskId = toCheck.pop()!;
+      
+      // If we've seen this task before, skip it
+      if (visited.has(currentTaskId)) {
+        continue;
+      }
+      
+      visited.add(currentTaskId);
+
+      // If this task depends on our original taskId, we have a circular dependency
+      if (currentTaskId === taskId) {
+        return true;
+      }
+
+      // Get all tasks that this current task depends on
+      const dependencies = await db
+        .select({ dependsOnTaskId: taskDependencies.dependsOnTaskId })
+        .from(taskDependencies)
+        .where(eq(taskDependencies.taskId, currentTaskId));
+
+      // Add them to our check list
+      for (const dep of dependencies) {
+        if (!visited.has(dep.dependsOnTaskId)) {
+          toCheck.push(dep.dependsOnTaskId);
+        }
+      }
+    }
+
+    return false;
+  }
 
   // Invoice routes - Database Storage
   app.get("/api/invoices", async (req, res) => {
