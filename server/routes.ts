@@ -2325,44 +2325,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to ensure comment_files record exists for task attachments
-  async function ensureCommentFileRecord(fileId: string) {
+  // Helper function to check if file exists (either in comment_files or task_attachments)
+  async function checkFileExists(fileId: string): Promise<{ exists: boolean, isTaskAttachment: boolean }> {
     try {
       const { db } = await import("./db");
       const { commentFiles, taskAttachments } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
       
-      // Check if comment_files record already exists
-      const [existingCommentFile] = await db.select()
+      // Check if it's a comment file
+      const [commentFile] = await db.select()
         .from(commentFiles)
         .where(eq(commentFiles.id, fileId));
       
-      if (!existingCommentFile) {
-        // Check if this is a task attachment
-        const [taskAttachment] = await db.select()
-          .from(taskAttachments)
-          .where(eq(taskAttachments.id, fileId));
-        
-        if (taskAttachment) {
-          // Create comment_files record for annotation support
-          await db
-            .insert(commentFiles)
-            .values({
-              id: taskAttachment.id,
-              commentId: null,
-              fileName: taskAttachment.fileName,
-              fileType: taskAttachment.fileType,
-              fileSize: taskAttachment.fileSize,
-              fileUrl: taskAttachment.fileUrl,
-              uploadedBy: taskAttachment.uploadedBy
-            })
-            .onConflictDoNothing();
-          
-          console.log(`Created comment_files record for task attachment: ${fileId}`);
-        }
+      if (commentFile) {
+        return { exists: true, isTaskAttachment: false };
       }
+      
+      // Check if it's a task attachment
+      const [taskAttachment] = await db.select()
+        .from(taskAttachments)
+        .where(eq(taskAttachments.id, fileId));
+      
+      if (taskAttachment) {
+        return { exists: true, isTaskAttachment: true };
+      }
+      
+      return { exists: false, isTaskAttachment: false };
     } catch (error) {
-      console.log("Error ensuring comment_files record:", error);
+      console.log("Error checking file exists:", error);
+      return { exists: false, isTaskAttachment: false };
     }
   }
 
@@ -2393,8 +2384,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get annotations for a specific image file
   app.get("/api/files/:fileId/annotations", async (req, res) => {
     try {
-      // Ensure comment_files record exists for this file
-      await ensureCommentFileRecord(req.params.fileId);
+      // Check if file exists
+      const fileCheck = await checkFileExists(req.params.fileId);
+      if (!fileCheck.exists) {
+        return res.status(404).json({ error: "File not found" });
+      }
       
       const { db } = await import("./db");
       const { imageAnnotations } = await import("@shared/schema");
@@ -2414,8 +2408,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new image annotation
   app.post("/api/files/:fileId/annotations", async (req, res) => {
     try {
-      // Ensure comment_files record exists for this file
-      await ensureCommentFileRecord(req.params.fileId);
+      // Check if file exists
+      const fileCheck = await checkFileExists(req.params.fileId);
+      if (!fileCheck.exists) {
+        return res.status(404).json({ error: "File not found" });
+      }
       
       const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
       

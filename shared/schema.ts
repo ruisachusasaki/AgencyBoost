@@ -509,7 +509,7 @@ export const commentFiles = pgTable("comment_files", {
 // Image annotations for collaborative feedback on uploaded images
 export const imageAnnotations = pgTable("image_annotations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fileId: varchar("file_id").notNull().references(() => commentFiles.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull(), // Can reference either commentFiles or taskAttachments
   x: decimal("x", { precision: 5, scale: 2 }).notNull(), // X coordinate as percentage (0-100)
   y: decimal("y", { precision: 5, scale: 2 }).notNull(), // Y coordinate as percentage (0-100)
   content: text("content").notNull(), // Annotation text/comment
