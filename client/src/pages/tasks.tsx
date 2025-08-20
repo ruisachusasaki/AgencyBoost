@@ -63,7 +63,9 @@ export default function Tasks() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/tasks/${id}`, "DELETE");
+      const response = await apiRequest(`/api/tasks/${id}`, "DELETE");
+      // Don't try to parse JSON from 204 No Content response
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
