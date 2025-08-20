@@ -19,8 +19,8 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const quillRef = useRef<ReactQuill>(null);
 
   // Configure display limits
-  const COLLAPSED_HEIGHT = 120; // pixels
-  const COLLAPSED_LINES = 4; // maximum lines to show when collapsed
+  const COLLAPSED_HEIGHT = 150; // pixels - increased for better text visibility
+  const COLLAPSED_LINES = 6; // maximum lines to show when collapsed
 
   // Quill toolbar configuration
   const quillModules = {
@@ -82,33 +82,8 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     return temp.textContent || temp.innerText || '';
   };
 
-  // Check if content needs expansion capability
-  const needsExpansion = task.description && (
-    stripHtml(task.description).length > 300 || 
-    stripHtml(task.description).split('\n').length > COLLAPSED_LINES
-  );
-
-  const displayDescription = () => {
-    if (!task.description) return "";
-    
-    if (!needsExpansion || isExpanded) {
-      return task.description;
-    }
-    
-    // For HTML content, we need to truncate more carefully
-    const plainText = stripHtml(task.description);
-    if (plainText.length <= 300) {
-      return task.description;
-    }
-    
-    // Create a truncated version by limiting text content
-    const words = plainText.split(' ');
-    const truncatedWords = words.slice(0, 50); // Roughly ~300 characters
-    const truncatedText = truncatedWords.join(' ') + '...';
-    
-    // Return as plain text for truncated view
-    return truncatedText;
-  };
+  // Check if content needs expansion capability based on rendered height
+  const needsExpansion = task.description && stripHtml(task.description).length > 250;
 
   return (
     <Card>
@@ -184,39 +159,44 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
             {task.description ? (
               <>
                 <div
-                  className={`text-slate-600 cursor-text hover:bg-slate-50 p-2 rounded transition-colors prose prose-sm max-w-none ${
-                    needsExpansion && !isExpanded ? 'overflow-hidden' : ''
+                  className={`text-slate-600 cursor-text hover:bg-slate-50 p-3 rounded-lg transition-all duration-200 prose prose-sm max-w-none prose-headings:text-slate-800 prose-p:text-slate-700 prose-strong:text-slate-800 prose-em:text-slate-600 prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-slate-300 prose-ul:text-slate-700 prose-ol:text-slate-700 ${
+                    needsExpansion && !isExpanded 
+                      ? 'overflow-hidden relative' 
+                      : ''
                   }`}
                   style={
                     needsExpansion && !isExpanded
-                      ? { maxHeight: `${COLLAPSED_HEIGHT}px` }
+                      ? { 
+                          maxHeight: `${COLLAPSED_HEIGHT}px`,
+                          maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
+                          WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
+                        }
                       : {}
                   }
                   onClick={() => setIsEditing(true)}
                   data-testid="text-description"
-                  dangerouslySetInnerHTML={{ 
-                    __html: needsExpansion && !isExpanded 
-                      ? displayDescription() 
-                      : task.description 
-                  }}
+                  dangerouslySetInnerHTML={{ __html: task.description }}
                 />
                 
                 {needsExpansion && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsExpanded(!isExpanded);
+                    }}
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 h-auto font-medium text-sm rounded-md transition-colors"
                     data-testid="button-toggle-description"
                   >
                     {isExpanded ? (
                       <>
-                        <ChevronUp className="h-4 w-4 mr-1" />
+                        <ChevronUp className="h-4 w-4 mr-1.5" />
                         Show less
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="h-4 w-4 mr-1" />
+                        <ChevronDown className="h-4 w-4 mr-1.5" />
                         Show more
                       </>
                     )}
@@ -225,11 +205,14 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
               </>
             ) : (
               <div
-                className="text-slate-400 italic cursor-text hover:bg-slate-50 p-2 rounded transition-colors"
+                className="text-slate-400 italic cursor-text hover:bg-slate-50 p-3 rounded-lg transition-colors border-2 border-dashed border-slate-200 hover:border-slate-300"
                 onClick={() => setIsEditing(true)}
                 data-testid="text-no-description"
               >
-                Click to add a description...
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4" />
+                  Click to add a description...
+                </div>
               </div>
             )}
           </div>
