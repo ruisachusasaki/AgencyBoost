@@ -1044,6 +1044,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertTaskSchema.partial().parse(req.body);
       
+      // Check task dependencies before allowing completion
+      if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
+        // Get all dependencies for this task
+        const dependencies = await db
+          .select({
+            dependencyType: taskDependencies.dependencyType,
+            dependsOnTask: {
+              id: tasks.id,
+              title: tasks.title,
+              status: tasks.status,
+              completedAt: tasks.completedAt,
+            }
+          })
+          .from(taskDependencies)
+          .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
+          .where(eq(taskDependencies.taskId, req.params.id));
+
+        // Check if all dependencies are satisfied
+        const unsatisfiedDependencies = [];
+        
+        for (const dep of dependencies) {
+          const { dependencyType, dependsOnTask } = dep;
+          let isSatisfied = false;
+
+          switch (dependencyType) {
+            case 'finish_to_start':
+            case 'finish_to_finish':
+              // Dependency task must be completed
+              isSatisfied = dependsOnTask.status === 'completed' || dependsOnTask.completedAt !== null;
+              break;
+            case 'start_to_start':
+            case 'start_to_finish':
+              // Dependency task must be started (not in todo status)
+              isSatisfied = dependsOnTask.status !== 'todo';
+              break;
+          }
+
+          if (!isSatisfied) {
+            unsatisfiedDependencies.push({
+              taskTitle: dependsOnTask.title,
+              dependencyType,
+              currentStatus: dependsOnTask.status
+            });
+          }
+        }
+
+        if (unsatisfiedDependencies.length > 0) {
+          const dependencyMessages = unsatisfiedDependencies.map(dep => {
+            const typeLabel = {
+              finish_to_start: 'must be completed',
+              start_to_start: 'must be started', 
+              finish_to_finish: 'must be completed',
+              start_to_finish: 'must be started'
+            }[dep.dependencyType];
+            
+            return `"${dep.taskTitle}" ${typeLabel} (currently ${dep.currentStatus})`;
+          });
+
+          return res.status(400).json({ 
+            message: `Cannot complete this task. The following dependencies must be satisfied first:\n\n${dependencyMessages.join('\n')}`,
+            unsatisfiedDependencies 
+          });
+        }
+      }
+      
       const [updatedTask] = await db.update(tasks)
         .set(validatedData)
         .where(eq(tasks.id, req.params.id))
@@ -1630,9 +1695,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks/:taskId/dependencies", async (req, res) => {
     try {
       const { taskId } = req.params;
-      
-      console.log("Debug - taskId from params:", taskId);
-      console.log("Debug - req.body:", JSON.stringify(req.body));
       
       // Validate the request body manually first
       if (!req.body.dependsOnTaskId) {
