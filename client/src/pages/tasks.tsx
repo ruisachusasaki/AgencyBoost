@@ -8,13 +8,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, BarChart3 } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Client, Project, Campaign, Staff } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Column {
   id: string;
@@ -24,6 +25,7 @@ interface Column {
 
 type SortField = 'title' | 'assignedTo' | 'dueDate' | 'priority' | 'clientId' | 'projectId' | 'status' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
+type ViewMode = 'table' | 'kanban' | 'gantt';
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,6 +34,7 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -450,6 +453,27 @@ export default function Tasks() {
     }
   };
 
+  // Handle drag and drop for Kanban board
+  const handleKanbanDragEnd = (result: any) => {
+    if (!result.destination) return;
+    
+    const { source, destination, draggableId } = result;
+    
+    // If dropped in the same position, do nothing
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+      return;
+    }
+    
+    // Get the new status from the destination column
+    const newStatus = destination.droppableId;
+    
+    // Update the task status
+    updateTaskMutation.mutate({
+      id: draggableId,
+      status: newStatus
+    });
+  };
+
   const taskStats = {
     total: tasks.length,
     pending: tasks.filter(t => t.status === "pending").length,
@@ -488,6 +512,218 @@ export default function Tasks() {
       </div>
     );
   }
+
+  // Kanban View Component
+  const KanbanView = ({ tasks, staff, clients, projects, onDragEnd, onDeleteTask, deleteTaskMutation }: {
+    tasks: Task[];
+    staff: Staff[];
+    clients: Client[];
+    projects: Project[];
+    onDragEnd: (result: any) => void;
+    onDeleteTask: (id: string) => void;
+    deleteTaskMutation: any;
+  }) => {
+    const columns = [
+      { id: 'pending', title: 'Pending', color: 'bg-yellow-100' },
+      { id: 'in_progress', title: 'In Progress', color: 'bg-blue-100' },
+      { id: 'completed', title: 'Completed', color: 'bg-green-100' },
+      { id: 'cancelled', title: 'Cancelled', color: 'bg-red-100' }
+    ];
+
+    const getTasksByStatus = (status: string) => {
+      return tasks.filter(task => task.status === status);
+    };
+
+    const TaskCard = ({ task, index }: { task: Task; index: number }) => (
+      <Draggable draggableId={task.id} index={index}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            className={`bg-white border border-slate-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition-shadow ${
+              snapshot.isDragging ? 'rotate-3 shadow-lg' : ''
+            }`}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <h4 className="font-medium text-sm text-slate-900 line-clamp-2">{task.title}</h4>
+              <div className="flex items-center gap-1 ml-2">
+                <Link href={`/tasks/${task.id}`}>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => onDeleteTask(task.id)}
+                  disabled={deleteTaskMutation.isPending}
+                  className="h-6 w-6 p-0"
+                >
+                  <Trash2 className="h-3 w-3 text-red-500" />
+                </Button>
+              </div>
+            </div>
+            
+            {task.description && (
+              <p className="text-xs text-slate-600 mb-2 line-clamp-2">{task.description}</p>
+            )}
+            
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                {task.priority && (
+                  <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
+                    {task.priority}
+                  </Badge>
+                )}
+                {task.assignedTo && (
+                  <span className="text-slate-600">
+                    {getStaffName(task.assignedTo)}
+                  </span>
+                )}
+              </div>
+              {task.dueDate && (
+                <span className={`text-xs ${
+                  new Date(task.dueDate) < new Date() ? 'text-red-600' : 'text-slate-500'
+                }`}>
+                  {formatDate(task.dueDate)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </Draggable>
+    );
+
+    return (
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+          {columns.map(column => (
+            <div key={column.id} className="bg-slate-50 rounded-lg p-3">
+              <div className={`${column.color} rounded-md p-2 mb-3`}>
+                <h3 className="font-medium text-slate-900 text-sm">{column.title}</h3>
+                <span className="text-xs text-slate-600">
+                  {getTasksByStatus(column.id).length} tasks
+                </span>
+              </div>
+              
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[200px] transition-colors ${
+                      snapshot.isDraggingOver ? 'bg-slate-100' : ''
+                    }`}
+                  >
+                    {getTasksByStatus(column.id).map((task, index) => (
+                      <TaskCard key={task.id} task={task} index={index} />
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          ))}
+        </div>
+      </DragDropContext>
+    );
+  };
+
+  // Gantt View Component
+  const GanttView = ({ tasks, staff, clients, projects }: {
+    tasks: Task[];
+    staff: Staff[];
+    clients: Client[];
+    projects: Project[];
+  }) => {
+    const ganttData = tasks
+      .filter(task => task.dueDate)
+      .map(task => {
+        const startDate = task.startDate ? new Date(task.startDate) : new Date();
+        const dueDate = new Date(task.dueDate!);
+        const duration = Math.max(1, Math.ceil((dueDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        return {
+          name: task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title,
+          start: startDate.toISOString().split('T')[0],
+          duration,
+          priority: task.priority,
+          assignee: getStaffName(task.assignedTo),
+          status: task.status
+        };
+      })
+      .slice(0, 20); // Limit to 20 tasks for readability
+
+    if (ganttData.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-slate-500 mb-4">No tasks with due dates found for Gantt chart.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-4">
+        <div className="mb-4">
+          <h3 className="text-lg font-medium text-slate-900 mb-2">Project Timeline</h3>
+          <p className="text-sm text-slate-600">Tasks shown by duration and timeline</p>
+        </div>
+        
+        <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <ResponsiveContainer width="100%" height={Math.max(400, ganttData.length * 40)}>
+            <BarChart
+              layout="horizontal"
+              data={ganttData}
+              margin={{ top: 20, right: 30, left: 200, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis dataKey="name" type="category" width={180} />
+              <Tooltip 
+                formatter={(value, name, props) => [
+                  `${value} days`,
+                  'Duration'
+                ]}
+                labelFormatter={(label) => `Task: ${label}`}
+              />
+              <Bar 
+                dataKey="duration" 
+                fill="#3b82f6"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded"></div>
+              <span className="text-sm font-medium">Urgent</span>
+            </div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-orange-500 rounded"></div>
+              <span className="text-sm font-medium">High</span>
+            </div>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded"></div>
+              <span className="text-sm font-medium">Normal</span>
+            </div>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded"></div>
+              <span className="text-sm font-medium">Low</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -564,6 +800,37 @@ export default function Tasks() {
               <div className="text-sm text-slate-600">
                 {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''}
               </div>
+            </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 border border-slate-200 rounded-lg p-1">
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="h-8"
+              >
+                <TableIcon className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "kanban" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("kanban")}
+                className="h-8"
+              >
+                <Columns className="h-4 w-4 mr-1" />
+                Kanban
+              </Button>
+              <Button
+                variant={viewMode === "gantt" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("gantt")}
+                className="h-8"
+              >
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Gantt
+              </Button>
             </div>
             
             {/* Filter Controls */}
@@ -647,7 +914,7 @@ export default function Tasks() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {filteredAndSortedTasks.length === 0 ? (
+          {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
                 {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || projectFilter !== "all"
@@ -671,7 +938,7 @@ export default function Tasks() {
                 </Dialog>
               )}
             </div>
-          ) : (
+          ) : viewMode === "table" ? (
             <DragDropContext onDragEnd={handleColumnDragEnd}>
               <Table>
                 <TableHeader>
@@ -785,6 +1052,23 @@ export default function Tasks() {
                 </TableBody>
               </Table>
             </DragDropContext>
+          ) : viewMode === "kanban" ? (
+            <KanbanView 
+              tasks={filteredAndSortedTasks}
+              staff={staff}
+              clients={clients}
+              projects={projects}
+              onDragEnd={handleKanbanDragEnd}
+              onDeleteTask={handleDeleteTask}
+              deleteTaskMutation={deleteTaskMutation}
+            />
+          ) : (
+            <GanttView 
+              tasks={filteredAndSortedTasks}
+              staff={staff}
+              clients={clients}
+              projects={projects}
+            />
           )}
         </CardContent>
       </Card>
