@@ -1178,18 +1178,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Deleted ${subTasks.length} sub-tasks`);
       }
       
-      // Delete task comments before deleting the main task
-      console.log(`Deleting comments for task: ${req.params.id}`);
+      // Delete all related data before deleting the main task
+      console.log(`Deleting all related data for task: ${req.params.id}`);
+      
+      // Delete comment files first
+      const commentFilesToDelete = await db.select()
+        .from(commentFiles)
+        .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+        .where(eq(taskComments.taskId, req.params.id));
+      
+      for (const file of commentFilesToDelete) {
+        await db.delete(commentFiles).where(eq(commentFiles.id, file.comment_files.id));
+      }
+      
+      // Delete task comment reactions
+      await db.delete(taskCommentReactions)
+        .where(sql`comment_id IN (SELECT id FROM task_comments WHERE task_id = ${req.params.id})`);
+      
+      // Delete task comments
       await db.delete(taskComments)
         .where(eq(taskComments.taskId, req.params.id));
       
       // Delete task activities
-      console.log(`Deleting activities for task: ${req.params.id}`);
       await db.delete(taskActivities)
         .where(eq(taskActivities.taskId, req.params.id));
       
+      // Delete task attachments
+      await db.delete(taskAttachments)
+        .where(eq(taskAttachments.taskId, req.params.id));
+      
+      console.log(`All related data deleted, now deleting main task: ${req.params.id}`);
+      
       // Delete the main task
-      console.log(`Deleting main task: ${req.params.id}`);
       const deletedRows = await db.delete(tasks)
         .where(eq(tasks.id, req.params.id));
       
