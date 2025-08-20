@@ -1223,6 +1223,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .returning();
 
+      // Also create a corresponding record in comment_files for annotation support
+      const { commentFiles } = await import("@shared/schema");
+      try {
+        await db
+          .insert(commentFiles)
+          .values({
+            id: attachment.id, // Use the same ID as the task attachment
+            commentId: null, // Not linked to a specific comment
+            fileName,
+            fileType,
+            fileSize,
+            fileUrl: normalizedFileUrl,
+            uploadedBy: userId
+          })
+          .onConflictDoNothing(); // In case it already exists
+      } catch (error) {
+        console.log("Failed to create comment_files record for annotation support:", error);
+      }
+
       // Log activity for file upload
       await db.insert(taskActivities).values({
         taskId,

@@ -229,14 +229,21 @@ export function ImageAnnotationModal({
             <div className="w-full h-full flex items-center justify-center p-8">
               <div className="relative w-full h-full">
                 {fileType?.includes('pdf') ? (
-                  <iframe
-                    ref={imageRef as any}
-                    src={imageUrl}
-                    className="w-full h-full border border-gray-300 rounded cursor-crosshair"
-                    onClick={handleImageClick}
-                    data-testid="annotation-pdf"
-                    style={{ minHeight: '600px' }}
-                  />
+                  <div className="relative w-full h-full">
+                    <iframe
+                      ref={imageRef as any}
+                      src={imageUrl}
+                      className="w-full h-full border border-gray-300 rounded"
+                      data-testid="annotation-pdf"
+                      style={{ minHeight: '600px', pointerEvents: 'none' }}
+                    />
+                    {/* Invisible overlay to capture clicks for PDF annotation */}
+                    <div 
+                      className="absolute inset-0 cursor-crosshair"
+                      onClick={handleImageClick}
+                      style={{ zIndex: 5 }}
+                    />
+                  </div>
                 ) : (
                   <img
                     ref={imageRef}
@@ -252,10 +259,11 @@ export function ImageAnnotationModal({
                 {annotations.map((annotation, index) => (
                   <div
                     key={annotation.id || `temp-${index}`}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
                     style={{
                       left: `${annotation.x}%`,
                       top: `${annotation.y}%`,
+                      zIndex: 10
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
