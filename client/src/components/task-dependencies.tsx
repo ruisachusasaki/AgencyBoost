@@ -182,11 +182,6 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
       return;
     }
 
-    console.log("Frontend - Adding dependency with:", {
-      dependsOnTaskId: selectedTaskId,
-      dependencyType: selectedDependencyType,
-    });
-
     addDependencyMutation.mutate({
       dependsOnTaskId: selectedTaskId,
       dependencyType: selectedDependencyType,
