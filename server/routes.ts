@@ -2432,10 +2432,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Object storage routes for profile images
   app.post("/api/objects/upload", async (req, res) => {
     try {
-      const { entityType = "profile", entityId = "default", fileExtension = ".jpg" } = req.body;
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL(entityType, entityId, fileExtension);
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       res.json({ uploadURL });
     } catch (error) {
       console.error("Error getting upload URL:", error);
@@ -2452,7 +2451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
-      const objectPath = objectStorageService.extractFilePathFromUrl(req.body.profileImageURL);
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.profileImageURL);
       console.log("Normalized object path:", objectPath);
 
       res.status(200).json({
