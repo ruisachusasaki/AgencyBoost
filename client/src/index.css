@@ -255,3 +255,64 @@ td .flex.items-center.justify-center [data-state] {
 .flex-shrink-0 * {
   border-radius: 50% !important;
 }
+
+/* ===== ANIMATION PERFORMANCE OPTIMIZATIONS ===== */
+
+/* Hardware acceleration for smooth hover animations */
+.group:hover,
+.transition-all,
+.transition-transform,
+.transition-colors,
+.transition-opacity,
+.transition-shadow {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize table rows and cards for smooth animations */
+.group {
+  will-change: transform, box-shadow, background-color;
+}
+
+/* Optimize interactive elements */
+button:hover {
+  will-change: background-color, color, transform;
+}
+
+/* Smooth animation performance for frequently animated elements */
+[class*="hover:scale"],
+[class*="group-hover:scale"],
+[class*="hover:shadow"],
+[class*="transition"] {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimize checkbox animations */
+[role="checkbox"]:hover,
+.bulk-select-checkbox:hover {
+  will-change: transform;
+}
+
+/* Ensure smooth transitions on all interactive elements */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .transition-all,
+  .transition-transform,
+  .transition-colors,
+  .transition-opacity,
+  .transition-shadow {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  [class*="hover:scale"] {
+    transform: none !important;
+  }
+}

@@ -357,12 +357,12 @@ export default function Tasks() {
                   e.stopPropagation();
                   toggleTaskExpansion(task.id);
                 }}
-                className="p-1 h-6 w-6"
+                className="p-1 h-6 w-6 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 hover:scale-110"
               >
                 {expandedTasks.has(task.id) ? (
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-3 w-3 transition-transform duration-200" />
                 ) : (
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3 w-3 transition-transform duration-200" />
                 )}
               </Button>
             )}
@@ -371,10 +371,10 @@ export default function Tasks() {
             <Checkbox 
               checked={task.status === "completed"}
               onCheckedChange={(checked) => handleTaskToggle(task.id, !!checked)}
-              className="flex-shrink-0"
+              className="flex-shrink-0 hover:scale-110 transition-transform duration-150"
             />
             <Link href={`/tasks/${task.id}`}>
-              <span className={`font-medium hover:text-blue-600 cursor-pointer ${
+              <span className={`font-medium hover:text-blue-600 cursor-pointer transition-colors duration-150 hover:underline hover:underline-offset-2 ${
                 task.status === "completed" 
                   ? "text-slate-500 line-through" 
                   : "text-slate-900"
@@ -411,16 +411,16 @@ export default function Tasks() {
       
       case "status":
         return (
-          <Badge className={getStatusColor(task.status)}>
+          <Badge className={`${getStatusColor(task.status)} hover:scale-105 transition-transform duration-150 cursor-default`}>
             {task.status.replace('_', ' ')}
           </Badge>
         );
       
       case "priority":
         return (
-          <div className="flex items-center gap-1">
-            <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
-            <Badge className={getPriorityColor(task.priority)} variant="outline">
+          <div className="flex items-center gap-1 group/priority hover:scale-105 transition-transform duration-150">
+            <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)} group-hover/priority:scale-110 transition-transform duration-150`} />
+            <Badge className={`${getPriorityColor(task.priority)} transition-colors duration-150`} variant="outline">
               {task.priority}
             </Badge>
           </div>
@@ -868,18 +868,18 @@ export default function Tasks() {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            className={`bg-white border border-slate-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition-shadow ${
-              snapshot.isDragging ? 'rotate-3 shadow-lg' : ''
+            className={`group bg-white border border-slate-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md hover:shadow-slate-200/60 hover:scale-[1.002] transition-all duration-200 ease-in-out cursor-pointer ${
+              snapshot.isDragging ? 'rotate-3 shadow-lg scale-105' : ''
             }`}
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-0">
-                <h4 className="font-medium text-sm text-slate-900 line-clamp-2">{task.title}</h4>
+                <h4 className="font-medium text-sm text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors duration-150">{task.title}</h4>
                 <TaskDependencyIcons taskId={task.id} />
               </div>
-              <div className="flex items-center gap-1 ml-2">
+              <div className="flex items-center gap-1 ml-2 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
                 <Link href={`/tasks/${task.id}`}>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 hover:scale-110">
                     <Edit className="h-3 w-3" />
                   </Button>
                 </Link>
@@ -888,9 +888,9 @@ export default function Tasks() {
                   size="sm"
                   onClick={() => onDeleteTask(task.id)}
                   disabled={deleteTaskMutation.isPending}
-                  className="h-6 w-6 p-0"
+                  className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-600 transition-colors duration-150 hover:scale-110"
                 >
-                  <Trash2 className="h-3 w-3 text-red-500" />
+                  <Trash2 className="h-3 w-3 text-red-500 group-hover:text-red-600 transition-colors duration-150" />
                 </Button>
               </div>
             </div>
@@ -902,7 +902,7 @@ export default function Tasks() {
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 {task.priority && (
-                  <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
+                  <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)} hover:scale-105 transition-transform duration-150`}>
                     {task.priority}
                   </Badge>
                 )}
@@ -1330,7 +1330,7 @@ export default function Tasks() {
                 </TableHeader>
               <TableBody>
                   {getHierarchicalTasks().map((task) => (
-                    <TableRow key={task.id} className="hover:bg-slate-50/50">
+                    <TableRow key={task.id} className="group transition-all duration-200 ease-in-out hover:bg-slate-50/60 hover:shadow-sm hover:scale-[1.002] cursor-pointer">
                       {/* Bulk selection checkbox column */}
                       <TableCell className="py-3">
                         <div className="flex items-center justify-center">
@@ -1349,9 +1349,9 @@ export default function Tasks() {
                         </TableCell>
                       ))}
                       <TableCell className="py-3">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
                           <Link href={`/tasks/${task.id}`}>
-                            <Button variant="ghost" size="sm" title="Edit task">
+                            <Button variant="ghost" size="sm" title="Edit task" className="hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150">
                               <Edit className="h-4 w-4" />
                             </Button>
                           </Link>
@@ -1362,8 +1362,9 @@ export default function Tasks() {
                             onClick={() => handleDeleteTask(task.id)}
                             disabled={deleteTaskMutation.isPending}
                             title="Delete task"
+                            className="hover:bg-red-50 hover:text-red-600 transition-colors duration-150"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4 text-red-500 group-hover:text-red-600" />
                           </Button>
                         </div>
                       </TableCell>
