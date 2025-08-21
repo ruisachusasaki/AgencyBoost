@@ -20,7 +20,7 @@ import { AppointmentModal } from "@/components/AppointmentModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TaskForm from "@/components/forms/task-form";
-import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, Task } from "@shared/schema";
+import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, Task as TaskType } from "@shared/schema";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,7 +33,7 @@ function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (conten
     queryKey: ["/api/email-templates"],
   });
 
-  const filteredTemplates = emailTemplates.filter((template: EmailTemplate) =>
+  const filteredTemplates = (emailTemplates as EmailTemplate[]).filter((template: EmailTemplate) =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -78,7 +78,7 @@ function SmsTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content:
     queryKey: ["/api/sms-templates"],
   });
 
-  const filteredTemplates = smsTemplates.filter((template: SmsTemplate) =>
+  const filteredTemplates = (smsTemplates as SmsTemplate[]).filter((template: SmsTemplate) =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -516,7 +516,7 @@ const EditableField = ({
   );
 };
 
-export default function EnhancedClientDetail() {
+function EnhancedClientDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -624,6 +624,7 @@ export default function EnhancedClientDetail() {
   });
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [editRecurringConfig, setEditRecurringConfig] = useState({
     interval: 1,
     unit: "days" as "hours" | "days" | "weeks" | "months" | "years",
@@ -3836,7 +3837,7 @@ export default function EnhancedClientDetail() {
                             <DialogTitle>Create New Task</DialogTitle>
                           </DialogHeader>
                           <TaskForm
-                            task={{ clientId } as Task}
+                            task={{ clientId } as any}
                             onSuccess={() => {
                               setIsTaskDialogOpen(false);
                               // Invalidate client tasks to refresh the list
@@ -3926,7 +3927,6 @@ export default function EnhancedClientDetail() {
                         </div>
                       )}
                     </div>
-                  </div>
                 )}
 
                 {/* Edit Task Dialog */}
@@ -4017,11 +4017,11 @@ export default function EnhancedClientDetail() {
                             recurring: editTask.recurring,
                           };
                           
-                          updateTaskMutation.mutate(taskData);
+                          editTaskMutation.mutate(taskData);
                         }}
-                        disabled={updateTaskMutation.isPending}
+                        disabled={editTaskMutation.isPending}
                       >
-                        {updateTaskMutation.isPending ? (
+                        {editTaskMutation.isPending ? (
                           <>
                             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                             Updating...
@@ -4031,16 +4031,16 @@ export default function EnhancedClientDetail() {
                         )}
                       </Button>
                     </div>
+                    </div>
                   </DialogContent>
                 </Dialog>
               </CardContent>
             </Card>
-            )}
           </div>
         </div>
       </div>
     </div>
-);
+  );
 }
 
 export default EnhancedClientDetail;
