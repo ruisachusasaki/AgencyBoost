@@ -680,7 +680,10 @@ export default function Tasks() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Tasks</h1>
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+          <CheckCircle className="h-8 w-8 text-[#46a1a0]" />
+          Tasks
+        </h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
