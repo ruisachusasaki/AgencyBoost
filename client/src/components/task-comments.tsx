@@ -646,7 +646,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                           
                           {/* Emoji Picker */}
                           {showEmojiPicker === comment.id && (
-                            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-10 w-48">
+                            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-50 w-48">
                               <div className="grid grid-cols-6 gap-2">
                                 {commonEmojis.map((emoji) => (
                                   <Button
@@ -770,7 +770,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                               
                               {/* Emoji Picker for Reply */}
                               {showEmojiPicker === reply.id && (
-                                <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-10">
+                                <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-50">
                                   <div className="grid grid-cols-4 gap-1">
                                     {commonEmojis.map((emoji) => (
                                       <Button
