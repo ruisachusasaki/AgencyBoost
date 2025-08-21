@@ -1,0 +1,114 @@
+Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+chunk-RPCDYKBN.js?v=e992afe4:521 Warning: Connect(Droppable): Support for defaultProps will be removed from memo components in a future major release. Use JavaScript default parameters instead.
+    at thead
+    at _c3 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/table.tsx:46:12)
+    at table
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/table.tsx:20:11)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=e992afe4:945:20)
+    at App (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=e992afe4:7462:25)
+    at ErrorBoundary2 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=e992afe4:1959:35)
+    at DragDropContext (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=e992afe4:7582:19)
+    at div
+    at _c9 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at Tasks (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/pages/tasks.tsx?t=1755735439259:36:39)
+    at Route (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e992afe4:191:16)
+    at Switch (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e992afe4:247:17)
+    at Router
+    at div
+    at main
+    at div
+    at MainLayout (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/layout/main-layout.tsx?t=1755735088382:22:38)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e992afe4:38:15)
+    at TooltipProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e992afe4:62:5)
+    at TimerProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/contexts/TimerContext.tsx?t=1755735088382:31:33)
+    at QueryClientProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e992afe4:2805:3)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=e992afe4:521Understand this error
+chunk-RPCDYKBN.js?v=e992afe4:521 Warning: validateDOMNesting(...): <div> cannot appear as a child of <tbody>.
+    at div
+    at SubTaskList (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/sub-task-list.tsx?t=1755735088382:27:31)
+    at tbody
+    at _c5 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/table.tsx:55:12)
+    at table
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/table.tsx:20:11)
+    at div
+    at _c9 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at div
+    at TaskDetail (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/pages/task-detail.tsx?t=1755735429767:40:22)
+    at Route (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e992afe4:191:16)
+    at Switch (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e992afe4:247:17)
+    at Router
+    at div
+    at main
+    at div
+    at MainLayout (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/layout/main-layout.tsx?t=1755735088382:22:38)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e992afe4:38:15)
+    at TooltipProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e992afe4:62:5)
+    at TimerProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/contexts/TimerContext.tsx?t=1755735088382:31:33)
+    at QueryClientProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e992afe4:2805:3)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=e992afe4:521Understand this error
+9fb53704-ef37-457e-98a4-dad6c619e5fd:1  Failed to load resource: the server responded with a status of 400 (Bad Request)Understand this error
+task-detail.tsx:176 🔍 Frontend received error: Error: 400: {"message":"Cannot complete this task. The following dependencies must be satisfied first:\n\n\"Task A\" must be completed (currently pending)","unsatisfiedDependencies":[{"taskTitle":"Task A","dependencyType":"finish_to_start","currentStatus":"pending"}]}
+    at throwIfResNotOk (queryClient.ts:17:13)
+    at async apiRequest (queryClient.ts:34:3)
+    at async Object.mutationFn (task-detail.tsx:166:7)
+task-detail.tsx:177 🔍 Error properties: Array(0)
+task-detail.tsx:178 🔍 isDependencyError: undefined
+task-detail.tsx:179 🔍 details: undefined
+task-detail.tsx:180 🔍 message: 400: {"message":"Cannot complete this task. The following dependencies must be satisfied first:\n\n\"Task A\" must be completed (currently pending)","unsatisfiedDependencies":[{"taskTitle":"Task A","dependencyType":"finish_to_start","currentStatus":"pending"}]}
+queryClient.ts:27  PUT https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/api/tasks/9fb53704-ef37-457e-98a4-dad6c619e5fd 400 (Bad Request)
+apiRequest @ queryClient.ts:27
+mutationFn @ task-detail.tsx:166
+fn @ @tanstack_react-query.js?v=e992afe4:1189
+run @ @tanstack_react-query.js?v=e992afe4:494
+start @ @tanstack_react-query.js?v=e992afe4:536
+execute @ @tanstack_react-query.js?v=e992afe4:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=e992afe4:2630
+(anonymous) @ @tanstack_react-query.js?v=e992afe4:3295
+onValueChange @ task-detail.tsx:373
+(anonymous) @ chunk-LETPRLTX.js?v=e992afe4:17
+(anonymous) @ chunk-XOKPMTP6.js?v=e992afe4:38
+handleSelect @ @radix-ui_react-select.js?v=e992afe4:870
+(anonymous) @ @radix-ui_react-select.js?v=e992afe4:916
+handleEvent @ chunk-XOKPMTP6.js?v=e992afe4:16
+callCallback2 @ chunk-RPCDYKBN.js?v=e992afe4:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=e992afe4:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=e992afe4:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=e992afe4:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=e992afe4:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=e992afe4:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=e992afe4:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=e992afe4:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=e992afe4:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=e992afe4:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=e992afe4:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=e992afe4:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=e992afe4:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=e992afe4:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=e992afe4:5449Understand this error
+task-detail.tsx:176 🔍 Frontend received error: Error: 400: {"message":"Cannot complete this task. The following dependencies must be satisfied first:\n\n\"Task A\" must be completed (currently pending)","unsatisfiedDependencies":[{"taskTitle":"Task A","dependencyType":"finish_to_start","currentStatus":"pending"}]}
+    at throwIfResNotOk (queryClient.ts:17:13)
+    at async apiRequest (queryClient.ts:34:3)
+    at async Object.mutationFn (task-detail.tsx:166:7)
+task-detail.tsx:177 🔍 Error properties: []
+task-detail.tsx:178 🔍 isDependencyError: undefined
+task-detail.tsx:179 🔍 details: undefined
+task-detail.tsx:180 🔍 message: 400: {"message":"Cannot complete this task. The following dependencies must be satisfied first:\n\n\"Task A\" must be completed (currently pending)","unsatisfiedDependencies":[{"taskTitle":"Task A","dependencyType":"finish_to_start","currentStatus":"pending"}]}

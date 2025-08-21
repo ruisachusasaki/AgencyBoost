@@ -173,12 +173,6 @@ export default function TaskDetail() {
       });
     },
     onError: (error: any) => {
-      console.log("🔍 Frontend received error:", error);
-      console.log("🔍 Error properties:", Object.keys(error));
-      console.log("🔍 isDependencyError:", error?.isDependencyError);
-      console.log("🔍 details:", error?.details);
-      console.log("🔍 message:", error?.message);
-      
       // Handle dependency validation errors specially
       if (error?.isDependencyError) {
         toast({
