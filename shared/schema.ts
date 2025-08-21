@@ -1198,7 +1198,7 @@ export const automationActions = pgTable("automation_actions", {
 // Notifications and Alerts
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull(), // Staff ID stored as string - no foreign key to avoid type mismatch
   type: text("type").notNull(), // task_due, workflow_completed, assignment, mention, system
   title: text("title").notNull(),
   message: text("message").notNull(),

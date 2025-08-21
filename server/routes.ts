@@ -3585,25 +3585,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create notifications in background without blocking response
         (async () => {
           try {
-            const { staff, users } = await import("@shared/schema");
+            const { staff } = await import("@shared/schema");
             const { inArray } = await import("drizzle-orm");
             
-            // Get staff emails for mentioned staff members
-            const mentionedStaff = await db.select({ id: staff.id, email: staff.email })
-              .from(staff)
-              .where(inArray(staff.id, mentions));
+            // Get mentioned staff members info
+            const mentionedStaff = await db.select({ 
+              id: staff.id, 
+              firstName: staff.firstName, 
+              lastName: staff.lastName, 
+              email: staff.email 
+            })
+            .from(staff)
+            .where(inArray(staff.id, mentions));
             
-            // Find matching users by email
-            const staffEmails = mentionedStaff.map(s => s.email);
-            const matchingUsers = await db.select({ id: users.id, email: users.email })
-              .from(users)
-              .where(inArray(users.email, staffEmails));
-            
-            // Create notifications for matching users
-            for (const user of matchingUsers) {
+            // Create notifications for mentioned staff members directly
+            for (const staffMember of mentionedStaff) {
               try {
                 await db.insert(notifications).values({
-                  userId: user.id,
+                  userId: staffMember.id, // Use staff ID directly for notifications
                   type: "annotation_mention",
                   title: "You were mentioned in an annotation",
                   message: `You were mentioned in an annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
@@ -3616,9 +3615,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   },
                   isRead: false,
                 });
-                console.log(`Notification created for user: ${user.email}`);
+                console.log(`Notification created for staff member: ${staffMember.firstName} ${staffMember.lastName} (${staffMember.email})`);
               } catch (singleNotificationError) {
-                console.log(`Failed to create notification for user ${user.email}:`, singleNotificationError);
+                console.log(`Failed to create notification for staff member ${staffMember.email}:`, singleNotificationError);
               }
             }
           } catch (notificationError) {
@@ -3669,25 +3668,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create notifications in background without blocking response
         (async () => {
           try {
-            const { staff, users } = await import("@shared/schema");
+            const { staff } = await import("@shared/schema");
             const { inArray } = await import("drizzle-orm");
             
-            // Get staff emails for mentioned staff members
-            const mentionedStaff = await db.select({ id: staff.id, email: staff.email })
-              .from(staff)
-              .where(inArray(staff.id, mentions));
+            // Get mentioned staff members info
+            const mentionedStaff = await db.select({ 
+              id: staff.id, 
+              firstName: staff.firstName, 
+              lastName: staff.lastName, 
+              email: staff.email 
+            })
+            .from(staff)
+            .where(inArray(staff.id, mentions));
             
-            // Find matching users by email
-            const staffEmails = mentionedStaff.map(s => s.email);
-            const matchingUsers = await db.select({ id: users.id, email: users.email })
-              .from(users)
-              .where(inArray(users.email, staffEmails));
-            
-            // Create notifications for matching users
-            for (const user of matchingUsers) {
+            // Create notifications for mentioned staff members directly
+            for (const staffMember of mentionedStaff) {
               try {
                 await db.insert(notifications).values({
-                  userId: user.id,
+                  userId: staffMember.id, // Use staff ID directly for notifications
                   type: "annotation_mention",
                   title: "You were mentioned in an updated annotation",
                   message: `You were mentioned in an updated annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
@@ -3699,9 +3697,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   },
                   isRead: false,
                 });
-                console.log(`Update notification created for user: ${user.email}`);
+                console.log(`Update notification created for staff member: ${staffMember.firstName} ${staffMember.lastName} (${staffMember.email})`);
               } catch (singleNotificationError) {
-                console.log(`Failed to create update notification for user ${user.email}:`, singleNotificationError);
+                console.log(`Failed to create update notification for staff member ${staffMember.email}:`, singleNotificationError);
               }
             }
           } catch (notificationError) {
