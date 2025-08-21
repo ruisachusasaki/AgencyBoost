@@ -585,7 +585,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Project Template Routes
+  // Project Template Routes - temporarily commented out until DbStorage implementation
+  /*
   app.get("/api/project-templates", async (req, res) => {
     try {
       const templates = await storage.getProjectTemplates();
@@ -595,7 +596,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch project templates" });
     }
   });
+  */
 
+  /*
   app.get("/api/project-templates/:id", async (req, res) => {
     try {
       const template = await storage.getProjectTemplate(req.params.id);
@@ -622,7 +625,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create project template", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
+  */
 
+  /*
   app.put("/api/project-templates/:id", async (req, res) => {
     try {
       const validatedData = insertProjectTemplateSchema.partial().parse(req.body);
@@ -716,6 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create project from template", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
+  */
 
   // Campaign routes
   app.get("/api/campaigns", async (req, res) => {

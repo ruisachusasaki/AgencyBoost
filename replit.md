@@ -6,6 +6,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Bundle architecture preference: Collection-based bundles.
+UX Organization: Project Templates integrated as tabs under Projects section rather than separate navigation (user feedback: "much better UX").
 
 ## System Architecture
 

@@ -6,17 +6,20 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, Layout } from "lucide-react";
 import ProjectForm from "@/components/forms/project-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { calculateProjectProgress, getProjectTasks } from "@/lib/project-utils";
-import type { Project, Client, Task } from "@shared/schema";
+import type { Project, Client, Task, ProjectTemplate } from "@shared/schema";
 
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [templatesSearchTerm, setTemplatesSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("projects");
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -33,6 +36,66 @@ export default function Projects() {
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  // For templates - use sample data since API not working yet
+  const sampleTemplates: ProjectTemplate[] = [
+    {
+      id: "template-1",
+      name: "SEO Audit & Optimization",
+      description: "Complete SEO analysis and optimization for client websites including technical audit, keyword research, and on-page optimization.",
+      category: "SEO Audit",
+      priority: "high",
+      estimatedDuration: 21,
+      estimatedBudget: "5000.00",
+      isActive: true,
+      usageCount: 12,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "template-2", 
+      name: "Social Media Campaign Setup",
+      description: "Complete social media marketing campaign including content strategy, asset creation, and campaign launch across multiple platforms.",
+      category: "Social Media Management",
+      priority: "medium",
+      estimatedDuration: 14,
+      estimatedBudget: "3500.00",
+      isActive: true,
+      usageCount: 8,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "template-3",
+      name: "Website Development",
+      description: "Full website development project including design, development, testing, and deployment with responsive design and SEO optimization.",
+      category: "Website Development",
+      priority: "high", 
+      estimatedDuration: 45,
+      estimatedBudget: "15000.00",
+      isActive: true,
+      usageCount: 5,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "template-4",
+      name: "PPC Campaign Launch", 
+      description: "Google Ads and social media advertising campaign setup including keyword research, ad creation, landing page optimization, and campaign monitoring.",
+      category: "PPC Campaign",
+      priority: "medium",
+      estimatedDuration: 10,
+      estimatedBudget: "2500.00",
+      isActive: true,
+      usageCount: 15,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -62,6 +125,12 @@ export default function Projects() {
       project.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  const filteredTemplates = sampleTemplates.filter(template =>
+    template.name.toLowerCase().includes(templatesSearchTerm.toLowerCase()) ||
+    template.description?.toLowerCase().includes(templatesSearchTerm.toLowerCase()) ||
+    template.category.toLowerCase().includes(templatesSearchTerm.toLowerCase())
+  );
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -143,23 +212,39 @@ export default function Projects() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Projects</h1>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Project</DialogTitle>
-            </DialogHeader>
-            <ProjectForm
-              onSuccess={() => setIsCreateDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="projects" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Projects ({filteredProjects.length})
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <Layout className="h-4 w-4" />
+            Templates ({filteredTemplates.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="projects" className="space-y-6 mt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Project
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Project</DialogTitle>
+                </DialogHeader>
+                <ProjectForm
+                  onSuccess={() => setIsCreateDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
 
       <Card>
         <CardHeader className="border-b border-slate-200">
@@ -300,6 +385,97 @@ export default function Projects() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </TabsContent>
+
+    <TabsContent value="templates" className="space-y-6 mt-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Template
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader className="border-b border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search templates..."
+                value={templatesSearchTerm}
+                onChange={(e) => setTemplatesSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="text-sm text-slate-600">
+              {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredTemplates.length === 0 ? (
+            <div className="text-center py-12">
+              <Layout className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">
+                {templatesSearchTerm ? 'No templates found' : 'No templates yet'}
+              </h3>
+              <p className="text-slate-600 mb-4 max-w-sm mx-auto">
+                {templatesSearchTerm 
+                  ? `No templates match "${templatesSearchTerm}". Try adjusting your search.`
+                  : 'Create your first project template to speed up future project setup.'
+                }
+              </p>
+              {!templatesSearchTerm && (
+                <Button>Create Your First Template</Button>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-200">
+              {filteredTemplates.map((template) => (
+                <div key={template.id} className="p-6 hover:bg-slate-50">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-slate-900 truncate">{template.name}</h3>
+                        <Badge className={getPriorityColor(template.priority)}>
+                          {template.priority}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {template.category}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-600 line-clamp-2 mb-2">{template.description}</p>
+                      <div className="text-xs text-slate-500">
+                        Used {template.usageCount} times • Est. {template.estimatedDuration} days • ${Number(template.estimatedBudget).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        data-testid={`button-edit-template-${template.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        data-testid={`button-delete-template-${template.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TabsContent>
+  </Tabs>
+</div>
   );
 }

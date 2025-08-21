@@ -10,7 +10,7 @@ import Clients from "@/pages/clients";
 import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 import Projects from "@/pages/projects";
 import ProjectEdit from "@/pages/project-edit";
-import ProjectTemplates from "@/pages/project-templates";
+
 import Campaigns from "@/pages/campaigns";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
@@ -51,7 +51,7 @@ function Router() {
       <Route path="/clients/:id" component={EnhancedClientDetail} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id/edit" component={ProjectEdit} />
-      <Route path="/project-templates" component={ProjectTemplates} />
+
       <Route path="/marketing" component={Campaigns} />
       <Route path="/leads" component={Leads} />
       <Route path="/tasks" component={Tasks} />

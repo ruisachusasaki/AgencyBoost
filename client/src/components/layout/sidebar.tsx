@@ -33,7 +33,6 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Projects", href: "/projects", icon: FolderOpen },
-  { name: "Templates", href: "/project-templates", icon: Layout },
   { name: "Marketing", href: "/marketing", icon: Megaphone },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
