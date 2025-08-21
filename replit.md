@@ -7,6 +7,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 Preferred communication style: Simple, everyday language.
 Bundle architecture preference: Collection-based bundles.
 UX Organization: Project Templates integrated as tabs under Projects section rather than separate navigation (user feedback: "much better UX").
+Checkbox Design: Bulk action checkboxes should be square, task completion checkboxes should be circular (implemented with custom CSS targeting).
 
 ## System Architecture
 
