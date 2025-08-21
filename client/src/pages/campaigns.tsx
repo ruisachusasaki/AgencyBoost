@@ -198,6 +198,7 @@ export default function Campaigns() {
   // Create email template mutation
   const createEmailTemplateMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Frontend: Creating email template with data:", data);
       return await apiRequest("POST", "/api/email-templates", data);
     },
     onSuccess: () => {
@@ -205,8 +206,10 @@ export default function Campaigns() {
       toast({ title: "Success", description: "Email template created successfully" });
       handleDialogClose();
     },
-    onError: () => {
-      toast({ variant: "destructive", title: "Error", description: "Failed to create email template" });
+    onError: (error: any) => {
+      console.error("Frontend: Email template creation error:", error);
+      const errorMessage = error?.message || "Failed to create email template";
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
   });
 
