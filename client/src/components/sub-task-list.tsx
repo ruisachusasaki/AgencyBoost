@@ -236,6 +236,193 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
           )}
         </React.Fragment>
       ))}
+      
+      {/* Add Sub-task Button and Form */}
+      {level < maxLevel - 1 && (
+        <>
+          {!showAddForm ? (
+            <TableRow>
+              <TableCell colSpan={4} className="py-3">
+                <div style={{ paddingLeft: `${level * 24}px` }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddForm(true)}
+                    className="h-8 px-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                    data-testid="add-subtask-button"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Sub-task
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} className="py-3">
+                <div style={{ paddingLeft: `${level * 24}px` }}>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Task Title</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter task title..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="assignedTo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Assignee</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select assignee" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">Unassigned</SelectItem>
+                                  {staff.map((member) => (
+                                    <SelectItem key={member.id} value={member.id}>
+                                      {member.firstName} {member.lastName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Priority</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="urgent">
+                                    <div className="flex items-center gap-2">
+                                      <Flag className="h-3 w-3 text-red-500" />
+                                      <span>Urgent</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="high">
+                                    <div className="flex items-center gap-2">
+                                      <Flag className="h-3 w-3 text-yellow-500" />
+                                      <span>High</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="normal">
+                                    <div className="flex items-center gap-2">
+                                      <Flag className="h-3 w-3 text-blue-500" />
+                                      <span>Normal</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="low">
+                                    <div className="flex items-center gap-2">
+                                      <Flag className="h-3 w-3 text-gray-500" />
+                                      <span>Low</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="status"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Status</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Enter task description..." 
+                                className="min-h-[80px]"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={createSubTaskMutation.isPending}
+                          data-testid="create-subtask-submit"
+                        >
+                          {createSubTaskMutation.isPending ? "Creating..." : "Create Sub-task"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddForm(false);
+                            form.reset();
+                          }}
+                          data-testid="create-subtask-cancel"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+        </>
+      )}
     </>
   );
 }
