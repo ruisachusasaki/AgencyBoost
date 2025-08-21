@@ -204,3 +204,23 @@
 .dark .ql-toolbar .ql-fill {
   fill: hsl(var(--foreground)) !important;
 }
+
+/* Ensure checkboxes appear as squares, not circles */
+[role="checkbox"] {
+  border-radius: 4px !important;
+}
+
+/* Override any circular styling for checkbox buttons */
+button[role="checkbox"] {
+  border-radius: 4px !important;
+}
+
+/* Specific styling for shadcn checkbox component */
+.peer[type="checkbox"] {
+  border-radius: 4px !important;
+}
+
+/* Target checkbox by data attribute if needed */
+[data-state="unchecked"], [data-state="checked"] {
+  border-radius: 4px !important;
+}
