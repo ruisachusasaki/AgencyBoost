@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, Calendar, Layout } from "lucide-react";
 import ProjectForm from "@/components/forms/project-form";
@@ -129,7 +129,7 @@ export default function Projects() {
   const filteredTemplates = sampleTemplates.filter(template =>
     template.name.toLowerCase().includes(templatesSearchTerm.toLowerCase()) ||
     template.description?.toLowerCase().includes(templatesSearchTerm.toLowerCase()) ||
-    template.category.toLowerCase().includes(templatesSearchTerm.toLowerCase())
+    template.category?.toLowerCase().includes(templatesSearchTerm.toLowerCase())
   );
 
   const getClientName = (clientId: string) => {
@@ -214,19 +214,35 @@ export default function Projects() {
         <h1 className="text-2xl font-bold text-slate-900">Projects</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="projects" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Projects ({filteredProjects.length})
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Layout className="h-4 w-4" />
-            Templates ({filteredTemplates.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "projects", name: "Projects", icon: Calendar, count: filteredProjects.length },
+            { id: "templates", name: "Templates", icon: Layout, count: filteredTemplates.length }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} ({tab.count})
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="projects" className="space-y-6 mt-6">
+      {/* Tab Content */}
+      {activeTab === "projects" && (
+        <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
@@ -385,9 +401,11 @@ export default function Projects() {
           )}
         </CardContent>
       </Card>
-    </TabsContent>
+        </div>
+      )}
 
-    <TabsContent value="templates" className="space-y-6 mt-6">
+      {activeTab === "templates" && (
+        <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <Button>
           <Plus className="h-4 w-4 mr-2" />
@@ -474,8 +492,8 @@ export default function Projects() {
           )}
         </CardContent>
       </Card>
-    </TabsContent>
-  </Tabs>
-</div>
+        </div>
+      )}
+    </div>
   );
 }
