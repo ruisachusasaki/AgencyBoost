@@ -11,7 +11,8 @@ import { Plus, Search, Edit, Trash2, Calendar } from "lucide-react";
 import ProjectForm from "@/components/forms/project-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Project, Client } from "@shared/schema";
+import { calculateProjectProgress, getProjectTasks } from "@/lib/project-utils";
+import type { Project, Client, Task } from "@shared/schema";
 
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,6 +29,10 @@ export default function Projects() {
     queryKey: ["/api/clients"],
   });
   const clients = clientsData?.clients || [];
+
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+  });
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -268,13 +273,26 @@ export default function Projects() {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">Progress</span>
-                      <span className="text-sm font-medium text-slate-900">
-                        {project.progress || 0}%
-                      </span>
-                    </div>
-                    <Progress value={project.progress || 0} className="h-2" />
+                    {(() => {
+                      const projectTasks = getProjectTasks(tasks, project.id);
+                      const progress = calculateProjectProgress(projectTasks);
+                      return (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600">Progress</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500">
+                                {progress.completedTasks} of {progress.totalTasks} tasks
+                              </span>
+                              <span className="text-sm font-medium text-slate-900">
+                                {progress.progressPercentage}%
+                              </span>
+                            </div>
+                          </div>
+                          <Progress value={progress.progressPercentage} className="h-2" />
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}

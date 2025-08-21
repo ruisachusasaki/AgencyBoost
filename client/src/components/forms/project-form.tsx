@@ -198,27 +198,6 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
 
           <FormField
             control={form.control}
-            name="progress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Progress (%)</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    placeholder="0"
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="startDate"
             render={({ field }) => (
               <FormItem>
