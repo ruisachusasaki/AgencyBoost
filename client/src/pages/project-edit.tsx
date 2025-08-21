@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -5,14 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle, Circle, Plus, Calendar, User, Flag } from "lucide-react";
+import { ArrowLeft, CheckCircle, Circle, Plus, Calendar, User, Flag, ChevronUp, ChevronDown } from "lucide-react";
 import ProjectForm from "@/components/forms/project-form";
 import { calculateProjectProgress, getProjectTasks } from "@/lib/project-utils";
 import type { Project, Task, Staff } from "@shared/schema";
 
+type SortField = 'title' | 'status' | 'assignedTo' | 'priority' | 'dueDate';
+type SortDirection = 'asc' | 'desc';
+
 export default function ProjectEdit() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { data: projects = [], isLoading, error } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -28,6 +34,54 @@ export default function ProjectEdit() {
 
   const project = projects.find(p => p.id === id);
   const projectTasks = project ? getProjectTasks(tasks, project.id) : [];
+
+  // Sort tasks based on current sort field and direction
+  const sortedTasks = useMemo(() => {
+    const tasksToSort = [...projectTasks];
+    
+    return tasksToSort.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortField) {
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'status':
+          // Define status priority: pending < in_progress < completed < cancelled
+          const statusOrder = { pending: 1, in_progress: 2, completed: 3, cancelled: 4 };
+          aValue = statusOrder[a.status as keyof typeof statusOrder] || 0;
+          bValue = statusOrder[b.status as keyof typeof statusOrder] || 0;
+          break;
+        case 'assignedTo':
+          aValue = getStaffName(a.assignedTo).toLowerCase();
+          bValue = getStaffName(b.assignedTo).toLowerCase();
+          break;
+        case 'priority':
+          // Define priority order: urgent > high > normal > low
+          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
+          aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+          break;
+        case 'dueDate':
+          aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+          bValue = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+          // Handle null dates - put them at the end
+          if (!a.dueDate && b.dueDate) return 1;
+          if (a.dueDate && !b.dueDate) return -1;
+          if (!a.dueDate && !b.dueDate) return 0;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortDirection === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  }, [projectTasks, sortField, sortDirection, staff]);
 
   const handleSuccess = () => {
     navigate("/projects");
@@ -85,6 +139,35 @@ export default function ProjectEdit() {
     if (!date) return "—";
     return new Date(date).toLocaleDateString();
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer select-none hover:bg-slate-50"
+      onClick={() => handleSort(field)}
+      data-testid={`header-${field}`}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <div className="flex flex-col">
+          <ChevronUp 
+            className={`h-3 w-3 ${sortField === field && sortDirection === 'asc' ? 'text-slate-900' : 'text-slate-300'}`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${sortField === field && sortDirection === 'desc' ? 'text-slate-900' : 'text-slate-300'}`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
 
   if (isLoading) {
     return (
@@ -186,15 +269,15 @@ export default function ProjectEdit() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Task</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assigned To</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Due Date</TableHead>
+                      <SortableHeader field="title">Task</SortableHeader>
+                      <SortableHeader field="status">Status</SortableHeader>
+                      <SortableHeader field="assignedTo">Assigned To</SortableHeader>
+                      <SortableHeader field="priority">Priority</SortableHeader>
+                      <SortableHeader field="dueDate">Due Date</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {projectTasks.map((task) => (
+                    {sortedTasks.map((task) => (
                       <TableRow 
                         key={task.id} 
                         className="cursor-pointer hover:bg-slate-50"
