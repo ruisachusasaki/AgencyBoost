@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import type { Project, Client } from "@shared/schema";
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -218,31 +219,21 @@ export default function Projects() {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <Dialog 
-                        open={editingProject?.id === project.id} 
-                        onOpenChange={(open) => setEditingProject(open ? project : null)}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => navigate(`/projects/${project.id}/edit`)}
+                        data-testid={`button-edit-${project.id}`}
                       >
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Edit Project</DialogTitle>
-                          </DialogHeader>
-                          <ProjectForm
-                            project={editingProject}
-                            onSuccess={() => setEditingProject(null)}
-                          />
-                        </DialogContent>
-                      </Dialog>
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       
                       <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleDeleteProject(project.id)}
                         disabled={deleteProjectMutation.isPending}
+                        data-testid={`button-delete-${project.id}`}
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
