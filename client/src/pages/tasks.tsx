@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
+import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Client, Project, Campaign, Staff } from "@shared/schema";
@@ -373,6 +374,7 @@ export default function Tasks() {
                 {task.title}
               </span>
             </Link>
+            <TaskDependencyIcons taskId={task.id} />
           </div>
         );
       
@@ -578,7 +580,10 @@ export default function Tasks() {
             }`}
           >
             <div className="flex items-start justify-between mb-2">
-              <h4 className="font-medium text-sm text-slate-900 line-clamp-2">{task.title}</h4>
+              <div className="flex items-center gap-0">
+                <h4 className="font-medium text-sm text-slate-900 line-clamp-2">{task.title}</h4>
+                <TaskDependencyIcons taskId={task.id} />
+              </div>
               <div className="flex items-center gap-1 ml-2">
                 <Link href={`/tasks/${task.id}`}>
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
