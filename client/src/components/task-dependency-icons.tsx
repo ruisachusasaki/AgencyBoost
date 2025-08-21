@@ -61,26 +61,36 @@ const dependencyTypeConfig = {
 };
 
 export function TaskDependencyIcons({ taskId, className = "" }: TaskDependencyIconsProps) {
-  const { data: dependencyResponse } = useQuery<DependencyResponse>({
+  const { data: dependencyResponse, isLoading, error } = useQuery<DependencyResponse>({
     queryKey: ["/api/tasks", taskId, "dependencies"],
   });
 
   // Extract dependencies array from the response
   const dependencyList = dependencyResponse?.dependencies || [];
   
-  if (dependencyList.length === 0) {
+  // Don't render anything while loading or if there are no dependencies
+  if (isLoading || dependencyList.length === 0) {
+    return null;
+  }
+
+  // Log errors for debugging
+  if (error) {
+    console.error("Error loading task dependencies:", error);
     return null;
   }
 
   return (
     <div className={`flex items-center gap-1 ml-2 ${className}`}>
       {dependencyList.map((dependency: TaskDependency) => {
-        // Skip if dependency data is incomplete
-        if (!dependency.dependencyType || !dependency.task?.title) {
+        // Skip if dependency data is incomplete or malformed
+        if (!dependency || !dependency.id || !dependency.dependencyType) {
           return null;
         }
+
+        // Safely access task data
+        const taskTitle = dependency.task?.title || "Unknown Task";
         
-        const config = dependencyTypeConfig[dependency.dependencyType];
+        const config = dependencyTypeConfig[dependency.dependencyType as keyof typeof dependencyTypeConfig];
         if (!config) {
           return null;
         }
@@ -101,7 +111,7 @@ export function TaskDependencyIcons({ taskId, className = "" }: TaskDependencyIc
                 <div className="text-center">
                   <div className="font-medium">{config.label}</div>
                   <div className="text-xs text-slate-400 mt-1">
-                    Depends on: "{dependency.task.title}"
+                    Depends on: "{taskTitle}"
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
                     {config.description}
