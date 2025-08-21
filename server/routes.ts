@@ -32,7 +32,7 @@ import {
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
-import { eq, like, or, and, asc, desc, sql, inArray } from "drizzle-orm";
+import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-orm";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
 
@@ -1160,61 +1160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
       const newTask = result[0];
       
-      // If this is a recurring task and createIfOverdue is enabled, create initial future instances
-      if (newTask.isRecurring && newTask.createIfOverdue && newTask.startDate) {
-        const maxInstancesToCreate = 5; // Create next 5 occurrences
-        const instances = [];
-        
-        for (let i = 1; i <= maxInstancesToCreate; i++) {
-          // Check if we've reached the end conditions
-          if (newTask.recurringEndType === "after_occurrences" && 
-              newTask.recurringEndOccurrences && 
-              i > newTask.recurringEndOccurrences) {
-            break;
-          }
-          
-          const nextStartDate = calculateNextOccurrence(
-            new Date(newTask.startDate), 
-            newTask.recurringInterval || 1, 
-            newTask.recurringUnit || "days", 
-            i
-          );
-          
-          if (newTask.recurringEndType === "on_date" && 
-              newTask.recurringEndDate && 
-              nextStartDate > new Date(newTask.recurringEndDate)) {
-            break;
-          }
-          
-          let nextDueDate = null;
-          if (newTask.dueDate) {
-            nextDueDate = calculateNextOccurrence(
-              new Date(newTask.dueDate), 
-              newTask.recurringInterval || 1, 
-              newTask.recurringUnit || "days", 
-              i
-            );
-          }
-          
-          const instanceData = {
-            ...validatedData,
-            startDate: nextStartDate,
-            dueDate: nextDueDate,
-            isRecurring: false, // Future instances are not recurring themselves
-            recurringInterval: null,
-            recurringUnit: null,
-            recurringEndType: null,
-            recurringEndDate: null,
-            recurringEndOccurrences: null,
-          };
-          
-          instances.push(instanceData);
-        }
-        
-        if (instances.length > 0) {
-          await db.insert(tasks).values(instances);
-        }
-      }
+      // Note: Recurring task instances will be created on-demand when tasks are completed
       
       res.status(201).json(newTask);
     } catch (error) {
@@ -1485,6 +1431,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newEntries = validatedData.timeEntries || [];
         if (JSON.stringify(oldEntries) !== JSON.stringify(newEntries)) {
           await logTaskActivity(req.params.id, 'time_tracking', 'timeEntries', 'Time entry updated', 'Time tracking session', currentUser, currentUserName);
+        }
+      }
+
+      // ClickUp-style recurring task logic: Create next instance only when current task is completed
+      if (validatedData.status === 'completed' && 
+          currentTask.status !== 'completed' && 
+          currentTask.isRecurring && 
+          currentTask.startDate) {
+        
+        // Check if we should create the next occurrence based on end conditions
+        let shouldCreateNext = true;
+        
+        // For "after_occurrences" end type, we need to count how many instances have been created
+        if (currentTask.recurringEndType === "after_occurrences" && currentTask.recurringEndOccurrences) {
+          // Count all instances of this recurring task series (including completed and pending)
+          const totalInstances = await db
+            .select({ count: sql`count(*)` })
+            .from(tasks)
+            .where(eq(tasks.title, currentTask.title));
+          
+          const totalCount = Number(totalInstances[0]?.count || 0);
+          
+          // If we've reached the limit, don't create another
+          if (totalCount >= currentTask.recurringEndOccurrences) {
+            shouldCreateNext = false;
+          }
+        }
+        
+        // For "on_date" end type, check if next occurrence would exceed end date
+        if (currentTask.recurringEndType === "on_date" && currentTask.recurringEndDate) {
+          const nextStartDate = calculateNextOccurrence(
+            new Date(currentTask.startDate), 
+            currentTask.recurringInterval || 1, 
+            currentTask.recurringUnit || "days", 
+            1
+          );
+          
+          if (nextStartDate > new Date(currentTask.recurringEndDate)) {
+            shouldCreateNext = false;
+          }
+        }
+        
+        if (shouldCreateNext) {
+          // Calculate next occurrence dates
+          const nextStartDate = calculateNextOccurrence(
+            new Date(currentTask.startDate), 
+            currentTask.recurringInterval || 1, 
+            currentTask.recurringUnit || "days", 
+            1
+          );
+          
+          let nextDueDate = null;
+          if (currentTask.dueDate) {
+            nextDueDate = calculateNextOccurrence(
+              new Date(currentTask.dueDate), 
+              currentTask.recurringInterval || 1, 
+              currentTask.recurringUnit || "days", 
+              1
+            );
+          }
+          
+          // Create the next task instance
+          const nextInstanceData = {
+            title: currentTask.title,
+            description: currentTask.description,
+            status: 'pending' as const,
+            priority: currentTask.priority,
+            assignedTo: currentTask.assignedTo,
+            clientId: currentTask.clientId,
+            projectId: currentTask.projectId,
+            campaignId: currentTask.campaignId,
+            startDate: nextStartDate,
+            dueDate: nextDueDate,
+            timeEstimate: currentTask.timeEstimate,
+            parentTaskId: currentTask.parentTaskId,
+            // Keep the original recurring settings in the new instance
+            isRecurring: true,
+            recurringInterval: currentTask.recurringInterval,
+            recurringUnit: currentTask.recurringUnit,
+            recurringEndType: currentTask.recurringEndType,
+            recurringEndDate: currentTask.recurringEndDate,
+            recurringEndOccurrences: currentTask.recurringEndOccurrences,
+            createIfOverdue: currentTask.createIfOverdue
+          };
+          
+          await db.insert(tasks).values(nextInstanceData);
+          
+          // Log the recurring task creation
+          await logTaskActivity(
+            req.params.id, 
+            'recurring_task_created', 
+            'status', 
+            'N/A', 
+            `Next recurring task created for ${nextStartDate.toDateString()}`,
+            currentUser, 
+            currentUserName
+          );
         }
       }
       
