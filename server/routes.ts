@@ -3575,12 +3575,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.insert(imageAnnotations).values(insertAnnotation).returning();
       const annotation = result[0];
       
-      // Create notifications for mentioned users
+      // Create notifications for mentioned users (staff -> users mapping)
       if (mentions.length > 0) {
-        const notificationPromises = mentions.map((mentionedUserId: string) => {
-          if (mentionedUserId !== userId) { // Don't notify the author
+        const { staff } = await import("@shared/schema");
+        const { eq, inArray } = await import("drizzle-orm");
+        
+        // Get user IDs from staff IDs since notifications reference users table
+        const staffUsers = await db.select({ staffId: staff.id, userId: staff.userId })
+          .from(staff)
+          .where(inArray(staff.id, mentions));
+        
+        const notificationPromises = staffUsers.map((staffUser) => {
+          if (staffUser.userId && staffUser.staffId !== userId) { // Don't notify the author
             return db.insert(notifications).values({
-              userId: mentionedUserId,
+              userId: staffUser.userId,
               type: "annotation_mention",
               title: "You were mentioned in an annotation",
               message: `You were mentioned in an annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
@@ -3635,12 +3643,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Annotation not found" });
       }
 
-      // Create notifications for mentioned users
+      // Create notifications for mentioned users (staff -> users mapping)
       if (mentions.length > 0) {
-        const notificationPromises = mentions.map((mentionedUserId: string) => {
-          if (mentionedUserId !== userId) { // Don't notify the author
+        const { staff } = await import("@shared/schema");
+        const { inArray } = await import("drizzle-orm");
+        
+        // Get user IDs from staff IDs since notifications reference users table
+        const staffUsers = await db.select({ staffId: staff.id, userId: staff.userId })
+          .from(staff)
+          .where(inArray(staff.id, mentions));
+        
+        const notificationPromises = staffUsers.map((staffUser) => {
+          if (staffUser.userId && staffUser.staffId !== userId) { // Don't notify the author
             return db.insert(notifications).values({
-              userId: mentionedUserId,
+              userId: staffUser.userId,
               type: "annotation_mention",
               title: "You were mentioned in an updated annotation",
               message: `You were mentioned in an updated annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,

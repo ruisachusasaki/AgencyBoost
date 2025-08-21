@@ -96,13 +96,12 @@ export function ImageAnnotationModal({
       setShowMentionDropdown(true);
       setSelectedMentionIndex(0);
 
-      // Calculate position for dropdown
-      const rect = textarea.getBoundingClientRect();
+      // Calculate position for dropdown relative to textarea
       const lines = textBeforeCursor.split('\n');
       const currentLine = lines.length - 1;
-      const lineHeight = 20;
-      const top = rect.top + (currentLine * lineHeight) + 30;
-      const left = rect.left + (mentionMatch.index || 0) * 8;
+      const lineHeight = 24;
+      const top = (currentLine * lineHeight) + 28; // Position below current line
+      const left = 0; // Align with textarea left edge
       
       setMentionPosition({ top, left });
     } else {
@@ -484,11 +483,11 @@ export function ImageAnnotationModal({
                   {/* @mention dropdown */}
                   {showMentionDropdown && filteredStaff.length > 0 && (
                     <div
-                      className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto z-50"
+                      className="absolute bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto z-50"
                       style={{
                         top: mentionPosition.top,
                         left: mentionPosition.left,
-                        minWidth: '200px'
+                        minWidth: '250px'
                       }}
                     >
                       {filteredStaff.map((staffMember: any, index: number) => (
