@@ -6857,6 +6857,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark notification as read
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [updated] = await db.update(notifications)
+        .set({ 
+          isRead: true,
+          readAt: new Date()
+        })
+        .where(
+          and(
+            eq(notifications.id, req.params.id),
+            eq(notifications.userId, userId)
+          )
+        )
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  // Delete notification
+  app.delete("/api/notifications/:id", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [deleted] = await db.delete(notifications)
+        .where(
+          and(
+            eq(notifications.id, req.params.id),
+            eq(notifications.userId, userId)
+          )
+        )
+        .returning();
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ error: "Failed to delete notification" });
+    }
+  });
+
+  // Mark all notifications as read
+  app.patch("/api/notifications/mark-all-read", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const updated = await db.update(notifications)
+        .set({ 
+          isRead: true,
+          readAt: new Date()
+        })
+        .where(
+          and(
+            eq(notifications.userId, userId),
+            eq(notifications.isRead, false)
+          )
+        )
+        .returning();
+      
+      res.json({ 
+        message: `${updated.length} notifications marked as read`,
+        updated: updated.length
+      });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ error: "Failed to mark all notifications as read" });
+    }
+  });
+
   // Test endpoint to view notifications for any staff member (dev only)
   app.get("/api/notifications/staff/:staffId", async (req, res) => {
     try {
