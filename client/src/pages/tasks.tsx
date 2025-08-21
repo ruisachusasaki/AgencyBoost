@@ -51,6 +51,8 @@ export default function Tasks() {
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -195,8 +197,12 @@ export default function Tasks() {
       const matchesProject = projectFilter === "all" || 
         (projectFilter === "none" && !task.projectId) ||
         task.projectId === projectFilter;
+
+      // Show/hide completed and cancelled tasks based on toggle settings
+      const shouldShowCompleted = showCompleted || task.status !== "completed";
+      const shouldShowCancelled = showCancelled || task.status !== "cancelled";
       
-      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject;
+      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && shouldShowCompleted && shouldShowCancelled;
     })
     .sort((a, b) => {
       let aValue: any = '';
@@ -1141,6 +1147,43 @@ export default function Tasks() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            
+            {/* Show/Hide Controls */}
+            <div className="flex items-center gap-6 pt-2 border-t border-slate-200">
+              <div className="text-sm font-medium text-slate-700">Show/Hide:</div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-completed"
+                    checked={showCompleted}
+                    onCheckedChange={setShowCompleted}
+                    data-testid="toggle-completed-tasks"
+                  />
+                  <label
+                    htmlFor="show-completed"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Show Completed
+                  </label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-cancelled"
+                    checked={showCancelled}
+                    onCheckedChange={setShowCancelled}
+                    data-testid="toggle-cancelled-tasks"
+                  />
+                  <label
+                    htmlFor="show-cancelled"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Show Cancelled
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>
