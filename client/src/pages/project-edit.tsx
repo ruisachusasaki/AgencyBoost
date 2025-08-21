@@ -3,10 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, CheckCircle, Circle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, CheckCircle, Circle, Plus, Calendar, User, Flag } from "lucide-react";
 import ProjectForm from "@/components/forms/project-form";
 import { calculateProjectProgress, getProjectTasks } from "@/lib/project-utils";
-import type { Project, Task } from "@shared/schema";
+import type { Project, Task, Staff } from "@shared/schema";
 
 export default function ProjectEdit() {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +22,12 @@ export default function ProjectEdit() {
     queryKey: ["/api/tasks"],
   });
 
+  const { data: staff = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
+  });
+
   const project = projects.find(p => p.id === id);
+  const projectTasks = project ? getProjectTasks(tasks, project.id) : [];
 
   const handleSuccess = () => {
     navigate("/projects");
@@ -28,6 +35,55 @@ export default function ProjectEdit() {
 
   const handleBackClick = () => {
     navigate("/projects");
+  };
+
+  const handleAddTask = () => {
+    navigate(`/tasks?projectId=${project?.id}`);
+  };
+
+  const handleTaskClick = (taskId: string) => {
+    navigate(`/tasks/${taskId}`);
+  };
+
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return "Unassigned";
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "text-red-600";
+      case "high":
+        return "text-yellow-600";
+      case "normal":
+        return "text-blue-600";
+      case "low":
+        return "text-gray-600";
+      default:
+        return "text-gray-400";
+    }
+  };
+
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString();
   };
 
   if (isLoading) {
@@ -90,7 +146,7 @@ export default function ProjectEdit() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Project Details</CardTitle>
@@ -100,6 +156,89 @@ export default function ProjectEdit() {
                 project={project}
                 onSuccess={handleSuccess}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Project Tasks ({projectTasks.length})</CardTitle>
+                <Button onClick={handleAddTask} size="sm" data-testid="button-add-task">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Task
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {projectTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <Circle className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 mb-2">No tasks yet</h3>
+                  <p className="text-slate-500 mb-4">
+                    Create tasks to break down this project into manageable work items.
+                  </p>
+                  <Button onClick={handleAddTask} data-testid="button-create-first-task">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Task
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Task</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Assigned To</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Due Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectTasks.map((task) => (
+                      <TableRow 
+                        key={task.id} 
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => handleTaskClick(task.id)}
+                        data-testid={`row-task-${task.id}`}
+                      >
+                        <TableCell className="font-medium">
+                          <div>
+                            <p className="font-medium text-slate-900">{task.title}</p>
+                            {task.description && (
+                              <p className="text-sm text-slate-500 truncate max-w-xs">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(task.status)}>
+                            {task.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-slate-400" />
+                            <span className="text-sm">{getStaffName(task.assignedTo)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Flag className={`h-4 w-4 ${getPriorityColor(task.priority)}`} />
+                            <span className="text-sm capitalize">{task.priority}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-slate-400" />
+                            <span className="text-sm">{formatDate(task.dueDate)}</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -114,7 +253,6 @@ export default function ProjectEdit() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const projectTasks = getProjectTasks(tasks, project.id);
                 const progress = calculateProjectProgress(projectTasks);
                 return (
                   <div className="space-y-4">
