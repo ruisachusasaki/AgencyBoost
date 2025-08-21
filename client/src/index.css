@@ -205,22 +205,25 @@
   fill: hsl(var(--foreground)) !important;
 }
 
-/* Ensure checkboxes appear as squares, not circles */
-[role="checkbox"] {
+/* Bulk action checkboxes should be squares */
+[data-testid^="select-task-"] [role="checkbox"],
+[data-testid="select-all-tasks"] [role="checkbox"] {
   border-radius: 4px !important;
 }
 
-/* Override any circular styling for checkbox buttons */
-button[role="checkbox"] {
+[data-testid^="select-task-"] button[role="checkbox"],
+[data-testid="select-all-tasks"] button[role="checkbox"] {
   border-radius: 4px !important;
 }
 
-/* Specific styling for shadcn checkbox component */
-.peer[type="checkbox"] {
+[data-testid^="select-task-"] [data-state="unchecked"],
+[data-testid^="select-task-"] [data-state="checked"],
+[data-testid="select-all-tasks"] [data-state="unchecked"],
+[data-testid="select-all-tasks"] [data-state="checked"] {
   border-radius: 4px !important;
 }
 
-/* Target checkbox by data attribute if needed */
-[data-state="unchecked"], [data-state="checked"] {
-  border-radius: 4px !important;
+/* Task completion checkboxes should remain circular */
+.flex-shrink-0[role="checkbox"] {
+  border-radius: 50% !important;
 }
