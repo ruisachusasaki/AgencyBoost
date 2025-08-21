@@ -3165,15 +3165,13 @@ export class DbStorage implements IStorage {
   }
   
   async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
-    const id = randomUUID();
-    const newTemplate = { 
-      ...template, 
-      id,
+    const result = await db.insert(emailTemplates).values({
+      ...template,
+      id: sql`gen_random_uuid()`,
       createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    await db.insert(emailTemplates).values(newTemplate);
-    return newTemplate as EmailTemplate;
+      updatedAt: new Date(),
+    }).returning();
+    return result[0];
   }
   
   async updateEmailTemplate(id: string, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined> {
