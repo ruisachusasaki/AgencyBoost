@@ -24,7 +24,7 @@ interface Column {
   width?: string;
 }
 
-type SortField = 'title' | 'assignedTo' | 'dueDate' | 'priority' | 'clientId' | 'projectId' | 'status' | 'createdAt';
+type SortField = 'title' | 'assignedTo' | 'dueDate' | 'status' | 'priority' | 'clientId' | 'projectId' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'table' | 'kanban';
 
@@ -41,12 +41,13 @@ export default function Tasks() {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [columns, setColumns] = useState<Column[]>([
-    { id: "name", label: "Task Name", width: "w-1/4" },
-    { id: "assignee", label: "Assignee", width: "w-1/6" },
-    { id: "dueDate", label: "Due Date", width: "w-1/6" },
+    { id: "name", label: "Task Name", width: "w-1/5" },
+    { id: "assignee", label: "Assignee", width: "w-1/7" },
+    { id: "dueDate", label: "Due Date", width: "w-1/7" },
+    { id: "status", label: "Status", width: "w-1/8" },
     { id: "priority", label: "Priority", width: "w-1/8" },
-    { id: "client", label: "Client", width: "w-1/6" },
-    { id: "project", label: "Project", width: "w-1/6" },
+    { id: "client", label: "Client", width: "w-1/7" },
+    { id: "project", label: "Project", width: "w-1/7" },
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
@@ -213,6 +214,10 @@ export default function Tasks() {
           aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0;
           bValue = b.dueDate ? new Date(b.dueDate).getTime() : 0;
           break;
+        case 'status':
+          aValue = a.status.toLowerCase();
+          bValue = b.status.toLowerCase();
+          break;
         case 'priority':
           const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
           aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
@@ -225,10 +230,6 @@ export default function Tasks() {
         case 'projectId':
           aValue = (getProjectName(a.projectId) || 'No project').toLowerCase();
           bValue = (getProjectName(b.projectId) || 'No project').toLowerCase();
-          break;
-        case 'status':
-          aValue = a.status.toLowerCase();
-          bValue = b.status.toLowerCase();
           break;
         case 'createdAt':
           aValue = new Date(a.createdAt || 0).getTime();
@@ -399,6 +400,13 @@ export default function Tasks() {
           </span>
         ) : (
           <span className="text-slate-400 text-sm">No due date</span>
+        );
+      
+      case "status":
+        return (
+          <Badge className={getStatusColor(task.status)}>
+            {task.status.replace('_', ' ')}
+          </Badge>
         );
       
       case "priority":
@@ -901,6 +909,7 @@ export default function Tasks() {
                             name: 'title',
                             assignee: 'assignedTo', 
                             dueDate: 'dueDate',
+                            status: 'status',
                             priority: 'priority',
                             client: 'clientId',
                             project: 'projectId'
