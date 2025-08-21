@@ -29,6 +29,7 @@ export default function TaskDetail() {
   const [activeTab, setActiveTab] = useState("comments");
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
+  const [timeEstimateUnit, setTimeEstimateUnit] = useState<"minutes" | "hours">("minutes");
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
 
   const { data: task, isLoading } = useQuery<Task>({
@@ -254,6 +255,43 @@ export default function TaskDetail() {
       cancelTitleEdit();
     }
   };
+
+  // Helper functions for time estimate conversion
+  const getDisplayTimeValue = () => {
+    if (!task?.timeEstimate) return "";
+    if (timeEstimateUnit === "hours") {
+      return (task.timeEstimate / 60).toString();
+    }
+    return task.timeEstimate.toString();
+  };
+
+  const convertToMinutes = (value: number, unit: "minutes" | "hours") => {
+    return unit === "hours" ? value * 60 : value;
+  };
+
+  const handleTimeEstimateChange = (value: string) => {
+    if (!value) {
+      updateTaskMutation.mutate({ timeEstimate: null });
+      return;
+    }
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || numValue < 0) return;
+    
+    const minutesValue = convertToMinutes(numValue, timeEstimateUnit);
+    updateTaskMutation.mutate({ timeEstimate: Math.round(minutesValue) });
+  };
+
+  // Update unit when task changes to show appropriate unit
+  useEffect(() => {
+    if (task?.timeEstimate) {
+      // If the time is a multiple of 60 minutes and >= 60, default to hours
+      if (task.timeEstimate >= 60 && task.timeEstimate % 60 === 0) {
+        setTimeEstimateUnit("hours");
+      } else {
+        setTimeEstimateUnit("minutes");
+      }
+    }
+  }, [task?.timeEstimate]);
 
   if (isLoading) {
     return (
@@ -538,12 +576,36 @@ export default function TaskDetail() {
                       <Input
                         type="number"
                         placeholder="0"
-                        value={task.timeEstimate || ""}
-                        onChange={(e) => updateTaskMutation.mutate({ timeEstimate: e.target.value ? parseInt(e.target.value) : null })}
-                        className="w-16 h-8 text-sm"
+                        value={getDisplayTimeValue()}
+                        onChange={(e) => handleTimeEstimateChange(e.target.value)}
+                        className="w-20 h-8 text-sm"
                         min="0"
+                        step={timeEstimateUnit === "hours" ? "0.25" : "1"}
                       />
-                      <span className="text-sm text-slate-500">minutes</span>
+                      <Select
+                        value={timeEstimateUnit}
+                        onValueChange={(value: "minutes" | "hours") => {
+                          setTimeEstimateUnit(value);
+                          // Convert existing value to new unit
+                          if (task?.timeEstimate) {
+                            const displayValue = value === "hours" ? task.timeEstimate / 60 : task.timeEstimate;
+                            // Update the field with the same value but potentially different precision
+                            if (value === "hours" && task.timeEstimate % 60 !== 0) {
+                              // If switching to hours and not evenly divisible, keep as decimal
+                              const hourValue = Math.round((task.timeEstimate / 60) * 100) / 100;
+                              updateTaskMutation.mutate({ timeEstimate: Math.round(hourValue * 60) });
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-20 h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="minutes">min</SelectItem>
+                          <SelectItem value="hours">hrs</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
