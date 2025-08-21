@@ -8,7 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertProjectSchema, type Project, type InsertProject, type Client } from "@shared/schema";
+import { insertProjectSchema, type Project, type InsertProject, type Client, type ProjectTemplate } from "@shared/schema";
+import { useState } from "react";
+import { Layout, Calendar, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface ProjectFormProps {
   project?: Project | null;
@@ -18,11 +23,33 @@ interface ProjectFormProps {
 export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(null);
 
   const { data: clientsData } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
   const clients = clientsData?.clients || [];
+
+  const { data: projectTemplates = [] } = useQuery<ProjectTemplate[]>({
+    queryKey: ["/api/project-templates"],
+  });
+
+  // Function to apply template data to form
+  const applyTemplate = (template: ProjectTemplate) => {
+    setSelectedTemplate(template);
+    const estimatedEnd = template.estimatedDuration 
+      ? new Date(Date.now() + template.estimatedDuration * 24 * 60 * 60 * 1000)
+      : undefined;
+    
+    form.setValue("name", `${template.name} Project`);
+    form.setValue("description", template.description || "");
+    form.setValue("priority", template.priority);
+    form.setValue("budget", template.estimatedBudget || "");
+    form.setValue("startDate", new Date());
+    if (estimatedEnd) {
+      form.setValue("endDate", estimatedEnd);
+    }
+  };
 
   const form = useForm<InsertProject>({
     resolver: zodResolver(insertProjectSchema),
@@ -94,6 +121,36 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto">
+        {/* Template Selection - Only show when creating new project */}
+        {!project && projectTemplates.length > 0 && (
+          <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+            <div className="flex items-center gap-2 mb-3">
+              <Layout className="h-4 w-4" />
+              <label className="text-sm font-medium">Quick Start with Template</label>
+            </div>
+            <Select onValueChange={(templateId) => {
+              const template = projectTemplates.find(t => t.id === templateId);
+              if (template) applyTemplate(template);
+            }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choose a project template..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projectTemplates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{template.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {template.category} • {template.estimatedDuration ? `${template.estimatedDuration} days` : 'Custom duration'}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -200,16 +257,37 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
             control={form.control}
             name="startDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Start Date</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="date"
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
-                  />
-                </FormControl>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a start date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date("1900-01-01")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}
@@ -219,16 +297,37 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
             control={form.control}
             name="endDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>End Date</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="date"
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
-                  />
-                </FormControl>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick an end date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date("1900-01-01")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

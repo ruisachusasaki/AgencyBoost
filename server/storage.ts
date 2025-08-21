@@ -49,6 +49,8 @@ import {
   type ImageAnnotation, type InsertImageAnnotation, imageAnnotations,
   type TaskActivity, type InsertTaskActivity, taskActivities,
   type TaskDependency, type InsertTaskDependency, taskDependencies,
+  type ProjectTemplate, type InsertProjectTemplate, projectTemplates,
+  type TemplateTask, type InsertTemplateTask, templateTasks,
   customFieldFileUploads, forms, formFields, formSubmissions, tags
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -71,6 +73,19 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: string): Promise<boolean>;
+
+  // Project Templates
+  getProjectTemplates(): Promise<ProjectTemplate[]>;
+  getProjectTemplate(id: string): Promise<ProjectTemplate | undefined>;
+  createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate>;
+  updateProjectTemplate(id: string, template: Partial<InsertProjectTemplate>): Promise<ProjectTemplate | undefined>;
+  deleteProjectTemplate(id: string): Promise<boolean>;
+  incrementTemplateUsage(id: string): Promise<void>;
+
+  // Template Tasks
+  getTemplateTasksByTemplate(templateId: string): Promise<TemplateTask[]>;
+  createTemplateTask(task: InsertTemplateTask): Promise<TemplateTask>;
+  deleteTemplateTasksByTemplate(templateId: string): Promise<void>;
   
   // Campaigns
   getCampaigns(): Promise<Campaign[]>;
@@ -453,10 +468,13 @@ export class MemStorage implements IStorage {
   private automationActions: Map<string, AutomationAction> = new Map();
   private notifications: Map<string, Notification> = new Map();
   private auditLogs: Map<string, AuditLog> = new Map();
+  private projectTemplates: Map<string, ProjectTemplate> = new Map();
+  private templateTasks: Map<string, TemplateTask> = new Map();
 
   constructor() {
     // Add sample data for testing
     this.addSampleData();
+    this.addSampleProjectTemplates();
     this.initializeWorkflowTemplates();
     this.initializeAutomationElements();
     this.initializeTemplateFoldersAndTemplates();
@@ -557,6 +575,122 @@ export class MemStorage implements IStorage {
 
     this.clients.set(sampleClient1.id, sampleClient1);
     this.clients.set(sampleClient2.id, sampleClient2);
+  }
+
+  private addSampleProjectTemplates() {
+    // Sample project templates
+    const template1: ProjectTemplate = {
+      id: "template-1",
+      name: "SEO Audit & Optimization",
+      description: "Complete SEO analysis and optimization for client websites including technical audit, keyword research, and on-page optimization.",
+      category: "SEO Audit",
+      priority: "high",
+      estimatedDuration: 21,
+      estimatedBudget: "5000.00",
+      isActive: true,
+      usageCount: 12,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const template2: ProjectTemplate = {
+      id: "template-2", 
+      name: "Social Media Campaign Setup",
+      description: "Complete social media marketing campaign including content strategy, asset creation, and campaign launch across multiple platforms.",
+      category: "Social Media Management",
+      priority: "medium",
+      estimatedDuration: 14,
+      estimatedBudget: "3500.00",
+      isActive: true,
+      usageCount: 8,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const template3: ProjectTemplate = {
+      id: "template-3",
+      name: "Website Development",
+      description: "Full website development project including design, development, testing, and deployment with responsive design and SEO optimization.",
+      category: "Website Development",
+      priority: "high", 
+      estimatedDuration: 45,
+      estimatedBudget: "15000.00",
+      isActive: true,
+      usageCount: 5,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const template4: ProjectTemplate = {
+      id: "template-4",
+      name: "PPC Campaign Launch", 
+      description: "Google Ads and social media advertising campaign setup including keyword research, ad creation, landing page optimization, and campaign monitoring.",
+      category: "PPC Campaign",
+      priority: "medium",
+      estimatedDuration: 10,
+      estimatedBudget: "2500.00",
+      isActive: true,
+      usageCount: 15,
+      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.projectTemplates.set("template-1", template1);
+    this.projectTemplates.set("template-2", template2);
+    this.projectTemplates.set("template-3", template3);
+    this.projectTemplates.set("template-4", template4);
+
+    // Sample template tasks for SEO Audit template
+    const seoTasks = [
+      {
+        id: "task-template-1",
+        templateId: "template-1",
+        title: "Initial Website Audit",
+        description: "Conduct comprehensive technical SEO audit of the website",
+        priority: "high" as const,
+        estimatedHours: "8.00",
+        dayOffset: 0,
+        dependsOn: null,
+        assignToRole: "SEO Specialist",
+        order: 1,
+        createdAt: new Date(),
+      },
+      {
+        id: "task-template-2", 
+        templateId: "template-1",
+        title: "Keyword Research",
+        description: "Research and identify target keywords for optimization",
+        priority: "high" as const,
+        estimatedHours: "12.00", 
+        dayOffset: 2,
+        dependsOn: "task-template-1",
+        assignToRole: "SEO Specialist",
+        order: 2,
+        createdAt: new Date(),
+      },
+      {
+        id: "task-template-3",
+        templateId: "template-1",
+        title: "On-Page Optimization",
+        description: "Implement on-page SEO improvements based on audit findings",
+        priority: "medium" as const,
+        estimatedHours: "16.00",
+        dayOffset: 7,
+        dependsOn: "task-template-2",
+        assignToRole: "Developer", 
+        order: 3,
+        createdAt: new Date(),
+      },
+    ];
+
+    // Add template tasks to storage
+    seoTasks.forEach(task => {
+      this.templateTasks.set(task.id, task as TemplateTask);
+    });
   }
 
   private initializeWorkflowTemplates() {
@@ -1237,6 +1371,100 @@ export class MemStorage implements IStorage {
 
   async deleteProject(id: string): Promise<boolean> {
     return this.projects.delete(id);
+  }
+
+  // Project Template Methods
+  async getProjectTemplates(): Promise<ProjectTemplate[]> {
+    return Array.from(this.projectTemplates.values()).filter(t => t.isActive);
+  }
+
+  async getProjectTemplate(id: string): Promise<ProjectTemplate | undefined> {
+    return this.projectTemplates.get(id);
+  }
+
+  async createProjectTemplate(insertTemplate: InsertProjectTemplate): Promise<ProjectTemplate> {
+    const id = randomUUID();
+    const now = new Date();
+    const template: ProjectTemplate = {
+      id,
+      name: insertTemplate.name,
+      description: insertTemplate.description || null,
+      category: insertTemplate.category || "General",
+      priority: insertTemplate.priority || "medium",
+      estimatedDuration: insertTemplate.estimatedDuration || null,
+      estimatedBudget: insertTemplate.estimatedBudget || null,
+      isActive: insertTemplate.isActive ?? true,
+      usageCount: 0,
+      createdBy: insertTemplate.createdBy,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.projectTemplates.set(id, template);
+    return template;
+  }
+
+  async updateProjectTemplate(id: string, templateUpdate: Partial<InsertProjectTemplate>): Promise<ProjectTemplate | undefined> {
+    const template = this.projectTemplates.get(id);
+    if (!template) return undefined;
+    
+    const updatedTemplate = { 
+      ...template, 
+      ...templateUpdate,
+      updatedAt: new Date()
+    };
+    this.projectTemplates.set(id, updatedTemplate);
+    return updatedTemplate;
+  }
+
+  async deleteProjectTemplate(id: string): Promise<boolean> {
+    // Also delete associated template tasks
+    const templateTasksToDelete = Array.from(this.templateTasks.values())
+      .filter(task => task.templateId === id);
+    templateTasksToDelete.forEach(task => this.templateTasks.delete(task.id));
+    
+    return this.projectTemplates.delete(id);
+  }
+
+  async incrementTemplateUsage(id: string): Promise<void> {
+    const template = this.projectTemplates.get(id);
+    if (template) {
+      template.usageCount += 1;
+      template.updatedAt = new Date();
+      this.projectTemplates.set(id, template);
+    }
+  }
+
+  // Template Task Methods
+  async getTemplateTasksByTemplate(templateId: string): Promise<TemplateTask[]> {
+    return Array.from(this.templateTasks.values())
+      .filter(task => task.templateId === templateId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+
+  async createTemplateTask(insertTask: InsertTemplateTask): Promise<TemplateTask> {
+    const id = randomUUID();
+    const now = new Date();
+    const task: TemplateTask = {
+      id,
+      templateId: insertTask.templateId,
+      title: insertTask.title,
+      description: insertTask.description || null,
+      priority: insertTask.priority || "normal",
+      estimatedHours: insertTask.estimatedHours || null,
+      dayOffset: insertTask.dayOffset || 0,
+      dependsOn: insertTask.dependsOn || null,
+      assignToRole: insertTask.assignToRole || null,
+      order: insertTask.order || 0,
+      createdAt: now,
+    };
+    this.templateTasks.set(id, task);
+    return task;
+  }
+
+  async deleteTemplateTasksByTemplate(templateId: string): Promise<void> {
+    const tasksToDelete = Array.from(this.templateTasks.values())
+      .filter(task => task.templateId === templateId);
+    tasksToDelete.forEach(task => this.templateTasks.delete(task.id));
   }
 
   // Campaigns

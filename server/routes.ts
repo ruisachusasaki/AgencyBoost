@@ -5,7 +5,7 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import { storage } from "./storage";
 import { 
-  insertClientSchema, insertProjectSchema, insertCampaignSchema, insertLeadSchema, 
+  insertClientSchema, insertProjectSchema, insertProjectTemplateSchema, insertTemplateTaskSchema, insertCampaignSchema, insertLeadSchema, 
   insertTaskSchema, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
@@ -582,6 +582,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
+  // Project Template Routes
+  app.get("/api/project-templates", async (req, res) => {
+    try {
+      const templates = await storage.getProjectTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Failed to fetch project templates:", error);
+      res.status(500).json({ message: "Failed to fetch project templates" });
+    }
+  });
+
+  app.get("/api/project-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getProjectTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Project template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Failed to fetch project template:", error);
+      res.status(500).json({ message: "Failed to fetch project template" });
+    }
+  });
+
+  app.post("/api/project-templates", async (req, res) => {
+    try {
+      const validatedData = insertProjectTemplateSchema.parse(req.body);
+      const template = await storage.createProjectTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Project template creation error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create project template", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.put("/api/project-templates/:id", async (req, res) => {
+    try {
+      const validatedData = insertProjectTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateProjectTemplate(req.params.id, validatedData);
+      if (!template) {
+        return res.status(404).json({ message: "Project template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Failed to update project template:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update project template" });
+    }
+  });
+
+  app.delete("/api/project-templates/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteProjectTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Project template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Failed to delete project template:", error);
+      res.status(500).json({ message: "Failed to delete project template" });
+    }
+  });
+
+  // Create project from template
+  app.post("/api/project-templates/:id/create-project", async (req, res) => {
+    try {
+      const template = await storage.getProjectTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Project template not found" });
+      }
+
+      // Get template tasks
+      const templateTasks = await storage.getTemplateTasksByTemplate(req.params.id);
+
+      // Increment template usage
+      await storage.incrementTemplateUsage(req.params.id);
+
+      // Create project from template (without client assignment for now)
+      const projectData = {
+        name: `${template.name} Project`,
+        description: template.description,
+        clientId: "", // Will need to be set by user
+        status: "planning" as const,
+        priority: template.priority,
+        budget: template.estimatedBudget,
+        startDate: new Date(),
+        endDate: template.estimatedDuration 
+          ? new Date(Date.now() + template.estimatedDuration * 24 * 60 * 60 * 1000)
+          : undefined,
+        progress: 0,
+      };
+
+      const project = await storage.createProject(projectData);
+      
+      // Create tasks from template tasks
+      const taskPromises = templateTasks.map(async (templateTask) => {
+        const taskData = {
+          title: templateTask.title,
+          description: templateTask.description,
+          projectId: project.id,
+          clientId: "", // Will need to be set
+          status: "todo" as const,
+          priority: templateTask.priority,
+          estimatedHours: templateTask.estimatedHours,
+          startDate: templateTask.dayOffset 
+            ? new Date(Date.now() + templateTask.dayOffset * 24 * 60 * 60 * 1000)
+            : undefined,
+          assignedTo: null, // Template role assignments would need to be mapped
+          parentTaskId: null, // Dependencies would need to be handled
+        };
+        
+        return storage.createTask(taskData);
+      });
+
+      await Promise.all(taskPromises);
+
+      res.status(201).json({ 
+        message: "Project created from template successfully",
+        project,
+        tasksCreated: templateTasks.length
+      });
+    } catch (error) {
+      console.error("Failed to create project from template:", error);
+      res.status(500).json({ message: "Failed to create project from template", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

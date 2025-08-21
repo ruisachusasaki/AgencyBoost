@@ -333,6 +333,37 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Project templates for recurring project types
+export const projectTemplates = pgTable("project_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").default("General"), // Marketing Campaign, Website Development, SEO Audit, etc.
+  priority: text("priority").notNull().default("medium"), // low, medium, high
+  estimatedDuration: integer("estimated_duration"), // in days
+  estimatedBudget: decimal("estimated_budget", { precision: 10, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0), // track how many times template is used
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Template tasks - predefined tasks for project templates
+export const templateTasks = pgTable("template_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => projectTemplates.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: text("priority").notNull().default("normal"), // urgent, high, normal, low
+  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
+  dayOffset: integer("day_offset").default(0), // days after project start
+  dependsOn: varchar("depends_on_task_id"), // reference to another template task (same template)
+  assignToRole: text("assign_to_role"), // "project_manager", "designer", "developer", etc.
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -750,6 +781,18 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   endDate: z.union([z.string(), z.date()]).transform((val) => val ? new Date(val) : undefined).optional(),
 });
 
+export const insertProjectTemplateSchema = createInsertSchema(projectTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+});
+
+export const insertTemplateTaskSchema = createInsertSchema(templateTasks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
   createdAt: true,
@@ -929,6 +972,12 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
+
+export type ProjectTemplate = typeof projectTemplates.$inferSelect;
+export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
+
+export type TemplateTask = typeof templateTasks.$inferSelect;
+export type InsertTemplateTask = z.infer<typeof insertTemplateTaskSchema>;
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
