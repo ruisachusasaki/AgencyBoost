@@ -3575,56 +3575,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.insert(imageAnnotations).values(insertAnnotation).returning();
       const annotation = result[0];
       
-      // TODO: Create notifications for mentioned users
-      // Note: Staff and Users are separate tables - need to implement proper mapping
-      // For now, annotation creation works without notifications
-      console.log(`Annotation created with mentions: ${mentions.join(', ')}`);
-      
-      // Create notifications by matching staff emails with user emails
-      if (mentions.length > 0) {
-        try {
-          const { staff, users } = await import("@shared/schema");
-          const { inArray } = await import("drizzle-orm");
-          
-          // Get staff emails for mentioned staff members
-          const mentionedStaff = await db.select({ id: staff.id, email: staff.email })
-            .from(staff)
-            .where(inArray(staff.id, mentions));
-          
-          // Find matching users by email
-          const staffEmails = mentionedStaff.map(s => s.email);
-          const matchingUsers = await db.select({ id: users.id, email: users.email })
-            .from(users)
-            .where(inArray(users.email, staffEmails));
-          
-          // Create notifications for matching users
-          const notificationPromises = matchingUsers.map((user) => {
-            return db.insert(notifications).values({
-              userId: user.id,
-              type: "annotation_mention",
-              title: "You were mentioned in an annotation",
-              message: `You were mentioned in an annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
-              entityType: "annotation",
-              entityId: annotation.id,
-              metadata: {
-                annotationId: annotation.id,
-                fileId: req.params.fileId,
-                mentionedBy: userId
-              },
-              isRead: false,
-            });
-          });
-
-          if (notificationPromises.length > 0) {
-            await Promise.all(notificationPromises);
-          }
-        } catch (notificationError) {
-          console.log("Failed to create notifications, but annotation created successfully:", notificationError);
-          // Don't fail the entire annotation creation if notifications fail
-        }
-      }
-
+      // Always return success for annotation creation
       res.status(201).json(annotation);
+      
+      // Try to create notifications asynchronously (don't await)
+      if (mentions.length > 0) {
+        console.log(`Annotation created with mentions: ${mentions.join(', ')}`);
+        
+        // Create notifications in background without blocking response
+        (async () => {
+          try {
+            const { staff, users } = await import("@shared/schema");
+            const { inArray } = await import("drizzle-orm");
+            
+            // Get staff emails for mentioned staff members
+            const mentionedStaff = await db.select({ id: staff.id, email: staff.email })
+              .from(staff)
+              .where(inArray(staff.id, mentions));
+            
+            // Find matching users by email
+            const staffEmails = mentionedStaff.map(s => s.email);
+            const matchingUsers = await db.select({ id: users.id, email: users.email })
+              .from(users)
+              .where(inArray(users.email, staffEmails));
+            
+            // Create notifications for matching users
+            for (const user of matchingUsers) {
+              try {
+                await db.insert(notifications).values({
+                  userId: user.id,
+                  type: "annotation_mention",
+                  title: "You were mentioned in an annotation",
+                  message: `You were mentioned in an annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
+                  entityType: "annotation",
+                  entityId: annotation.id,
+                  metadata: {
+                    annotationId: annotation.id,
+                    fileId: req.params.fileId,
+                    mentionedBy: userId
+                  },
+                  isRead: false,
+                });
+                console.log(`Notification created for user: ${user.email}`);
+              } catch (singleNotificationError) {
+                console.log(`Failed to create notification for user ${user.email}:`, singleNotificationError);
+              }
+            }
+          } catch (notificationError) {
+            console.log("Failed to create notifications, but annotation was created successfully:", notificationError);
+          }
+        })();
+      }
     } catch (error) {
       console.error("Error creating image annotation:", error);
       res.status(500).json({ error: "Failed to create image annotation" });
@@ -3658,50 +3659,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Annotation not found" });
       }
 
-      // Create notifications by matching staff emails with user emails
-      if (mentions.length > 0) {
-        try {
-          const { staff, users } = await import("@shared/schema");
-          const { inArray } = await import("drizzle-orm");
-          
-          // Get staff emails for mentioned staff members
-          const mentionedStaff = await db.select({ id: staff.id, email: staff.email })
-            .from(staff)
-            .where(inArray(staff.id, mentions));
-          
-          // Find matching users by email
-          const staffEmails = mentionedStaff.map(s => s.email);
-          const matchingUsers = await db.select({ id: users.id, email: users.email })
-            .from(users)
-            .where(inArray(users.email, staffEmails));
-          
-          // Create notifications for matching users
-          const notificationPromises = matchingUsers.map((user) => {
-            return db.insert(notifications).values({
-              userId: user.id,
-              type: "annotation_mention",
-              title: "You were mentioned in an updated annotation",
-              message: `You were mentioned in an updated annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
-              entityType: "annotation",
-              entityId: req.params.annotationId,
-              metadata: {
-                annotationId: req.params.annotationId,
-                mentionedBy: userId
-              },
-              isRead: false,
-            });
-          });
-
-          if (notificationPromises.length > 0) {
-            await Promise.all(notificationPromises);
-          }
-        } catch (notificationError) {
-          console.log("Failed to create notifications for annotation update, but annotation updated successfully:", notificationError);
-          // Don't fail the entire annotation update if notifications fail
-        }
-      }
-      
+      // Always return success for annotation update
       res.json(result[0]);
+
+      // Try to create notifications asynchronously (don't await)
+      if (mentions.length > 0) {
+        console.log(`Annotation updated with mentions: ${mentions.join(', ')}`);
+        
+        // Create notifications in background without blocking response
+        (async () => {
+          try {
+            const { staff, users } = await import("@shared/schema");
+            const { inArray } = await import("drizzle-orm");
+            
+            // Get staff emails for mentioned staff members
+            const mentionedStaff = await db.select({ id: staff.id, email: staff.email })
+              .from(staff)
+              .where(inArray(staff.id, mentions));
+            
+            // Find matching users by email
+            const staffEmails = mentionedStaff.map(s => s.email);
+            const matchingUsers = await db.select({ id: users.id, email: users.email })
+              .from(users)
+              .where(inArray(users.email, staffEmails));
+            
+            // Create notifications for matching users
+            for (const user of matchingUsers) {
+              try {
+                await db.insert(notifications).values({
+                  userId: user.id,
+                  type: "annotation_mention",
+                  title: "You were mentioned in an updated annotation",
+                  message: `You were mentioned in an updated annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
+                  entityType: "annotation",
+                  entityId: req.params.annotationId,
+                  metadata: {
+                    annotationId: req.params.annotationId,
+                    mentionedBy: userId
+                  },
+                  isRead: false,
+                });
+                console.log(`Update notification created for user: ${user.email}`);
+              } catch (singleNotificationError) {
+                console.log(`Failed to create update notification for user ${user.email}:`, singleNotificationError);
+              }
+            }
+          } catch (notificationError) {
+            console.log("Failed to create notifications for annotation update, but annotation was updated successfully:", notificationError);
+          }
+        })();
+      }
     } catch (error) {
       console.error("Error updating image annotation:", error);
       res.status(500).json({ error: "Failed to update image annotation" });
