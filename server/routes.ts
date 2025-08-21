@@ -1125,6 +1125,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to calculate next occurrence date
+  const calculateNextOccurrence = (startDate: Date, interval: number, unit: string, occurrenceCount: number = 1): Date => {
+    const nextDate = new Date(startDate);
+    const totalAmount = interval * occurrenceCount;
+    
+    switch (unit) {
+      case "hours":
+        nextDate.setHours(nextDate.getHours() + totalAmount);
+        break;
+      case "days":
+        nextDate.setDate(nextDate.getDate() + totalAmount);
+        break;
+      case "weeks":
+        nextDate.setDate(nextDate.getDate() + (totalAmount * 7));
+        break;
+      case "months":
+        nextDate.setMonth(nextDate.getMonth() + totalAmount);
+        break;
+      case "years":
+        nextDate.setFullYear(nextDate.getFullYear() + totalAmount);
+        break;
+    }
+    
+    return nextDate;
+  };
+
   app.post("/api/tasks", async (req, res) => {
     try {
       const validatedData = insertTaskSchema.parse(req.body);
@@ -1133,6 +1159,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values(validatedData)
         .returning();
       
+      // If this is a recurring task and createIfOverdue is enabled, create initial future instances
+      if (newTask.isRecurring && newTask.createIfOverdue && newTask.startDate) {
+        const maxInstancesToCreate = 5; // Create next 5 occurrences
+        const instances = [];
+        
+        for (let i = 1; i <= maxInstancesToCreate; i++) {
+          // Check if we've reached the end conditions
+          if (newTask.recurringEndType === "after_occurrences" && 
+              newTask.recurringEndOccurrences && 
+              i > newTask.recurringEndOccurrences) {
+            break;
+          }
+          
+          const nextStartDate = calculateNextOccurrence(
+            new Date(newTask.startDate), 
+            newTask.recurringInterval || 1, 
+            newTask.recurringUnit || "days", 
+            i
+          );
+          
+          if (newTask.recurringEndType === "on_date" && 
+              newTask.recurringEndDate && 
+              nextStartDate > new Date(newTask.recurringEndDate)) {
+            break;
+          }
+          
+          let nextDueDate = null;
+          if (newTask.dueDate) {
+            nextDueDate = calculateNextOccurrence(
+              new Date(newTask.dueDate), 
+              newTask.recurringInterval || 1, 
+              newTask.recurringUnit || "days", 
+              i
+            );
+          }
+          
+          const instanceData = {
+            ...validatedData,
+            startDate: nextStartDate,
+            dueDate: nextDueDate,
+            isRecurring: false, // Future instances are not recurring themselves
+            recurringInterval: null,
+            recurringUnit: null,
+            recurringEndType: null,
+            recurringEndDate: null,
+            recurringEndOccurrences: null,
+          };
+          
+          instances.push(instanceData);
+        }
+        
+        if (instances.length > 0) {
+          await db.insert(tasks).values(instances);
+        }
+      }
+      
       res.status(201).json(newTask);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -1140,6 +1222,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  // API endpoint to generate recurring task instances (can be called by cron job)
+  app.post("/api/tasks/generate-recurring", async (req, res) => {
+    try {
+      // Find all recurring tasks that need new instances
+      const recurringTasks = await db.select()
+        .from(tasks)
+        .where(eq(tasks.isRecurring, true));
+      
+      let totalCreated = 0;
+      
+      for (const task of recurringTasks) {
+        if (!task.startDate || !task.createIfOverdue) continue;
+        
+        // Find existing instances to determine next occurrence
+        const existingInstances = await db.select()
+          .from(tasks)
+          .where(
+            and(
+              eq(tasks.title, task.title),
+              eq(tasks.clientId, task.clientId || ""),
+              eq(tasks.projectId, task.projectId || "")
+            )
+          )
+          .orderBy(desc(tasks.startDate));
+        
+        const latestInstance = existingInstances[0];
+        const nextStartDate = calculateNextOccurrence(
+          new Date(latestInstance.startDate || task.startDate),
+          task.recurringInterval || 1,
+          task.recurringUnit || "days",
+          1
+        );
+        
+        // Check if we should create a new instance
+        const now = new Date();
+        const shouldCreate = nextStartDate <= now;
+        
+        if (shouldCreate) {
+          // Check end conditions
+          let shouldStop = false;
+          
+          if (task.recurringEndType === "after_occurrences" && task.recurringEndOccurrences) {
+            const totalInstances = existingInstances.length;
+            if (totalInstances >= task.recurringEndOccurrences) {
+              shouldStop = true;
+            }
+          }
+          
+          if (task.recurringEndType === "on_date" && task.recurringEndDate) {
+            if (nextStartDate > new Date(task.recurringEndDate)) {
+              shouldStop = true;
+            }
+          }
+          
+          if (!shouldStop) {
+            let nextDueDate = null;
+            if (task.dueDate) {
+              nextDueDate = calculateNextOccurrence(
+                new Date(latestInstance.dueDate || task.dueDate),
+                task.recurringInterval || 1,
+                task.recurringUnit || "days",
+                1
+              );
+            }
+            
+            const newInstanceData = {
+              title: task.title,
+              description: task.description,
+              status: "pending" as const,
+              priority: task.priority,
+              assignedTo: task.assignedTo,
+              clientId: task.clientId,
+              projectId: task.projectId,
+              campaignId: task.campaignId,
+              startDate: nextStartDate,
+              dueDate: nextDueDate,
+              isRecurring: false,
+            };
+            
+            await db.insert(tasks).values(newInstanceData);
+            totalCreated++;
+          }
+        }
+      }
+      
+      res.json({ message: `Generated ${totalCreated} recurring task instances` });
+    } catch (error) {
+      console.error("Error generating recurring tasks:", error);
+      res.status(500).json({ message: "Failed to generate recurring tasks" });
     }
   });
 

@@ -873,6 +873,18 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
     if (val instanceof Date) return val;
     return new Date(val);
   }),
+  recurringEndDate: z.union([z.string(), z.date(), z.null()]).optional().transform((val) => {
+    if (!val || val === '' || val === null) return null;
+    if (val instanceof Date) return val;
+    return new Date(val);
+  }),
+  // Ensure recurring fields are properly typed
+  isRecurring: z.boolean().optional().default(false),
+  recurringInterval: z.number().optional(),
+  recurringUnit: z.enum(["hours", "days", "weeks", "months", "years"]).optional(),
+  recurringEndType: z.enum(["never", "on_date", "after_occurrences"]).optional(),
+  recurringEndOccurrences: z.number().optional(),
+  createIfOverdue: z.boolean().optional().default(false),
 });
 
 export const insertTaskActivitySchema = createInsertSchema(taskActivities).omit({
