@@ -448,9 +448,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Comments List */}
-      <div className="space-y-3 max-h-[600px] overflow-y-auto">
+    <div className="flex flex-col h-full max-h-[calc(100vh-12rem)]">
+      {/* Comments List - Responsive viewport */}
+      <div className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0">
         {comments.length === 0 ? (
           <div className="text-center py-8 text-slate-500">
             <div className="h-8 w-8 mx-auto mb-2 flex items-center justify-center">
