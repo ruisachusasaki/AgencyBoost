@@ -7,25 +7,16 @@ async function throwIfResNotOk(res: Response) {
     // Try to parse JSON error responses to preserve special fields
     try {
       const errorData = JSON.parse(text);
-      console.log("🔍 Parsed error data:", errorData);
       
-      // Instead of modifying Error object, create a plain object that acts like an error
-      const error = {
-        name: 'Error',
-        message: errorData.message || `${res.status}: ${text}`,
-        details: errorData.details,
-        unsatisfiedDependencies: errorData.unsatisfiedDependencies,
-        isDependencyError: errorData.isDependencyError,
-        status: res.status,
-        stack: new Error().stack
-      };
-      
-      console.log("🔍 Created error object:", error);
-      console.log("🔍 isDependencyError check:", error.isDependencyError);
+      // Create a proper Error instance and assign custom properties
+      const error = new Error(errorData.message || `${res.status}: ${text}`) as any;
+      error.details = errorData.details;
+      error.unsatisfiedDependencies = errorData.unsatisfiedDependencies;
+      error.isDependencyError = errorData.isDependencyError;
+      error.status = res.status;
       
       throw error;
     } catch (parseError) {
-      console.log("🔍 JSON parse failed:", parseError);
       // If JSON parsing fails, throw the original text
       throw new Error(`${res.status}: ${text}`);
     }
