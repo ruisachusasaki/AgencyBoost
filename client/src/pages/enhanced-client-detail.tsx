@@ -3837,14 +3837,102 @@ function EnhancedClientDetail() {
                           <DialogHeader>
                             <DialogTitle>Create New Task</DialogTitle>
                           </DialogHeader>
-                          <TaskForm
-                            task={{ clientId } as any}
-                            onSuccess={() => {
-                              setIsTaskDialogOpen(false);
-                              // Invalidate client tasks to refresh the list
-                              queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
-                            }}
-                          />
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
+                              <Input
+                                value={newTask.title}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="Enter task title"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
+                              <Textarea
+                                value={newTask.description}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Enter task description"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
+                                <Input
+                                  type="date"
+                                  value={newTask.dueDate}
+                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
+                                <Input
+                                  type="time"
+                                  value={newTask.dueTime}
+                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
+                              <Input
+                                value={newTask.assignee}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, assignee: e.target.value }))}
+                                placeholder="Enter assignee name"
+                              />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox 
+                                checked={newTask.recurring}
+                                onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, recurring: Boolean(checked) }))}
+                              />
+                              <Label>Recurring Task</Label>
+                            </div>
+                          </div>
+                          <div className="flex justify-end space-x-2 pt-4">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setIsTaskDialogOpen(false)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              onClick={() => {
+                                if (!newTask.title.trim()) {
+                                  toast({
+                                    title: "Error", 
+                                    description: "Task title is required",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                
+                                const taskData = {
+                                  title: newTask.title,
+                                  description: newTask.description || null,
+                                  dueDate: newTask.dueDate && newTask.dueTime ? 
+                                    new Date(`${newTask.dueDate}T${newTask.dueTime}`).toISOString() : 
+                                    newTask.dueDate ? new Date(`${newTask.dueDate}T23:59`).toISOString() : null,
+                                  assignedTo: newTask.assignee || null,
+                                  status: "pending",
+                                  priority: "normal",
+                                  clientId: clientId,
+                                  recurring: newTask.recurring,
+                                };
+                                
+                                createTaskMutation.mutate(taskData);
+                              }}
+                              disabled={createTaskMutation.isPending}
+                            >
+                              {createTaskMutation.isPending ? (
+                                <>
+                                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                  Creating...
+                                </>
+                              ) : (
+                                "Create Task"
+                              )}
+                            </Button>
+                          </div>
                         </DialogContent>
                       </Dialog>
                     </div>
