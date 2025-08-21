@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, Calendar, Layout } from "lucide-react";
 import ProjectForm from "@/components/forms/project-form";
+import ProjectTemplateForm from "@/components/forms/project-template-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { calculateProjectProgress, getProjectTasks } from "@/lib/project-utils";
@@ -20,6 +21,8 @@ export default function Projects() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [templatesSearchTerm, setTemplatesSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("projects");
+  const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<ProjectTemplate | null>(null);
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -176,6 +179,15 @@ export default function Projects() {
     if (confirm("Are you sure you want to delete this project?")) {
       deleteProjectMutation.mutate(id);
     }
+  };
+
+  const handleEditTemplate = (template: ProjectTemplate) => {
+    setEditingTemplate(template);
+  };
+
+  const handleCloseTemplateDialog = () => {
+    setEditingTemplate(null);
+    setIsCreateTemplateDialogOpen(false);
   };
 
   if (isLoading) {
@@ -406,12 +418,24 @@ export default function Projects() {
 
       {activeTab === "templates" && (
         <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Template
-        </Button>
-      </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <Dialog open={isCreateTemplateDialogOpen} onOpenChange={setIsCreateTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Template
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Create New Template</DialogTitle>
+                </DialogHeader>
+                <ProjectTemplateForm
+                  onSuccess={handleCloseTemplateDialog}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
 
       <Card>
         <CardHeader className="border-b border-slate-200">
@@ -472,6 +496,7 @@ export default function Projects() {
                       <Button 
                         variant="ghost" 
                         size="sm"
+                        onClick={() => handleEditTemplate(template)}
                         data-testid={`button-edit-template-${template.id}`}
                       >
                         <Edit className="h-4 w-4" />
@@ -494,6 +519,21 @@ export default function Projects() {
       </Card>
         </div>
       )}
+
+      {/* Template Edit Dialog */}
+      <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && setEditingTemplate(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+          </DialogHeader>
+          {editingTemplate && (
+            <ProjectTemplateForm
+              template={editingTemplate}
+              onSuccess={handleCloseTemplateDialog}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
