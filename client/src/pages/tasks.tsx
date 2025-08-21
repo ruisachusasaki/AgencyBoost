@@ -1185,11 +1185,13 @@ export default function Tasks() {
                       <TableRow ref={provided.innerRef} {...provided.droppableProps}>
                         {/* Bulk selection checkbox column */}
                         <TableHead className="w-12">
-                          <Checkbox 
-                            checked={selectedTasks.size === filteredAndSortedTasks.length && filteredAndSortedTasks.length > 0}
-                            onCheckedChange={handleSelectAll}
-                            data-testid="select-all-tasks"
-                          />
+                          <div className="flex items-center justify-center">
+                            <Checkbox 
+                              checked={selectedTasks.size === filteredAndSortedTasks.length && filteredAndSortedTasks.length > 0}
+                              onCheckedChange={handleSelectAll}
+                              data-testid="select-all-tasks"
+                            />
+                          </div>
                         </TableHead>
                         
                         {/* Fixed Task Name column (non-draggable) */}
@@ -1273,11 +1275,13 @@ export default function Tasks() {
                     <TableRow key={task.id} className="hover:bg-slate-50/50">
                       {/* Bulk selection checkbox column */}
                       <TableCell className="py-3">
-                        <Checkbox 
-                          checked={selectedTasks.has(task.id)}
-                          onCheckedChange={(checked) => handleSelectTask(task.id, checked as boolean)}
-                          data-testid={`select-task-${task.id}`}
-                        />
+                        <div className="flex items-center justify-center">
+                          <Checkbox 
+                            checked={selectedTasks.has(task.id)}
+                            onCheckedChange={(checked) => handleSelectTask(task.id, checked as boolean)}
+                            data-testid={`select-task-${task.id}`}
+                          />
+                        </div>
                       </TableCell>
                       
                       {columns.map((column) => (
