@@ -50,6 +50,7 @@ export default function Tasks() {
     { id: "project", label: "Project", width: "w-1/7" },
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -495,6 +496,284 @@ export default function Tasks() {
     }
   };
 
+  // Bulk actions helper functions
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedTasks(new Set(filteredAndSortedTasks.map(task => task.id)));
+    } else {
+      setSelectedTasks(new Set());
+    }
+  };
+
+  const handleSelectTask = (taskId: string, checked: boolean) => {
+    const newSelected = new Set(selectedTasks);
+    if (checked) {
+      newSelected.add(taskId);
+    } else {
+      newSelected.delete(taskId);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  const clearSelection = () => setSelectedTasks(new Set());
+
+  // Bulk actions mutations
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (taskIds: string[]) => {
+      await apiRequest('/api/tasks/bulk-delete', 'DELETE', { taskIds });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      clearSelection();
+      toast({
+        title: "Tasks deleted",
+        description: `${selectedTasks.size} tasks have been successfully deleted.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete tasks. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ taskIds, updates }: { taskIds: string[], updates: any }) => {
+      await apiRequest('/api/tasks/bulk-update', 'PUT', { taskIds, updates });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      clearSelection();
+      toast({
+        title: "Tasks updated",
+        description: `${selectedTasks.size} tasks have been successfully updated.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update tasks. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk Actions Toolbar Component
+  const BulkActionsToolbar = () => {
+    const [bulkAssigneeDialogOpen, setBulkAssigneeDialogOpen] = useState(false);
+    const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+    const [bulkDueDateDialogOpen, setBulkDueDateDialogOpen] = useState(false);
+    const [bulkPriorityDialogOpen, setBulkPriorityDialogOpen] = useState(false);
+    const [tempAssignee, setTempAssignee] = useState("");
+    const [tempStatus, setTempStatus] = useState("");
+    const [tempDueDate, setTempDueDate] = useState("");
+    const [tempPriority, setTempPriority] = useState("");
+
+    const handleBulkDelete = () => {
+      if (confirm(`Are you sure you want to delete ${selectedTasks.size} selected tasks?`)) {
+        bulkDeleteMutation.mutate(Array.from(selectedTasks));
+      }
+    };
+
+    const handleBulkAssignee = () => {
+      if (!tempAssignee) return;
+      bulkUpdateMutation.mutate({
+        taskIds: Array.from(selectedTasks),
+        updates: { assignedTo: tempAssignee }
+      });
+      setBulkAssigneeDialogOpen(false);
+      setTempAssignee("");
+    };
+
+    const handleBulkStatus = () => {
+      if (!tempStatus) return;
+      bulkUpdateMutation.mutate({
+        taskIds: Array.from(selectedTasks),
+        updates: { status: tempStatus }
+      });
+      setBulkStatusDialogOpen(false);
+      setTempStatus("");
+    };
+
+    const handleBulkDueDate = () => {
+      if (!tempDueDate) return;
+      bulkUpdateMutation.mutate({
+        taskIds: Array.from(selectedTasks),
+        updates: { dueDate: new Date(tempDueDate).toISOString() }
+      });
+      setBulkDueDateDialogOpen(false);
+      setTempDueDate("");
+    };
+
+    const handleBulkPriority = () => {
+      if (!tempPriority) return;
+      bulkUpdateMutation.mutate({
+        taskIds: Array.from(selectedTasks),
+        updates: { priority: tempPriority }
+      });
+      setBulkPriorityDialogOpen(false);
+      setTempPriority("");
+    };
+
+    if (selectedTasks.size === 0) return null;
+
+    return (
+      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-blue-900">
+            {selectedTasks.size} task{selectedTasks.size > 1 ? 's' : ''} selected
+          </span>
+          <Button variant="outline" size="sm" onClick={clearSelection}>
+            Clear Selection
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleBulkDelete} className="text-red-600 hover:text-red-700">
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
+
+          <Dialog open={bulkAssigneeDialogOpen} onOpenChange={setBulkAssigneeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <User className="h-4 w-4 mr-1" />
+                Assignee
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Assignee for {selectedTasks.size} tasks</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempAssignee} onValueChange={setTempAssignee}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkAssigneeDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkAssignee} disabled={!tempAssignee}>
+                    Update Assignee
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={bulkStatusDialogOpen} onOpenChange={setBulkStatusDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Status
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Status for {selectedTasks.size} tasks</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempStatus} onValueChange={setTempStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkStatusDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkStatus} disabled={!tempStatus}>
+                    Update Status
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={bulkDueDateDialogOpen} onOpenChange={setBulkDueDateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Calendar className="h-4 w-4 mr-1" />
+                Due Date
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Due Date for {selectedTasks.size} tasks</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Input
+                  type="datetime-local"
+                  value={tempDueDate}
+                  onChange={(e) => setTempDueDate(e.target.value)}
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkDueDateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkDueDate} disabled={!tempDueDate}>
+                    Update Due Date
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={bulkPriorityDialogOpen} onOpenChange={setBulkPriorityDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Flag className="h-4 w-4 mr-1" />
+                Priority
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Priority for {selectedTasks.size} tasks</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempPriority} onValueChange={setTempPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkPriorityDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkPriority} disabled={!tempPriority}>
+                    Update Priority
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
+  };
+
   // Handle drag and drop for Kanban board
   const handleKanbanDragEnd = (result: any) => {
     if (!result.destination) return;
@@ -866,6 +1145,13 @@ export default function Tasks() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {/* Bulk Actions Toolbar */}
+          {viewMode === "table" && filteredAndSortedTasks.length > 0 && (
+            <div className="p-4 pb-0">
+              <BulkActionsToolbar />
+            </div>
+          )}
+          
           {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
@@ -897,6 +1183,15 @@ export default function Tasks() {
                   <Droppable droppableId="table-headers" direction="horizontal">
                     {(provided) => (
                       <TableRow ref={provided.innerRef} {...provided.droppableProps}>
+                        {/* Bulk selection checkbox column */}
+                        <TableHead className="w-12">
+                          <Checkbox 
+                            checked={selectedTasks.size === filteredAndSortedTasks.length && filteredAndSortedTasks.length > 0}
+                            onCheckedChange={handleSelectAll}
+                            data-testid="select-all-tasks"
+                          />
+                        </TableHead>
+                        
                         {/* Fixed Task Name column (non-draggable) */}
                         <SortableHeader 
                           column={columns[0]}
@@ -976,6 +1271,15 @@ export default function Tasks() {
               <TableBody>
                   {getHierarchicalTasks().map((task) => (
                     <TableRow key={task.id} className="hover:bg-slate-50/50">
+                      {/* Bulk selection checkbox column */}
+                      <TableCell className="py-3">
+                        <Checkbox 
+                          checked={selectedTasks.has(task.id)}
+                          onCheckedChange={(checked) => handleSelectTask(task.id, checked as boolean)}
+                          data-testid={`select-task-${task.id}`}
+                        />
+                      </TableCell>
+                      
                       {columns.map((column) => (
                         <TableCell key={column.id} className="py-3">
                           {renderCellContent(column, task)}

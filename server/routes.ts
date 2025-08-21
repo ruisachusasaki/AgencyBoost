@@ -1661,6 +1661,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete tasks
+  app.delete("/api/tasks/bulk-delete", async (req, res) => {
+    try {
+      const { taskIds } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!Array.isArray(taskIds) || taskIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty taskIds array" });
+      }
+
+      console.log(`BULK DELETE tasks request - Task IDs: ${taskIds.join(', ')}, User ID: ${userId}`);
+
+      // Check if user has permission to delete tasks
+      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
+
+      let deletedCount = 0;
+      const errors = [];
+
+      for (const taskId of taskIds) {
+        try {
+          // Check if task exists and get its details
+          const taskToDelete = await db.select()
+            .from(tasks)
+            .where(eq(tasks.id, taskId))
+            .limit(1);
+
+          if (taskToDelete.length === 0) {
+            errors.push(`Task not found: ${taskId}`);
+            continue;
+          }
+
+          const task = taskToDelete[0];
+          const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
+
+          if (!canDelete && !isTaskOwner) {
+            errors.push(`Access denied for task: ${taskId}`);
+            continue;
+          }
+
+          // Delete sub-tasks first
+          const subTasks = await db.select()
+            .from(tasks)
+            .where(eq(tasks.parentTaskId, taskId));
+
+          if (subTasks.length > 0) {
+            for (const subTask of subTasks) {
+              await db.delete(tasks).where(eq(tasks.id, subTask.id));
+            }
+          }
+
+          // Delete task dependencies
+          await db.delete(taskDependencies).where(
+            or(
+              eq(taskDependencies.taskId, taskId),
+              eq(taskDependencies.dependsOnTaskId, taskId)
+            )
+          );
+
+          // Delete task comment files
+          const commentFilesToDelete = await db.select()
+            .from(commentFiles)
+            .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+            .where(eq(taskComments.taskId, taskId));
+
+          for (const file of commentFilesToDelete) {
+            await db.delete(commentFiles).where(eq(commentFiles.id, file.comment_files.id));
+          }
+
+          // Delete task comment reactions
+          await db.delete(taskCommentReactions)
+            .where(sql`comment_id IN (SELECT id FROM task_comments WHERE task_id = ${taskId})`);
+
+          // Delete task comments
+          await db.delete(taskComments)
+            .where(eq(taskComments.taskId, taskId));
+
+          // Delete task activities
+          await db.delete(taskActivities)
+            .where(eq(taskActivities.taskId, taskId));
+
+          // Delete task attachments
+          await db.delete(taskAttachments)
+            .where(eq(taskAttachments.taskId, taskId));
+
+          // Delete the main task
+          await db.delete(tasks).where(eq(tasks.id, taskId));
+
+          // Create audit log
+          await createAuditLog(
+            "deleted",
+            "task",
+            taskId,
+            "Task",
+            userId,
+            "Task bulk deleted",
+            null,
+            null,
+            req
+          );
+
+          deletedCount++;
+        } catch (error) {
+          console.error(`Error deleting task ${taskId}:`, error);
+          errors.push(`Failed to delete task: ${taskId}`);
+        }
+      }
+
+      console.log(`Bulk deletion completed - ${deletedCount} tasks deleted, ${errors.length} errors`);
+      
+      res.json({
+        message: `Successfully deleted ${deletedCount} tasks`,
+        deletedCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk delete tasks:", error);
+      res.status(500).json({ message: "Failed to bulk delete tasks", error: error.message });
+    }
+  });
+
+  // Bulk update tasks
+  app.put("/api/tasks/bulk-update", async (req, res) => {
+    try {
+      const { taskIds, updates } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+
+      if (!Array.isArray(taskIds) || taskIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty taskIds array" });
+      }
+
+      if (!updates || typeof updates !== 'object') {
+        return res.status(400).json({ message: "Updates object is required" });
+      }
+
+      console.log(`BULK UPDATE tasks request - Task IDs: ${taskIds.join(', ')}, Updates:`, updates, `User ID: ${userId}`);
+
+      // Check if user has permission to edit tasks
+      const canEdit = await hasPermission(userId, 'tasks', 'canEdit');
+
+      let updatedCount = 0;
+      const errors = [];
+
+      for (const taskId of taskIds) {
+        try {
+          // Check if task exists and get its details
+          const existingTask = await db.select()
+            .from(tasks)
+            .where(eq(tasks.id, taskId))
+            .limit(1);
+
+          if (existingTask.length === 0) {
+            errors.push(`Task not found: ${taskId}`);
+            continue;
+          }
+
+          const task = existingTask[0];
+          const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
+
+          if (!canEdit && !isTaskOwner) {
+            errors.push(`Access denied for task: ${taskId}`);
+            continue;
+          }
+
+          // Validate the updates using partial schema
+          const validatedUpdates = insertTaskSchema.partial().parse(updates);
+
+          // Update the task
+          await db.update(tasks)
+            .set({
+              ...validatedUpdates,
+              updatedAt: new Date()
+            })
+            .where(eq(tasks.id, taskId));
+
+          // Create audit log for bulk update
+          await createAuditLog(
+            "updated",
+            "task",
+            taskId,
+            "Task",
+            userId,
+            "Task bulk updated",
+            task,
+            validatedUpdates,
+            req
+          );
+
+          updatedCount++;
+        } catch (error) {
+          console.error(`Error updating task ${taskId}:`, error);
+          errors.push(`Failed to update task: ${taskId}`);
+        }
+      }
+
+      console.log(`Bulk update completed - ${updatedCount} tasks updated, ${errors.length} errors`);
+      
+      res.json({
+        message: `Successfully updated ${updatedCount} tasks`,
+        updatedCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk update tasks:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to bulk update tasks", error: error.message });
+    }
+  });
+
   // Sub-task Hierarchy API (ClickUp-style up to 5 levels deep)
   app.get("/api/tasks/:taskId/subtasks", async (req, res) => {
     try {
