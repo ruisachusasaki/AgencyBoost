@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, MessageSquare, Plus } from "lucide-react";
+import { Trash2, MessageSquare, Plus, AtSign } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ interface AnnotationPin {
   x: number;
   y: number;
   content: string;
+  mentions?: string[];
   isNew?: boolean;
 }
 
@@ -40,7 +41,16 @@ export function ImageAnnotationModal({
   const [selectedAnnotation, setSelectedAnnotation] = useState<AnnotationPin | null>(null);
   const [isAddingAnnotation, setIsAddingAnnotation] = useState(false);
   const [newAnnotationContent, setNewAnnotationContent] = useState("");
+  
+  // @mention state management
+  const [mentions, setMentions] = useState<string[]>([]);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState("");
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionPosition, setMentionPosition] = useState<{top: number, left: number}>({ top: 0, left: 0 });
+  
   const imageRef = useRef<HTMLImageElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -48,6 +58,12 @@ export function ImageAnnotationModal({
   const { data: existingAnnotations } = useQuery({
     queryKey: [`/api/files/${fileId}/annotations`],
     enabled: isOpen && !!fileId,
+  });
+
+  // Fetch staff for @mentions
+  const { data: staff = [] } = useQuery({
+    queryKey: ['/api/staff'],
+    enabled: isOpen,
   });
 
   // Load existing annotations when data changes
@@ -58,14 +74,104 @@ export function ImageAnnotationModal({
         x: parseFloat(ann.x),
         y: parseFloat(ann.y),
         content: ann.content,
+        mentions: ann.mentions || [],
       }));
       setAnnotations(formattedAnnotations);
     }
   }, [existingAnnotations]);
 
+  // @mention input handling
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewAnnotationContent(value);
+
+    const textarea = e.target;
+    const cursorPosition = textarea.selectionStart;
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      const filter = mentionMatch[1];
+      setMentionFilter(filter);
+      setShowMentionDropdown(true);
+      setSelectedMentionIndex(0);
+
+      // Calculate position for dropdown
+      const rect = textarea.getBoundingClientRect();
+      const lines = textBeforeCursor.split('\n');
+      const currentLine = lines.length - 1;
+      const lineHeight = 20;
+      const top = rect.top + (currentLine * lineHeight) + 30;
+      const left = rect.left + (mentionMatch.index || 0) * 8;
+      
+      setMentionPosition({ top, left });
+    } else {
+      setShowMentionDropdown(false);
+    }
+  };
+
+  // Handle @mention selection
+  const handleMentionSelect = (staffMember: any) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPosition = textarea.selectionStart;
+    const textBeforeCursor = newAnnotationContent.slice(0, cursorPosition);
+    const textAfterCursor = newAnnotationContent.slice(cursorPosition);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      const beforeMention = textBeforeCursor.slice(0, mentionMatch.index);
+      const mentionText = `@${staffMember.firstName} ${staffMember.lastName}`;
+      const newText = beforeMention + mentionText + ' ' + textAfterCursor;
+      
+      setNewAnnotationContent(newText);
+      setMentions(prev => [...prev, staffMember.id]);
+      setShowMentionDropdown(false);
+
+      // Set cursor position after mention
+      setTimeout(() => {
+        const newPosition = beforeMention.length + mentionText.length + 1;
+        textarea.setSelectionRange(newPosition, newPosition);
+        textarea.focus();
+      }, 0);
+    }
+  };
+
+  // Handle keyboard navigation in mention dropdown
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showMentionDropdown) return;
+
+    const filteredStaff = staff.filter(s => 
+      s.firstName.toLowerCase().includes(mentionFilter.toLowerCase()) ||
+      s.lastName.toLowerCase().includes(mentionFilter.toLowerCase())
+    );
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedMentionIndex(prev => Math.min(prev + 1, filteredStaff.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedMentionIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filteredStaff[selectedMentionIndex]) {
+        handleMentionSelect(filteredStaff[selectedMentionIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowMentionDropdown(false);
+    }
+  };
+
+  // Filter staff for mentions
+  const filteredStaff = staff.filter((s: any) => 
+    s.firstName.toLowerCase().includes(mentionFilter.toLowerCase()) ||
+    s.lastName.toLowerCase().includes(mentionFilter.toLowerCase())
+  );
+
   // Create annotation mutation
   const createAnnotationMutation = useMutation({
-    mutationFn: async (data: { x: number; y: number; content: string }) => {
+    mutationFn: async (data: { x: number; y: number; content: string; mentions: string[] }) => {
       return apiRequest(`/api/files/${fileId}/annotations`, "POST", data);
     },
     onSuccess: () => {
@@ -86,8 +192,8 @@ export function ImageAnnotationModal({
 
   // Update annotation mutation
   const updateAnnotationMutation = useMutation({
-    mutationFn: async (data: { id: string; content: string }) => {
-      return apiRequest(`/api/annotations/${data.id}`, "PUT", { content: data.content });
+    mutationFn: async (data: { id: string; content: string; mentions: string[] }) => {
+      return apiRequest(`/api/annotations/${data.id}`, "PUT", { content: data.content, mentions: data.mentions });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
@@ -154,6 +260,7 @@ export function ImageAnnotationModal({
         x: selectedAnnotation.x,
         y: selectedAnnotation.y,
         content: newAnnotationContent,
+        mentions: mentions,
       });
 
       // Remove the temporary annotation
@@ -163,11 +270,14 @@ export function ImageAnnotationModal({
       updateAnnotationMutation.mutate({
         id: selectedAnnotation.id,
         content: newAnnotationContent,
+        mentions: mentions,
       });
     }
 
     setSelectedAnnotation(null);
     setNewAnnotationContent("");
+    setMentions([]);
+    setShowMentionDropdown(false);
   };
 
   const handleDeleteAnnotation = (annotation: AnnotationPin) => {
@@ -186,6 +296,8 @@ export function ImageAnnotationModal({
   const handleSelectAnnotation = (annotation: AnnotationPin) => {
     setSelectedAnnotation(annotation);
     setNewAnnotationContent(annotation.content);
+    setMentions(annotation.mentions || []);
+    setShowMentionDropdown(false);
   };
 
   const handleClose = () => {
@@ -193,6 +305,8 @@ export function ImageAnnotationModal({
     setSelectedAnnotation(null);
     setNewAnnotationContent("");
     setIsAddingAnnotation(false);
+    setMentions([]);
+    setShowMentionDropdown(false);
     onClose();
   };
 
@@ -355,14 +469,45 @@ export function ImageAnnotationModal({
                 <h4 className="font-medium mb-2">
                   {selectedAnnotation.isNew ? 'Add' : 'Edit'} Annotation
                 </h4>
-                <Textarea
-                  value={newAnnotationContent}
-                  onChange={(e) => setNewAnnotationContent(e.target.value)}
-                  placeholder="Enter annotation comment..."
-                  className="mb-3"
-                  rows={3}
-                  data-testid="textarea-annotation-content"
-                />
+                <div className="relative">
+                  <Textarea
+                    ref={textareaRef}
+                    value={newAnnotationContent}
+                    onChange={handleTextareaInput}
+                    onKeyDown={handleTextareaKeyDown}
+                    placeholder="Enter annotation comment... Use @ to mention team members"
+                    className="mb-3"
+                    rows={3}
+                    data-testid="textarea-annotation-content"
+                  />
+                  
+                  {/* @mention dropdown */}
+                  {showMentionDropdown && filteredStaff.length > 0 && (
+                    <div
+                      className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto z-50"
+                      style={{
+                        top: mentionPosition.top,
+                        left: mentionPosition.left,
+                        minWidth: '200px'
+                      }}
+                    >
+                      {filteredStaff.map((staffMember: any, index: number) => (
+                        <div
+                          key={staffMember.id}
+                          className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
+                            index === selectedMentionIndex
+                              ? 'bg-blue-500 text-white'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                          onClick={() => handleMentionSelect(staffMember)}
+                        >
+                          <AtSign className="w-4 h-4" />
+                          <span>{staffMember.firstName} {staffMember.lastName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleSaveAnnotation}

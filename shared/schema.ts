@@ -559,6 +559,7 @@ export const imageAnnotations = pgTable("image_annotations", {
   x: decimal("x", { precision: 5, scale: 2 }).notNull(), // X coordinate as percentage (0-100)
   y: decimal("y", { precision: 5, scale: 2 }).notNull(), // Y coordinate as percentage (0-100)
   content: text("content").notNull(), // Annotation text/comment
+  mentions: text("mentions").array().default([]), // Array of mentioned user IDs
   authorId: varchar("author_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

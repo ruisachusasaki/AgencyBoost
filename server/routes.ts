@@ -3554,6 +3554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+      const mentions = req.body.mentions || [];
       
       const insertAnnotation = insertImageAnnotationSchema.parse({
         id: nanoid(),
@@ -3561,6 +3562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         x: req.body.x.toString(),
         y: req.body.y.toString(),
         content: req.body.content,
+        mentions: mentions,
         authorId: userId,  // Use authorId instead of userId
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -3568,11 +3570,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Direct database insertion
       const { db } = await import("./db");
-      const { imageAnnotations } = await import("@shared/schema");
+      const { imageAnnotations, notifications } = await import("@shared/schema");
       
       const result = await db.insert(imageAnnotations).values(insertAnnotation).returning();
       const annotation = result[0];
       
+      // Create notifications for mentioned users
+      if (mentions.length > 0) {
+        const notificationPromises = mentions.map((mentionedUserId: string) => {
+          if (mentionedUserId !== userId) { // Don't notify the author
+            return db.insert(notifications).values({
+              userId: mentionedUserId,
+              type: "annotation_mention",
+              title: "You were mentioned in an annotation",
+              message: `You were mentioned in an annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
+              entityType: "annotation",
+              entityId: annotation.id,
+              metadata: {
+                annotationId: annotation.id,
+                fileId: req.params.fileId,
+                mentionedBy: userId
+              },
+              isRead: false,
+            });
+          }
+        }).filter(Boolean);
+
+        if (notificationPromises.length > 0) {
+          await Promise.all(notificationPromises);
+        }
+      }
 
       res.status(201).json(annotation);
     } catch (error) {
@@ -3584,14 +3611,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update an image annotation
   app.put("/api/annotations/:annotationId", async (req, res) => {
     try {
+      const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+      const mentions = req.body.mentions || [];
+      
       const updateData = {
         content: req.body.content,
+        mentions: mentions,
         updatedAt: new Date(),
       };
 
       // Direct database update
       const { db } = await import("./db");
-      const { imageAnnotations } = await import("@shared/schema");
+      const { imageAnnotations, notifications } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
       
       const result = await db
@@ -3602,6 +3633,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (result.length === 0) {
         return res.status(404).json({ error: "Annotation not found" });
+      }
+
+      // Create notifications for mentioned users
+      if (mentions.length > 0) {
+        const notificationPromises = mentions.map((mentionedUserId: string) => {
+          if (mentionedUserId !== userId) { // Don't notify the author
+            return db.insert(notifications).values({
+              userId: mentionedUserId,
+              type: "annotation_mention",
+              title: "You were mentioned in an updated annotation",
+              message: `You were mentioned in an updated annotation: "${req.body.content.substring(0, 100)}${req.body.content.length > 100 ? '...' : ''}"`,
+              entityType: "annotation",
+              entityId: req.params.annotationId,
+              metadata: {
+                annotationId: req.params.annotationId,
+                mentionedBy: userId
+              },
+              isRead: false,
+            });
+          }
+        }).filter(Boolean);
+
+        if (notificationPromises.length > 0) {
+          await Promise.all(notificationPromises);
+        }
       }
       
       res.json(result[0]);
