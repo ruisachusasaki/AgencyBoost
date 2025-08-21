@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [emojiButtonRect, setEmojiButtonRect] = useState<DOMRect | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [showToolbar, setShowToolbar] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -638,30 +640,15 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setShowEmojiPicker(showEmojiPicker === comment.id ? null : comment.id)}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setEmojiButtonRect(rect);
+                              setShowEmojiPicker(showEmojiPicker === comment.id ? null : comment.id);
+                            }}
                             className="text-xs text-slate-500 hover:text-slate-700 h-6 px-2"
                           >
                             <Smile className="h-3 w-3" />
                           </Button>
-                          
-                          {/* Emoji Picker */}
-                          {showEmojiPicker === comment.id && (
-                            <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-50 w-48">
-                              <div className="grid grid-cols-6 gap-2">
-                                {commonEmojis.map((emoji) => (
-                                  <Button
-                                    key={emoji}
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEmojiReaction(comment.id, emoji)}
-                                    className="h-8 w-8 p-0 hover:bg-slate-100 text-lg flex items-center justify-center"
-                                  >
-                                    {emoji}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                       
@@ -770,7 +757,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                               
                               {/* Emoji Picker for Reply */}
                               {showEmojiPicker === reply.id && (
-                                <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-50">
+                                <div className="absolute bottom-full left-0 mb-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-[999]">
                                   <div className="grid grid-cols-4 gap-1">
                                     {commonEmojis.map((emoji) => (
                                       <Button
@@ -949,6 +936,39 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           fileId={selectedImage.fileId}
           fileName={selectedImage.fileName}
         />
+      )}
+
+      {/* Emoji Picker Portal - renders outside card to avoid clipping */}
+      {showEmojiPicker && emojiButtonRect && createPortal(
+        <div 
+          className="fixed bg-white border border-slate-200 rounded-lg shadow-xl p-3 z-[999] w-48"
+          style={{
+            top: emojiButtonRect.top - 10,
+            left: emojiButtonRect.left,
+            transform: 'translateY(-100%)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="grid grid-cols-6 gap-2">
+            {commonEmojis.map((emoji) => (
+              <Button
+                key={emoji}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  handleEmojiReaction(showEmojiPicker, emoji);
+                  setShowEmojiPicker(null);
+                  setEmojiButtonRect(null);
+                }}
+                className="h-8 w-8 p-0 hover:bg-slate-100 text-lg flex items-center justify-center"
+              >
+                {emoji}
+              </Button>
+            ))}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
