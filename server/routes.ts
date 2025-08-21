@@ -27,7 +27,7 @@ import {
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
-  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies
+  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -6844,21 +6844,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
-      if (!global.notifications) {
-        global.notifications = {};
-      }
+      // Query notifications from the database
+      const userNotifications = await db.select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt));
       
-      const userNotifications = global.notifications[userId] || [];
-      
-      // Sort by newest first
-      const sortedNotifications = userNotifications.sort((a: any, b: any) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      
-      res.json(sortedNotifications);
+      res.json(userNotifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
       res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  // Test endpoint to view notifications for any staff member (dev only)
+  app.get("/api/notifications/staff/:staffId", async (req, res) => {
+    try {
+      const staffId = req.params.staffId;
+      
+      // Query notifications from the database for specific staff member
+      const userNotifications = await db.select()
+        .from(notifications)
+        .where(eq(notifications.userId, staffId))
+        .orderBy(desc(notifications.createdAt));
+      
+      res.json(userNotifications);
+    } catch (error) {
+      console.error("Error fetching staff notifications:", error);
+      res.status(500).json({ error: "Failed to fetch staff notifications" });
     }
   });
 
