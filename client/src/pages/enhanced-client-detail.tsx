@@ -2052,7 +2052,8 @@ function EnhancedClientDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       {/* Back Button */}
       <div className="flex items-center space-x-2">
         <Button variant="outline" size="sm" onClick={() => setLocation("/clients")} className="flex items-center space-x-2">
@@ -3846,8 +3847,9 @@ function EnhancedClientDetail() {
                           />
                         </DialogContent>
                       </Dialog>
+                    </div>
 
-                      {clientTasksData && clientTasksData.length > 0 ? (
+                    {clientTasksData && clientTasksData.length > 0 ? (
                         <div className="space-y-3">
                           {clientTasksData.map((task: any) => {
                             const dueDate = task.dueDate ? new Date(task.dueDate) : null;
@@ -3928,118 +3930,117 @@ function EnhancedClientDetail() {
                       )}
                     </div>
                 )}
-
-                {/* Edit Task Dialog */}
-                <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Edit Task</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                        <Input
-                          value={editTask.title}
-                          onChange={(e) => setEditTask(prev => ({ ...prev, title: e.target.value }))}
-                          placeholder="Enter task title"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                        <Textarea
-                          value={editTask.description}
-                          onChange={(e) => setEditTask(prev => ({ ...prev, description: e.target.value }))}
-                          placeholder="Enter task description"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                          <Input
-                            type="date"
-                            value={editTask.dueDate}
-                            onChange={(e) => setEditTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                          <Input
-                            type="time"
-                            value={editTask.dueTime}
-                            onChange={(e) => setEditTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                        <Input
-                          value={editTask.assignee}
-                          onChange={(e) => setEditTask(prev => ({ ...prev, assignee: e.target.value }))}
-                          placeholder="Enter assignee name"
-                        />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          checked={editTask.recurring}
-                          onCheckedChange={(checked) => setEditTask(prev => ({ ...prev, recurring: Boolean(checked) }))}
-                        />
-                        <Label>Recurring Task</Label>
-                      </div>
-                    </div>
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setIsEditTaskDialogOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={() => {
-                          if (!editTask.title.trim()) {
-                            toast({
-                              title: "Error", 
-                              description: "Task title is required",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-                          
-                          const taskData = {
-                            title: editTask.title,
-                            description: editTask.description || null,
-                            dueDate: editTask.dueDate && editTask.dueTime ? 
-                              new Date(`${editTask.dueDate}T${editTask.dueTime}`).toISOString() : 
-                              editTask.dueDate ? new Date(`${editTask.dueDate}T23:59`).toISOString() : null,
-                            assignedTo: editTask.assignee || null,
-                            status: "pending",
-                            priority: "normal",
-                            clientId: clientId,
-                            recurring: editTask.recurring,
-                          };
-                          
-                          editTaskMutation.mutate(taskData);
-                        }}
-                        disabled={editTaskMutation.isPending}
-                      >
-                        {editTaskMutation.isPending ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Updating...
-                          </>
-                        ) : (
-                          "Update Task"
-                        )}
-                      </Button>
-                    </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
+              <Input
+                value={editTask.title}
+                onChange={(e) => setEditTask(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter task title"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
+              <Textarea
+                value={editTask.description}
+                onChange={(e) => setEditTask(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter task description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
+                <Input
+                  type="date"
+                  value={editTask.dueDate}
+                  onChange={(e) => setEditTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
+                <Input
+                  type="time"
+                  value={editTask.dueTime}
+                  onChange={(e) => setEditTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
+              <Input
+                value={editTask.assignee}
+                onChange={(e) => setEditTask(prev => ({ ...prev, assignee: e.target.value }))}
+                placeholder="Enter assignee name"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                checked={editTask.recurring}
+                onCheckedChange={(checked) => setEditTask(prev => ({ ...prev, recurring: Boolean(checked) }))}
+              />
+              <Label>Recurring Task</Label>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditTaskDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!editTask.title.trim()) {
+                  toast({
+                    title: "Error", 
+                    description: "Task title is required",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                const taskData = {
+                  title: editTask.title,
+                  description: editTask.description || null,
+                  dueDate: editTask.dueDate && editTask.dueTime ? 
+                    new Date(`${editTask.dueDate}T${editTask.dueTime}`).toISOString() : 
+                    editTask.dueDate ? new Date(`${editTask.dueDate}T23:59`).toISOString() : null,
+                  assignedTo: editTask.assignee || null,
+                  status: "pending",
+                  priority: "normal",
+                  clientId: clientId,
+                  recurring: editTask.recurring,
+                };
+                
+                editTaskMutation.mutate(taskData);
+              }}
+              disabled={editTaskMutation.isPending}
+            >
+              {editTaskMutation.isPending ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Task"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
