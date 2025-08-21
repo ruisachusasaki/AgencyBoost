@@ -1155,26 +1155,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertTaskSchema.parse(req.body);
       
-      const [newTask] = await db.insert(tasks)
+      const result = await db.insert(tasks)
         .values(validatedData)
         .returning();
+      const newTask = result[0];
       
       // If this is a recurring task and createIfOverdue is enabled, create initial future instances
       if (newTask.isRecurring && newTask.createIfOverdue && newTask.startDate) {
-        console.log(`Creating recurring instances for task: ${newTask.title}`);
-        console.log(`Recurring settings: interval=${newTask.recurringInterval}, unit=${newTask.recurringUnit}, endType=${newTask.recurringEndType}, endOccurrences=${newTask.recurringEndOccurrences}`);
-        
         const maxInstancesToCreate = 5; // Create next 5 occurrences
         const instances = [];
         
         for (let i = 1; i <= maxInstancesToCreate; i++) {
-          console.log(`Processing occurrence ${i}/${maxInstancesToCreate}`);
-          
           // Check if we've reached the end conditions
           if (newTask.recurringEndType === "after_occurrences" && 
               newTask.recurringEndOccurrences && 
-              i >= newTask.recurringEndOccurrences) {
-            console.log(`Stopping at occurrence ${i} due to max occurrences limit: ${newTask.recurringEndOccurrences}`);
+              i > newTask.recurringEndOccurrences) {
             break;
           }
           
@@ -1185,12 +1180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             i
           );
           
-          console.log(`Next start date for occurrence ${i}: ${nextStartDate}`);
-          
           if (newTask.recurringEndType === "on_date" && 
               newTask.recurringEndDate && 
               nextStartDate > new Date(newTask.recurringEndDate)) {
-            console.log(`Stopping at occurrence ${i} due to end date: ${newTask.recurringEndDate}`);
             break;
           }
           
@@ -1217,16 +1209,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           instances.push(instanceData);
-          console.log(`Added instance ${i} to queue`);
         }
         
-        console.log(`Total instances to create: ${instances.length}`);
         if (instances.length > 0) {
           await db.insert(tasks).values(instances);
-          console.log(`Successfully created ${instances.length} recurring task instances`);
         }
-      } else {
-        console.log(`Not creating recurring instances - isRecurring: ${newTask.isRecurring}, createIfOverdue: ${newTask.createIfOverdue}, hasStartDate: ${!!newTask.startDate}`);
       }
       
       res.status(201).json(newTask);
