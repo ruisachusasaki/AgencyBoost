@@ -81,8 +81,12 @@ function Router() {
       <Route path="/settings/tags" component={Tags} />
       <Route path="/settings/products" component={Products} />
       <Route path="/settings/audit-logs" component={AuditLogs} />
-      <Route path="/form-builder" component={FormBuilder} />
-      <Route path="/form-builder/:id" component={({ params }: { params: { id: string } }) => <FormBuilder formId={params.id} />} />
+      <Route path="/form-builder">
+        {() => <FormBuilder />}
+      </Route>
+      <Route path="/form-builder/:id">
+        {(params) => <FormBuilder formId={params.id} />}
+      </Route>
       <Route path="/forms-test" component={FormsTest} />
       <Route component={NotFound} />
     </Switch>
