@@ -77,6 +77,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
       console.log("Creating sub-task with data:", data);
       const requestData = {
         ...data,
+        assignedTo: data.assignedTo === "unassigned" ? null : data.assignedTo,
         parentTaskId,
         level: (level || 0) + 1,
         // Inherit client and project from parent task
@@ -106,7 +107,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
       description: "",
       status: "pending",
       priority: "normal",
-      assignedTo: "",
+      assignedTo: "unassigned",
     }
   });
 
@@ -291,7 +292,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">Unassigned</SelectItem>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
                                   {staff.map((member) => (
                                     <SelectItem key={member.id} value={member.id}>
                                       {member.firstName} {member.lastName}
