@@ -52,6 +52,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [showToolbar, setShowToolbar] = useState(false);
@@ -183,10 +184,44 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     if (lastWord.startsWith('@') && lastWord.length > 1) {
       setMentionQuery(lastWord.slice(1).toLowerCase());
       setShowMentionDropdown(true);
+      setSelectedMentionIndex(0); // Reset to first item
       setCursorPosition(cursorPos);
     } else {
       setShowMentionDropdown(false);
       setMentionQuery("");
+      setSelectedMentionIndex(0);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showMentionDropdown || filteredStaff.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < Math.min(filteredStaff.length - 1, 4) ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : Math.min(filteredStaff.length - 1, 4)
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        const selectedStaff = filteredStaff[selectedMentionIndex];
+        if (selectedStaff) {
+          insertMention(selectedStaff.name || `${selectedStaff.firstName} ${selectedStaff.lastName}`.trim());
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowMentionDropdown(false);
+        setMentionQuery("");
+        setSelectedMentionIndex(0);
+        break;
     }
   };
 
@@ -772,6 +807,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
             placeholder="Add a comment... Use @name to mention someone"
             value={newComment}
             onChange={(e) => handleTextChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             onFocus={() => setShowToolbar(true)}
             className="min-h-[80px] resize-none"
             rows={3}
@@ -836,14 +872,16 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           {/* Mention Dropdown */}
           {showMentionDropdown && filteredStaff.length > 0 && (
             <div className="absolute z-10 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-              {filteredStaff.slice(0, 5).map((staff: any) => (
+              {filteredStaff.slice(0, 5).map((staff: any, index: number) => (
                 <button
                   key={staff.id}
                   type="button"
-                  className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2"
+                  className={`w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 ${
+                    index === selectedMentionIndex ? 'bg-blue-100 text-blue-900' : ''
+                  }`}
                   onClick={() => insertMention(staff.name || `${staff.firstName} ${staff.lastName}`.trim())}
                 >
-                  <AtSign className="h-4 w-4 text-slate-400" />
+                  <AtSign className={`h-4 w-4 ${index === selectedMentionIndex ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span>{staff.name || `${staff.firstName} ${staff.lastName}`.trim()}</span>
                 </button>
               ))}
