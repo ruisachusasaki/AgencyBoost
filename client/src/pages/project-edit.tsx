@@ -35,6 +35,13 @@ export default function ProjectEdit() {
   const project = projects.find(p => p.id === id);
   const projectTasks = project ? getProjectTasks(tasks, project.id) : [];
 
+  // Helper function to get staff name - defined before sorting logic
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return "Unassigned";
+    const staffMember = staff.find(s => s.id === staffId);
+    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+  };
+
   // Sort tasks based on current sort field and direction
   const sortedTasks = useMemo(() => {
     const tasksToSort = [...projectTasks];
@@ -97,12 +104,6 @@ export default function ProjectEdit() {
 
   const handleTaskClick = (taskId: string) => {
     navigate(`/tasks/${taskId}`);
-  };
-
-  const getStaffName = (staffId: string | null) => {
-    if (!staffId) return "Unassigned";
-    const staffMember = staff.find(s => s.id === staffId);
-    return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
   };
 
   const getStatusColor = (status: string) => {
