@@ -1037,8 +1037,59 @@ export default function Tasks() {
                   className="pl-10"
                 />
               </div>
-              <div className="text-sm text-slate-600">
-                {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''}
+              
+              <div className="flex items-center gap-4">
+                {/* Show/Hide Multi-Select Dropdown */}
+                <Select value="show-options" onValueChange={() => {}}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue>
+                      {(() => {
+                        const selected = [];
+                        if (showCompleted) selected.push("Completed");
+                        if (showCancelled) selected.push("Cancelled");
+                        if (selected.length === 0) return "Show Options";
+                        if (selected.length === 1) return `Show ${selected[0]}`;
+                        return `Show ${selected.length} Types`;
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <div className="flex items-center space-x-2 py-1">
+                        <Checkbox
+                          id="multi-show-completed"
+                          checked={showCompleted}
+                          onCheckedChange={setShowCompleted}
+                          data-testid="multi-toggle-completed-tasks"
+                        />
+                        <label
+                          htmlFor="multi-show-completed"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Show Completed
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 py-1">
+                        <Checkbox
+                          id="multi-show-cancelled"
+                          checked={showCancelled}
+                          onCheckedChange={setShowCancelled}
+                          data-testid="multi-toggle-cancelled-tasks"
+                        />
+                        <label
+                          htmlFor="multi-show-cancelled"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Show Cancelled
+                        </label>
+                      </div>
+                    </div>
+                  </SelectContent>
+                </Select>
+                
+                <div className="text-sm text-slate-600">
+                  {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''}
+                </div>
               </div>
             </div>
             
@@ -1147,43 +1198,6 @@ export default function Tasks() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            {/* Show/Hide Controls */}
-            <div className="flex items-center gap-6 pt-2 border-t border-slate-200">
-              <div className="text-sm font-medium text-slate-700">Show/Hide:</div>
-              
-              <div className="flex items-center gap-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="show-completed"
-                    checked={showCompleted}
-                    onCheckedChange={setShowCompleted}
-                    data-testid="toggle-completed-tasks"
-                  />
-                  <label
-                    htmlFor="show-completed"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Show Completed
-                  </label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="show-cancelled"
-                    checked={showCancelled}
-                    onCheckedChange={setShowCancelled}
-                    data-testid="toggle-cancelled-tasks"
-                  />
-                  <label
-                    htmlFor="show-cancelled"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Show Cancelled
-                  </label>
-                </div>
-              </div>
             </div>
           </div>
         </CardHeader>
