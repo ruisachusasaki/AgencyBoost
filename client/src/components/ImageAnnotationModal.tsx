@@ -340,9 +340,9 @@ export function ImageAnnotationModal({
             </div>
 
             <div className="w-full h-full flex items-center justify-center p-8">
-              <div className="relative w-full h-full">
+              <div className="relative">
                 {fileType?.includes('pdf') ? (
-                  <div className="relative w-full h-full">
+                  <div className="relative">
                     <iframe
                       ref={imageRef as any}
                       src={imageUrl}
@@ -356,47 +356,79 @@ export function ImageAnnotationModal({
                       onClick={handleImageClick}
                       style={{ zIndex: 5 }}
                     />
+                    
+                    {/* Annotation Pins for PDF */}
+                    {annotations.map((annotation, index) => (
+                      <div
+                        key={annotation.id || `temp-${index}`}
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                        style={{
+                          left: `${annotation.x}%`,
+                          top: `${annotation.y}%`,
+                          zIndex: 10
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAnnotation(annotation);
+                        }}
+                        data-testid={`annotation-pin-${annotation.id || index}`}
+                      >
+                        <div 
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white ${
+                            selectedAnnotation === annotation 
+                              ? 'bg-blue-600 ring-2 ring-blue-300' 
+                              : annotation.isNew 
+                                ? 'bg-yellow-500' 
+                                : 'bg-red-500'
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <img
-                    ref={imageRef}
-                    src={imageUrl}
-                    alt={fileName}
-                    className="max-w-full max-h-full object-contain cursor-crosshair mx-auto"
-                    onClick={handleImageClick}
-                    data-testid="annotation-image"
-                  />
-                )}
-
-                {/* Annotation Pins */}
-                {annotations.map((annotation, index) => (
-                  <div
-                    key={annotation.id || `temp-${index}`}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-                    style={{
-                      left: `${annotation.x}%`,
-                      top: `${annotation.y}%`,
-                      zIndex: 10
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelectAnnotation(annotation);
-                    }}
-                    data-testid={`annotation-pin-${annotation.id || index}`}
-                  >
-                    <div 
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white ${
-                        selectedAnnotation === annotation 
-                          ? 'bg-blue-600 ring-2 ring-blue-300' 
-                          : annotation.isNew 
-                            ? 'bg-yellow-500' 
-                            : 'bg-red-500'
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
+                  <div className="relative">
+                    <img
+                      ref={imageRef}
+                      src={imageUrl}
+                      alt={fileName}
+                      className="max-w-full max-h-full object-contain cursor-crosshair"
+                      onClick={handleImageClick}
+                      data-testid="annotation-image"
+                    />
+                    
+                    {/* Annotation Pins for Image */}
+                    {annotations.map((annotation, index) => (
+                      <div
+                        key={annotation.id || `temp-${index}`}
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                        style={{
+                          left: `${annotation.x}%`,
+                          top: `${annotation.y}%`,
+                          zIndex: 10
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAnnotation(annotation);
+                        }}
+                        data-testid={`annotation-pin-${annotation.id || index}`}
+                      >
+                        <div 
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white ${
+                            selectedAnnotation === annotation 
+                              ? 'bg-blue-600 ring-2 ring-blue-300' 
+                              : annotation.isNew 
+                                ? 'bg-yellow-500' 
+                                : 'bg-red-500'
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
