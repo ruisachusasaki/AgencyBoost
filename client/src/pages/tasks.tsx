@@ -104,11 +104,27 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     },
     onError: (error: any) => {
-      // Handle dependency validation errors specially
-      if (error?.isDependencyError) {
+      // Handle dependency validation errors by checking message content
+      const errorMessage = error?.message || "";
+      if (errorMessage.includes("dependencies that need to be completed first") || error?.isDependencyError) {
+        // Extract the details from the JSON in the error message if present
+        let details = error?.details;
+        if (!details && errorMessage.includes('{"message"')) {
+          try {
+            const jsonMatch = errorMessage.match(/\{.*\}/);
+            if (jsonMatch) {
+              const errorData = JSON.parse(jsonMatch[0]);
+              details = errorData.details;
+            }
+          } catch (e) {
+            // Fallback to a generic message
+            details = "Please complete the required dependencies first";
+          }
+        }
+        
         toast({
           title: "Cannot Complete Task",
-          description: error.details || error.message,
+          description: details || "This task has dependencies that need to be completed first",
           variant: "destructive",
         });
       } else {
