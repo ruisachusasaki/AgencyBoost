@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { 
-  ArrowRight, 
+  AlertTriangle, 
   GitBranch, 
   Target, 
   RotateCcw
@@ -35,10 +35,10 @@ interface DependencyResponse {
 
 const dependencyTypeConfig = {
   finish_to_start: {
-    icon: ArrowRight,
+    icon: AlertTriangle,
     label: "Finish to Start",
     description: "This task starts after dependency finishes",
-    color: "text-blue-500"
+    color: "text-amber-500"
   },
   start_to_start: {
     icon: GitBranch, 
