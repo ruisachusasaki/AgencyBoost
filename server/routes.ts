@@ -1541,127 +1541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:id/activities", async (req, res) => {
-    try {
-      const activities = await db.select()
-        .from(taskActivities)
-        .where(eq(taskActivities.taskId, req.params.id))
-        .orderBy(desc(taskActivities.createdAt));
-      
-      res.json(activities);
-    } catch (error) {
-      console.error("Error fetching task activities:", error);
-      res.status(500).json({ message: "Failed to fetch task activities" });
-    }
-  });
-
-  app.delete("/api/tasks/:id", async (req, res) => {
-    try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
-      console.log(`DELETE task request - Task ID: ${req.params.id}, User ID: ${userId}`);
-      
-      // Check if task exists and get its details
-      const taskToDelete = await db.select()
-        .from(tasks)
-        .where(eq(tasks.id, req.params.id))
-        .limit(1);
-      
-      if (taskToDelete.length === 0) {
-        console.log(`Task not found: ${req.params.id}`);
-        return res.status(404).json({ message: "Task not found" });
-      }
-      
-      const task = taskToDelete[0];
-      console.log(`Task found:`, { id: task.id, title: task.title, createdBy: task.createdBy, assignedTo: task.assignedTo });
-      
-      // Check if user has permission to delete tasks (admin or task creator/assignee)
-      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
-      const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
-      
-      console.log(`Permission check - canDelete: ${canDelete}, isTaskOwner: ${isTaskOwner}`);
-      
-      if (!canDelete && !isTaskOwner) {
-        console.log(`Access denied for user ${userId} to delete task ${req.params.id}`);
-        return res.status(403).json({ message: "Access denied. You can only delete tasks you created or are assigned to." });
-      }
-
-      // Delete sub-tasks first if any exist
-      const subTasks = await db.select()
-        .from(tasks)
-        .where(eq(tasks.parentTaskId, req.params.id));
-      
-      console.log(`Found ${subTasks.length} sub-tasks to delete`);
-      
-      if (subTasks.length > 0) {
-        // Delete comments for sub-tasks first
-        for (const subTask of subTasks) {
-          await db.delete(taskComments)
-            .where(eq(taskComments.taskId, subTask.id));
-        }
-        await db.delete(tasks)
-          .where(eq(tasks.parentTaskId, req.params.id));
-        console.log(`Deleted ${subTasks.length} sub-tasks`);
-      }
-      
-      // Delete all related data before deleting the main task
-      console.log(`Deleting all related data for task: ${req.params.id}`);
-      
-      // Delete comment files first
-      const commentFilesToDelete = await db.select()
-        .from(commentFiles)
-        .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
-        .where(eq(taskComments.taskId, req.params.id));
-      
-      for (const file of commentFilesToDelete) {
-        await db.delete(commentFiles).where(eq(commentFiles.id, file.comment_files.id));
-      }
-      
-      // Delete task comment reactions
-      await db.delete(taskCommentReactions)
-        .where(sql`comment_id IN (SELECT id FROM task_comments WHERE task_id = ${req.params.id})`);
-      
-      // Delete task comments
-      await db.delete(taskComments)
-        .where(eq(taskComments.taskId, req.params.id));
-      
-      // Delete task activities
-      await db.delete(taskActivities)
-        .where(eq(taskActivities.taskId, req.params.id));
-      
-      // Delete task attachments
-      await db.delete(taskAttachments)
-        .where(eq(taskAttachments.taskId, req.params.id));
-      
-      console.log(`All related data deleted, now deleting main task: ${req.params.id}`);
-      
-      // Delete the main task
-      const deletedRows = await db.delete(tasks)
-        .where(eq(tasks.id, req.params.id));
-      
-      console.log(`Main task deletion result:`, deletedRows);
-
-      // Log the deletion
-      await createAuditLog(
-        "deleted",
-        "task",
-        req.params.id,
-        "Task",
-        userId,
-        "Task deleted by administrator",
-        null,
-        null,
-        req
-      );
-
-      console.log(`Task deletion successful: ${req.params.id}`);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      res.status(500).json({ message: "Failed to delete task", error: error.message });
-    }
-  });
-
-  // Bulk delete tasks
+  // Bulk delete tasks - MUST come before individual task routes
   app.delete("/api/tasks/bulk-delete", async (req, res) => {
     try {
       const { taskIds } = req.body;
@@ -1781,7 +1661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk update tasks
+  // Bulk update tasks - MUST come before individual task routes
   app.put("/api/tasks/bulk-update", async (req, res) => {
     try {
       const { taskIds, updates } = req.body;
@@ -1868,6 +1748,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid update data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to bulk update tasks", error: error.message });
+    }
+  });
+
+  app.get("/api/tasks/:id/activities", async (req, res) => {
+    try {
+      const activities = await db.select()
+        .from(taskActivities)
+        .where(eq(taskActivities.taskId, req.params.id))
+        .orderBy(desc(taskActivities.createdAt));
+      
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching task activities:", error);
+      res.status(500).json({ message: "Failed to fetch task activities" });
+    }
+  });
+
+  app.delete("/api/tasks/:id", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      console.log(`DELETE task request - Task ID: ${req.params.id}, User ID: ${userId}`);
+      
+      // Check if task exists and get its details
+      const taskToDelete = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, req.params.id))
+        .limit(1);
+      
+      if (taskToDelete.length === 0) {
+        console.log(`Task not found: ${req.params.id}`);
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const task = taskToDelete[0];
+      console.log(`Task found:`, { id: task.id, title: task.title, createdBy: task.createdBy, assignedTo: task.assignedTo });
+      
+      // Check if user has permission to delete tasks (admin or task creator/assignee)
+      const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
+      const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
+      
+      console.log(`Permission check - canDelete: ${canDelete}, isTaskOwner: ${isTaskOwner}`);
+      
+      if (!canDelete && !isTaskOwner) {
+        console.log(`Access denied for user ${userId} to delete task ${req.params.id}`);
+        return res.status(403).json({ message: "Access denied. You can only delete tasks you created or are assigned to." });
+      }
+
+      // Delete sub-tasks first if any exist
+      const subTasks = await db.select()
+        .from(tasks)
+        .where(eq(tasks.parentTaskId, req.params.id));
+      
+      console.log(`Found ${subTasks.length} sub-tasks to delete`);
+      
+      if (subTasks.length > 0) {
+        // Delete comments for sub-tasks first
+        for (const subTask of subTasks) {
+          await db.delete(taskComments)
+            .where(eq(taskComments.taskId, subTask.id));
+        }
+        await db.delete(tasks)
+          .where(eq(tasks.parentTaskId, req.params.id));
+        console.log(`Deleted ${subTasks.length} sub-tasks`);
+      }
+      
+      // Delete all related data before deleting the main task
+      console.log(`Deleting all related data for task: ${req.params.id}`);
+      
+      // Delete comment files first
+      const commentFilesToDelete = await db.select()
+        .from(commentFiles)
+        .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+        .where(eq(taskComments.taskId, req.params.id));
+      
+      for (const file of commentFilesToDelete) {
+        await db.delete(commentFiles).where(eq(commentFiles.id, file.comment_files.id));
+      }
+      
+      // Delete task comment reactions
+      await db.delete(taskCommentReactions)
+        .where(sql`comment_id IN (SELECT id FROM task_comments WHERE task_id = ${req.params.id})`);
+      
+      // Delete task comments
+      await db.delete(taskComments)
+        .where(eq(taskComments.taskId, req.params.id));
+      
+      // Delete task activities
+      await db.delete(taskActivities)
+        .where(eq(taskActivities.taskId, req.params.id));
+      
+      // Delete task attachments
+      await db.delete(taskAttachments)
+        .where(eq(taskAttachments.taskId, req.params.id));
+      
+      console.log(`All related data deleted, now deleting main task: ${req.params.id}`);
+      
+      // Delete the main task
+      const deletedRows = await db.delete(tasks)
+        .where(eq(tasks.id, req.params.id));
+      
+      console.log(`Main task deletion result:`, deletedRows);
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "task",
+        req.params.id,
+        "Task",
+        userId,
+        "Task deleted by administrator",
+        null,
+        null,
+        req
+      );
+
+      console.log(`Task deletion successful: ${req.params.id}`);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task", error: error.message });
     }
   });
 
