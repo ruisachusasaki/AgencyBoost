@@ -1190,6 +1190,7 @@ export default function Tasks() {
                               checked={selectedTasks.size === filteredAndSortedTasks.length && filteredAndSortedTasks.length > 0}
                               onCheckedChange={handleSelectAll}
                               data-testid="select-all-tasks"
+                              className="bulk-select-checkbox"
                             />
                           </div>
                         </TableHead>
@@ -1280,6 +1281,7 @@ export default function Tasks() {
                             checked={selectedTasks.has(task.id)}
                             onCheckedChange={(checked) => handleSelectTask(task.id, checked as boolean)}
                             data-testid={`select-task-${task.id}`}
+                            className="bulk-select-checkbox"
                           />
                         </div>
                       </TableCell>

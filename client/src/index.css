@@ -205,25 +205,53 @@
   fill: hsl(var(--foreground)) !important;
 }
 
-/* Bulk action checkboxes should be squares */
-[data-testid^="select-task-"] [role="checkbox"],
-[data-testid="select-all-tasks"] [role="checkbox"] {
+/* Bulk action checkboxes should be squares - target table structure */
+.w-12 [role="checkbox"],
+.w-12 button[role="checkbox"],
+.w-12 [data-state] {
   border-radius: 4px !important;
 }
 
-[data-testid^="select-task-"] button[role="checkbox"],
-[data-testid="select-all-tasks"] button[role="checkbox"] {
+/* Target bulk selection checkboxes in table cells */
+th.w-12 [role="checkbox"],
+th.w-12 button[role="checkbox"],
+th.w-12 [data-state] {
   border-radius: 4px !important;
 }
 
-[data-testid^="select-task-"] [data-state="unchecked"],
-[data-testid^="select-task-"] [data-state="checked"],
-[data-testid="select-all-tasks"] [data-state="unchecked"],
-[data-testid="select-all-tasks"] [data-state="checked"] {
+/* Target individual task selection checkboxes */
+td .flex.items-center.justify-center [role="checkbox"],
+td .flex.items-center.justify-center button[role="checkbox"],
+td .flex.items-center.justify-center [data-state] {
+  border-radius: 4px !important;
+}
+
+/* Force bulk selection checkboxes to be square using custom class */
+.bulk-select-checkbox,
+.bulk-select-checkbox *,
+.bulk-select-checkbox button,
+.bulk-select-checkbox [role="checkbox"],
+.bulk-select-checkbox [data-state],
+.bulk-select-checkbox [data-state="unchecked"],
+.bulk-select-checkbox [data-state="checked"] {
+  border-radius: 4px !important;
+}
+
+/* Additional targeting by data-testid */
+[data-testid^="select-task-"],
+[data-testid="select-all-tasks"] {
+  border-radius: 4px !important;
+}
+
+[data-testid^="select-task-"] *,
+[data-testid="select-all-tasks"] * {
   border-radius: 4px !important;
 }
 
 /* Task completion checkboxes should remain circular */
-.flex-shrink-0[role="checkbox"] {
+.flex-shrink-0[role="checkbox"],
+.flex-shrink-0 button[role="checkbox"],
+.flex-shrink-0 [data-state],
+.flex-shrink-0 * {
   border-radius: 50% !important;
 }
