@@ -99,6 +99,23 @@ export default function TaskActivities({ taskId, showCard = true }: TaskActiviti
           </div>
         );
         
+      case 'time_estimate_change':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-teal-100 rounded-full flex-shrink-0">
+              <Clock className="h-4 w-4 text-teal-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> changed time estimate from{' '}
+                <span className="font-medium">{activity.oldValue}</span> to{' '}
+                <span className="font-medium">{activity.newValue}</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
       case 'priority_change':
         const getPriorityColor = (priority: string | null) => {
           switch (priority) {

@@ -1644,6 +1644,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Check for time estimate changes
+      if (validatedData.timeEstimate !== undefined && validatedData.timeEstimate !== currentTask.timeEstimate) {
+        const formatTimeEstimate = (minutes: number | null) => {
+          if (!minutes) return 'No estimate';
+          if (minutes < 60) return `${minutes} minutes`;
+          const hours = Math.floor(minutes / 60);
+          const remainingMinutes = minutes % 60;
+          if (remainingMinutes === 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+          return `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} minutes`;
+        };
+
+        const oldEstimateDisplay = formatTimeEstimate(currentTask.timeEstimate);
+        const newEstimateDisplay = formatTimeEstimate(validatedData.timeEstimate);
+        
+        await logTaskActivity(req.params.id, 'time_estimate_change', 'timeEstimate', oldEstimateDisplay, newEstimateDisplay, currentUser, currentUserName);
+      }
+
       // ClickUp-style recurring task logic: Create next instance only when current task is completed
       if (validatedData.status === 'completed' && 
           currentTask.status !== 'completed' && 
