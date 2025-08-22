@@ -310,10 +310,19 @@ div.max-h-96.overflow-y-auto.space-y-4 {
   border-top-right-radius: 0px !important;
   border-bottom-left-radius: 0px !important;
   border-bottom-right-radius: 0px !important;
-  border-top-right-radius: 0px !important;
-  border-bottom-right-radius: 0px !important;
-  border-bottom-left-radius: 0px !important;
-  border-top-left-radius: 0px !important;
+}
+
+/* FIX 1: Form Elements tabs - target with maximum specificity */
+.form-elements-tabslist button.form-elements-tab,
+.form-elements-tabslist .form-elements-tab,
+button[value="add-fields"].form-elements-tab,
+button[value="custom-fields"].form-elements-tab,
+button[value="styling"].form-elements-tab {
+  border-radius: 6px !important;
+  border-top-left-radius: 6px !important;
+  border-top-right-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
 }
 
 /* Fix Accordion content display issues */
