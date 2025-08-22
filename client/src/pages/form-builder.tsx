@@ -1209,6 +1209,11 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
 
   return (
     <div className="space-y-2" style={{ marginBottom: `${styling?.layout.fieldSpacing || 16}px` }}>
+      {/* DEBUG: Text indicator to confirm state changes */}
+      <div style={{ backgroundColor: 'yellow', padding: '4px', fontSize: '12px', fontWeight: 'bold', border: '2px solid red' }}>
+        DEBUG: Current Input Style = "{styling?.inputFields?.style || 'undefined'}"
+      </div>
+      
       <Label className="text-sm font-medium" style={labelStyles}>
         {field.label || 'Untitled Field'}
         {field.required && <span className="text-red-500 ml-1">*</span>}
