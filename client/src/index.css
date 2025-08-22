@@ -304,26 +304,44 @@ button[variant="outline"] {
   border-radius: 6px !important;
 }
 
-/* Fix all remaining Form Builder Select dropdowns */
-/* Form Settings and Style sections */
-.space-y-4 [data-radix-select-trigger],
-.space-y-3 [data-radix-select-trigger],
-.grid.grid-cols-2.gap-2 [data-radix-select-trigger],
-[data-radix-accordion-content] [data-radix-select-trigger],
-[data-radix-accordion-content] .h-8[role="combobox"] {
+/* AGGRESSIVE FIX: Target ALL possible oval containers in Form Builder */
+/* Use very broad selectors to catch everything */
+
+/* All button elements with potential oval styling */
+* button,
+* [role="combobox"],
+* [data-radix-select-trigger],
+* .h-8,
+* .h-10,
+* select {
   border-radius: 6px !important;
 }
 
-/* Target specific styling dropdowns by class combinations */
-.h-8.w-full[data-radix-select-trigger],
-.text-xs + [data-radix-select-trigger],
-.space-y-3 .h-8[data-radix-select-trigger] {
+/* Specifically target any remaining rounded elements */
+* {
   border-radius: 6px !important;
 }
 
-/* Layout Type, Border Style, Input Style, Font Family dropdowns */
-[data-radix-accordion-content] .space-y-3 [role="combobox"],
-[data-radix-accordion-content] .grid [role="combobox"],
-[data-radix-accordion-content] .h-8 {
-  border-radius: 6px !important;
+/* Override with exceptions for elements that should be circular */
+/* Keep task completion checkboxes circular */
+input[type="checkbox"]:not(.bulk-action-checkbox),
+.task-completion-checkbox,
+[data-task-completion-checkbox] {
+  border-radius: 50% !important;
+}
+
+/* Keep avatars and profile images circular */
+.w-8.h-8.rounded-full,
+.w-10.h-10.rounded-full,
+.w-12.h-12.rounded-full,
+[data-avatar],
+.profile-image {
+  border-radius: 50% !important;
+}
+
+/* Keep badges and pills rounded */
+.badge,
+.pill,
+[data-badge] {
+  border-radius: 9999px !important;
 }
