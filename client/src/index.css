@@ -312,17 +312,31 @@ div.max-h-96.overflow-y-auto.space-y-4 {
   border-bottom-right-radius: 0px !important;
 }
 
-/* FIX 1: Form Elements tabs - target with maximum specificity */
-.form-elements-tabslist button.form-elements-tab,
-.form-elements-tabslist .form-elements-tab,
-button[value="add-fields"].form-elements-tab,
-button[value="custom-fields"].form-elements-tab,
-button[value="styling"].form-elements-tab {
-  border-radius: 6px !important;
-  border-top-left-radius: 6px !important;
-  border-top-right-radius: 6px !important;
-  border-bottom-left-radius: 6px !important;
-  border-bottom-right-radius: 6px !important;
+/* ELEGANT SOLUTION: Active tabs with solid background instead of just border */
+
+/* Form Elements tabs - active state with solid background */
+.form-elements-tab[data-state="active"] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-bottom: none !important;
+}
+
+.form-elements-tab[data-state="active"] svg {
+  color: white !important;
+}
+
+/* Workflows tabs - active state with solid background */
+.workflows-tab[data-state="active"] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-bottom: none !important;
+}
+
+/* Social Media tabs - active state with solid background */
+.social-media-tab[data-state="active"] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-bottom: none !important;
 }
 
 /* Fix Accordion content display issues */
