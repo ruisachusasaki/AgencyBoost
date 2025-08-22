@@ -16,6 +16,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import type { Department, Staff, Position, InsertPosition } from "@shared/schema";
 
 const positionFormSchema = z.object({
@@ -527,7 +529,7 @@ export default function TeamDetail() {
                       Add Position
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Create New Position</DialogTitle>
                       <DialogDescription>
@@ -554,9 +556,25 @@ export default function TeamDetail() {
                           name="description"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Description</FormLabel>
+                              <FormLabel>Position Job Description</FormLabel>
                               <FormControl>
-                                <Input placeholder="Brief description of this position" {...field} />
+                                <div className="min-h-[300px]">
+                                  <ReactQuill
+                                    theme="snow"
+                                    value={field.value || ""}
+                                    onChange={field.onChange}
+                                    placeholder="Detailed description of this position, responsibilities, requirements, etc."
+                                    style={{ height: "250px" }}
+                                    modules={{
+                                      toolbar: [
+                                        [{ 'header': [1, 2, false] }],
+                                        ['bold', 'italic', 'underline'],
+                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                        ['clean']
+                                      ],
+                                    }}
+                                  />
+                                </div>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -706,7 +724,7 @@ export default function TeamDetail() {
 
       {/* Edit Position Dialog */}
       <Dialog open={isEditPositionDialogOpen} onOpenChange={setIsEditPositionDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Position</DialogTitle>
             <DialogDescription>
@@ -735,7 +753,23 @@ export default function TeamDetail() {
                   <FormItem>
                     <FormLabel>Position Job Description</FormLabel>
                     <FormControl>
-                      <Input placeholder="Brief description of this position" {...field} />
+                      <div className="min-h-[300px]">
+                        <ReactQuill
+                          theme="snow"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          placeholder="Detailed description of this position, responsibilities, requirements, etc."
+                          style={{ height: "250px" }}
+                          modules={{
+                            toolbar: [
+                              [{ 'header': [1, 2, false] }],
+                              ['bold', 'italic', 'underline'],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              ['clean']
+                            ],
+                          }}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
