@@ -291,17 +291,7 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
-/* Clean simple approach - just add the separator line */
-[data-radix-tabs-list] {
-  border-bottom: 1px solid #e5e7eb !important;
-  width: 100% !important;
-}
-
-/* Also try the wrapper div */
-div:has([data-radix-tabs-list]) {
-  border-bottom: 1px solid #e5e7eb !important;
-  width: 100% !important;
-}
+/* Remove the Radix targeting since it's not working */
 
 /* Fix Accordion content display issues */
 [data-radix-accordion-content] {
