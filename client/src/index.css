@@ -265,6 +265,14 @@ button.inline-flex.items-center.justify-center,
 
 /* Fix filter containers specifically */
 .min-w-\[160px\] [data-radix-select-trigger],
+.min-w-\[160px\] button[role="combobox"],
+.min-w-\[160px\] .flex.h-10,
 button[variant="outline"] {
+  border-radius: 6px !important;
+}
+
+/* Target Radix Select components more specifically */
+[data-radix-select-trigger].flex.h-10,
+[role="combobox"][data-radix-select-trigger] {
   border-radius: 6px !important;
 }
