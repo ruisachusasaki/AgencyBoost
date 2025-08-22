@@ -948,7 +948,11 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
       fontFamily: labels.fontFamily || 'Inter, sans-serif',
       fontSize: `${labels.fontSize || 14}px`,
       fontWeight: labels.fontWeight || 500,
-      display: layout.showLabels !== false ? 'block' : 'none'
+      display: layout.showLabels !== false ? 'block' : 'none',
+      // TEMP TEST: Add obvious styling to see if labels can be styled at all
+      backgroundColor: 'yellow',
+      border: '2px solid red',
+      padding: '4px'
     };
   };
 
