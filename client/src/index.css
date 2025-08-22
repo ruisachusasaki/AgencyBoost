@@ -346,3 +346,18 @@ input[type="checkbox"]:not(.bulk-action-checkbox),
 .rounded-full {
   border-radius: var(--border-radius-pill) !important;
 }
+
+/* Preserve toggle switches - keep them rounded */
+[data-radix-switch-root],
+[data-testid="switch-preview-mode"],
+[data-testid^="switch-"],
+.peer.inline-flex.h-6.w-11,
+[data-radix-switch-thumb] {
+  border-radius: var(--border-radius-pill) !important;
+}
+
+/* Specifically target switch components */
+button[role="switch"],
+[aria-checked] {
+  border-radius: var(--border-radius-pill) !important;
+}
