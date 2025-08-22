@@ -255,3 +255,24 @@ td .flex.items-center.justify-center [data-state] {
 .flex-shrink-0 button[role="checkbox"] [data-state] {
   border-radius: 50% !important;
 }
+
+/* Fix oval buttons and containers - force rectangular appearance */
+button,
+[role="button"],
+.inline-flex,
+select,
+input[type="text"],
+input[type="email"],
+input[type="search"],
+[role="combobox"],
+[data-radix-select-trigger],
+.border {
+  border-radius: 6px !important;
+}
+
+/* Override any rounded-* classes that might be too round */
+.rounded-md,
+.rounded-lg,
+.rounded-xl {
+  border-radius: 6px !important;
+}
