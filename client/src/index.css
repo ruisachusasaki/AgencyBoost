@@ -284,13 +284,6 @@ button[variant="outline"] {
   border-radius: 6px !important;
 }
 
-/* Fix Accordion components - ensure proper borders */
-[data-radix-accordion-item],
-.border-b {
-  border-bottom: 1px solid hsl(var(--border)) !important;
-  border-radius: 0 !important;
-}
-
 /* Fix universal tab separator issue */
 .border-b {
   border-bottom: 1px solid #e5e7eb !important;
@@ -354,7 +347,7 @@ button.input-style-line:focus,
   border-right: none !important;
   border-radius: 0 !important;
   background-color: transparent !important;
-  border-bottom: 5px solid #ef4444 !important; /* Extra thick red line for debugging */
+  border-bottom: 2px solid #3b82f6 !important;
   box-shadow: none !important;
 }
 
