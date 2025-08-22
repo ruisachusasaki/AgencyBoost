@@ -11,14 +11,12 @@ const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <div 
-    className="relative w-full"
-    style={{
-      borderBottom: '1px solid #e5e7eb',
-      width: '100%',
+  <div style={{ 
+      width: '100vw', 
+      marginLeft: 'calc(-50vw + 50%)',
+      borderBottom: '2px solid #ef4444',
       position: 'relative'
-    }}
-  >
+    }}>
     <TabsPrimitive.List
       ref={ref}
       className={cn(
