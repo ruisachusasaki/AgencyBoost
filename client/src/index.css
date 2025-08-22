@@ -292,8 +292,7 @@ button[variant="outline"] {
 }
 
 /* Fix Accordion content display issues */
-[data-radix-accordion-content],
-.overflow-hidden {
+[data-radix-accordion-content] {
   overflow: visible !important;
   border-radius: 0 !important;
 }
