@@ -1213,6 +1213,8 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
         ...updates
       }
     };
+    console.log("updateStyling called:", section, updates);
+    console.log("New styling object:", newStyling);
     onUpdateStyling(newStyling);
   };
 
@@ -1445,7 +1447,10 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Input Style</Label>
-                <Select value={styling.inputFields.style} onValueChange={(value) => updateStyling('inputFields', { style: value })}>
+                <Select value={styling.inputFields.style} onValueChange={(value) => {
+                  console.log("Input Style changed to:", value);
+                  updateStyling('inputFields', { style: value });
+                }}>
                   <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
