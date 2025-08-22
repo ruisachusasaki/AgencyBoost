@@ -72,16 +72,14 @@ export default function Campaigns() {
     queryKey: ["/api/custom-fields"],
   });
 
-  // Fetch forms for forms tab count (will be used by FormsTab component)
+  // Fetch forms for forms tab count (always load to show correct count)
   const { data: formsData = [] } = useQuery({
     queryKey: ["/api/forms"],
-    enabled: activeTab === "forms", // Only fetch when forms tab is active
   });
 
-  // Fetch form folders data
+  // Fetch form folders data (always load to show correct count)
   const { data: formFolders = [] } = useQuery<Array<{id: string; name: string; description?: string; order: number}>>({
     queryKey: ['/api/form-folders'],
-    enabled: activeTab === "forms", // Only fetch when forms tab is active
   });
 
   // Define available merge tags based on client schema - dynamic with custom fields
