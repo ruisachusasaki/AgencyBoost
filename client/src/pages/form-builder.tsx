@@ -915,22 +915,28 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
       margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px`,
     };
 
-    // Apply styling based on input style preference
+    // Apply styling based on input style preference - EXTREME DEBUG MODE
     if (inputFields.style === 'line') {
-      // Line style - transparent background, only bottom border
+      // Line style - RED background with thick bottom border - IMPOSSIBLE TO MISS
       Object.assign(inputStyle, {
-        backgroundColor: 'transparent',
+        backgroundColor: 'red !important',
+        color: 'white !important',
         border: 'none',
-        borderBottom: `${inputFields.borderWidth || 1}px solid ${inputFields.borderColor || '#d1d5db'}`,
+        borderBottom: '8px solid black !important',
         borderRadius: '0',
         outline: 'none',
+        fontWeight: 'bold',
+        fontSize: '18px',
       });
     } else {
-      // Box style - full border with background
+      // Box style - GREEN background with thick border - IMPOSSIBLE TO MISS
       Object.assign(inputStyle, {
-        backgroundColor: '#ffffff',
-        border: `${inputFields.borderWidth || 1}px solid ${inputFields.borderColor || '#d1d5db'}`,
-        borderRadius: `${inputFields.cornerRadius || 6}px`,
+        backgroundColor: 'green !important',
+        color: 'white !important',
+        border: '8px solid blue !important',
+        borderRadius: '20px !important',
+        fontWeight: 'bold',
+        fontSize: '18px',
       });
     }
 
@@ -973,13 +979,16 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   
   // Debug the styling state and CSS classes
   const appliedClasses = `form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`;
-  console.log("🔍 FormFieldPreview Debug:", {
+  console.log("🔥 INLINE STYLES DEBUG:", {
     inputStyle: styling?.inputFields?.style,
     fieldType: field.type,
     fieldId: field.id,
     appliedClasses: appliedClasses,
     hasLineStyle: styling?.inputFields?.style === 'line',
-    hasBoxStyle: styling?.inputFields?.style === 'box'
+    hasBoxStyle: styling?.inputFields?.style === 'box',
+    inlineStyles: fieldStyles,
+    shouldBeRed: styling?.inputFields?.style === 'line',
+    shouldBeGreen: styling?.inputFields?.style !== 'line'
   });
   
   // Load Google Font if needed
