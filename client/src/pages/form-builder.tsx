@@ -971,11 +971,15 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
   
-  // Debug the styling state
+  // Debug the styling state and CSS classes
+  const appliedClasses = `form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`;
   console.log("🔍 FormFieldPreview Debug:", {
     inputStyle: styling?.inputFields?.style,
     fieldType: field.type,
-    fieldId: field.id
+    fieldId: field.id,
+    appliedClasses: appliedClasses,
+    hasLineStyle: styling?.inputFields?.style === 'line',
+    hasBoxStyle: styling?.inputFields?.style === 'box'
   });
   
   // Load Google Font if needed

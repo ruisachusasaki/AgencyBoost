@@ -331,25 +331,33 @@ button[variant="outline"] {
   background-color: revert !important;
 }
 
-/* Form input styling with maximum specificity to override all other styles */
-.input-style-line,
-.input-style-line:focus,
-.input-style-line:hover,
-.input-style-line:focus-visible {
+/* Form input styling - using even more specific selectors with higher specificity */
+input.input-style-line,
+select.input-style-line,
+button.input-style-line,
+[data-radix-select-trigger].input-style-line,
+input.input-style-line:focus,
+select.input-style-line:focus,
+button.input-style-line:focus,
+[data-radix-select-trigger].input-style-line:focus {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
   border-radius: 0 !important;
   background-color: transparent !important;
-  border-bottom: 3px solid #ef4444 !important; /* Temporary red line for visual debugging */
+  border-bottom: 5px solid #ef4444 !important; /* Extra thick red line for debugging */
   box-shadow: none !important;
 }
 
-.input-style-box,
-.input-style-box:focus,
-.input-style-box:hover,
-.input-style-box:focus-visible {
-  border: 3px solid #22c55e !important; /* Temporary green border for visual debugging */
+input.input-style-box,
+select.input-style-box,
+button.input-style-box,
+[data-radix-select-trigger].input-style-box,
+input.input-style-box:focus,
+select.input-style-box:focus,
+button.input-style-box:focus,
+[data-radix-select-trigger].input-style-box:focus {
+  border: 5px solid #22c55e !important; /* Extra thick green border for debugging */
   border-radius: 6px !important;
   background-color: #ffffff !important;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
@@ -404,4 +412,15 @@ input[type="checkbox"]:not(.bulk-action-checkbox),
 button[role="switch"],
 [aria-checked] {
   border-radius: var(--border-radius-pill) !important;
+}
+
+/* Ultimate debugging - if these work, our CSS is loading */
+.input-style-line {
+  background-color: red !important;
+  color: white !important;
+}
+
+.input-style-box {
+  background-color: green !important;
+  color: white !important;
 }
