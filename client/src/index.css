@@ -291,6 +291,39 @@ nav.-mb-px,
   border-bottom: 1px solid #e5e7eb !important;
 }
 
+/* TARGETED FIXES for the 5 specific styling issues */
+
+/* 1. Form Builder tabs should match Tasks styling (straight corners) */
+.form-builder-tabs [role="tab"] {
+  border-radius: 6px !important;
+}
+
+/* 2. Fix CustomFieldsAccordion oval hiding custom fields */
+.custom-fields-accordion [data-radix-accordion-item],
+.custom-fields-accordion [data-radix-accordion-content],
+.custom-fields-accordion [data-radix-accordion-trigger] {
+  border-radius: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+/* 3. Fix all Accordion borders to be straight (not curved) */
+[data-radix-accordion-item] {
+  border-radius: 0 !important;
+}
+
+/* 4. Fix Workflows tabs - active state should be square not rounded */
+.workflows-page [role="tab"],
+.workflows-page [role="tablist"] [role="tab"] {
+  border-radius: 6px !important;
+}
+
+/* 5. Fix Social Media tabs - active state should be square not rounded */
+.social-media-page [role="tab"],
+.social-media-page [role="tablist"] [role="tab"] {
+  border-radius: 6px !important;
+}
+
 /* Fix Accordion content display issues */
 [data-radix-accordion-content] {
   overflow: visible !important;

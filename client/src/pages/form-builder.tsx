@@ -564,7 +564,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
               <CardTitle>Form Elements</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="add-fields" className="w-full">
+              <Tabs defaultValue="add-fields" className="w-full form-builder-tabs">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="add-fields">Add Fields</TabsTrigger>
                   <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
@@ -1726,7 +1726,7 @@ function CustomFieldsAccordion({ customFields, customFieldFolders, onAddField }:
   });
 
   return (
-    <Accordion type="multiple" className="w-full">
+    <Accordion type="multiple" className="w-full custom-fields-accordion">
       {sortedFolders.map((folderName) => (
         <AccordionItem key={folderName} value={folderName} className="border-none">
           <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">
