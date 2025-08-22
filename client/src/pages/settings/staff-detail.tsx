@@ -107,7 +107,7 @@ export default function StaffDetail() {
         zip: staffMember.zip || "",
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
-        department: staffMember.department || "",
+        department: staffMember.department || "none",
         managerId: staffMember.managerId || "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
@@ -197,10 +197,11 @@ export default function StaffDetail() {
 
   const onSubmit = (data: StaffFormData) => {
     console.log("Form data before processing:", data);
-    // Convert "none" back to null for managerId
+    // Convert "none" back to null for managerId and department
     const submitData = {
       ...data,
-      managerId: data.managerId === "none" ? null : (data.managerId || null)
+      managerId: data.managerId === "none" ? null : (data.managerId || null),
+      department: data.department === "none" ? null : (data.department || null)
     };
     console.log("Submit data after processing:", submitData);
     updateMutation.mutate(submitData as any);
@@ -446,7 +447,7 @@ export default function StaffDetail() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No Department</SelectItem>
+                            <SelectItem value="none">No Department</SelectItem>
                             {departments.map((dept) => (
                               <SelectItem key={dept.id} value={dept.name}>
                                 {dept.name}
