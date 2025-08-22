@@ -291,6 +291,16 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
+/* Force tab separator line to show */
+[data-radix-tabs-list] {
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+/* Ensure TabsList wrapper div border shows */
+div:has([data-radix-tabs-list]) {
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
 /* Fix Accordion content display issues */
 [data-radix-accordion-content] {
   overflow: visible !important;
