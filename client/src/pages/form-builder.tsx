@@ -1207,34 +1207,74 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     }
   };
 
-  // Create ultra-high-specificity CSS to override shadcn components
+  // Create ultra-high-specificity CSS to override all input styling
   const createForceStyleCSS = () => {
     const fieldId = field.id || 'default';
     if (styling?.inputFields?.style === 'line') {
       return `
-        [data-testid="preview-input-${fieldId}"],
-        [data-testid="preview-date-${fieldId}"],  
-        [data-testid="preview-select-${fieldId}"] > button {
+        /* Target input with maximum specificity and override browser defaults */
+        div div div [data-testid="preview-input-${fieldId}"],
+        div div div [data-testid="preview-date-${fieldId}"],
+        div.space-y-2 [data-testid="preview-input-${fieldId}"],
+        div.space-y-2 [data-testid="preview-date-${fieldId}"],
+        input[data-testid="preview-input-${fieldId}"],
+        input[data-testid="preview-date-${fieldId}"] {
           background-color: red !important;
+          background: red !important;
           color: white !important;
           border: none !important;
           border-bottom: 8px solid black !important;
           border-radius: 0 !important;
           font-weight: bold !important;
           font-size: 18px !important;
+          outline: none !important;
+          box-shadow: none !important;
+          appearance: none !important;
+          -webkit-appearance: none !important;
+          -moz-appearance: none !important;
+        }
+        
+        /* Force input focus states too */
+        input[data-testid="preview-input-${fieldId}"]:focus,
+        input[data-testid="preview-date-${fieldId}"]:focus {
+          background-color: darkred !important;
+          background: darkred !important;
+          border-bottom: 8px solid black !important;
+          outline: none !important;
+          box-shadow: none !important;
         }
       `;
     } else {
       return `
-        [data-testid="preview-input-${fieldId}"],
-        [data-testid="preview-date-${fieldId}"],
-        [data-testid="preview-select-${fieldId}"] > button {
+        /* Target input with maximum specificity and override browser defaults */
+        div div div [data-testid="preview-input-${fieldId}"],
+        div div div [data-testid="preview-date-${fieldId}"],
+        div.space-y-2 [data-testid="preview-input-${fieldId}"],
+        div.space-y-2 [data-testid="preview-date-${fieldId}"],
+        input[data-testid="preview-input-${fieldId}"],
+        input[data-testid="preview-date-${fieldId}"] {
           background-color: green !important;
+          background: green !important;
           color: white !important;
           border: 8px solid blue !important;
           border-radius: 20px !important;
           font-weight: bold !important;
           font-size: 18px !important;
+          outline: none !important;
+          box-shadow: none !important;
+          appearance: none !important;
+          -webkit-appearance: none !important;
+          -moz-appearance: none !important;
+        }
+        
+        /* Force input focus states too */
+        input[data-testid="preview-input-${fieldId}"]:focus,
+        input[data-testid="preview-date-${fieldId}"]:focus {
+          background-color: darkgreen !important;
+          background: darkgreen !important;
+          border: 8px solid blue !important;
+          outline: none !important;
+          box-shadow: none !important;
         }
       `;
     }
