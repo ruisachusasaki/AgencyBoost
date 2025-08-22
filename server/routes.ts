@@ -3759,23 +3759,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Staff/Users Management API
   app.get("/api/staff", async (req, res) => {
     try {
-      const { search } = req.query;
-      let query = db.select().from(staff).where(eq(staff.isActive, true));
+      const { search, departmentId } = req.query;
+      let whereConditions = [eq(staff.isActive, true)];
       
       if (search && typeof search === 'string') {
-        query = db.select().from(staff)
-          .where(
-            and(
-              eq(staff.isActive, true),
-              or(
-                like(sql`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
-                like(staff.email, `%${search}%`),
-                like(staff.department, `%${search}%`)
-              )
-            )
-          );
+        whereConditions.push(
+          or(
+            like(sql`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
+            like(staff.email, `%${search}%`),
+            like(staff.department, `%${search}%`)
+          )
+        );
+      }
+
+      // Filter by department ID - lookup department name first
+      if (departmentId && typeof departmentId === 'string') {
+        const [department] = await db.select().from(departments).where(eq(departments.id, departmentId));
+        if (department) {
+          whereConditions.push(eq(staff.department, department.name));
+        }
       }
       
+      const query = db.select().from(staff).where(and(...whereConditions));
       const staffMembers = await query.orderBy(asc(staff.firstName));
       res.json(staffMembers);
     } catch (error) {
