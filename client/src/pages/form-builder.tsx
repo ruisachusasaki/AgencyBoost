@@ -466,7 +466,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 w-full">
+      <div className="flex flex-col lg:flex-row gap-4 w-full form-builder-container">
         {/* Form Settings - Left Column */}
         <div className="lg:w-[400px] xl:w-[450px] flex-shrink-0">
           <Card className="h-fit">

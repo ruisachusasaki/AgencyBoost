@@ -304,44 +304,45 @@ button[variant="outline"] {
   border-radius: 6px !important;
 }
 
-/* AGGRESSIVE FIX: Target ALL possible oval containers in Form Builder */
-/* Use very broad selectors to catch everything */
+/* PROPER CSS ARCHITECTURE: Component-specific targeting */
 
-/* All button elements with potential oval styling */
-* button,
-* [role="combobox"],
-* [data-radix-select-trigger],
-* .h-8,
-* .h-10,
-* select {
-  border-radius: 6px !important;
+/* Define design system variables */
+:root {
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  --border-radius-full: 50%;
+  --border-radius-pill: 9999px;
 }
 
-/* Specifically target any remaining rounded elements */
-* {
-  border-radius: 6px !important;
+/* Form Builder specific components */
+.form-builder-container [data-radix-select-trigger],
+.form-builder-container [role="combobox"],
+.form-builder-container button:not(.circular),
+.form-builder-container .h-8:not(.circular),
+.form-builder-container .h-10:not(.circular) {
+  border-radius: var(--border-radius-md) !important;
 }
 
-/* Override with exceptions for elements that should be circular */
-/* Keep task completion checkboxes circular */
-input[type="checkbox"]:not(.bulk-action-checkbox),
+/* Accordion components within form builder */
+.form-builder-container [data-radix-accordion-content] [data-radix-select-trigger],
+.form-builder-container [data-radix-accordion-content] button {
+  border-radius: var(--border-radius-md) !important;
+}
+
+/* Preserve circular elements */
+.circular,
+.rounded-full,
 .task-completion-checkbox,
-[data-task-completion-checkbox] {
-  border-radius: 50% !important;
+input[type="checkbox"]:not(.bulk-action-checkbox),
+.profile-image,
+.avatar {
+  border-radius: var(--border-radius-full) !important;
 }
 
-/* Keep avatars and profile images circular */
-.w-8.h-8.rounded-full,
-.w-10.h-10.rounded-full,
-.w-12.h-12.rounded-full,
-[data-avatar],
-.profile-image {
-  border-radius: 50% !important;
-}
-
-/* Keep badges and pills rounded */
+/* Preserve pill-shaped elements */
 .badge,
 .pill,
-[data-badge] {
-  border-radius: 9999px !important;
+.rounded-full {
+  border-radius: var(--border-radius-pill) !important;
 }

@@ -9,6 +9,15 @@ Bundle architecture preference: Collection-based bundles.
 UX Organization: Project Templates integrated as tabs under Projects section rather than separate navigation (user feedback: "much better UX").
 Checkbox Design: Bulk action checkboxes should be square, task completion checkboxes should be circular (implemented with custom CSS targeting).
 
+## CSS Architecture Guidelines
+**Problem**: Broad CSS selectors (like `* { border-radius: 50% !important }`) cause styling issues across unrelated components.
+**Solution**: Component-scoped CSS with design system variables.
+- Use CSS custom properties for consistent design tokens
+- Target specific component containers (e.g., `.form-builder-container`)
+- Avoid universal selectors (`*`) and overly broad rules
+- Preserve semantic circular elements (checkboxes, avatars, badges)
+- Date implemented: August 22, 2025
+
 ## System Architecture
 
 ### Core Technologies
