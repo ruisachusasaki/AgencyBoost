@@ -23,17 +23,32 @@ const positionFormSchema = z.object({
   description: z.string().optional(),
 });
 
+const editTeamFormSchema = z.object({
+  name: z.string().min(1, "Team name is required"),
+  description: z.string().optional(),
+});
+
 type PositionFormData = z.infer<typeof positionFormSchema>;
+type EditTeamFormData = z.infer<typeof editTeamFormSchema>;
 
 export default function TeamDetail() {
   const { toast } = useToast();
   const [, params] = useRoute("/settings/teams/:id");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddPositionDialogOpen, setIsAddPositionDialogOpen] = useState(false);
+  const [isEditTeamDialogOpen, setIsEditTeamDialogOpen] = useState(false);
   const teamId = params?.id;
 
   const positionForm = useForm<PositionFormData>({
     resolver: zodResolver(positionFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    }
+  });
+
+  const editTeamForm = useForm<EditTeamFormData>({
+    resolver: zodResolver(editTeamFormSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -117,9 +132,46 @@ export default function TeamDetail() {
     createPositionMutation.mutate(data);
   };
 
+  // Update team mutation
+  const updateTeamMutation = useMutation({
+    mutationFn: async (data: EditTeamFormData) => {
+      return apiRequest("PUT", `/api/departments/${teamId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
+      setIsEditTeamDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Team updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update team"
+      });
+    }
+  });
+
+  const onTeamSubmit = (data: EditTeamFormData) => {
+    updateTeamMutation.mutate(data);
+  };
+
   const handleDeletePosition = (positionId: string, positionName: string) => {
     if (!confirm(`Are you sure you want to delete the position "${positionName}"?`)) return;
     deletePositionMutation.mutate(positionId);
+  };
+
+  const handleEditTeam = () => {
+    if (team) {
+      editTeamForm.reset({
+        name: team.name,
+        description: team.description || "",
+      });
+      setIsEditTeamDialogOpen(true);
+    }
   };
 
   if (teamLoading) {
@@ -198,7 +250,7 @@ export default function TeamDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" data-testid="button-edit-team">
+          <Button variant="outline" size="sm" onClick={handleEditTeam} data-testid="button-edit-team">
             <Edit className="h-4 w-4 mr-2" />
             Edit Team
           </Button>
@@ -548,6 +600,60 @@ export default function TeamDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Team Dialog */}
+      <Dialog open={isEditTeamDialogOpen} onOpenChange={setIsEditTeamDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team</DialogTitle>
+            <DialogDescription>
+              Update the team information
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editTeamForm}>
+            <form onSubmit={editTeamForm.handleSubmit(onTeamSubmit)} className="space-y-4">
+              <FormField
+                control={editTeamForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Team Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Marketing, Sales, Development" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editTeamForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Brief description of this team" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditTeamDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateTeamMutation.isPending}>
+                  {updateTeamMutation.isPending ? "Updating..." : "Update Team"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
