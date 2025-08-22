@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,13 @@ const staffFormSchema = z.object({
   position: z.string().optional(),
 });
 
+const teamFormSchema = z.object({
+  name: z.string().min(1, "Team name is required"),
+  description: z.string().optional(),
+});
+
 type StaffFormData = z.infer<typeof staffFormSchema>;
+type TeamFormData = z.infer<typeof teamFormSchema>;
 
 type SortField = 'name' | 'email' | 'phone' | 'role';
 type SortOrder = 'asc' | 'desc';
@@ -38,6 +44,8 @@ export default function Staff() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("staff");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddTeamDialogOpen, setIsAddTeamDialogOpen] = useState(false);
+  const [isTeamSettingsDialogOpen, setIsTeamSettingsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -50,6 +58,14 @@ export default function Staff() {
       email: "",
       phone: "",
       roleId: "",
+    }
+  });
+
+  const teamForm = useForm<TeamFormData>({
+    resolver: zodResolver(teamFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
     }
   });
   
@@ -67,6 +83,15 @@ export default function Staff() {
   // Fetch available roles for the dropdown
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ["/api/roles"],
+  });
+
+  // Fetch departments (teams) and positions
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
+    queryKey: ['/api/departments'],
+  });
+
+  const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
+    queryKey: ['/api/positions'],
   });
 
   // Create staff mutation
@@ -123,8 +148,35 @@ export default function Staff() {
     }
   });
 
+  // Create team mutation
+  const createTeamMutation = useMutation({
+    mutationFn: async (data: TeamFormData) => {
+      return apiRequest("POST", "/api/departments", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
+      setIsAddTeamDialogOpen(false);
+      teamForm.reset();
+      toast({
+        title: "Success",
+        description: "Team created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create team"
+      });
+    }
+  });
+
   const onSubmit = (data: StaffFormData) => {
     createStaffMutation.mutate(data);
+  };
+
+  const onTeamSubmit = (data: TeamFormData) => {
+    createTeamMutation.mutate(data);
   };
 
   const handleDeleteStaff = async (staffId: string, staffName: string) => {
@@ -556,23 +608,218 @@ export default function Staff() {
 
       {activeTab === "teams" && (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Teams Management</CardTitle>
-              <CardDescription>
-                Manage departments and positions for your organization
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground">Teams Management</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Coming soon! Manage departments and positions here.
-                </p>
+          {/* Header with action buttons */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold">Teams Overview</h2>
+              <p className="text-sm text-muted-foreground">
+                Manage teams and their positions
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setIsTeamSettingsDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Team Settings
+              </Button>
+              <Button 
+                onClick={() => setIsAddTeamDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Team
+              </Button>
+            </div>
+          </div>
+
+          {/* Teams Grid */}
+          {departmentsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : departments.length === 0 ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="text-center">
+                  <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-muted-foreground mb-2">No Teams Yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Create your first team to organize your staff members
+                  </p>
+                  <Button 
+                    onClick={() => setIsAddTeamDialogOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create First Team
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {departments.map((department) => {
+                const teamPositions = positions.filter(p => p.departmentId === department.id);
+                const staffCount = staffMembers.filter(s => s.departmentId === department.id).length;
+                
+                return (
+                  <Link key={department.id} href={`/settings/teams/${department.id}`}>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-md">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg">{department.name}</h3>
+                              {department.description && (
+                                <p className="text-sm text-muted-foreground">
+                                  {department.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Staff Members</span>
+                            <span className="font-medium">{staffCount}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Positions</span>
+                            <span className="font-medium">{teamPositions.length}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add Team Dialog */}
+          <Dialog open={isAddTeamDialogOpen} onOpenChange={setIsAddTeamDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Team</DialogTitle>
+                <DialogDescription>
+                  Add a new team to organize your staff members
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...teamForm}>
+                <form onSubmit={teamForm.handleSubmit(onTeamSubmit)} className="space-y-4">
+                  <FormField
+                    control={teamForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Team Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Marketing, Sales, Development" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={teamForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Brief description of this team" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsAddTeamDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createTeamMutation.isPending}>
+                      {createTeamMutation.isPending ? "Creating..." : "Create Team"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Team Settings Dialog */}
+          <Dialog open={isTeamSettingsDialogOpen} onOpenChange={setIsTeamSettingsDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Team Settings</DialogTitle>
+                <DialogDescription>
+                  Manage positions across all teams
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">Positions</h3>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Position
+                  </Button>
+                </div>
+                {positionsLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-10 bg-muted rounded animate-pulse"></div>
+                    ))}
+                  </div>
+                ) : positions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <UsersIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No positions created yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {positions.map((position) => {
+                      const department = departments.find(d => d.id === position.departmentId);
+                      return (
+                        <div key={position.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div>
+                            <div className="font-medium">{position.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {department?.name} • {position.description}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsTeamSettingsDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>
