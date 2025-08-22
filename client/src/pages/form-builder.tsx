@@ -971,29 +971,23 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
   
-  // Debug the styling state and CSS classes
-  const appliedClasses = `form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`;
-  console.log("🔥 INLINE STYLES DEBUG:", {
-    inputStyle: styling?.inputFields?.style,
-    fieldType: field.type,
-    fieldId: field.id,
-    appliedClasses: appliedClasses,
-    hasLineStyle: styling?.inputFields?.style === 'line',
-    hasBoxStyle: styling?.inputFields?.style === 'box',
-    inlineStyles: fieldStyles,
-    shouldBeRed: styling?.inputFields?.style === 'line',
-    shouldBeGreen: styling?.inputFields?.style !== 'line'
-  });
   
   // Load Google Font if needed
   useEffect(() => {
     const loadGoogleFont = (fontFamily: string) => {
-      if (!fontFamily || fontFamily === 'inherit' || fontFamily.includes('sans-serif') || fontFamily.includes('serif') || fontFamily.includes('monospace')) {
-        console.log('🚫 Skipping font load for:', fontFamily);
+      if (!fontFamily || fontFamily === 'inherit') {
         return;
       }
       
-      const fontName = fontFamily.split(',')[0].replace(/['"]/g, '');
+      // Extract the primary font name before checking if it's a system font
+      const fontName = fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+      
+      // Only skip if the PRIMARY font name is a system font
+      const systemFonts = ['sans-serif', 'serif', 'monospace', 'cursive', 'fantasy', 'Arial', 'Times', 'Courier', 'Helvetica', 'Georgia'];
+      if (systemFonts.includes(fontName)) {
+        return;
+      }
+      
       const existingLink = document.querySelector(`link[href*="${fontName.replace(/\s+/g, '+')}"]`);
       
       if (!existingLink) {
@@ -1001,19 +995,10 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap`;
         link.rel = 'stylesheet';
         document.head.appendChild(link);
-        console.log('🔤 Loading Google Font:', fontName, 'URL:', link.href);
-      } else {
-        console.log('✅ Font already loaded:', fontName);
       }
     };
 
     if (styling) {
-      console.log('🎨 Font loading check:', {
-        labelFont: styling.labels.fontFamily,
-        inputFont: styling.inputFields.fontFamily,
-        placeholderFont: styling.placeholders.fontFamily
-      });
-      
       loadGoogleFont(styling.labels.fontFamily);
       loadGoogleFont(styling.inputFields.fontFamily);
       loadGoogleFont(styling.placeholders.fontFamily);
