@@ -291,16 +291,17 @@ nav.-mb-px,
   border-bottom: 1px solid #e5e7eb !important;
 }
 
-/* SURGICAL FIXES with unique class names for specific tabs */
+/* SURGICAL FIXES with unique class names and maximum specificity */
 
-/* 1. Form Elements tabs (Add Fields, Custom Fields, Style) - square corners like Tasks */
-.form-elements-tab,
-.form-elements-tabslist button,
-.form-elements-tabs [data-state="active"] {
+/* 1. Form Elements tabs - force square corners with highest specificity */
+.form-elements-tabs .form-elements-tabslist .form-elements-tab,
+.form-elements-tabslist.form-elements-tabslist button.form-elements-tab,
+button.form-elements-tab[data-state="active"],
+button.form-elements-tab[data-state="inactive"] {
   border-radius: 6px !important;
 }
 
-/* 2. Fix CustomFieldsAccordion oval hiding custom fields */
+/* 2. Fix CustomFieldsAccordion oval hiding custom fields - ALREADY WORKING */
 .custom-fields-accordion,
 .custom-fields-accordion * {
   border-radius: 0 !important;
@@ -308,24 +309,29 @@ nav.-mb-px,
   background: transparent !important;
 }
 
-/* 3. Fix all Accordion borders to be straight (not curved) */
-[data-radix-accordion-item],
-[data-radix-accordion-trigger],
-[data-radix-accordion-content] {
+/* 3. Fix ALL Accordion borders to be straight with maximum force */
+div[data-radix-accordion-item],
+button[data-radix-accordion-trigger],
+div[data-radix-accordion-content],
+[data-radix-accordion-item][data-radix-accordion-item],
+[data-radix-accordion-trigger][data-radix-accordion-trigger],
+[data-radix-accordion-content][data-radix-accordion-content] {
   border-radius: 0 !important;
 }
 
-/* 4. Fix Workflows tabs - active state should be square */
-.workflows-tab,
-.workflows-tabslist button,
-.workflows-tabslist [data-state="active"] {
+/* 4. Fix Workflows tabs - maximum specificity for active state */
+.workflows-tabslist.workflows-tabslist button.workflows-tab,
+button.workflows-tab[data-state="active"],
+button.workflows-tab[data-state="inactive"],
+.workflows-page button.workflows-tab {
   border-radius: 6px !important;
 }
 
-/* 5. Fix Social Media tabs - active state should be square */
-.social-media-tab,
-.social-media-tabslist button,
-.social-media-tabslist [data-state="active"] {
+/* 5. Fix Social Media tabs - maximum specificity for active state */
+.social-media-tabslist.social-media-tabslist button.social-media-tab,
+button.social-media-tab[data-state="active"],
+button.social-media-tab[data-state="inactive"],
+.social-media-page button.social-media-tab {
   border-radius: 6px !important;
 }
 
