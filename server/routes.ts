@@ -8244,11 +8244,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(formFields)
           .where(eq(formFields.formId, req.params.id));
           
-        const fieldIds = fields.map(f => f.id).filter(Boolean);
+        // Filter out temporary IDs (temp-*) - these are new fields to be created
+        const realFieldIds = fields.map(f => f.id).filter(id => id && !id.startsWith('temp-'));
         
-        // Delete removed fields
+        // Delete removed fields (only delete if not in the real field IDs)
         for (const existingField of existingFields) {
-          if (!fieldIds.includes(existingField.id)) {
+          if (!realFieldIds.includes(existingField.id)) {
             await db.delete(formFields).where(eq(formFields.id, existingField.id));
           }
         }
@@ -8256,14 +8257,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update or create fields
         for (let i = 0; i < fields.length; i++) {
           const field = fields[i];
-          if (field.id) {
+          if (field.id && !field.id.startsWith('temp-')) {
             // Update existing field - exclude timestamp fields
             const { createdAt, ...fieldData } = field;
             await db.update(formFields)
               .set({ ...fieldData, order: i })
               .where(eq(formFields.id, field.id));
           } else {
-            // Create new field - exclude timestamp fields  
+            // Create new field (either no ID or temp ID) - exclude timestamp fields  
             const { createdAt, id, ...fieldData } = field;
             await db.insert(formFields).values({
               ...fieldData,

@@ -967,9 +967,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
   
-  // Debug logging to track style changes
-  console.log("FormFieldPreview - Input style:", styling?.inputFields?.style);
-  console.log("FormFieldPreview - fieldStyles:", fieldStyles);
+  // FormFieldPreview styling applied based on input style preference
   
   // Load Google Font if needed
   useEffect(() => {

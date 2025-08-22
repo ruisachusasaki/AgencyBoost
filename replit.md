@@ -17,6 +17,7 @@ Checkbox Design: Bulk action checkboxes should be square, task completion checkb
 - Avoid universal selectors (`*`) and overly broad rules
 - Preserve semantic circular elements (checkboxes, avatars, badges)
 - **Status**: Successfully implemented - Form Builder oval containers fixed (August 22, 2025)
+- **Critical Bug Fixed**: Form field disappearing issue resolved - server logic now properly handles temporary field IDs when saving custom fields (August 22, 2025)
 - **Best Practice**: Always scope CSS changes to specific component containers to prevent cross-contamination
 
 ## System Architecture
