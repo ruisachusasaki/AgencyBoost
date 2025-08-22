@@ -14,7 +14,8 @@ const TabsList = React.forwardRef<
   <div style={{ 
       width: '100vw', 
       marginLeft: 'calc(-50vw + 50%)',
-      borderBottom: '2px solid #ef4444',
+      backgroundColor: '#ff0000',
+      height: '20px',
       position: 'relative'
     }}>
     <TabsPrimitive.List
