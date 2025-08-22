@@ -291,25 +291,34 @@ nav.-mb-px,
   border-bottom: 1px solid #e5e7eb !important;
 }
 
-/* BRUTE FORCE DEBUGGING - Let's see what we're actually targeting */
+/* NUCLEAR APPROACH - Override ALL border radius properties */
 
-/* TEST: Make ALL tabs bright red to see which ones are being targeted */
+/* Fix tabs with maximum force - target ALL possible states */
 button[role="tab"],
 [data-radix-tabs-trigger],
 .form-elements-tab,
 .workflows-tab,
-.social-media-tab {
-  background-color: red !important;
-  color: white !important;
-  border-radius: 0px !important;
+.social-media-tab,
+button[role="tab"]:hover,
+button[role="tab"]:active,
+button[role="tab"][data-state="active"],
+button[role="tab"][data-state="inactive"] {
+  border-radius: 6px !important;
+  border-top-left-radius: 6px !important;
+  border-top-right-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
 }
 
-/* TEST: Make ALL accordions bright blue */
+/* Fix accordions with maximum force */
 [data-radix-accordion-item],
 [data-radix-accordion-trigger],
 [data-radix-accordion-content] {
-  background-color: blue !important;
   border-radius: 0px !important;
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
 }
 
 /* Fix Accordion content display issues */
