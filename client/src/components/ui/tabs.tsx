@@ -11,14 +11,16 @@ const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-10 items-center justify-center border-b border-border",
-      className
-    )}
-    {...props}
-  />
+  <div className="border-b border-border">
+    <TabsPrimitive.List
+      ref={ref}
+      className={cn(
+        "inline-flex h-10 items-center justify-center -mb-px",
+        className
+      )}
+      {...props}
+    />
+  </div>
 ))
 TabsList.displayName = TabsPrimitive.List.displayName
 
@@ -29,7 +31,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium border-b-2 border-transparent text-gray-500 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-gray-700 hover:border-gray-300 data-[state=active]:border-primary data-[state=active]:text-primary",
+      "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-primary data-[state=active]:text-primary",
       className
     )}
     {...props}
