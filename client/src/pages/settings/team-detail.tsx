@@ -37,6 +37,8 @@ export default function TeamDetail() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddPositionDialogOpen, setIsAddPositionDialogOpen] = useState(false);
   const [isEditTeamDialogOpen, setIsEditTeamDialogOpen] = useState(false);
+  const [isEditPositionDialogOpen, setIsEditPositionDialogOpen] = useState(false);
+  const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const teamId = params?.id;
 
   const positionForm = useForm<PositionFormData>({
@@ -49,6 +51,14 @@ export default function TeamDetail() {
 
   const editTeamForm = useForm<EditTeamFormData>({
     resolver: zodResolver(editTeamFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    }
+  });
+
+  const editPositionForm = useForm<PositionFormData>({
+    resolver: zodResolver(positionFormSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -155,8 +165,37 @@ export default function TeamDetail() {
     }
   });
 
+  // Update position mutation
+  const updatePositionMutation = useMutation({
+    mutationFn: async (data: PositionFormData) => {
+      if (!editingPosition) throw new Error("No position selected for editing");
+      return apiRequest("PUT", `/api/positions/${editingPosition.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments", teamId, "positions"] });
+      setIsEditPositionDialogOpen(false);
+      setEditingPosition(null);
+      editPositionForm.reset();
+      toast({
+        title: "Success",
+        description: "Position updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update position"
+      });
+    }
+  });
+
   const onTeamSubmit = (data: EditTeamFormData) => {
     updateTeamMutation.mutate(data);
+  };
+
+  const onPositionUpdateSubmit = (data: PositionFormData) => {
+    updatePositionMutation.mutate(data);
   };
 
   const handleDeletePosition = (positionId: string, positionName: string) => {
@@ -172,6 +211,15 @@ export default function TeamDetail() {
       });
       setIsEditTeamDialogOpen(true);
     }
+  };
+
+  const handleEditPosition = (position: Position) => {
+    setEditingPosition(position);
+    editPositionForm.reset({
+      name: position.name,
+      description: position.description || "",
+    });
+    setIsEditPositionDialogOpen(true);
   };
 
   if (teamLoading) {
@@ -578,6 +626,7 @@ export default function TeamDetail() {
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleEditPosition(position)}
                           data-testid={`button-edit-position-${position.id}`}
                         >
                           <Edit className="h-4 w-4" />
@@ -648,6 +697,64 @@ export default function TeamDetail() {
                 </Button>
                 <Button type="submit" disabled={updateTeamMutation.isPending}>
                   {updateTeamMutation.isPending ? "Updating..." : "Update Team"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Position Dialog */}
+      <Dialog open={isEditPositionDialogOpen} onOpenChange={setIsEditPositionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Position</DialogTitle>
+            <DialogDescription>
+              Update the position details for {editingPosition?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editPositionForm}>
+            <form onSubmit={editPositionForm.handleSubmit(onPositionUpdateSubmit)} className="space-y-4">
+              <FormField
+                control={editPositionForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Marketing Manager, Sales Rep" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editPositionForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position Job Description</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Brief description of this position" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsEditPositionDialogOpen(false);
+                    setEditingPosition(null);
+                    editPositionForm.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updatePositionMutation.isPending}>
+                  {updatePositionMutation.isPending ? "Updating..." : "Update Position"}
                 </Button>
               </DialogFooter>
             </form>
