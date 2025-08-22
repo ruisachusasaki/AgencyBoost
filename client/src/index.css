@@ -301,22 +301,19 @@ nav.-mb-px,
   background: transparent !important;
 }
 
-/* DEBUG: Find the oval/circular viewport element */
-.max-h-96.overflow-y-auto.space-y-4 {
-  background-color: red !important;
-  border-radius: 0 !important;
-}
-
-/* DEBUG: Target all accordion content areas in form builder */
-[data-radix-accordion-content] {
-  background-color: blue !important;
-  border-radius: 0 !important;
-}
-
-/* DEBUG: Target the entire accordion container */
-.w-full[type="single"] {
-  background-color: green !important;
-  border-radius: 0 !important;
+/* CRITICAL FIX: Style panel viewport oval/circular issue - MAXIMUM FORCE */
+.max-h-96.overflow-y-auto.space-y-4,
+.max-h-96.overflow-y-auto.space-y-4 *,
+div.max-h-96.overflow-y-auto.space-y-4 {
+  border-radius: 0px !important;
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+  border-bottom-left-radius: 0px !important;
+  border-top-left-radius: 0px !important;
 }
 
 /* Fix Accordion content display issues */
