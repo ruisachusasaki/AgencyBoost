@@ -291,49 +291,14 @@ nav.-mb-px,
   border-bottom: 1px solid #e5e7eb !important;
 }
 
-/* ULTIMATE APPROACH - Override with maximum possible specificity */
+/* SAFE APPROACH - Only target the specific problematic elements */
 
-/* Fix tabs with ULTIMATE force - target everything including pseudo-elements */
-html body div button[role="tab"],
-html body div [data-radix-tabs-trigger],
-html body .form-elements-tab,
-html body .workflows-tab,
-html body .social-media-tab,
-html body button[role="tab"]:hover,
-html body button[role="tab"]:active,
-html body button[role="tab"][data-state="active"],
-html body button[role="tab"][data-state="inactive"],
-html body button[role="tab"]::before,
-html body button[role="tab"]::after {
-  border-radius: 6px !important;
-  border-top-left-radius: 6px !important;
-  border-top-right-radius: 6px !important;
-  border-bottom-left-radius: 6px !important;
-  border-bottom-right-radius: 6px !important;
-}
-
-/* Fix accordions with ULTIMATE force - but preserve custom fields functionality */
-html body [data-radix-accordion-item]:not(.custom-fields-accordion),
-html body [data-radix-accordion-trigger]:not(.custom-fields-accordion),
-html body [data-radix-accordion-content]:not(.custom-fields-accordion) {
-  border-radius: 0px !important;
-  border-top-left-radius: 0px !important;
-  border-top-right-radius: 0px !important;
-  border-bottom-left-radius: 0px !important;
-  border-bottom-right-radius: 0px !important;
-}
-
-/* CRITICAL: Ensure custom fields accordion is always visible and functional */
+/* Only fix the custom fields accordion visibility (the critical issue) */
 .custom-fields-accordion,
-.custom-fields-accordion *,
-.custom-fields-accordion [data-radix-accordion-content] {
+.custom-fields-accordion * {
   border-radius: 0 !important;
   overflow: visible !important;
-  display: block !important;
-  visibility: visible !important;
-  height: auto !important;
-  max-height: none !important;
-  opacity: 1 !important;
+  background: transparent !important;
 }
 
 /* Fix Accordion content display issues */
