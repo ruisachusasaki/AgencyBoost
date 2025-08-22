@@ -331,6 +331,21 @@ button[variant="outline"] {
   background-color: revert !important;
 }
 
+/* Form input styling based on data attributes */
+.form-field-input[data-input-style="line"] {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+}
+
+.form-field-input[data-input-style="box"] {
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  background-color: #ffffff !important;
+}
+
 /* Accordion components within form builder */
 .form-builder-container [data-radix-accordion-content] [data-radix-select-trigger],
 .form-builder-container [data-radix-accordion-content] button {

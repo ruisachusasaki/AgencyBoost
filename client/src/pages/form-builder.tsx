@@ -1006,6 +1006,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               required={field.required || false}
               style={fieldStyles}
               className="form-field-input"
+              data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-input-${field.id}`}
             />
           </>
@@ -1022,6 +1023,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               required={field.required || false}
               style={fieldStyles}
               className="form-field-input"
+              data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-date-${field.id}`}
             />
           </>
@@ -1031,7 +1033,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         const options = (field.settings as any)?.options || ['Option 1', 'Option 2', 'Option 3'];
         return (
           <Select value={value || ''} onValueChange={onChange}>
-            <SelectTrigger style={fieldStyles} className="form-field-input" data-testid={`preview-select-${field.id}`}>
+            <SelectTrigger style={fieldStyles} className="form-field-input" data-input-style={styling?.inputFields?.style || 'box'} data-testid={`preview-select-${field.id}`}>
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>

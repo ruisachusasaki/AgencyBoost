@@ -40,7 +40,7 @@ function NotificationButton() {
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await apiRequest(`/api/notifications/${notificationId}/read`, 'PATCH');
+      const response = await apiRequest('PATCH', `/api/notifications/${notificationId}/read`);
       return response.json();
     },
     onSuccess: () => {
@@ -51,7 +51,7 @@ function NotificationButton() {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('/api/notifications/mark-all-read', 'PATCH');
+      const response = await apiRequest('PATCH', '/api/notifications/mark-all-read');
       return response.json();
     },
     onSuccess: () => {
@@ -62,7 +62,7 @@ function NotificationButton() {
   // Delete notification mutation
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await apiRequest(`/api/notifications/${notificationId}`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/notifications/${notificationId}`);
       return response.json();
     },
     onSuccess: () => {
