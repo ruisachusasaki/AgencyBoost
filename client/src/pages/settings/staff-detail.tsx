@@ -16,20 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings } from "@shared/schema";
-
-const departments = [
-  "Media Buying",
-  "Venue Booking", 
-  "Creative",
-  "DevOps",
-  "Executive",
-  "Account Management",
-  "Project Management",
-  "Accounting",
-  "Social Media",
-  "SEO"
-];
+import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings, Department } from "@shared/schema";
 
 const userTypes = [
   "Admin",
@@ -74,6 +61,10 @@ export default function StaffDetail() {
 
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ["/api/roles"]
+  });
+
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
   });
 
   const { data: notificationSettings } = useQuery<NotificationSettings>({
@@ -455,9 +446,10 @@ export default function StaffDetail() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="">No Department</SelectItem>
                             {departments.map((dept) => (
-                              <SelectItem key={dept} value={dept}>
-                                {dept}
+                              <SelectItem key={dept.id} value={dept.name}>
+                                {dept.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
