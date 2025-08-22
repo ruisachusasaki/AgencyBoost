@@ -331,10 +331,11 @@ button[variant="outline"] {
   background-color: revert !important;
 }
 
-/* Form input styling with high specificity to override all other styles */
-.form-builder-container .form-field-input.input-style-line,
-.form-builder-container .form-field-input.input-style-line:focus,
-.form-builder-container .form-field-input.input-style-line:hover {
+/* Form input styling with maximum specificity to override all other styles */
+.input-style-line,
+.input-style-line:focus,
+.input-style-line:hover,
+.input-style-line:focus-visible {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
@@ -344,12 +345,14 @@ button[variant="outline"] {
   box-shadow: none !important;
 }
 
-.form-builder-container .form-field-input.input-style-box,
-.form-builder-container .form-field-input.input-style-box:focus,
-.form-builder-container .form-field-input.input-style-box:hover {
+.input-style-box,
+.input-style-box:focus,
+.input-style-box:hover,
+.input-style-box:focus-visible {
   border: 3px solid #22c55e !important; /* Temporary green border for visual debugging */
   border-radius: 6px !important;
   background-color: #ffffff !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
 }
 
 /* Override Radix UI select trigger styles */

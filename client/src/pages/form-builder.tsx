@@ -967,7 +967,12 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   const labelStyles = getLabelStyles();
   const placeholderCSS = getPlaceholderCSS();
   
-  // FormFieldPreview styling applied based on input style preference
+  // Debug the styling state
+  console.log("🔍 FormFieldPreview Debug:", {
+    inputStyle: styling?.inputFields?.style,
+    fieldType: field.type,
+    fieldId: field.id
+  });
   
   // Load Google Font if needed
   useEffect(() => {
@@ -1013,6 +1018,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-input-${field.id}`}
+              key={`input-${styling?.inputFields?.style}-${field.id}`}
             />
           </>
         );
@@ -1030,6 +1036,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-date-${field.id}`}
+              key={`date-${styling?.inputFields?.style}-${field.id}`}
             />
           </>
         );
@@ -1042,7 +1049,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               style={fieldStyles}
               className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'} 
-              data-testid={`preview-select-${field.id}`}>
+              data-testid={`preview-select-${field.id}`}
+              key={`select-${styling?.inputFields?.style}-${field.id}`}>
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
