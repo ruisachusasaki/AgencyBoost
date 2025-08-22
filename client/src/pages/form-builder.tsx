@@ -564,11 +564,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
               <CardTitle>Form Elements</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="add-fields" className="w-full form-builder-tabs">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="add-fields">Add Fields</TabsTrigger>
-                  <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
-                  <TabsTrigger value="styling">
+              <Tabs defaultValue="add-fields" className="w-full form-elements-tabs">
+                <TabsList className="grid w-full grid-cols-3 form-elements-tabslist">
+                  <TabsTrigger value="add-fields" className="form-elements-tab">Add Fields</TabsTrigger>
+                  <TabsTrigger value="custom-fields" className="form-elements-tab">Custom Fields</TabsTrigger>
+                  <TabsTrigger value="styling" className="form-elements-tab">
                     <Palette className="w-4 h-4 mr-1" />
                     Style
                   </TabsTrigger>

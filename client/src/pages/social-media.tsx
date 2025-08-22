@@ -227,12 +227,12 @@ export default function SocialMediaPage() {
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="posts">Posts</TabsTrigger>
-              <TabsTrigger value="accounts">Accounts</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsList className="social-media-tabslist">
+              <TabsTrigger value="overview" className="social-media-tab">Overview</TabsTrigger>
+              <TabsTrigger value="posts" className="social-media-tab">Posts</TabsTrigger>
+              <TabsTrigger value="accounts" className="social-media-tab">Accounts</TabsTrigger>
+              <TabsTrigger value="analytics" className="social-media-tab">Analytics</TabsTrigger>
+              <TabsTrigger value="templates" className="social-media-tab">Templates</TabsTrigger>
             </TabsList>
             
             <div className="flex items-center gap-2">

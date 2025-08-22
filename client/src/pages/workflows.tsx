@@ -196,11 +196,11 @@ export default function WorkflowsPage() {
 
       <Tabs defaultValue="workflows" className="space-y-4">
         <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="workflows">Active Workflows</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="automation">Automation Builder</TabsTrigger>
+          <TabsList className="workflows-tabslist">
+            <TabsTrigger value="workflows" className="workflows-tab">Active Workflows</TabsTrigger>
+            <TabsTrigger value="templates" className="workflows-tab">Templates</TabsTrigger>
+            <TabsTrigger value="analytics" className="workflows-tab">Analytics</TabsTrigger>
+            <TabsTrigger value="automation" className="workflows-tab">Automation Builder</TabsTrigger>
           </TabsList>
           
           {/* Category Filter - Only show on workflows tab */}
