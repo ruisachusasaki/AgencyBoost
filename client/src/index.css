@@ -291,48 +291,25 @@ nav.-mb-px,
   border-bottom: 1px solid #e5e7eb !important;
 }
 
-/* SURGICAL FIXES with unique class names and maximum specificity */
+/* BRUTE FORCE DEBUGGING - Let's see what we're actually targeting */
 
-/* 1. Form Elements tabs - force square corners with highest specificity */
-.form-elements-tabs .form-elements-tabslist .form-elements-tab,
-.form-elements-tabslist.form-elements-tabslist button.form-elements-tab,
-button.form-elements-tab[data-state="active"],
-button.form-elements-tab[data-state="inactive"] {
-  border-radius: 6px !important;
+/* TEST: Make ALL tabs bright red to see which ones are being targeted */
+button[role="tab"],
+[data-radix-tabs-trigger],
+.form-elements-tab,
+.workflows-tab,
+.social-media-tab {
+  background-color: red !important;
+  color: white !important;
+  border-radius: 0px !important;
 }
 
-/* 2. Fix CustomFieldsAccordion oval hiding custom fields - ALREADY WORKING */
-.custom-fields-accordion,
-.custom-fields-accordion * {
-  border-radius: 0 !important;
-  overflow: visible !important;
-  background: transparent !important;
-}
-
-/* 3. Fix ALL Accordion borders to be straight with maximum force */
-div[data-radix-accordion-item],
-button[data-radix-accordion-trigger],
-div[data-radix-accordion-content],
-[data-radix-accordion-item][data-radix-accordion-item],
-[data-radix-accordion-trigger][data-radix-accordion-trigger],
-[data-radix-accordion-content][data-radix-accordion-content] {
-  border-radius: 0 !important;
-}
-
-/* 4. Fix Workflows tabs - maximum specificity for active state */
-.workflows-tabslist.workflows-tabslist button.workflows-tab,
-button.workflows-tab[data-state="active"],
-button.workflows-tab[data-state="inactive"],
-.workflows-page button.workflows-tab {
-  border-radius: 6px !important;
-}
-
-/* 5. Fix Social Media tabs - maximum specificity for active state */
-.social-media-tabslist.social-media-tabslist button.social-media-tab,
-button.social-media-tab[data-state="active"],
-button.social-media-tab[data-state="inactive"],
-.social-media-page button.social-media-tab {
-  border-radius: 6px !important;
+/* TEST: Make ALL accordions bright blue */
+[data-radix-accordion-item],
+[data-radix-accordion-trigger],
+[data-radix-accordion-content] {
+  background-color: blue !important;
+  border-radius: 0px !important;
 }
 
 /* Fix Accordion content display issues */
