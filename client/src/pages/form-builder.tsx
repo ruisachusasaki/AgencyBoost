@@ -903,28 +903,28 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     const placeholders = styling.placeholders || {};
     
     const inputStyle: React.CSSProperties = {
-      backgroundColor: '#ffffff',
-      color: inputFields.fontColor || '#000000',
-      borderWidth: `${inputFields.borderWidth || 1}px`,
-      borderColor: inputFields.borderColor || '#d1d5db',
-      borderStyle: 'solid',
-      borderRadius: `${inputFields.cornerRadius || 6}px`,
-      padding: `${inputFields.padding?.top || 8}px ${inputFields.padding?.right || 12}px ${inputFields.padding?.bottom || 8}px ${inputFields.padding?.left || 12}px`,
-      margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px`,
-      fontFamily: inputFields.fontFamily || 'Inter, sans-serif',
-      fontSize: `${inputFields.fontSize || 14}px`,
+      backgroundColor: '#ffffff !important' as any,
+      color: `${inputFields.fontColor || '#000000'} !important` as any,
+      borderWidth: `${inputFields.borderWidth || 1}px !important` as any,
+      borderColor: `${inputFields.borderColor || '#d1d5db'} !important` as any,
+      borderStyle: 'solid !important' as any,
+      borderRadius: `${inputFields.cornerRadius || 6}px !important` as any,
+      padding: `${inputFields.padding?.top || 8}px ${inputFields.padding?.right || 12}px ${inputFields.padding?.bottom || 8}px ${inputFields.padding?.left || 12}px !important` as any,
+      margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px !important` as any,
+      fontFamily: `${inputFields.fontFamily || 'Inter, sans-serif'} !important` as any,
+      fontSize: `${inputFields.fontSize || 14}px !important` as any,
     };
 
     // Apply line style for inputs - only bottom border
     if (inputFields.style === 'line') {
-      inputStyle.borderTop = 'none';
-      inputStyle.borderLeft = 'none';
-      inputStyle.borderRight = 'none';
-      inputStyle.borderRadius = '0';
-      inputStyle.backgroundColor = 'transparent';
-      inputStyle.borderBottomWidth = `${inputFields.borderWidth || 1}px`;
-      inputStyle.borderBottomColor = inputFields.borderColor || '#d1d5db';
-      inputStyle.borderBottomStyle = 'solid';
+      inputStyle.borderTop = 'none !important' as any;
+      inputStyle.borderLeft = 'none !important' as any;
+      inputStyle.borderRight = 'none !important' as any;
+      inputStyle.borderRadius = '0 !important' as any;
+      inputStyle.backgroundColor = 'transparent !important' as any;
+      inputStyle.borderBottomWidth = `${inputFields.borderWidth || 1}px !important` as any;
+      inputStyle.borderBottomColor = `${inputFields.borderColor || '#d1d5db'} !important` as any;
+      inputStyle.borderBottomStyle = 'solid !important' as any;
     }
 
     return inputStyle;

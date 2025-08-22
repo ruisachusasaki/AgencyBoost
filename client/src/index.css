@@ -318,10 +318,17 @@ button[variant="outline"] {
 /* Form Builder specific components */
 .form-builder-container [data-radix-select-trigger],
 .form-builder-container [role="combobox"],
-.form-builder-container button:not(.circular),
-.form-builder-container .h-8:not(.circular),
-.form-builder-container .h-10:not(.circular) {
+.form-builder-container button:not(.circular):not(.form-field-input),
+.form-builder-container .h-8:not(.circular):not(.form-field-input),
+.form-builder-container .h-10:not(.circular):not(.form-field-input) {
   border-radius: var(--border-radius-md) !important;
+}
+
+/* Exclude form preview inputs from global styling */
+.form-builder-container .form-field-input {
+  border-radius: revert !important;
+  border: revert !important;
+  background-color: revert !important;
 }
 
 /* Accordion components within form builder */
