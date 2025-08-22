@@ -291,14 +291,23 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
-/* Force tab separator line to show with bright red for debugging */
-[data-radix-tabs-list] {
-  border-bottom: 4px solid red !important;
+/* Debug: Put borders on everything to see what shows up */
+* {
+  border: 2px solid orange !important;
 }
 
-/* Ensure TabsList wrapper div border shows */
-div:has([data-radix-tabs-list]) {
-  border-bottom: 4px solid red !important;
+/* Specifically target any tabs-related elements */
+[data-radix-tabs-root],
+[data-radix-tabs-list], 
+[data-radix-tabs-trigger],
+[data-radix-tabs-content] {
+  border: 4px solid purple !important;
+}
+
+/* Target the wrapper div classes */
+.border-b-4,
+.border-red-500 {
+  border: 4px solid red !important;
 }
 
 /* Fix Accordion content display issues */
