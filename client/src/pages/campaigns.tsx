@@ -55,6 +55,15 @@ export default function Campaigns() {
   const [selectedFormFolder, setSelectedFormFolder] = useState<string | null>(null);
   const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
   const [folderToEdit, setFolderToEdit] = useState<any>(null);
+  
+  // Sorting state for each tab
+  const [emailSortField, setEmailSortField] = useState<'name' | 'subject' | null>(null);
+  const [emailSortDirection, setEmailSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [smsSortField, setSmsSortField] = useState<'name' | 'content' | null>(null);
+  const [smsSortDirection, setSmsSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [formsSortField, setFormsSortField] = useState<'name' | 'lastUpdated' | null>(null);
+  const [formsSortDirection, setFormsSortDirection] = useState<'asc' | 'desc'>('asc');
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -138,11 +147,39 @@ export default function Campaigns() {
     queryKey: ["/api/sms-templates"],
   });
 
+  // Sorting handlers
+  const handleEmailSort = (field: 'name' | 'subject') => {
+    if (emailSortField === field) {
+      setEmailSortDirection(emailSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setEmailSortField(field);
+      setEmailSortDirection('asc');
+    }
+  };
+
+  const handleSmsSort = (field: 'name' | 'content') => {
+    if (smsSortField === field) {
+      setSmsSortDirection(smsSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSmsSortField(field);
+      setSmsSortDirection('asc');
+    }
+  };
+
+  const handleFormsSort = (field: 'name' | 'lastUpdated') => {
+    if (formsSortField === field) {
+      setFormsSortDirection(formsSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setFormsSortField(field);
+      setFormsSortDirection('asc');
+    }
+  };
+
   // Filter folders by type
   const emailFolders = templateFolders.filter(folder => folder.type === "email" || folder.type === "both");
   const smsFolders = templateFolders.filter(folder => folder.type === "sms" || folder.type === "both");
 
-  // Filter templates with tab-specific search terms
+  // Filter and sort templates with tab-specific search terms
   const filteredEmailTemplates = emailTemplates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(emailSearchTerm.toLowerCase()) ||
                          template.subject.toLowerCase().includes(emailSearchTerm.toLowerCase()) ||
@@ -150,6 +187,25 @@ export default function Campaigns() {
     // Show templates without folders when no folder is selected, or templates in selected folder
     const matchesFolder = selectedFolder ? template.folderId === selectedFolder : !template.folderId;
     return matchesSearch && matchesFolder;
+  }).sort((a, b) => {
+    if (!emailSortField) return 0;
+    
+    let aValue = '';
+    let bValue = '';
+    
+    if (emailSortField === 'name') {
+      aValue = a.name.toLowerCase();
+      bValue = b.name.toLowerCase();
+    } else if (emailSortField === 'subject') {
+      aValue = a.subject.toLowerCase();
+      bValue = b.subject.toLowerCase();
+    }
+    
+    if (emailSortDirection === 'asc') {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
   });
 
   const filteredSmsTemplates = smsTemplates.filter(template => {
@@ -159,6 +215,25 @@ export default function Campaigns() {
     // Show templates without folders when no folder is selected, or templates in selected folder
     const matchesFolder = selectedSmsFolder ? template.folderId === selectedSmsFolder : !template.folderId;
     return matchesSearch && matchesFolder;
+  }).sort((a, b) => {
+    if (!smsSortField) return 0;
+    
+    let aValue = '';
+    let bValue = '';
+    
+    if (smsSortField === 'name') {
+      aValue = a.name.toLowerCase();
+      bValue = b.name.toLowerCase();
+    } else if (smsSortField === 'content') {
+      aValue = a.content.toLowerCase();
+      bValue = b.content.toLowerCase();
+    }
+    
+    if (smsSortDirection === 'asc') {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
   });
 
   // Create folder mutation
@@ -596,12 +671,42 @@ export default function Campaigns() {
     }
   };
 
-  // Filter forms with search and folder selection - handle formsData being unknown type
+  // Filter and sort forms with search and folder selection - handle formsData being unknown type
   const filteredForms = Array.isArray(formsData) ? formsData.filter((form: any) => {
     const matchesSearch = form.name.toLowerCase().includes(formSearchTerm.toLowerCase()) ||
                           (form.description && form.description.toLowerCase().includes(formSearchTerm.toLowerCase()));
     const matchesFolder = !selectedFormFolder || form.folderId === selectedFormFolder;
     return matchesSearch && matchesFolder;
+  }).sort((a: any, b: any) => {
+    if (!formsSortField) return 0;
+    
+    let aValue = '';
+    let bValue = '';
+    
+    if (formsSortField === 'name') {
+      aValue = a.name.toLowerCase();
+      bValue = b.name.toLowerCase();
+    } else if (formsSortField === 'lastUpdated') {
+      // Use updatedAt or createdAt as fallback
+      const aDate = new Date(a.updatedAt || a.createdAt);
+      const bDate = new Date(b.updatedAt || b.createdAt);
+      
+      if (formsSortDirection === 'asc') {
+        return aDate.getTime() - bDate.getTime();
+      } else {
+        return bDate.getTime() - aDate.getTime();
+      }
+    }
+    
+    if (formsSortField === 'name') {
+      if (formsSortDirection === 'asc') {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
+    }
+    
+    return 0;
   }) : [];
 
   // Handle folder navigation
@@ -612,6 +717,88 @@ export default function Campaigns() {
   const handleClearFolderFilter = () => {
     setSelectedFormFolder(null);
   };
+
+  // Sortable header components
+  const EmailSortableHeader = ({ field, children }: { field: 'name' | 'subject'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleEmailSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              emailSortField === field && emailSortDirection === 'asc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              emailSortField === field && emailSortDirection === 'desc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
+  const SmsSortableHeader = ({ field, children }: { field: 'name' | 'content'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleSmsSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              smsSortField === field && smsSortDirection === 'asc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              smsSortField === field && smsSortDirection === 'desc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
+  const FormsSortableHeader = ({ field, children }: { field: 'name' | 'lastUpdated'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleFormsSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              formsSortField === field && formsSortDirection === 'asc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              formsSortField === field && formsSortDirection === 'desc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
 
   // Combine forms and folders for table display
   const getTableData = () => {
@@ -904,24 +1091,8 @@ export default function Campaigns() {
               <Table className="bg-white">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">
-                      <div className="flex items-center gap-2">
-                        Name
-                        <div className="flex flex-col ml-1">
-                          <ChevronUp className="h-3 w-3 text-gray-400" />
-                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
-                        </div>
-                      </div>
-                    </TableHead>
-                    <TableHead className="w-[25%]">
-                      <div className="flex items-center gap-2">
-                        Subject
-                        <div className="flex flex-col ml-1">
-                          <ChevronUp className="h-3 w-3 text-gray-400" />
-                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
-                        </div>
-                      </div>
-                    </TableHead>
+                    <EmailSortableHeader field="name">Name</EmailSortableHeader>
+                    <EmailSortableHeader field="subject">Subject</EmailSortableHeader>
                     <TableHead className="w-[20%]">Type</TableHead>
                     <TableHead className="w-[15%]">Actions</TableHead>
                   </TableRow>
@@ -1207,24 +1378,8 @@ export default function Campaigns() {
               <Table className="bg-white">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">
-                      <div className="flex items-center gap-2">
-                        Name
-                        <div className="flex flex-col ml-1">
-                          <ChevronUp className="h-3 w-3 text-gray-400" />
-                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
-                        </div>
-                      </div>
-                    </TableHead>
-                    <TableHead className="w-[25%]">
-                      <div className="flex items-center gap-2">
-                        Content Preview
-                        <div className="flex flex-col ml-1">
-                          <ChevronUp className="h-3 w-3 text-gray-400" />
-                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
-                        </div>
-                      </div>
-                    </TableHead>
+                    <SmsSortableHeader field="name">Name</SmsSortableHeader>
+                    <SmsSortableHeader field="content">Content Preview</SmsSortableHeader>
                     <TableHead className="w-[20%]">Type</TableHead>
                     <TableHead className="w-[15%]">Actions</TableHead>
                   </TableRow>
@@ -1579,24 +1734,8 @@ export default function Campaigns() {
               <Table className="bg-white">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">
-                      <div className="flex items-center gap-2">
-                        Name
-                        <div className="flex flex-col ml-1">
-                          <ChevronUp className="h-3 w-3 text-gray-400" />
-                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
-                        </div>
-                      </div>
-                    </TableHead>
-                    <TableHead className="w-[25%]">
-                      <div className="flex items-center gap-2">
-                        Last Updated
-                        <div className="flex flex-col ml-1">
-                          <ChevronUp className="h-3 w-3 text-gray-400" />
-                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
-                        </div>
-                      </div>
-                    </TableHead>
+                    <FormsSortableHeader field="name">Name</FormsSortableHeader>
+                    <FormsSortableHeader field="lastUpdated">Last Updated</FormsSortableHeader>
                     <TableHead className="w-[20%]">Updated By</TableHead>
                     <TableHead className="w-[15%]">Actions</TableHead>
                   </TableRow>
