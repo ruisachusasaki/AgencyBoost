@@ -291,14 +291,14 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
-/* Add universal tab separator line */
-.tab-container {
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 24px;
+/* Fix universal tab separator issue */
+.border-b {
+  border-bottom: 1px solid #e5e7eb !important;
 }
 
-.tab-container nav {
-  margin-bottom: -1px;
+/* Force all tab container borders to show */
+div[class*="border-b"] {
+  border-bottom: 1px solid #e5e7eb !important;
 }
 
 /* Fix Accordion content display issues */
