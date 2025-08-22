@@ -728,7 +728,11 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                 <TabsContent value="styling" className="mt-4">
                   <FormStylingPanel 
                     styling={formStyling} 
-                    onUpdateStyling={setFormStyling}
+                    onUpdateStyling={(newStyling) => {
+                      console.log("🔄 Main Form Builder updating styling:", newStyling);
+                      console.log("🔄 Input Fields Style:", newStyling.inputFields?.style);
+                      setFormStyling(newStyling);
+                    }}
                   />
                 </TabsContent>
               </Tabs>
@@ -812,7 +816,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                       >
                         {formFields.map((field, index) => (
                             <FormFieldPreview
-                              key={`${field.id || `field-${index}`}-${formStyling.inputFields.style}-${Date.now()}`}
+                              key={`${field.id || `field-${index}`}-${formStyling.inputFields?.style || 'default'}`}
                               field={field as FormField}
                               value={previewData[field.id || `field-${index}`]}
                               styling={formStyling}
@@ -1220,6 +1224,7 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
         ...updates
       }
     };
+    console.log("🎯 FormStylingPanel updateStyling called:", { section, updates, newStyling });
     onUpdateStyling(newStyling);
   };
 
