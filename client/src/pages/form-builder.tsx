@@ -1027,8 +1027,16 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               onChange={(e) => onChange(e.target.value)}
               placeholder={field.placeholder || `Enter ${field.label?.toLowerCase() || 'value'}`}
               required={field.required || false}
-              style={fieldStyles}
-              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
+              style={{
+                // HARDCODED TEST - Can we change ANYTHING about input appearance?
+                backgroundColor: styling?.inputFields?.style === 'line' ? 'red' : 'green',
+                color: 'white',
+                border: styling?.inputFields?.style === 'line' ? '3px solid black' : '3px solid blue',
+                padding: '15px',
+                fontSize: '20px',
+                fontWeight: 'bold'
+              }}
+              className=""
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-input-${field.id}`}
               key={`input-${styling?.inputFields?.style}-${field.id}`}
@@ -1045,8 +1053,16 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
               required={field.required || false}
-              style={fieldStyles}
-              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
+              style={{
+                // HARDCODED TEST - Can we change ANYTHING about input appearance?
+                backgroundColor: styling?.inputFields?.style === 'line' ? 'red' : 'green',
+                color: 'white',
+                border: styling?.inputFields?.style === 'line' ? '3px solid black' : '3px solid blue',
+                padding: '15px',
+                fontSize: '20px',
+                fontWeight: 'bold'
+              }}
+              className=""
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-date-${field.id}`}
               key={`date-${styling?.inputFields?.style}-${field.id}`}
