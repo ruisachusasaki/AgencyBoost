@@ -810,9 +810,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                         }
                         style={{ gap: `${formStyling.layout.fieldSpacing}px` }}
                       >
-                        {formFields.map((field, index) => {
-                          console.log(`Rendering FormFieldPreview ${index} with styling:`, formStyling);
-                          return (
+                        {formFields.map((field, index) => (
                             <FormFieldPreview
                               key={`${field.id || `field-${index}`}-${formStyling.inputFields.style}`}
                               field={field as FormField}
@@ -825,8 +823,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                                 }));
                               }}
                             />
-                          );
-                        })}
+                        ))}
                         <div className="flex gap-3 pt-4">
                           <Button className="bg-blue-600 hover:bg-blue-700">
                             Submit Form
@@ -893,23 +890,17 @@ interface FormFieldPreviewProps {
 }
 
 function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewProps) {
-  // Debug logging to track styling prop
-  console.log("FormFieldPreview received styling:", styling);
-  console.log("Input fields styling:", styling?.inputFields);
+  // FormFieldPreview renders form fields with applied styling
   
   // Generate dynamic styles based on form styling configuration
   const getFieldStyles = () => {
     if (!styling) {
-      console.log("No styling provided to getFieldStyles");
       return {};
     }
     
     const inputFields = styling.inputFields || {};
     const form = styling.form || {};
     const placeholders = styling.placeholders || {};
-    
-    console.log("Using input fields:", inputFields);
-    console.log("Input style:", inputFields.style);
     
     const inputStyle: React.CSSProperties = {
       backgroundColor: '#ffffff',
@@ -926,7 +917,6 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
 
     // Apply line style for inputs - only bottom border
     if (inputFields.style === 'line') {
-      console.log("Applying line style to input");
       inputStyle.borderTop = 'none';
       inputStyle.borderLeft = 'none';
       inputStyle.borderRight = 'none';
@@ -935,8 +925,6 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
       inputStyle.borderBottomWidth = `${inputFields.borderWidth || 1}px`;
       inputStyle.borderBottomColor = inputFields.borderColor || '#d1d5db';
       inputStyle.borderBottomStyle = 'solid';
-    } else {
-      console.log("Applying box style to input");
     }
 
     return inputStyle;
@@ -1213,8 +1201,6 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
         ...updates
       }
     };
-    console.log("updateStyling called:", section, updates);
-    console.log("New styling object:", newStyling);
     onUpdateStyling(newStyling);
   };
 
@@ -1447,10 +1433,7 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Input Style</Label>
-                <Select value={styling.inputFields.style} onValueChange={(value) => {
-                  console.log("Input Style changed to:", value);
-                  updateStyling('inputFields', { style: value });
-                }}>
+                <Select value={styling.inputFields.style} onValueChange={(value) => updateStyling('inputFields', { style: value })}>
                   <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
