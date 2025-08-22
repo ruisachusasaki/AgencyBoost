@@ -256,23 +256,15 @@ td .flex.items-center.justify-center [data-state] {
   border-radius: 50% !important;
 }
 
-/* Fix oval buttons and containers - force rectangular appearance */
-button,
-[role="button"],
-.inline-flex,
-select,
-input[type="text"],
-input[type="email"],
-input[type="search"],
-[role="combobox"],
-[data-radix-select-trigger],
-.border {
+/* Targeted fix for specific oval elements */
+/* Fix Add Lead button and similar primary buttons */
+button.inline-flex.items-center.justify-center,
+[data-radix-select-trigger] {
   border-radius: 6px !important;
 }
 
-/* Override any rounded-* classes that might be too round */
-.rounded-md,
-.rounded-lg,
-.rounded-xl {
+/* Fix filter containers specifically */
+.min-w-\[160px\] [data-radix-select-trigger],
+button[variant="outline"] {
   border-radius: 6px !important;
 }
