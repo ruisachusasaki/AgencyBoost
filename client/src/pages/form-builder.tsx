@@ -1025,7 +1025,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         return (
           <>
             {styling && <style dangerouslySetInnerHTML={{ __html: placeholderCSS }} />}
-            <Input
+            <input
               type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' ? 'number' : 'text'}
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
@@ -1044,7 +1044,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         return (
           <>
             {styling && <style dangerouslySetInnerHTML={{ __html: placeholderCSS }} />}
-            <Input
+            <input
               type="date"
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
