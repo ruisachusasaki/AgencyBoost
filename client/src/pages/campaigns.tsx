@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ArrowUpDown, ExternalLink, ArrowLeft } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ChevronUp, ChevronDown, ExternalLink, ArrowLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -907,13 +907,19 @@ export default function Campaigns() {
                     <TableHead className="w-[40%]">
                       <div className="flex items-center gap-2">
                         Name
-                        <ArrowUpDown className="h-4 w-4" />
+                        <div className="flex flex-col ml-1">
+                          <ChevronUp className="h-3 w-3 text-gray-400" />
+                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
+                        </div>
                       </div>
                     </TableHead>
                     <TableHead className="w-[25%]">
                       <div className="flex items-center gap-2">
                         Subject
-                        <ArrowUpDown className="h-4 w-4" />
+                        <div className="flex flex-col ml-1">
+                          <ChevronUp className="h-3 w-3 text-gray-400" />
+                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
+                        </div>
                       </div>
                     </TableHead>
                     <TableHead className="w-[20%]">Type</TableHead>
@@ -1204,13 +1210,19 @@ export default function Campaigns() {
                     <TableHead className="w-[40%]">
                       <div className="flex items-center gap-2">
                         Name
-                        <ArrowUpDown className="h-4 w-4" />
+                        <div className="flex flex-col ml-1">
+                          <ChevronUp className="h-3 w-3 text-gray-400" />
+                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
+                        </div>
                       </div>
                     </TableHead>
                     <TableHead className="w-[25%]">
                       <div className="flex items-center gap-2">
                         Content Preview
-                        <ArrowUpDown className="h-4 w-4" />
+                        <div className="flex flex-col ml-1">
+                          <ChevronUp className="h-3 w-3 text-gray-400" />
+                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
+                        </div>
                       </div>
                     </TableHead>
                     <TableHead className="w-[20%]">Type</TableHead>
@@ -1570,13 +1582,19 @@ export default function Campaigns() {
                     <TableHead className="w-[40%]">
                       <div className="flex items-center gap-2">
                         Name
-                        <ArrowUpDown className="h-4 w-4" />
+                        <div className="flex flex-col ml-1">
+                          <ChevronUp className="h-3 w-3 text-gray-400" />
+                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
+                        </div>
                       </div>
                     </TableHead>
                     <TableHead className="w-[25%]">
                       <div className="flex items-center gap-2">
                         Last Updated
-                        <ArrowUpDown className="h-4 w-4" />
+                        <div className="flex flex-col ml-1">
+                          <ChevronUp className="h-3 w-3 text-gray-400" />
+                          <ChevronDown className="h-3 w-3 -mt-1 text-gray-400" />
+                        </div>
                       </div>
                     </TableHead>
                     <TableHead className="w-[20%]">Updated By</TableHead>
