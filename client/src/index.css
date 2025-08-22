@@ -284,13 +284,11 @@ button[variant="outline"] {
   border-radius: 6px !important;
 }
 
-/* Fix universal tab separator issue */
-.border-b {
-  border-bottom: 1px solid #e5e7eb !important;
-}
-
-/* Force all tab container borders to show */
-div[class*="border-b"] {
+/* Targeted tab separator fix - ONLY affects tab navigation */
+nav.-mb-px,
+nav[class*="-mb-px"],
+.tabs-navigation,
+[data-testid*="tabs-nav"] {
   border-bottom: 1px solid #e5e7eb !important;
 }
 
