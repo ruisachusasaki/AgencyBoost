@@ -1,19 +1,44 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, Users, MapPin, Phone, Mail, Edit, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Phone, Mail, Edit, Trash2, Plus, Briefcase } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Department, Staff, Position } from "@shared/schema";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Department, Staff, Position, InsertPosition } from "@shared/schema";
+
+const positionFormSchema = z.object({
+  name: z.string().min(1, "Position name is required"),
+  description: z.string().optional(),
+});
+
+type PositionFormData = z.infer<typeof positionFormSchema>;
 
 export default function TeamDetail() {
+  const { toast } = useToast();
   const [, params] = useRoute("/settings/teams/:id");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddPositionDialogOpen, setIsAddPositionDialogOpen] = useState(false);
   const teamId = params?.id;
+
+  const positionForm = useForm<PositionFormData>({
+    resolver: zodResolver(positionFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    }
+  });
 
   // Fetch team details
   const { data: team, isLoading: teamLoading } = useQuery<Department>({
@@ -38,11 +63,64 @@ export default function TeamDetail() {
   });
 
   // Fetch positions for this team
-  const { data: positions = [] } = useQuery<Position[]>({
+  const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
     queryKey: ["/api/departments", teamId, "positions"],
     queryFn: () => fetch(`/api/departments/${teamId}/positions`).then(res => res.json()),
     enabled: !!teamId,
   });
+
+  // Create position mutation
+  const createPositionMutation = useMutation({
+    mutationFn: async (data: PositionFormData) => {
+      return apiRequest("POST", "/api/positions", { ...data, departmentId: teamId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments", teamId, "positions"] });
+      setIsAddPositionDialogOpen(false);
+      positionForm.reset();
+      toast({
+        title: "Success",
+        description: "Position created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create position"
+      });
+    }
+  });
+
+  // Delete position mutation
+  const deletePositionMutation = useMutation({
+    mutationFn: async (positionId: string) => {
+      return apiRequest("DELETE", `/api/positions/${positionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments", teamId, "positions"] });
+      toast({
+        title: "Success",
+        description: "Position deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete position"
+      });
+    }
+  });
+
+  const onPositionSubmit = (data: PositionFormData) => {
+    createPositionMutation.mutate(data);
+  };
+
+  const handleDeletePosition = (positionId: string, positionName: string) => {
+    if (!confirm(`Are you sure you want to delete the position "${positionName}"?`)) return;
+    deletePositionMutation.mutate(positionId);
+  };
 
   if (teamLoading) {
     return (
@@ -178,29 +256,37 @@ export default function TeamDetail() {
         </Card>
       </div>
 
-      {/* Team Members Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Team Members</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage members assigned to this team
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Input
-                  placeholder="Search members..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-64"
-                  data-testid="input-search-members"
-                />
+      {/* Tabs for Members and Positions */}
+      <Tabs defaultValue="members" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="members" data-testid="tab-members">Members</TabsTrigger>
+          <TabsTrigger value="positions" data-testid="tab-positions">Positions</TabsTrigger>
+        </TabsList>
+
+        {/* Members Tab */}
+        <TabsContent value="members">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Manage members assigned to this team
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Input
+                      placeholder="Search members..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-64"
+                      data-testid="input-search-members"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </CardHeader>
+            </CardHeader>
         <CardContent>
           {staffLoading ? (
             <div className="space-y-4">
@@ -274,10 +360,10 @@ export default function TeamDetail() {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          className={getRoleBadgeColor(member.roleId)} 
+                          className={getRoleBadgeColor(member.roleId || "")} 
                           data-testid={`badge-member-role-${member.id}`}
                         >
-                          {member.roleId}
+                          {member.roleId || "No role"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -316,11 +402,152 @@ export default function TeamDetail() {
                     </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Positions Tab */}
+        <TabsContent value="positions">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Team Positions</CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Manage available positions for this team
+                  </p>
+                </div>
+                <Dialog open={isAddPositionDialogOpen} onOpenChange={setIsAddPositionDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-add-position">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Position
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Position</DialogTitle>
+                      <DialogDescription>
+                        Add a new position for the {team?.name} team
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...positionForm}>
+                      <form onSubmit={positionForm.handleSubmit(onPositionSubmit)} className="space-y-4">
+                        <FormField
+                          control={positionForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Position Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g. Marketing Manager, Sales Rep" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={positionForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Brief description of this position" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <DialogFooter>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => setIsAddPositionDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" disabled={createPositionMutation.isPending}>
+                            {createPositionMutation.isPending ? "Creating..." : "Create Position"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {positionsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-48" />
+                      </div>
+                      <div className="flex space-x-2">
+                        <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+                        <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : positions.length === 0 ? (
+                <div className="text-center py-12">
+                  <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No positions defined</h3>
+                  <p className="text-gray-600 mb-4">
+                    Start by creating positions for this team to organize your staff better
+                  </p>
+                  <Button onClick={() => setIsAddPositionDialogOpen(true)} data-testid="button-add-first-position">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add First Position
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {positions.map((position) => (
+                    <div key={position.id} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow" data-testid={`position-card-${position.id}`}>
+                      <div>
+                        <h4 className="font-medium text-gray-900" data-testid={`text-position-name-${position.id}`}>
+                          {position.name}
+                        </h4>
+                        {position.description && (
+                          <p className="text-sm text-gray-600 mt-1" data-testid={`text-position-description-${position.id}`}>
+                            {position.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          data-testid={`button-edit-position-${position.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeletePosition(position.id, position.name)}
+                          data-testid={`button-delete-position-${position.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
