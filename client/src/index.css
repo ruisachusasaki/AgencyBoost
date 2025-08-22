@@ -291,7 +291,15 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
-/* Remove the Radix targeting since it's not working */
+/* Add universal tab separator line */
+.tab-container {
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.tab-container nav {
+  margin-bottom: -1px;
+}
 
 /* Fix Accordion content display issues */
 [data-radix-accordion-content] {
