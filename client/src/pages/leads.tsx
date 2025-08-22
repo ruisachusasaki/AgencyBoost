@@ -741,9 +741,9 @@ export default function Leads() {
                                                                 if (lead.assignedTo) {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
                                                                   
-                                                                  if (staffMember?.profileImagePath) {
+                                                                  if (staffMember?.profileImage) {
                                                                     // Convert object storage path to proper URL format  
-                                                                    const imageUrl = `/objects${staffMember.profileImagePath}`;
+                                                                    const imageUrl = `/objects${staffMember.profileImage}`;
                                                                     return (
                                                                       <img
                                                                         src={imageUrl}
