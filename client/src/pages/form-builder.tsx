@@ -1241,7 +1241,16 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   };
 
   return (
-    <div className="space-y-2" style={{ marginBottom: `${styling?.layout.fieldSpacing || 16}px` }}>
+    <div 
+      className="space-y-2" 
+      style={{ 
+        marginBottom: `${styling?.layout.fieldSpacing || 16}px`,
+        // CONTAINER DEBUG - See if container styling works
+        backgroundColor: styling?.inputFields?.style === 'line' ? '#ffcccc' : '#ccffcc',
+        border: '3px dashed black',
+        padding: '10px'
+      }}
+    >
       {/* Inject aggressive CSS styling */}
       <style dangerouslySetInnerHTML={{ __html: createForceStyleCSS() }} />
       
