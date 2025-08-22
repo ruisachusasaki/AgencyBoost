@@ -284,11 +284,10 @@ button[variant="outline"] {
   border-radius: 6px !important;
 }
 
-/* Targeted tab separator fix - ONLY affects tab navigation */
+/* HIGHLY TARGETED tab separator fix - ONLY actual tab containers */
+div.border-b.border-gray-200.mb-6,
 nav.-mb-px,
-nav[class*="-mb-px"],
-.tabs-navigation,
-[data-testid*="tabs-nav"] {
+[data-orientation="horizontal"][role="tablist"] {
   border-bottom: 1px solid #e5e7eb !important;
 }
 
