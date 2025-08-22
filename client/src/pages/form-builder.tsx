@@ -1207,8 +1207,44 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     }
   };
 
+  // Create ultra-high-specificity CSS to override shadcn components
+  const createForceStyleCSS = () => {
+    const fieldId = field.id || 'default';
+    if (styling?.inputFields?.style === 'line') {
+      return `
+        [data-testid="preview-input-${fieldId}"],
+        [data-testid="preview-date-${fieldId}"],  
+        [data-testid="preview-select-${fieldId}"] > button {
+          background-color: red !important;
+          color: white !important;
+          border: none !important;
+          border-bottom: 8px solid black !important;
+          border-radius: 0 !important;
+          font-weight: bold !important;
+          font-size: 18px !important;
+        }
+      `;
+    } else {
+      return `
+        [data-testid="preview-input-${fieldId}"],
+        [data-testid="preview-date-${fieldId}"],
+        [data-testid="preview-select-${fieldId}"] > button {
+          background-color: green !important;
+          color: white !important;
+          border: 8px solid blue !important;
+          border-radius: 20px !important;
+          font-weight: bold !important;
+          font-size: 18px !important;
+        }
+      `;
+    }
+  };
+
   return (
     <div className="space-y-2" style={{ marginBottom: `${styling?.layout.fieldSpacing || 16}px` }}>
+      {/* Inject aggressive CSS styling */}
+      <style dangerouslySetInnerHTML={{ __html: createForceStyleCSS() }} />
+      
       {/* DEBUG: Text indicator to confirm state changes */}
       <div style={{ backgroundColor: 'yellow', padding: '4px', fontSize: '12px', fontWeight: 'bold', border: '2px solid red' }}>
         DEBUG: Current Input Style = "{styling?.inputFields?.style || 'undefined'}"
