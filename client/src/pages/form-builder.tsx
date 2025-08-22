@@ -906,37 +906,35 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     const form = styling.form || {};
     const placeholders = styling.placeholders || {};
     
-    // DEBUGGING: Box/Line styling takes ABSOLUTE PRIORITY over individual controls
+    // Base input style with individual controls
+    const inputStyle: React.CSSProperties = {
+      color: inputFields.fontColor || '#000000',
+      fontFamily: inputFields.fontFamily || 'Inter, sans-serif',
+      fontSize: `${inputFields.fontSize || 14}px`,
+      padding: `${inputFields.padding?.top || 8}px ${inputFields.padding?.right || 12}px ${inputFields.padding?.bottom || 8}px ${inputFields.padding?.left || 12}px`,
+      margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px`,
+    };
+
+    // Apply Box/Line styling - override specific properties for the input style preference
     if (inputFields.style === 'line') {
-      // Line style - RED background with thick bottom border - OVERRIDES EVERYTHING
-      return {
-        backgroundColor: 'red',
-        color: 'white',
+      // Line style - transparent background, bottom border only, no radius
+      Object.assign(inputStyle, {
+        backgroundColor: 'transparent',
         border: 'none',
-        borderBottom: '8px solid black',
+        borderBottom: `${inputFields.borderWidth || 2}px solid ${inputFields.borderColor || '#d1d5db'}`,
         borderRadius: '0',
         outline: 'none',
-        fontWeight: 'bold',
-        fontSize: '18px',
-        fontFamily: 'Arial, sans-serif', // Use different font to prove it's working
-        padding: '12px',
-        margin: '4px 0',
-      };
+      });
     } else {
-      // Box style - GREEN background with thick border - OVERRIDES EVERYTHING
-      return {
-        backgroundColor: 'green',
-        color: 'white',
-        border: '8px solid blue',
-        borderRadius: '20px',
-        outline: 'none',
-        fontWeight: 'bold',
-        fontSize: '18px',
-        fontFamily: 'Arial, sans-serif', // Use different font to prove it's working
-        padding: '12px',
-        margin: '4px 0',
-      };
+      // Box style - white background, full border, rounded corners  
+      Object.assign(inputStyle, {
+        backgroundColor: '#ffffff',
+        border: `${inputFields.borderWidth || 1}px solid ${inputFields.borderColor || '#d1d5db'}`,
+        borderRadius: `${inputFields.cornerRadius || 6}px`,
+      });
     }
+
+    return inputStyle;
   };
 
   const getLabelStyles = () => {
@@ -1027,16 +1025,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               onChange={(e) => onChange(e.target.value)}
               placeholder={field.placeholder || `Enter ${field.label?.toLowerCase() || 'value'}`}
               required={field.required || false}
-              style={{
-                // HARDCODED TEST - Can we change ANYTHING about input appearance?
-                backgroundColor: styling?.inputFields?.style === 'line' ? 'red' : 'green',
-                color: 'white',
-                border: styling?.inputFields?.style === 'line' ? '3px solid black' : '3px solid blue',
-                padding: '15px',
-                fontSize: '20px',
-                fontWeight: 'bold'
-              }}
-              className=""
+              style={fieldStyles}
+              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-input-${field.id}`}
               key={`input-${styling?.inputFields?.style}-${field.id}`}
@@ -1053,16 +1043,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
               required={field.required || false}
-              style={{
-                // HARDCODED TEST - Can we change ANYTHING about input appearance?
-                backgroundColor: styling?.inputFields?.style === 'line' ? 'red' : 'green',
-                color: 'white',
-                border: styling?.inputFields?.style === 'line' ? '3px solid black' : '3px solid blue',
-                padding: '15px',
-                fontSize: '20px',
-                fontWeight: 'bold'
-              }}
-              className=""
+              style={fieldStyles}
+              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-date-${field.id}`}
               key={`date-${styling?.inputFields?.style}-${field.id}`}
@@ -1219,97 +1201,9 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     }
   };
 
-  // Create ultra-high-specificity CSS to override all input styling
-  const createForceStyleCSS = () => {
-    const fieldId = field.id || 'default';
-    if (styling?.inputFields?.style === 'line') {
-      return `
-        /* Target input with maximum specificity and override browser defaults */
-        div div div [data-testid="preview-input-${fieldId}"],
-        div div div [data-testid="preview-date-${fieldId}"],
-        div.space-y-2 [data-testid="preview-input-${fieldId}"],
-        div.space-y-2 [data-testid="preview-date-${fieldId}"],
-        input[data-testid="preview-input-${fieldId}"],
-        input[data-testid="preview-date-${fieldId}"] {
-          background-color: red !important;
-          background: red !important;
-          color: white !important;
-          border: none !important;
-          border-bottom: 8px solid black !important;
-          border-radius: 0 !important;
-          font-weight: bold !important;
-          font-size: 18px !important;
-          outline: none !important;
-          box-shadow: none !important;
-          appearance: none !important;
-          -webkit-appearance: none !important;
-          -moz-appearance: none !important;
-        }
-        
-        /* Force input focus states too */
-        input[data-testid="preview-input-${fieldId}"]:focus,
-        input[data-testid="preview-date-${fieldId}"]:focus {
-          background-color: darkred !important;
-          background: darkred !important;
-          border-bottom: 8px solid black !important;
-          outline: none !important;
-          box-shadow: none !important;
-        }
-      `;
-    } else {
-      return `
-        /* Target input with maximum specificity and override browser defaults */
-        div div div [data-testid="preview-input-${fieldId}"],
-        div div div [data-testid="preview-date-${fieldId}"],
-        div.space-y-2 [data-testid="preview-input-${fieldId}"],
-        div.space-y-2 [data-testid="preview-date-${fieldId}"],
-        input[data-testid="preview-input-${fieldId}"],
-        input[data-testid="preview-date-${fieldId}"] {
-          background-color: green !important;
-          background: green !important;
-          color: white !important;
-          border: 8px solid blue !important;
-          border-radius: 20px !important;
-          font-weight: bold !important;
-          font-size: 18px !important;
-          outline: none !important;
-          box-shadow: none !important;
-          appearance: none !important;
-          -webkit-appearance: none !important;
-          -moz-appearance: none !important;
-        }
-        
-        /* Force input focus states too */
-        input[data-testid="preview-input-${fieldId}"]:focus,
-        input[data-testid="preview-date-${fieldId}"]:focus {
-          background-color: darkgreen !important;
-          background: darkgreen !important;
-          border: 8px solid blue !important;
-          outline: none !important;
-          box-shadow: none !important;
-        }
-      `;
-    }
-  };
 
   return (
-    <div 
-      className="space-y-2" 
-      style={{ 
-        marginBottom: `${styling?.layout.fieldSpacing || 16}px`,
-        // CONTAINER DEBUG - See if container styling works
-        backgroundColor: styling?.inputFields?.style === 'line' ? '#ffcccc' : '#ccffcc',
-        border: '3px dashed black',
-        padding: '10px'
-      }}
-    >
-      {/* Inject aggressive CSS styling */}
-      <style dangerouslySetInnerHTML={{ __html: createForceStyleCSS() }} />
-      
-      {/* DEBUG: Text indicator to confirm state changes */}
-      <div style={{ backgroundColor: 'yellow', padding: '4px', fontSize: '12px', fontWeight: 'bold', border: '2px solid red' }}>
-        DEBUG: Current Input Style = "{styling?.inputFields?.style || 'undefined'}"
-      </div>
+    <div className="space-y-2" style={{ marginBottom: `${styling?.layout.fieldSpacing || 16}px` }}>
       
       <Label className="text-sm font-medium" style={labelStyles}>
         {field.label || 'Untitled Field'}
