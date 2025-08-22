@@ -316,7 +316,7 @@ div.max-h-96.overflow-y-auto.space-y-4 {
 
 /* Form Elements tabs - active state with solid background */
 .form-elements-tab[data-state="active"] {
-  background-color: #3b82f6 !important;
+  background-color: #44a1a0 !important;
   color: white !important;
   border-bottom: none !important;
 }
@@ -327,14 +327,14 @@ div.max-h-96.overflow-y-auto.space-y-4 {
 
 /* Workflows tabs - active state with solid background */
 .workflows-tab[data-state="active"] {
-  background-color: #3b82f6 !important;
+  background-color: #44a1a0 !important;
   color: white !important;
   border-bottom: none !important;
 }
 
 /* Social Media tabs - active state with solid background */
 .social-media-tab[data-state="active"] {
-  background-color: #3b82f6 !important;
+  background-color: #44a1a0 !important;
   color: white !important;
   border-bottom: none !important;
 }
