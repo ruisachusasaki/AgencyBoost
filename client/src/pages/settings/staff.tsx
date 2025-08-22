@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -354,7 +355,9 @@ export default function Staff() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabelWithTooltip tooltip="Staff member's legal first name">
+                          First Name
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -367,7 +370,9 @@ export default function Staff() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                        <FormLabelWithTooltip tooltip="Staff member's legal last name">
+                          Last Name
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -726,7 +731,9 @@ export default function Staff() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Team Name</FormLabel>
+                        <FormLabelWithTooltip tooltip="Create a new team or department for organizing your staff members">
+                          Team Name
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input placeholder="e.g. Marketing, Sales, Development" {...field} />
                         </FormControl>
@@ -739,7 +746,9 @@ export default function Staff() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabelWithTooltip tooltip="A brief description explaining this team's purpose and responsibilities">
+                          Description
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input placeholder="Brief description of this team" {...field} />
                         </FormControl>

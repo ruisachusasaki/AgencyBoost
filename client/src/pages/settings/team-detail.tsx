@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -679,7 +680,9 @@ export default function TeamDetail() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Team Name</FormLabel>
+                    <FormLabelWithTooltip tooltip="The official name of this team or department">
+                      Team Name
+                    </FormLabelWithTooltip>
                     <FormControl>
                       <Input placeholder="e.g. Marketing, Sales, Development" {...field} />
                     </FormControl>
@@ -692,7 +695,9 @@ export default function TeamDetail() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabelWithTooltip tooltip="A brief description explaining this team's purpose and responsibilities">
+                      Description
+                    </FormLabelWithTooltip>
                     <FormControl>
                       <Input placeholder="Brief description of this team" {...field} />
                     </FormControl>
@@ -733,7 +738,9 @@ export default function TeamDetail() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Position Title</FormLabel>
+                    <FormLabelWithTooltip tooltip="The official title for this position within the team">
+                      Position Title
+                    </FormLabelWithTooltip>
                     <FormControl>
                       <Input placeholder="e.g. Marketing Manager, Sales Rep" {...field} />
                     </FormControl>

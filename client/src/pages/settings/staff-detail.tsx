@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -342,7 +343,9 @@ export default function StaffDetail() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabelWithTooltip tooltip="The staff member's legal first name">
+                          First Name
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input {...field} disabled={!isEditing} />
                         </FormControl>
@@ -355,7 +358,9 @@ export default function StaffDetail() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                        <FormLabelWithTooltip tooltip="The staff member's legal last name">
+                          Last Name
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input {...field} disabled={!isEditing} />
                         </FormControl>
@@ -394,7 +399,9 @@ export default function StaffDetail() {
                     name="roleId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Role & Permissions</FormLabel>
+                        <FormLabelWithTooltip tooltip="Assign a role to control what features and data this staff member can access">
+                          Role & Permissions
+                        </FormLabelWithTooltip>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -435,7 +442,9 @@ export default function StaffDetail() {
                     name="department"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Department</FormLabel>
+                        <FormLabelWithTooltip tooltip="Select which team/department this staff member belongs to">
+                          Department
+                        </FormLabelWithTooltip>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -477,7 +486,9 @@ export default function StaffDetail() {
                     name="managerId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Manager</FormLabel>
+                        <FormLabelWithTooltip tooltip="Choose who this staff member reports to for management hierarchy">
+                          Manager
+                        </FormLabelWithTooltip>
                         <Select
                           value={field.value || undefined}
                           onValueChange={field.onChange}
@@ -506,7 +517,9 @@ export default function StaffDetail() {
                     name="hireDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Hire Date</FormLabel>
+                        <FormLabelWithTooltip tooltip="The date when this staff member was officially hired">
+                          Hire Date
+                        </FormLabelWithTooltip>
                         <FormControl>
                           <Input {...field} type="date" disabled={!isEditing} />
                         </FormControl>
