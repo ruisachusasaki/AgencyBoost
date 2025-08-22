@@ -17,7 +17,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Staff, InsertStaff, Role, Department, InsertDepartment, Position, InsertPosition } from "@shared/schema";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Removed hardcoded userTypes - now using dynamic roles from API
 
@@ -252,37 +251,52 @@ export default function Staff() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="staff" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            Staff Members ({staffMembers.length})
-          </TabsTrigger>
-          <TabsTrigger value="teams" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Teams
-          </TabsTrigger>
-        </TabsList>
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "staff", name: "Staff Members", icon: UserCheck, count: staffMembers.length },
+            { id: "teams", name: "Teams", icon: Building2, count: 0 }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} {tab.count > 0 && `(${tab.count})`}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="staff" className="space-y-6">
+      {/* Tab Content */}
+      {activeTab === "staff" && (
+        <div className="space-y-6">
           <div className="flex justify-end">
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Staff Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Staff Member</DialogTitle>
-              <DialogDescription>
-                Create a new staff member account with basic information.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Staff Member
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Staff Member</DialogTitle>
+                  <DialogDescription>
+                    Create a new staff member account with basic information.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="firstName"
@@ -537,9 +551,11 @@ export default function Staff() {
           </div>
         </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="teams" className="space-y-6">
+      {activeTab === "teams" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Teams Management</CardTitle>
@@ -557,8 +573,8 @@ export default function Staff() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
