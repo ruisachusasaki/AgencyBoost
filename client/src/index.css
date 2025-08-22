@@ -276,3 +276,30 @@ button[variant="outline"] {
 [role="combobox"][data-radix-select-trigger] {
   border-radius: 6px !important;
 }
+
+/* Fix Form Builder specific oval containers */
+/* On Submit dropdown in form settings */
+[data-testid="select-on-submit-action"],
+[data-testid="select-on-submit-action"] button {
+  border-radius: 6px !important;
+}
+
+/* Fix Accordion components - ensure proper borders */
+[data-radix-accordion-item],
+.border-b {
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  border-radius: 0 !important;
+}
+
+/* Fix Accordion content display issues */
+[data-radix-accordion-content],
+.overflow-hidden {
+  overflow: visible !important;
+  border-radius: 0 !important;
+}
+
+/* Fix buttons within accordions */
+[data-testid^="button-add-custom-field-"],
+.justify-start.text-xs.h-8 {
+  border-radius: 6px !important;
+}
