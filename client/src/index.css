@@ -301,6 +301,15 @@ nav.-mb-px,
   background: transparent !important;
 }
 
+/* CRITICAL FIX: Style panel viewport appearing oval/circular */
+.max-h-96.overflow-y-auto.space-y-4 {
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
 /* Fix Accordion content display issues */
 [data-radix-accordion-content] {
   overflow: visible !important;
