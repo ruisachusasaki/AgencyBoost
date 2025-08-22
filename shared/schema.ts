@@ -1431,6 +1431,26 @@ export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
 export type ClientTransaction = typeof clientTransactions.$inferSelect;
 export type InsertClientTransaction = z.infer<typeof insertClientTransactionSchema>;
 
+// Departments and Positions Management
+export const departments = pgTable("departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const positions = pgTable("positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  departmentId: varchar("department_id").notNull().references(() => departments.id, { onDelete: "cascade" }),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Staff Management
 export const staff = pgTable("staff", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -1469,6 +1489,24 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
 
 export type Staff = typeof staff.$inferSelect;
 export type InsertStaff = z.infer<typeof insertStaffSchema>;
+
+// Department and Position schema exports
+export const insertDepartmentSchema = createInsertSchema(departments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPositionSchema = createInsertSchema(positions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type Position = typeof positions.$inferSelect;
+export type InsertPosition = z.infer<typeof insertPositionSchema>;
 
 // Tags schema exports
 export const insertTagSchema = createInsertSchema(tags).omit({

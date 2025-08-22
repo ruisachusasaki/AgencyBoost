@@ -11,7 +11,7 @@ import {
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
-  insertStaffSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
@@ -22,7 +22,7 @@ import {
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema,
-  users, businessProfile, customFields, customFieldFolders, staff, tags, products, productCategories, auditLogs,
+  users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
@@ -3875,6 +3875,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting staff:', error);
       res.status(500).json({ message: "Failed to delete staff member" });
+    }
+  });
+
+  // Departments API
+  app.get("/api/departments", async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      res.status(500).json({ message: "Failed to fetch departments" });
+    }
+  });
+
+  app.get("/api/departments/:id", async (req, res) => {
+    try {
+      const department = await storage.getDepartment(req.params.id);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      res.json(department);
+    } catch (error) {
+      console.error('Error fetching department:', error);
+      res.status(500).json({ message: "Failed to fetch department" });
+    }
+  });
+
+  app.post("/api/departments", async (req, res) => {
+    try {
+      const insertData = insertDepartmentSchema.parse(req.body);
+      const department = await storage.createDepartment(insertData);
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "department",
+        department.id,
+        department.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `New department created: ${department.name}`,
+        null,
+        { name: department.name, description: department.description },
+        req
+      );
+      
+      res.status(201).json(department);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating department:', error);
+      res.status(500).json({ message: "Failed to create department" });
+    }
+  });
+
+  app.put("/api/departments/:id", async (req, res) => {
+    try {
+      const insertData = insertDepartmentSchema.partial().parse(req.body);
+      const department = await storage.updateDepartment(req.params.id, insertData);
+      
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "department",
+        department.id,
+        department.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Department updated: ${department.name}`,
+        null,
+        insertData,
+        req
+      );
+      
+      res.json(department);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating department:', error);
+      res.status(500).json({ message: "Failed to update department" });
+    }
+  });
+
+  app.delete("/api/departments/:id", async (req, res) => {
+    try {
+      const department = await storage.getDepartment(req.params.id);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      const success = await storage.deleteDepartment(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete department" });
+      }
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "department",
+        req.params.id,
+        department.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Department deleted: ${department.name}`,
+        { name: department.name },
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      res.status(500).json({ message: "Failed to delete department" });
+    }
+  });
+
+  // Positions API
+  app.get("/api/positions", async (req, res) => {
+    try {
+      const positions = await storage.getPositions();
+      res.json(positions);
+    } catch (error) {
+      console.error('Error fetching positions:', error);
+      res.status(500).json({ message: "Failed to fetch positions" });
+    }
+  });
+
+  app.get("/api/positions/:id", async (req, res) => {
+    try {
+      const position = await storage.getPosition(req.params.id);
+      if (!position) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      res.json(position);
+    } catch (error) {
+      console.error('Error fetching position:', error);
+      res.status(500).json({ message: "Failed to fetch position" });
+    }
+  });
+
+  app.get("/api/departments/:departmentId/positions", async (req, res) => {
+    try {
+      const positions = await storage.getPositionsByDepartment(req.params.departmentId);
+      res.json(positions);
+    } catch (error) {
+      console.error('Error fetching positions for department:', error);
+      res.status(500).json({ message: "Failed to fetch positions for department" });
+    }
+  });
+
+  app.post("/api/positions", async (req, res) => {
+    try {
+      const insertData = insertPositionSchema.parse(req.body);
+      const position = await storage.createPosition(insertData);
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "position",
+        position.id,
+        position.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `New position created: ${position.name}`,
+        null,
+        { name: position.name, departmentId: position.departmentId, description: position.description },
+        req
+      );
+      
+      res.status(201).json(position);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating position:', error);
+      res.status(500).json({ message: "Failed to create position" });
+    }
+  });
+
+  app.put("/api/positions/:id", async (req, res) => {
+    try {
+      const insertData = insertPositionSchema.partial().parse(req.body);
+      const position = await storage.updatePosition(req.params.id, insertData);
+      
+      if (!position) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "position",
+        position.id,
+        position.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Position updated: ${position.name}`,
+        null,
+        insertData,
+        req
+      );
+      
+      res.json(position);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating position:', error);
+      res.status(500).json({ message: "Failed to update position" });
+    }
+  });
+
+  app.delete("/api/positions/:id", async (req, res) => {
+    try {
+      const position = await storage.getPosition(req.params.id);
+      if (!position) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      
+      const success = await storage.deletePosition(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete position" });
+      }
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "position",
+        req.params.id,
+        position.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Position deleted: ${position.name}`,
+        { name: position.name },
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting position:', error);
+      res.status(500).json({ message: "Failed to delete position" });
     }
   });
 

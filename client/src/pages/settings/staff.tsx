@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Staff, InsertStaff, Role } from "@shared/schema";
+import type { Staff, InsertStaff, Role, Department, InsertDepartment, Position, InsertPosition } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Removed hardcoded userTypes - now using dynamic roles from API
 
@@ -36,6 +37,7 @@ type SortOrder = 'asc' | 'desc';
 
 export default function Staff() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("staff");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('name');
@@ -248,8 +250,22 @@ export default function Staff() {
           Manage your team members and their access levels
         </p>
       </div>
-      
-      <div className="flex justify-end">
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="staff" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Staff Members ({staffMembers.length})
+          </TabsTrigger>
+          <TabsTrigger value="teams" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Teams
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="staff" className="space-y-6">
+          <div className="flex justify-end">
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -520,7 +536,29 @@ export default function Staff() {
             </Table>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="teams" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Teams Management</CardTitle>
+              <CardDescription>
+                Manage departments and positions for your organization
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground">Teams Management</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Coming soon! Manage departments and positions here.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

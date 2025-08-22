@@ -51,6 +51,8 @@ import {
   type TaskDependency, type InsertTaskDependency, taskDependencies,
   type ProjectTemplate, type InsertProjectTemplate, projectTemplates,
   type TemplateTask, type InsertTemplateTask, templateTasks,
+  type Department, type InsertDepartment, departments,
+  type Position, type InsertPosition, positions,
   customFieldFileUploads, forms, formFields, formSubmissions, tags
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -299,6 +301,21 @@ export interface IStorage {
   createStaffMember(staff: InsertStaff): Promise<Staff>;
   updateStaffMember(id: string, staff: Partial<InsertStaff>): Promise<Staff | undefined>;
   deleteStaffMember(id: string): Promise<boolean>;
+  
+  // Departments
+  getDepartments(): Promise<Department[]>;
+  getDepartment(id: string): Promise<Department | undefined>;
+  createDepartment(department: InsertDepartment): Promise<Department>;
+  updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department | undefined>;
+  deleteDepartment(id: string): Promise<boolean>;
+  
+  // Positions
+  getPositions(): Promise<Position[]>;
+  getPosition(id: string): Promise<Position | undefined>;
+  getPositionsByDepartment(departmentId: string): Promise<Position[]>;
+  createPosition(position: InsertPosition): Promise<Position>;
+  updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position | undefined>;
+  deletePosition(id: string): Promise<boolean>;
   
   // Roles
   getRoles(): Promise<Role[]>;
@@ -3243,6 +3260,85 @@ export class DbStorage implements IStorage {
   async createStaffMember(staff: InsertStaff): Promise<Staff> { return this.memStorage.createStaffMember(staff); }
   async updateStaffMember(id: string, staff: Partial<InsertStaff>): Promise<Staff | undefined> { return this.memStorage.updateStaffMember(id, staff); }
   async deleteStaffMember(id: string): Promise<boolean> { return this.memStorage.deleteStaffMember(id); }
+
+  // Departments
+  async getDepartments(): Promise<Department[]> {
+    const result = await this.db.select().from(departments).orderBy(asc(departments.name));
+    return result;
+  }
+
+  async getDepartment(id: string): Promise<Department | undefined> {
+    const result = await this.db.select().from(departments).where(eq(departments.id, id));
+    return result[0];
+  }
+
+  async createDepartment(department: InsertDepartment): Promise<Department> {
+    const result = await this.db.insert(departments).values(department).returning();
+    return result[0];
+  }
+
+  async updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department | undefined> {
+    const result = await this.db
+      .update(departments)
+      .set({ ...department, updatedAt: new Date() })
+      .where(eq(departments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    try {
+      await this.db.delete(departments).where(eq(departments.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting department:", error);
+      return false;
+    }
+  }
+
+  // Positions
+  async getPositions(): Promise<Position[]> {
+    const result = await this.db.select().from(positions).orderBy(asc(positions.name));
+    return result;
+  }
+
+  async getPosition(id: string): Promise<Position | undefined> {
+    const result = await this.db.select().from(positions).where(eq(positions.id, id));
+    return result[0];
+  }
+
+  async getPositionsByDepartment(departmentId: string): Promise<Position[]> {
+    const result = await this.db
+      .select()
+      .from(positions)
+      .where(eq(positions.departmentId, departmentId))
+      .orderBy(asc(positions.name));
+    return result;
+  }
+
+  async createPosition(position: InsertPosition): Promise<Position> {
+    const result = await this.db.insert(positions).values(position).returning();
+    return result[0];
+  }
+
+  async updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position | undefined> {
+    const result = await this.db
+      .update(positions)
+      .set({ ...position, updatedAt: new Date() })
+      .where(eq(positions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePosition(id: string): Promise<boolean> {
+    try {
+      await this.db.delete(positions).where(eq(positions.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting position:", error);
+      return false;
+    }
+  }
 
   // Tags
   async getTags(): Promise<Tag[]> {
