@@ -948,11 +948,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
       fontFamily: labels.fontFamily || 'Inter, sans-serif',
       fontSize: `${labels.fontSize || 14}px`,
       fontWeight: labels.fontWeight || 500,
-      display: layout.showLabels !== false ? 'block' : 'none',
-      // TEMP TEST: Add obvious styling to see if labels can be styled at all
-      backgroundColor: 'yellow',
-      border: '2px solid red',
-      padding: '4px'
+      display: layout.showLabels !== false ? 'block' : 'none'
     };
   };
 
@@ -993,6 +989,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
   useEffect(() => {
     const loadGoogleFont = (fontFamily: string) => {
       if (!fontFamily || fontFamily === 'inherit' || fontFamily.includes('sans-serif') || fontFamily.includes('serif') || fontFamily.includes('monospace')) {
+        console.log('🚫 Skipping font load for:', fontFamily);
         return;
       }
       
@@ -1004,10 +1001,19 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap`;
         link.rel = 'stylesheet';
         document.head.appendChild(link);
+        console.log('🔤 Loading Google Font:', fontName, 'URL:', link.href);
+      } else {
+        console.log('✅ Font already loaded:', fontName);
       }
     };
 
     if (styling) {
+      console.log('🎨 Font loading check:', {
+        labelFont: styling.labels.fontFamily,
+        inputFont: styling.inputFields.fontFamily,
+        placeholderFont: styling.placeholders.fontFamily
+      });
+      
       loadGoogleFont(styling.labels.fontFamily);
       loadGoogleFont(styling.inputFields.fontFamily);
       loadGoogleFont(styling.placeholders.fontFamily);
