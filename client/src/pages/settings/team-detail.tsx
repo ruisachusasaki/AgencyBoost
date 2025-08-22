@@ -634,11 +634,6 @@ export default function TeamDetail() {
                         <h4 className="font-medium text-gray-900" data-testid={`text-position-name-${position.id}`}>
                           {position.name}
                         </h4>
-                        {position.description && (
-                          <p className="text-sm text-gray-600 mt-1" data-testid={`text-position-description-${position.id}`}>
-                            {position.description}
-                          </p>
-                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <Button 
