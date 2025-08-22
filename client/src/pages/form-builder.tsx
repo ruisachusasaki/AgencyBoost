@@ -906,19 +906,10 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     const form = styling.form || {};
     const placeholders = styling.placeholders || {};
     
-    // Base input style
-    const inputStyle: React.CSSProperties = {
-      color: inputFields.fontColor || '#000000',
-      fontFamily: inputFields.fontFamily || 'Inter, sans-serif',
-      fontSize: `${inputFields.fontSize || 14}px`,
-      padding: `${inputFields.padding?.top || 8}px ${inputFields.padding?.right || 12}px ${inputFields.padding?.bottom || 8}px ${inputFields.padding?.left || 12}px`,
-      margin: `${inputFields.margins?.top || 0}px ${inputFields.margins?.right || 0}px ${inputFields.margins?.bottom || 0}px ${inputFields.margins?.left || 0}px`,
-    };
-
-    // Apply styling based on input style preference - EXTREME DEBUG MODE
+    // DEBUGGING: Box/Line styling takes ABSOLUTE PRIORITY over individual controls
     if (inputFields.style === 'line') {
-      // Line style - RED background with thick bottom border - IMPOSSIBLE TO MISS
-      Object.assign(inputStyle, {
+      // Line style - RED background with thick bottom border - OVERRIDES EVERYTHING
+      return {
         backgroundColor: 'red',
         color: 'white',
         border: 'none',
@@ -927,20 +918,25 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         outline: 'none',
         fontWeight: 'bold',
         fontSize: '18px',
-      });
+        fontFamily: 'Arial, sans-serif', // Use different font to prove it's working
+        padding: '12px',
+        margin: '4px 0',
+      };
     } else {
-      // Box style - GREEN background with thick border - IMPOSSIBLE TO MISS
-      Object.assign(inputStyle, {
+      // Box style - GREEN background with thick border - OVERRIDES EVERYTHING
+      return {
         backgroundColor: 'green',
         color: 'white',
         border: '8px solid blue',
         borderRadius: '20px',
+        outline: 'none',
         fontWeight: 'bold',
         fontSize: '18px',
-      });
+        fontFamily: 'Arial, sans-serif', // Use different font to prove it's working
+        padding: '12px',
+        margin: '4px 0',
+      };
     }
-
-    return inputStyle;
   };
 
   const getLabelStyles = () => {
