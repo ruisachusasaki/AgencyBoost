@@ -814,7 +814,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                           console.log(`Rendering FormFieldPreview ${index} with styling:`, formStyling);
                           return (
                             <FormFieldPreview
-                              key={field.id || `field-${index}`}
+                              key={`${field.id || `field-${index}`}-${formStyling.inputFields.style}`}
                               field={field as FormField}
                               value={previewData[field.id || `field-${index}`]}
                               styling={formStyling}
@@ -909,6 +909,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     const placeholders = styling.placeholders || {};
     
     console.log("Using input fields:", inputFields);
+    console.log("Input style:", inputFields.style);
     
     const inputStyle: React.CSSProperties = {
       backgroundColor: '#ffffff',
@@ -925,6 +926,7 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
 
     // Apply line style for inputs - only bottom border
     if (inputFields.style === 'line') {
+      console.log("Applying line style to input");
       inputStyle.borderTop = 'none';
       inputStyle.borderLeft = 'none';
       inputStyle.borderRight = 'none';
@@ -933,6 +935,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
       inputStyle.borderBottomWidth = `${inputFields.borderWidth || 1}px`;
       inputStyle.borderBottomColor = inputFields.borderColor || '#d1d5db';
       inputStyle.borderBottomStyle = 'solid';
+    } else {
+      console.log("Applying box style to input");
     }
 
     return inputStyle;
