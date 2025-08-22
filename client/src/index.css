@@ -331,19 +331,38 @@ button[variant="outline"] {
   background-color: revert !important;
 }
 
-/* Form input styling based on data attributes */
-.form-field-input[data-input-style="line"] {
+/* Form input styling with high specificity to override all other styles */
+.form-builder-container .form-field-input.input-style-line,
+.form-builder-container .form-field-input.input-style-line:focus,
+.form-builder-container .form-field-input.input-style-line:hover {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
   border-radius: 0 !important;
   background-color: transparent !important;
+  border-bottom: 3px solid #ef4444 !important; /* Temporary red line for visual debugging */
+  box-shadow: none !important;
 }
 
-.form-field-input[data-input-style="box"] {
-  border: 1px solid #d1d5db !important;
+.form-builder-container .form-field-input.input-style-box,
+.form-builder-container .form-field-input.input-style-box:focus,
+.form-builder-container .form-field-input.input-style-box:hover {
+  border: 3px solid #22c55e !important; /* Temporary green border for visual debugging */
   border-radius: 6px !important;
   background-color: #ffffff !important;
+}
+
+/* Override Radix UI select trigger styles */
+.form-builder-container [data-radix-select-trigger].input-style-line,
+.form-builder-container [data-radix-select-trigger].input-style-line:focus,
+.form-builder-container [data-radix-select-trigger].input-style-line:hover {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid #d1d5db !important;
+  box-shadow: none !important;
 }
 
 /* Accordion components within form builder */

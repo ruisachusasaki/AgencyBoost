@@ -1009,22 +1009,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               onChange={(e) => onChange(e.target.value)}
               placeholder={field.placeholder || `Enter ${field.label?.toLowerCase() || 'value'}`}
               required={field.required || false}
-              style={{
-                ...fieldStyles,
-                // Force styling to override any CSS conflicts
-                ...(styling?.inputFields?.style === 'line' ? {
-                  backgroundColor: 'transparent !important',
-                  border: 'none !important',
-                  borderBottom: `${styling?.inputFields?.borderWidth || 1}px solid ${styling?.inputFields?.borderColor || '#d1d5db'} !important`,
-                  borderRadius: '0 !important',
-                  outline: 'none !important',
-                } : {
-                  backgroundColor: '#ffffff !important',
-                  border: `${styling?.inputFields?.borderWidth || 1}px solid ${styling?.inputFields?.borderColor || '#d1d5db'} !important`,
-                  borderRadius: `${styling?.inputFields?.cornerRadius || 6}px !important`,
-                })
-              } as React.CSSProperties}
-              className="form-field-input"
+              style={fieldStyles}
+              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-input-${field.id}`}
             />
@@ -1040,22 +1026,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
               required={field.required || false}
-              style={{
-                ...fieldStyles,
-                // Force styling to override any CSS conflicts
-                ...(styling?.inputFields?.style === 'line' ? {
-                  backgroundColor: 'transparent !important',
-                  border: 'none !important',
-                  borderBottom: `${styling?.inputFields?.borderWidth || 1}px solid ${styling?.inputFields?.borderColor || '#d1d5db'} !important`,
-                  borderRadius: '0 !important',
-                  outline: 'none !important',
-                } : {
-                  backgroundColor: '#ffffff !important',
-                  border: `${styling?.inputFields?.borderWidth || 1}px solid ${styling?.inputFields?.borderColor || '#d1d5db'} !important`,
-                  borderRadius: `${styling?.inputFields?.cornerRadius || 6}px !important`,
-                })
-              } as React.CSSProperties}
-              className="form-field-input"
+              style={fieldStyles}
+              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'}
               data-testid={`preview-date-${field.id}`}
             />
@@ -1067,22 +1039,8 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
         return (
           <Select value={value || ''} onValueChange={onChange}>
             <SelectTrigger 
-              style={{
-                ...fieldStyles,
-                // Force styling to override any CSS conflicts
-                ...(styling?.inputFields?.style === 'line' ? {
-                  backgroundColor: 'transparent !important',
-                  border: 'none !important',
-                  borderBottom: `${styling?.inputFields?.borderWidth || 1}px solid ${styling?.inputFields?.borderColor || '#d1d5db'} !important`,
-                  borderRadius: '0 !important',
-                  outline: 'none !important',
-                } : {
-                  backgroundColor: '#ffffff !important',
-                  border: `${styling?.inputFields?.borderWidth || 1}px solid ${styling?.inputFields?.borderColor || '#d1d5db'} !important`,
-                  borderRadius: `${styling?.inputFields?.cornerRadius || 6}px !important`,
-                })
-              } as React.CSSProperties}
-              className="form-field-input" 
+              style={fieldStyles}
+              className={`form-field-input ${styling?.inputFields?.style === 'line' ? 'input-style-line' : 'input-style-box'}`}
               data-input-style={styling?.inputFields?.style || 'box'} 
               data-testid={`preview-select-${field.id}`}>
               <SelectValue placeholder="Select an option" />
@@ -1486,7 +1444,10 @@ const FormStylingPanel = ({ styling, onUpdateStyling }: FormStylingPanelProps) =
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Input Style</Label>
-                <Select value={styling.inputFields.style} onValueChange={(value) => updateStyling('inputFields', { style: value })}>
+                <Select value={styling.inputFields.style} onValueChange={(value) => {
+                  console.log("🎨 Input Style changing to:", value);
+                  updateStyling('inputFields', { style: value });
+                }}>
                   <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
