@@ -291,18 +291,20 @@ nav.-mb-px,
   border-bottom: 1px solid #e5e7eb !important;
 }
 
-/* NUCLEAR APPROACH - Override ALL border radius properties */
+/* ULTIMATE APPROACH - Override with maximum possible specificity */
 
-/* Fix tabs with maximum force - target ALL possible states */
-button[role="tab"],
-[data-radix-tabs-trigger],
-.form-elements-tab,
-.workflows-tab,
-.social-media-tab,
-button[role="tab"]:hover,
-button[role="tab"]:active,
-button[role="tab"][data-state="active"],
-button[role="tab"][data-state="inactive"] {
+/* Fix tabs with ULTIMATE force - target everything including pseudo-elements */
+html body div button[role="tab"],
+html body div [data-radix-tabs-trigger],
+html body .form-elements-tab,
+html body .workflows-tab,
+html body .social-media-tab,
+html body button[role="tab"]:hover,
+html body button[role="tab"]:active,
+html body button[role="tab"][data-state="active"],
+html body button[role="tab"][data-state="inactive"],
+html body button[role="tab"]::before,
+html body button[role="tab"]::after {
   border-radius: 6px !important;
   border-top-left-radius: 6px !important;
   border-top-right-radius: 6px !important;
@@ -310,10 +312,12 @@ button[role="tab"][data-state="inactive"] {
   border-bottom-right-radius: 6px !important;
 }
 
-/* Fix accordions with maximum force */
-[data-radix-accordion-item],
-[data-radix-accordion-trigger],
-[data-radix-accordion-content] {
+/* Fix accordions with ULTIMATE force */
+html body [data-radix-accordion-item],
+html body [data-radix-accordion-trigger],
+html body [data-radix-accordion-content],
+html body [data-radix-accordion-item]::before,
+html body [data-radix-accordion-item]::after {
   border-radius: 0px !important;
   border-top-left-radius: 0px !important;
   border-top-right-radius: 0px !important;
