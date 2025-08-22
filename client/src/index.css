@@ -303,3 +303,27 @@ button[variant="outline"] {
 .justify-start.text-xs.h-8 {
   border-radius: 6px !important;
 }
+
+/* Fix all remaining Form Builder Select dropdowns */
+/* Form Settings and Style sections */
+.space-y-4 [data-radix-select-trigger],
+.space-y-3 [data-radix-select-trigger],
+.grid.grid-cols-2.gap-2 [data-radix-select-trigger],
+[data-radix-accordion-content] [data-radix-select-trigger],
+[data-radix-accordion-content] .h-8[role="combobox"] {
+  border-radius: 6px !important;
+}
+
+/* Target specific styling dropdowns by class combinations */
+.h-8.w-full[data-radix-select-trigger],
+.text-xs + [data-radix-select-trigger],
+.space-y-3 .h-8[data-radix-select-trigger] {
+  border-radius: 6px !important;
+}
+
+/* Layout Type, Border Style, Input Style, Font Family dropdowns */
+[data-radix-accordion-content] .space-y-3 [role="combobox"],
+[data-radix-accordion-content] .grid [role="combobox"],
+[data-radix-accordion-content] .h-8 {
+  border-radius: 6px !important;
+}
