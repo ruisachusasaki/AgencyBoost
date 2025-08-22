@@ -291,14 +291,14 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
-/* Force tab separator line to show */
+/* Force tab separator line to show with bright red for debugging */
 [data-radix-tabs-list] {
-  border-bottom: 1px solid hsl(var(--border)) !important;
+  border-bottom: 4px solid red !important;
 }
 
 /* Ensure TabsList wrapper div border shows */
 div:has([data-radix-tabs-list]) {
-  border-bottom: 1px solid hsl(var(--border)) !important;
+  border-bottom: 4px solid red !important;
 }
 
 /* Fix Accordion content display issues */

@@ -11,7 +11,7 @@ const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <div className="border-b border-border">
+  <div className="border-b-4 border-red-500">
     <TabsPrimitive.List
       ref={ref}
       className={cn(
