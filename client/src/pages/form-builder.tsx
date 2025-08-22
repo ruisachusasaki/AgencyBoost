@@ -919,10 +919,10 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     if (inputFields.style === 'line') {
       // Line style - RED background with thick bottom border - IMPOSSIBLE TO MISS
       Object.assign(inputStyle, {
-        backgroundColor: 'red !important',
-        color: 'white !important',
+        backgroundColor: 'red',
+        color: 'white',
         border: 'none',
-        borderBottom: '8px solid black !important',
+        borderBottom: '8px solid black',
         borderRadius: '0',
         outline: 'none',
         fontWeight: 'bold',
@@ -931,10 +931,10 @@ function FormFieldPreview({ field, value, onChange, styling }: FormFieldPreviewP
     } else {
       // Box style - GREEN background with thick border - IMPOSSIBLE TO MISS
       Object.assign(inputStyle, {
-        backgroundColor: 'green !important',
-        color: 'white !important',
-        border: '8px solid blue !important',
-        borderRadius: '20px !important',
+        backgroundColor: 'green',
+        color: 'white',
+        border: '8px solid blue',
+        borderRadius: '20px',
         fontWeight: 'bold',
         fontSize: '18px',
       });
