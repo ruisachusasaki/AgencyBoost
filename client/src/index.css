@@ -291,23 +291,16 @@ button[variant="outline"] {
   border-radius: 0 !important;
 }
 
-/* Debug: Put borders on everything to see what shows up */
-* {
-  border: 2px solid orange !important;
+/* Clean simple approach - just add the separator line */
+[data-radix-tabs-list] {
+  border-bottom: 1px solid #e5e7eb !important;
+  width: 100% !important;
 }
 
-/* Specifically target any tabs-related elements */
-[data-radix-tabs-root],
-[data-radix-tabs-list], 
-[data-radix-tabs-trigger],
-[data-radix-tabs-content] {
-  border: 4px solid purple !important;
-}
-
-/* Target the wrapper div classes */
-.border-b-4,
-.border-red-500 {
-  border: 4px solid red !important;
+/* Also try the wrapper div */
+div:has([data-radix-tabs-list]) {
+  border-bottom: 1px solid #e5e7eb !important;
+  width: 100% !important;
 }
 
 /* Fix Accordion content display issues */
