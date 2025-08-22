@@ -1801,7 +1801,6 @@ export default function Campaigns() {
                               variant="ghost" 
                               size="sm" 
                               data-testid={`button-${item.type}-menu-${item.id}`}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
