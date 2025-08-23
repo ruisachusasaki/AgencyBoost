@@ -1437,6 +1437,7 @@ export const departments = pgTable("departments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull().unique(),
   description: text("description"),
+  workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // team's custom workflow
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1975,6 +1976,27 @@ export const taskStatuses = pgTable("task_statuses", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Team Workflows - define status flows for different teams/departments
+export const teamWorkflows = pgTable("team_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "Video Production Workflow"
+  description: text("description"),
+  isDefault: boolean("is_default").default(false), // default workflow for new departments
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Team Workflow Statuses - maps statuses to team workflows with ordering
+export const teamWorkflowStatuses = pgTable("team_workflow_statuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => teamWorkflows.id, { onDelete: "cascade" }),
+  statusId: varchar("status_id").notNull().references(() => taskStatuses.id, { onDelete: "cascade" }),
+  order: integer("order").notNull().default(0), // status order within workflow
+  isRequired: boolean("is_required").default(false), // if true, tasks must pass through this status
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Task Priorities - customizable priority levels for tasks  
 export const taskPriorities = pgTable("task_priorities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2034,6 +2056,24 @@ export type InsertTaskPriority = z.infer<typeof insertTaskPrioritySchema>;
 
 export type TaskSettings = typeof taskSettings.$inferSelect;
 export type InsertTaskSettings = z.infer<typeof insertTaskSettingsSchema>;
+
+// Team Workflow schema exports
+export const insertTeamWorkflowSchema = createInsertSchema(teamWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTeamWorkflowStatusSchema = createInsertSchema(teamWorkflowStatuses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TeamWorkflow = typeof teamWorkflows.$inferSelect;
+export type InsertTeamWorkflow = z.infer<typeof insertTeamWorkflowSchema>;
+
+export type TeamWorkflowStatus = typeof teamWorkflowStatuses.$inferSelect;
+export type InsertTeamWorkflowStatus = z.infer<typeof insertTeamWorkflowStatusSchema>;
 
 // Form folders - for organizing forms
 export const formFolders = pgTable("form_folders", {

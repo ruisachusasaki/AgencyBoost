@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, Repeat } from "lucide-react";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff, type TaskStatus, type TaskPriority, type TaskCategory } from "@shared/schema";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff, type TaskStatus, type TaskPriority, type TaskCategory, type Department, type TeamWorkflow } from "@shared/schema";
 import { useState } from "react";
 
 interface TaskFormProps {
@@ -53,10 +53,29 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/task-categories"],
   });
 
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
+  });
+
+  // Get assigned user's department and workflow
+  const assignedUser = staff.find((s: Staff) => s.id === form.watch('assignedTo'));
+  const assignedDepartment = departments.find((d: Department) => d.name === assignedUser?.department);
+  
+  // Fetch team-specific workflow if department has one
+  const { data: teamWorkflow } = useQuery<TeamWorkflow>({
+    queryKey: ["/api/team-workflows", assignedDepartment?.workflowId],
+    enabled: !!assignedDepartment?.workflowId,
+  });
+
+  // Determine which statuses to use (team workflow statuses or global statuses)
+  const availableStatuses = teamWorkflow?.statuses?.length 
+    ? teamWorkflow.statuses.map((ws: any) => ws.status)
+    : taskStatuses;
+
   // Get default values from settings
-  const defaultStatus = taskStatuses.find(s => s.isDefault)?.value || taskStatuses[0]?.value || "pending";
-  const defaultPriority = taskPriorities.find(p => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
-  const defaultCategory = taskCategories.find(c => c.isDefault)?.id || null;
+  const defaultStatus = availableStatuses.find((s: TaskStatus) => s.isDefault)?.value || availableStatuses[0]?.value || "pending";
+  const defaultPriority = taskPriorities.find((p: TaskPriority) => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
+  const defaultCategory = taskCategories.find((c: TaskCategory) => c.isDefault)?.id || null;
 
   const [isRecurringEnabled, setIsRecurringEnabled] = useState(task?.isRecurring || false);
 

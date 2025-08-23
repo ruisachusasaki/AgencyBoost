@@ -22,13 +22,14 @@ import {
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
+  insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
-  taskStatuses, taskPriorities, taskSettings
+  taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -9050,6 +9051,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error saving task setting:", error);
       res.status(500).json({ message: "Failed to save task setting" });
+    }
+  });
+
+  // Team Workflows - Manage team-specific status workflows
+  app.get("/api/team-workflows", async (req, res) => {
+    try {
+      const workflows = await db.select()
+        .from(teamWorkflows)
+        .where(eq(teamWorkflows.isActive, true))
+        .orderBy(asc(teamWorkflows.name));
+      
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching team workflows:", error);
+      res.status(500).json({ message: "Failed to fetch team workflows" });
+    }
+  });
+
+  app.get("/api/team-workflows/:id", async (req, res) => {
+    try {
+      const [workflow] = await db.select()
+        .from(teamWorkflows)
+        .where(eq(teamWorkflows.id, req.params.id));
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Team workflow not found" });
+      }
+      
+      // Get workflow statuses with their status details
+      const workflowStatuses = await db
+        .select({
+          id: teamWorkflowStatuses.id,
+          workflowId: teamWorkflowStatuses.workflowId,
+          order: teamWorkflowStatuses.order,
+          isRequired: teamWorkflowStatuses.isRequired,
+          status: {
+            id: taskStatuses.id,
+            name: taskStatuses.name,
+            value: taskStatuses.value,
+            color: taskStatuses.color,
+            isDefault: taskStatuses.isDefault,
+          }
+        })
+        .from(teamWorkflowStatuses)
+        .innerJoin(taskStatuses, eq(teamWorkflowStatuses.statusId, taskStatuses.id))
+        .where(eq(teamWorkflowStatuses.workflowId, req.params.id))
+        .orderBy(asc(teamWorkflowStatuses.order));
+      
+      res.json({ ...workflow, statuses: workflowStatuses });
+    } catch (error) {
+      console.error("Error fetching team workflow:", error);
+      res.status(500).json({ message: "Failed to fetch team workflow" });
+    }
+  });
+
+  app.post("/api/team-workflows", async (req, res) => {
+    try {
+      const data = insertTeamWorkflowSchema.parse(req.body);
+      
+      const [newWorkflow] = await db.insert(teamWorkflows)
+        .values(data)
+        .returning();
+      
+      // Create audit log
+      await createAuditLog("created", "team_workflow", newWorkflow.id, null, JSON.stringify(data), req.session?.userId || null);
+      
+      res.status(201).json(newWorkflow);
+    } catch (error) {
+      console.error("Error creating team workflow:", error);
+      res.status(500).json({ message: "Failed to create team workflow" });
+    }
+  });
+
+  app.patch("/api/team-workflows/:id", async (req, res) => {
+    try {
+      const data = insertTeamWorkflowSchema.partial().parse(req.body);
+      
+      // Get current workflow for audit log
+      const [currentWorkflow] = await db.select()
+        .from(teamWorkflows)
+        .where(eq(teamWorkflows.id, req.params.id));
+      
+      if (!currentWorkflow) {
+        return res.status(404).json({ message: "Team workflow not found" });
+      }
+      
+      const [updatedWorkflow] = await db.update(teamWorkflows)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(teamWorkflows.id, req.params.id))
+        .returning();
+      
+      // Create audit log
+      await createAuditLog("updated", "team_workflow", updatedWorkflow.id, JSON.stringify(currentWorkflow), JSON.stringify(data), req.session?.userId || null);
+      
+      res.json(updatedWorkflow);
+    } catch (error) {
+      console.error("Error updating team workflow:", error);
+      res.status(500).json({ message: "Failed to update team workflow" });
+    }
+  });
+
+  app.delete("/api/team-workflows/:id", async (req, res) => {
+    try {
+      // Get current workflow for audit log
+      const [currentWorkflow] = await db.select()
+        .from(teamWorkflows)
+        .where(eq(teamWorkflows.id, req.params.id));
+      
+      if (!currentWorkflow) {
+        return res.status(404).json({ message: "Team workflow not found" });
+      }
+      
+      // Check if any departments are using this workflow
+      const [departmentCount] = await db.select({ count: sql`count(*)` })
+        .from(departments)
+        .where(eq(departments.workflowId, req.params.id));
+      
+      if (departmentCount.count > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete workflow that is assigned to departments" 
+        });
+      }
+      
+      await db.delete(teamWorkflows)
+        .where(eq(teamWorkflows.id, req.params.id));
+      
+      // Create audit log
+      await createAuditLog("deleted", "team_workflow", req.params.id, JSON.stringify(currentWorkflow), null, req.session?.userId || null);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting team workflow:", error);
+      res.status(500).json({ message: "Failed to delete team workflow" });
+    }
+  });
+
+  // Team Workflow Statuses - Manage status order within workflows
+  app.post("/api/team-workflows/:workflowId/statuses", async (req, res) => {
+    try {
+      const { statusId, order, isRequired } = req.body;
+      
+      const data = insertTeamWorkflowStatusSchema.parse({
+        workflowId: req.params.workflowId,
+        statusId,
+        order,
+        isRequired,
+      });
+      
+      const [newWorkflowStatus] = await db.insert(teamWorkflowStatuses)
+        .values(data)
+        .returning();
+      
+      res.status(201).json(newWorkflowStatus);
+    } catch (error) {
+      console.error("Error adding status to workflow:", error);
+      res.status(500).json({ message: "Failed to add status to workflow" });
+    }
+  });
+
+  app.patch("/api/team-workflow-statuses/:id", async (req, res) => {
+    try {
+      const { order, isRequired } = req.body;
+      
+      const [updatedStatus] = await db.update(teamWorkflowStatuses)
+        .set({ order, isRequired })
+        .where(eq(teamWorkflowStatuses.id, req.params.id))
+        .returning();
+      
+      res.json(updatedStatus);
+    } catch (error) {
+      console.error("Error updating workflow status:", error);
+      res.status(500).json({ message: "Failed to update workflow status" });
+    }
+  });
+
+  app.delete("/api/team-workflow-statuses/:id", async (req, res) => {
+    try {
+      await db.delete(teamWorkflowStatuses)
+        .where(eq(teamWorkflowStatuses.id, req.params.id));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing status from workflow:", error);
+      res.status(500).json({ message: "Failed to remove status from workflow" });
+    }
+  });
+
+  // Department workflow assignment
+  app.patch("/api/departments/:id/workflow", async (req, res) => {
+    try {
+      const { workflowId } = req.body;
+      
+      const [updatedDepartment] = await db.update(departments)
+        .set({ workflowId })
+        .where(eq(departments.id, req.params.id))
+        .returning();
+      
+      res.json(updatedDepartment);
+    } catch (error) {
+      console.error("Error assigning workflow to department:", error);
+      res.status(500).json({ message: "Failed to assign workflow to department" });
     }
   });
 

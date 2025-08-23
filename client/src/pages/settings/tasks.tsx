@@ -38,7 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema } from "@shared/schema";
+import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Color options for task statuses and priorities
@@ -105,6 +105,38 @@ type TaskCategory = {
 type TaskStatusFormData = z.infer<typeof insertTaskStatusSchema>;
 type TaskPriorityFormData = z.infer<typeof insertTaskPrioritySchema>;
 type TaskCategoryFormData = z.infer<typeof insertTaskCategorySchema>;
+type TeamWorkflowFormData = z.infer<typeof insertTeamWorkflowSchema>;
+
+type TeamWorkflow = {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  statuses?: {
+    id: string;
+    workflowId: string;
+    order: number;
+    isRequired: boolean;
+    status: {
+      id: string;
+      name: string;
+      value: string;
+      color: string;
+      isDefault: boolean;
+    };
+  }[];
+};
+
+type Department = {
+  id: string;
+  name: string;
+  description?: string;
+  workflowId?: string;
+  isActive: boolean;
+};
 
 export default function TasksSettingsPage() {
   const [activeTab, setActiveTab] = useState("statuses");
@@ -129,6 +161,16 @@ export default function TasksSettingsPage() {
   // Fetch task categories
   const { data: categories = [], isLoading: loadingCategories } = useQuery<TaskCategory[]>({
     queryKey: ["/api/task-categories"],
+  });
+
+  // Fetch team workflows
+  const { data: workflows = [], isLoading: loadingWorkflows } = useQuery<TeamWorkflow[]>({
+    queryKey: ["/api/team-workflows"],
+  });
+
+  // Fetch departments
+  const { data: departments = [], isLoading: loadingDepartments } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
   });
 
   // Form for creating/editing statuses
@@ -171,6 +213,17 @@ export default function TasksSettingsPage() {
       color: "#6b7280",
       icon: "folder",
       isDefault: false,
+    },
+  });
+
+  // Form for creating/editing workflows
+  const workflowForm = useForm<TeamWorkflowFormData>({
+    resolver: zodResolver(insertTeamWorkflowSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      isDefault: false,
+      isActive: true,
     },
   });
 
@@ -449,7 +502,7 @@ export default function TasksSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="statuses" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
             Statuses
@@ -461,6 +514,10 @@ export default function TasksSettingsPage() {
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <Folder className="h-4 w-4" />
             Categories
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <GripVertical className="h-4 w-4" />
+            Workflows
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
