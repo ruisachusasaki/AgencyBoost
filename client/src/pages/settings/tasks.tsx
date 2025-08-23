@@ -140,11 +140,11 @@ type Department = {
 
 export default function TasksSettingsPage() {
   const [activeTab, setActiveTab] = useState("statuses");
-  const [editingItem, setEditingItem] = useState<TaskStatus | TaskPriority | TaskCategory | null>(null);
+  const [editingItem, setEditingItem] = useState<TaskStatus | TaskPriority | TaskCategory | TeamWorkflow | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<TaskStatus | TaskPriority | TaskCategory | null>(null);
-  const [editType, setEditType] = useState<'status' | 'priority' | 'category'>('status');
+  const [itemToDelete, setItemToDelete] = useState<TaskStatus | TaskPriority | TaskCategory | TeamWorkflow | null>(null);
+  const [editType, setEditType] = useState<'status' | 'priority' | 'category' | 'workflow'>('status');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -344,7 +344,46 @@ export default function TasksSettingsPage() {
     },
   });
 
-  const handleOpenDialog = (type: 'status' | 'priority' | 'category', item?: TaskStatus | TaskPriority | TaskCategory) => {
+  // Workflow mutations
+  const createWorkflowMutation = useMutation({
+    mutationFn: (data: TeamWorkflowFormData) => apiRequest("POST", "/api/team-workflows", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-workflows"] });
+      toast({ title: "Success", description: "Team workflow created successfully" });
+      handleCloseDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create team workflow", variant: "destructive" });
+    },
+  });
+
+  const updateWorkflowMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: TeamWorkflowFormData }) => 
+      apiRequest("PUT", `/api/team-workflows/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-workflows"] });
+      toast({ title: "Success", description: "Team workflow updated successfully" });
+      handleCloseDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update team workflow", variant: "destructive" });
+    },
+  });
+
+  const deleteWorkflowMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/team-workflows/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-workflows"] });
+      toast({ title: "Success", description: "Team workflow deleted successfully" });
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete team workflow", variant: "destructive" });
+    },
+  });
+
+  const handleOpenDialog = (type: 'status' | 'priority' | 'category' | 'workflow', item?: TaskStatus | TaskPriority | TaskCategory | TeamWorkflow) => {
     setEditType(type);
     
     if (type === 'status') {
@@ -403,7 +442,7 @@ export default function TasksSettingsPage() {
           isSystemPriority: false,
         });
       }
-    } else {
+    } else if (type === 'category') {
       const category = item as TaskCategory;
       if (category) {
         setEditingItem(category);
@@ -424,6 +463,25 @@ export default function TasksSettingsPage() {
           isDefault: false,
         });
       }
+    } else if (type === 'workflow') {
+      const workflow = item as TeamWorkflow;
+      if (workflow) {
+        setEditingItem(workflow);
+        workflowForm.reset({
+          name: workflow.name,
+          description: workflow.description || "",
+          isDefault: workflow.isDefault,
+          isActive: workflow.isActive,
+        });
+      } else {
+        setEditingItem(null);
+        workflowForm.reset({
+          name: "",
+          description: "",
+          isDefault: false,
+          isActive: true,
+        });
+      }
     }
     setIsDialogOpen(true);
   };
@@ -434,9 +492,10 @@ export default function TasksSettingsPage() {
     statusForm.reset();
     priorityForm.reset();
     categoryForm.reset();
+    workflowForm.reset();
   };
 
-  const handleSubmit = (data: TaskStatusFormData | TaskPriorityFormData | TaskCategoryFormData) => {
+  const handleSubmit = (data: TaskStatusFormData | TaskPriorityFormData | TaskCategoryFormData | TeamWorkflowFormData) => {
     // Auto-generate value from name if not provided for statuses and priorities
     if ('value' in data && !data.value) {
       data.value = data.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
@@ -454,16 +513,22 @@ export default function TasksSettingsPage() {
       } else {
         createPriorityMutation.mutate(data as TaskPriorityFormData);
       }
-    } else {
+    } else if (editType === 'category') {
       if (editingItem) {
         updateCategoryMutation.mutate({ id: editingItem.id, data: data as TaskCategoryFormData });
       } else {
         createCategoryMutation.mutate(data as TaskCategoryFormData);
       }
+    } else if (editType === 'workflow') {
+      if (editingItem) {
+        updateWorkflowMutation.mutate({ id: editingItem.id, data: data as TeamWorkflowFormData });
+      } else {
+        createWorkflowMutation.mutate(data as TeamWorkflowFormData);
+      }
     }
   };
 
-  const handleDelete = (item: TaskStatus | TaskPriority | TaskCategory) => {
+  const handleDelete = (item: TaskStatus | TaskPriority | TaskCategory | TeamWorkflow) => {
     setItemToDelete(item);
     setIsDeleteDialogOpen(true);
   };
@@ -474,6 +539,8 @@ export default function TasksSettingsPage() {
         deleteStatusMutation.mutate(itemToDelete.id);
       } else if ('isSystemPriority' in itemToDelete) {
         deletePriorityMutation.mutate(itemToDelete.id);
+      } else if ('createdAt' in itemToDelete && 'updatedAt' in itemToDelete && 'isActive' in itemToDelete) {
+        deleteWorkflowMutation.mutate(itemToDelete.id);
       } else {
         deleteCategoryMutation.mutate(itemToDelete.id);
       }
@@ -487,6 +554,7 @@ export default function TasksSettingsPage() {
   const getCurrentForm = () => {
     if (editType === 'status') return statusForm;
     if (editType === 'priority') return priorityForm;
+    if (editType === 'workflow') return workflowForm;
     return categoryForm;
   };
 
@@ -775,6 +843,125 @@ export default function TasksSettingsPage() {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Team Workflows Tab */}
+        <TabsContent value="workflows" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-medium">Team Workflows</h3>
+              <p className="text-muted-foreground">
+                Create custom status flows for different teams and departments.
+              </p>
+            </div>
+            <Button onClick={() => handleOpenDialog('workflow')} data-testid="button-add-workflow">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Workflow
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              {loadingWorkflows ? (
+                <div className="flex items-center justify-center h-48">
+                  <div className="text-muted-foreground">Loading workflows...</div>
+                </div>
+              ) : workflows.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No custom workflows configured. Create your first workflow to get started.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status Flow</TableHead>
+                      <TableHead>Default</TableHead>
+                      <TableHead>Active</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workflows
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map((workflow) => (
+                        <TableRow key={workflow.id}>
+                          <TableCell className="font-medium">{workflow.name}</TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {workflow.description || 'No description'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {workflow.statuses?.slice(0, 3).map((ws, index) => (
+                                <Badge key={ws.id} variant="secondary" className="text-xs">
+                                  {ws.status.name}
+                                  {index < Math.min(2, (workflow.statuses?.length || 0) - 1) && " →"}
+                                </Badge>
+                              ))}
+                              {(workflow.statuses?.length || 0) > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{(workflow.statuses?.length || 0) - 3} more
+                                </Badge>
+                              )}
+                              {(!workflow.statuses || workflow.statuses.length === 0) && (
+                                <span className="text-sm text-muted-foreground">No statuses</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {workflow.isDefault && (
+                              <Badge variant="default" className="text-xs">
+                                Default
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {workflow.isActive ? (
+                              <Badge variant="secondary" className="text-xs text-green-600">
+                                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Inactive
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(workflow.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenDialog('workflow', workflow)}
+                                data-testid={`button-edit-${workflow.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(workflow)}
+                                data-testid={`button-delete-${workflow.id}`}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1464,6 +1651,113 @@ export default function TasksSettingsPage() {
               </form>
             </Form>
           )}
+
+          {editType === 'workflow' && (
+            <Form {...workflowForm}>
+              <form onSubmit={workflowForm.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={workflowForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Workflow Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Video Production Workflow"
+                          {...field}
+                          data-testid="input-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={workflowForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Brief description of this workflow and when it should be used"
+                          {...field}
+                          value={field.value || ""}
+                          data-testid="input-description"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={workflowForm.control}
+                    name="isDefault"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel>Default Workflow</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-default"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={workflowForm.control}
+                    name="isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel>Active</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-active"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    💡 <strong>Next steps:</strong> After creating this workflow, you can assign specific status progression in the workflow editor, then assign it to departments in the Teams section.
+                  </p>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createWorkflowMutation.isPending || updateWorkflowMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    {createWorkflowMutation.isPending || updateWorkflowMutation.isPending
+                      ? "Saving..."
+                      : editingItem
+                      ? "Update"
+                      : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1473,13 +1767,15 @@ export default function TasksSettingsPage() {
           <DialogHeader>
             <DialogTitle>Delete Task {
               itemToDelete && 'isSystemStatus' in itemToDelete ? 'Status' : 
-              itemToDelete && 'isSystemPriority' in itemToDelete ? 'Priority' : 'Category'
+              itemToDelete && 'isSystemPriority' in itemToDelete ? 'Priority' : 
+              itemToDelete && 'isActive' in itemToDelete ? 'Workflow' : 'Category'
             }</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete "{itemToDelete?.name}"? This action will
               deactivate the {
                 itemToDelete && 'isSystemStatus' in itemToDelete ? 'status' : 
-                itemToDelete && 'isSystemPriority' in itemToDelete ? 'priority' : 'category'
+                itemToDelete && 'isSystemPriority' in itemToDelete ? 'priority' : 
+                itemToDelete && 'isActive' in itemToDelete ? 'workflow' : 'category'
               } and it won't be available for new tasks.
             </DialogDescription>
           </DialogHeader>
@@ -1494,10 +1790,10 @@ export default function TasksSettingsPage() {
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending}
+              disabled={deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending || deleteWorkflowMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending || deleteWorkflowMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
