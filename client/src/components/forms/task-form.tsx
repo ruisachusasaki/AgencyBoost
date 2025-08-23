@@ -57,23 +57,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/departments"],
   });
 
-  // Get assigned user's department and workflow
-  const assignedUser = staff.find((s: Staff) => s.id === form.watch('assignedTo'));
-  const assignedDepartment = departments.find((d: Department) => d.name === assignedUser?.department);
-  
-  // Fetch team-specific workflow if department has one
-  const { data: teamWorkflow } = useQuery<TeamWorkflow>({
-    queryKey: ["/api/team-workflows", assignedDepartment?.workflowId],
-    enabled: !!assignedDepartment?.workflowId,
-  });
-
-  // Determine which statuses to use (team workflow statuses or global statuses)
-  const availableStatuses = teamWorkflow?.statuses?.length 
-    ? teamWorkflow.statuses.map((ws: any) => ws.status)
-    : taskStatuses;
-
   // Get default values from settings
-  const defaultStatus = availableStatuses.find((s: TaskStatus) => s.isDefault)?.value || availableStatuses[0]?.value || "pending";
+  const defaultStatus = taskStatuses.find((s: TaskStatus) => s.isDefault)?.value || taskStatuses[0]?.value || "pending";
   const defaultPriority = taskPriorities.find((p: TaskPriority) => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
   const defaultCategory = taskCategories.find((c: TaskCategory) => c.isDefault)?.id || null;
 
@@ -104,9 +89,24 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     },
   });
 
+  // Get assigned user's department and workflow (after form is declared)
+  const assignedUser = staff.find((s: Staff) => s.id === form.watch('assignedTo'));
+  const assignedDepartment = departments.find((d: Department) => d.name === assignedUser?.department);
+  
+  // Fetch team-specific workflow if department has one
+  const { data: teamWorkflow } = useQuery<TeamWorkflow>({
+    queryKey: ["/api/team-workflows", assignedDepartment?.workflowId],
+    enabled: !!assignedDepartment?.workflowId,
+  });
+
+  // Determine which statuses to use (team workflow statuses or global statuses)
+  const availableStatuses = teamWorkflow?.statuses?.length 
+    ? teamWorkflow.statuses.map((ws: any) => ws.status)
+    : taskStatuses;
+
   const createTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
-      await apiRequest("/api/tasks", "POST", data);
+      await apiRequest("POST", "/api/tasks", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -128,7 +128,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
-      await apiRequest(`/api/tasks/${task!.id}`, "PUT", data);
+      await apiRequest("PUT", `/api/tasks/${task!.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -217,7 +217,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {taskStatuses.filter(status => status.isActive).map((status) => (
+                    {availableStatuses.filter(status => status.isActive).map((status) => (
                       <SelectItem key={status.id} value={status.value}>
                         <div className="flex items-center gap-2">
                           <div 
