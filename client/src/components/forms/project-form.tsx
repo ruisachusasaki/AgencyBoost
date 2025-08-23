@@ -25,6 +25,8 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(null);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const { data: clientsData } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
@@ -247,7 +249,16 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
               <FormItem>
                 <FormLabel>Budget</FormLabel>
                 <FormControl>
-                  <Input {...field} type="number" placeholder="10000" value={field.value || ""} />
+                  <Input 
+                    {...field} 
+                    type="number" 
+                    placeholder="10000" 
+                    value={field.value || ""} 
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? null : value);
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -260,7 +271,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Start Date</FormLabel>
-                <Popover>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -283,7 +294,10 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setStartDateOpen(false);
+                      }}
                       disabled={(date) => date < new Date("1900-01-01")}
                       initialFocus
                     />
@@ -300,7 +314,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>End Date</FormLabel>
-                <Popover>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -323,7 +337,10 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setEndDateOpen(false);
+                      }}
                       disabled={(date) => date < new Date("1900-01-01")}
                       initialFocus
                     />
