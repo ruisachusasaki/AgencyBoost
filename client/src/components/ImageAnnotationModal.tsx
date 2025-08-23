@@ -141,7 +141,7 @@ export function ImageAnnotationModal({
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!showMentionDropdown) return;
 
-    const filteredStaff = staff.filter(s => 
+    const filteredStaff = (staff as any[]).filter((s: any) => 
       s.firstName.toLowerCase().includes(mentionFilter.toLowerCase()) ||
       s.lastName.toLowerCase().includes(mentionFilter.toLowerCase())
     );
@@ -163,7 +163,7 @@ export function ImageAnnotationModal({
   };
 
   // Filter staff for mentions
-  const filteredStaff = staff.filter((s: any) => 
+  const filteredStaff = (staff as any[]).filter((s: any) => 
     s.firstName.toLowerCase().includes(mentionFilter.toLowerCase()) ||
     s.lastName.toLowerCase().includes(mentionFilter.toLowerCase())
   );
