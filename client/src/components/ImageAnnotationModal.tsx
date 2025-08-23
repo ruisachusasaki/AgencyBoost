@@ -171,7 +171,7 @@ export function ImageAnnotationModal({
   // Create annotation mutation
   const createAnnotationMutation = useMutation({
     mutationFn: async (data: { x: number; y: number; content: string; mentions: string[] }) => {
-      return apiRequest(`/api/files/${fileId}/annotations`, "POST", data);
+      return apiRequest("POST", `/api/files/${fileId}/annotations`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
@@ -192,7 +192,7 @@ export function ImageAnnotationModal({
   // Update annotation mutation
   const updateAnnotationMutation = useMutation({
     mutationFn: async (data: { id: string; content: string; mentions: string[] }) => {
-      return apiRequest(`/api/annotations/${data.id}`, "PUT", { content: data.content, mentions: data.mentions });
+      return apiRequest("PUT", `/api/annotations/${data.id}`, { content: data.content, mentions: data.mentions });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
@@ -213,7 +213,7 @@ export function ImageAnnotationModal({
   // Delete annotation mutation
   const deleteAnnotationMutation = useMutation({
     mutationFn: async (annotationId: string) => {
-      return apiRequest(`/api/annotations/${annotationId}`, "DELETE");
+      return apiRequest("DELETE", `/api/annotations/${annotationId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
