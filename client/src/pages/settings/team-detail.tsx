@@ -816,7 +816,7 @@ export default function TeamDetail() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No Workflow (Use all statuses)</SelectItem>
+                        <SelectItem value="none">No Workflow (Use all statuses)</SelectItem>
                         {workflows.filter(w => w.isActive).map((workflow) => (
                           <SelectItem key={workflow.id} value={workflow.id}>
                             {workflow.name}
