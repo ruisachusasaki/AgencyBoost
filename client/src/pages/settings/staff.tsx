@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,6 +65,16 @@ export default function Staff() {
     }
   });
 
+  // Clear position when department changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'department') {
+        form.setValue('position', '');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const teamForm = useForm<TeamFormData>({
     resolver: zodResolver(teamFormSchema),
     defaultValues: {
@@ -98,6 +108,17 @@ export default function Staff() {
     queryKey: ['/api/positions'],
   });
 
+  // Get selected department for position filtering
+  const selectedDepartment = form.watch('department');
+  const selectedDeptObj = departments.find(dept => dept.name === selectedDepartment);
+
+  // Fetch positions for selected department
+  const { data: departmentPositions = [] } = useQuery<Position[]>({
+    queryKey: ['/api/departments', selectedDeptObj?.id, 'positions'],
+    queryFn: () => fetch(`/api/departments/${selectedDeptObj?.id}/positions`).then(res => res.json()),
+    enabled: !!selectedDeptObj?.id,
+  });
+
   // Create staff mutation
   const createStaffMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
@@ -111,9 +132,10 @@ export default function Staff() {
       const staffResponse = await apiRequest("POST", "/api/staff", staffData);
       
       // Also assign the role in the user_roles table
-      if (data.roleId && staffResponse?.id) {
+      const createdStaff = await staffResponse.json();
+      if (data.roleId && createdStaff?.id) {
         try {
-          await apiRequest("POST", `/api/users/${staffResponse.id}/roles`, {
+          await apiRequest("POST", `/api/users/${createdStaff.id}/roles`, {
             roleId: data.roleId,
             assignedBy: "system" // TODO: Replace with current user ID
           });
@@ -123,7 +145,7 @@ export default function Staff() {
         }
       }
       
-      return staffResponse;
+      return createdStaff;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
@@ -464,11 +486,17 @@ export default function Staff() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {positions.map((pos) => (
-                            <SelectItem key={pos.id} value={pos.name}>
-                              {pos.name}
+                          {selectedDepartment && selectedDepartment !== '' ? (
+                            departmentPositions.map((pos) => (
+                              <SelectItem key={pos.id} value={pos.name}>
+                                {pos.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              Please select a team/department first
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -732,7 +760,7 @@ export default function Staff() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {departments.map((department) => {
                 const teamPositions = positions.filter(p => p.departmentId === department.id);
-                const staffCount = staffMembers.filter(s => s.departmentId === department.id).length;
+                const staffCount = staffMembers.filter(s => s.department === department.name).length;
                 
                 return (
                   <Link key={department.id} href={`/settings/teams/${department.id}`}>
