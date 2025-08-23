@@ -61,7 +61,8 @@ export function IconPicker({ value, onChange, placeholder = "Type icon name...",
       setFilteredIcons(popularIcons);
     } else {
       const filtered = allIconNames.filter(iconName =>
-        iconName.toLowerCase().includes(newValue.toLowerCase())
+        iconName.toLowerCase().includes(newValue.toLowerCase()) ||
+        iconName.replace(/([A-Z])/g, '-$1').toLowerCase().includes(newValue.toLowerCase())
       ).slice(0, 20); // Limit to 20 results
       setFilteredIcons(filtered);
     }

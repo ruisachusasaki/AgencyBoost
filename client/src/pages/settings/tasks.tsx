@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -786,7 +787,11 @@ export default function TasksSettingsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center">
-                            <Folder className="h-4 w-4 mr-2" />
+                            {(() => {
+                              const iconName = category.icon || 'folder';
+                              const IconComponent = (LucideIcons as any)[iconName] || (LucideIcons as any)[iconName.charAt(0).toUpperCase() + iconName.slice(1)] || Folder;
+                              return <IconComponent className="h-4 w-4 mr-2" />;
+                            })()}
                             <span className="text-sm">{category.icon || 'folder'}</span>
                           </div>
                         </TableCell>
