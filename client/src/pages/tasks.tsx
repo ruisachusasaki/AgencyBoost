@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -55,6 +55,7 @@ export default function Tasks() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -93,6 +94,18 @@ export default function Tasks() {
   const { data: taskCategories = [] } = useQuery<TaskCategory[]>({
     queryKey: ["/api/task-categories"],
   });
+
+  // Fetch team workflows for workflow-aware Kanban
+  const { data: workflows = [] } = useQuery<any[]>({
+    queryKey: ["/api/team-workflows"],
+  });
+
+  // Auto-select first workflow if none selected and workflows are available
+  React.useEffect(() => {
+    if (workflows.length > 0 && !selectedWorkflowId) {
+      setSelectedWorkflowId(workflows[0].id);
+    }
+  }, [workflows, selectedWorkflowId]);
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -847,15 +860,20 @@ export default function Tasks() {
     });
   };
 
+  // Dynamic task stats based on selected workflow
+  const selectedWorkflow = workflows.find(w => w.id === selectedWorkflowId) || workflows[0];
+  const workflowStatuses = selectedWorkflow?.statuses || [];
+  
   const taskStats = {
     total: tasks.length,
-    pending: tasks.filter(t => t.status === "pending").length,
-    inProgress: tasks.filter(t => t.status === "in_progress").length,
-    completed: tasks.filter(t => t.status === "completed").length,
+    byStatus: workflowStatuses.reduce((acc: any, status: any) => {
+      acc[status.name] = tasks.filter(t => t.status === status.name).length;
+      return acc;
+    }, {}),
     overdue: tasks.filter(t => 
       t.dueDate && 
       new Date(t.dueDate) < new Date() && 
-      t.status !== "completed"
+      !workflowStatuses.find((s: any) => s.name === t.status && (s.name === "completed" || s.name === "cancelled"))
     ).length,
   };
 
@@ -896,12 +914,21 @@ export default function Tasks() {
     onDeleteTask: (id: string) => void;
     deleteTaskMutation: any;
   }) => {
-    const columns = [
-      { id: 'pending', title: 'Pending', color: 'bg-yellow-100' },
-      { id: 'in_progress', title: 'In Progress', color: 'bg-blue-100' },
-      { id: 'completed', title: 'Completed', color: 'bg-green-100' },
-      { id: 'cancelled', title: 'Cancelled', color: 'bg-red-100' }
-    ];
+    // Get the selected workflow or default to the first one
+    const selectedWorkflow = workflows.find(w => w.id === selectedWorkflowId) || workflows[0];
+    
+    // Generate dynamic columns based on workflow statuses
+    const columns = selectedWorkflow?.statuses?.map((status: any, index: number) => {
+      const colors = [
+        'bg-yellow-100', 'bg-blue-100', 'bg-green-100', 'bg-red-100', 
+        'bg-purple-100', 'bg-orange-100', 'bg-pink-100', 'bg-gray-100'
+      ];
+      return {
+        id: status.name,
+        title: status.label || status.name,
+        color: colors[index % colors.length]
+      };
+    }) || [];
 
     const getTasksByStatus = (status: string) => {
       return tasks.filter(task => task.status === status);
@@ -971,38 +998,105 @@ export default function Tasks() {
       </Draggable>
     );
 
-    return (
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
-          {columns.map(column => (
-            <div key={column.id} className="bg-slate-50 rounded-lg p-3">
-              <div className={`${column.color} rounded-md p-2 mb-3`}>
-                <h3 className="font-medium text-slate-900 text-sm">{column.title}</h3>
-                <span className="text-xs text-slate-600">
-                  {getTasksByStatus(column.id).length} tasks
-                </span>
-              </div>
-              
-              <Droppable droppableId={column.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-[200px] transition-colors ${
-                      snapshot.isDraggingOver ? 'bg-slate-100' : ''
-                    }`}
-                  >
-                    {getTasksByStatus(column.id).map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+    // Show workflow selector and empty state if no workflow or columns
+    if (!selectedWorkflow || columns.length === 0) {
+      return (
+        <div className="space-y-4">
+          {/* Workflow Selector */}
+          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+            <label className="text-sm font-medium text-slate-700">Workflow:</label>
+            <Select 
+              value={selectedWorkflowId} 
+              onValueChange={setSelectedWorkflowId}
+            >
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Select a workflow" />
+              </SelectTrigger>
+              <SelectContent>
+                {workflows.map((workflow: any) => (
+                  <SelectItem key={workflow.id} value={workflow.id}>
+                    {workflow.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {workflows.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500 mb-4">No workflows found. Create a workflow first to use Kanban view.</p>
+              <Link href="/settings/tasks">
+                <Button>Go to Workflow Settings</Button>
+              </Link>
             </div>
-          ))}
+          ) : !selectedWorkflow ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500">Please select a workflow to view tasks in Kanban format.</p>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-slate-500">This workflow has no status columns configured.</p>
+            </div>
+          )}
         </div>
-      </DragDropContext>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Workflow Selector */}
+        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+          <label className="text-sm font-medium text-slate-700">Workflow:</label>
+          <Select 
+            value={selectedWorkflowId} 
+            onValueChange={setSelectedWorkflowId}
+          >
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Select a workflow" />
+            </SelectTrigger>
+            <SelectContent>
+              {workflows.map((workflow: any) => (
+                <SelectItem key={workflow.id} value={workflow.id}>
+                  {workflow.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Kanban Board */}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+            {columns.map(column => (
+              <div key={column.id} className="bg-slate-50 rounded-lg p-3">
+                <div className={`${column.color} rounded-md p-2 mb-3`}>
+                  <h3 className="font-medium text-slate-900 text-sm">{column.title}</h3>
+                  <span className="text-xs text-slate-600">
+                    {getTasksByStatus(column.id).length} tasks
+                  </span>
+                </div>
+                
+                <Droppable droppableId={column.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`min-h-[200px] transition-colors ${
+                        snapshot.isDraggingOver ? 'bg-slate-100' : ''
+                      }`}
+                    >
+                      {getTasksByStatus(column.id).map((task, index) => (
+                        <TaskCard key={task.id} task={task} index={index} />
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            ))}
+          </div>
+        </DragDropContext>
+      </div>
     );
   };
 
@@ -1033,32 +1127,34 @@ export default function Tasks() {
         </Dialog>
       </div>
 
-      {/* Task Statistics */}
+      {/* Task Statistics - Dynamic based on workflow */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-slate-900">{taskStats.pending}</p>
-              <p className="text-sm text-slate-600">Pending</p>
+              <p className="text-2xl font-bold text-slate-900">{taskStats.total}</p>
+              <p className="text-sm text-slate-600">Total Tasks</p>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{taskStats.inProgress}</p>
-              <p className="text-sm text-slate-600">In Progress</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{taskStats.completed}</p>
-              <p className="text-sm text-slate-600">Completed</p>
-            </div>
-          </CardContent>
-        </Card>
+        
+        {/* Dynamic workflow status cards */}
+        {workflowStatuses.slice(0, 2).map((status: any, index: number) => {
+          const colors = ['text-yellow-600', 'text-blue-600', 'text-green-600', 'text-purple-600'];
+          return (
+            <Card key={status.name}>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className={`text-2xl font-bold ${colors[index] || 'text-slate-600'}`}>
+                    {taskStats.byStatus[status.name] || 0}
+                  </p>
+                  <p className="text-sm text-slate-600">{status.label || status.name}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+        
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
