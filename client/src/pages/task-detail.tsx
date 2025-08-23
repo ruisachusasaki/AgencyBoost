@@ -19,7 +19,7 @@ import { TaskPath } from "@/components/task-path";
 import { TaskDependencies } from "@/components/task-dependencies";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
-// import { useTimer } from "@/contexts/TimerContext";
+import { useTimer } from "@/contexts/TimerContext";
 
 export default function TaskDetail() {
   const { taskId } = useParams();
@@ -30,8 +30,7 @@ export default function TaskDetail() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [timeEstimateUnit, setTimeEstimateUnit] = useState<"minutes" | "hours">("minutes");
-  // const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
-  const startTimer = () => {}, stopTimer = () => {}, isTimerRunning = false, currentTimer = null;
+  const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
@@ -256,7 +255,7 @@ export default function TaskDetail() {
   };
 
   // Check if this task has the running timer
-  const isThisTaskTimerRunning = isTimerRunning && currentTimer?.taskId === taskId;
+  const isThisTaskTimerRunning = isTimerRunning && currentTimer && currentTimer.taskId === taskId;
 
   const startTimeTracking = () => {
     if (!task?.id || !task?.title) return;
@@ -264,7 +263,9 @@ export default function TaskDetail() {
   };
 
   const stopTimeTracking = () => {
-    stopTimer();
+    if (stopTimer) {
+      stopTimer();
+    }
   };
 
   const getStaffName = (staffId: string | null) => {
