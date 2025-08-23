@@ -109,6 +109,11 @@ export default function StaffDetail() {
   // Update form values when staff member changes
   useEffect(() => {
     if (staffMember) {
+      console.log("Loading staff member:", {
+        name: `${staffMember.firstName} ${staffMember.lastName}`,
+        department: staffMember.department,
+        position: staffMember.position
+      });
       form.reset({
         firstName: staffMember.firstName,
         lastName: staffMember.lastName,
@@ -527,6 +532,12 @@ export default function StaffDetail() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">No Position</SelectItem>
+                            {/* Show the current position even if it's not in the loaded positions yet */}
+                            {field.value && field.value !== "none" && !departmentPositions.find(p => p.name === field.value) && (
+                              <SelectItem key="current" value={field.value}>
+                                {field.value} (current)
+                              </SelectItem>
+                            )}
                             {departmentPositions.map((position) => (
                               <SelectItem key={position.id} value={position.name}>
                                 {position.name}
