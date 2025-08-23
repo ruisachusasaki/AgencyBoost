@@ -32,6 +32,7 @@ import {
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses
 } from "@shared/schema";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-orm";
