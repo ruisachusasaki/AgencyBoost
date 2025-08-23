@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, X } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,6 +145,9 @@ export default function TasksSettingsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<TaskStatus | TaskPriority | TaskCategory | TeamWorkflow | null>(null);
   const [editType, setEditType] = useState<'status' | 'priority' | 'category' | 'workflow'>('status');
+  const [isStatusFlowDialogOpen, setIsStatusFlowDialogOpen] = useState(false);
+  const [currentWorkflow, setCurrentWorkflow] = useState<TeamWorkflow | null>(null);
+  const [workflowStatuses, setWorkflowStatuses] = useState<{id: string; order: number; isRequired: boolean; statusId: string}[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -382,6 +385,92 @@ export default function TasksSettingsPage() {
       toast({ title: "Error", description: error.message || "Failed to delete team workflow", variant: "destructive" });
     },
   });
+
+  // Workflow status mutations
+  const saveWorkflowStatusesMutation = useMutation({
+    mutationFn: ({ workflowId, statuses }: { workflowId: string; statuses: { statusId: string; order: number; isRequired: boolean }[] }) =>
+      apiRequest("PUT", `/api/team-workflows/${workflowId}/statuses`, { statuses }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-workflows"] });
+      toast({ title: "Success", description: "Workflow status flow updated successfully" });
+      setIsStatusFlowDialogOpen(false);
+      setCurrentWorkflow(null);
+      setWorkflowStatuses([]);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update workflow status flow", variant: "destructive" });
+    },
+  });
+
+  const handleConfigureStatusFlow = (workflow: TeamWorkflow) => {
+    setCurrentWorkflow(workflow);
+    // Initialize workflow statuses from the workflow's current statuses
+    const initialStatuses = workflow.statuses?.map(ws => ({
+      id: ws.id,
+      statusId: ws.status.id,
+      order: ws.order,
+      isRequired: ws.isRequired
+    })) || [];
+    setWorkflowStatuses(initialStatuses);
+    setIsStatusFlowDialogOpen(true);
+  };
+
+  const handleAddStatusToWorkflow = (statusId: string) => {
+    const maxOrder = workflowStatuses.length > 0 ? Math.max(...workflowStatuses.map(ws => ws.order)) : -1;
+    setWorkflowStatuses([...workflowStatuses, {
+      id: `temp-${Date.now()}`,
+      statusId,
+      order: maxOrder + 1,
+      isRequired: true
+    }]);
+  };
+
+  const handleRemoveStatusFromWorkflow = (statusId: string) => {
+    setWorkflowStatuses(workflowStatuses.filter(ws => ws.statusId !== statusId));
+  };
+
+  const handleToggleStatusRequired = (statusId: string) => {
+    setWorkflowStatuses(workflowStatuses.map(ws => 
+      ws.statusId === statusId ? { ...ws, isRequired: !ws.isRequired } : ws
+    ));
+  };
+
+  const handleMoveStatusUp = (statusId: string) => {
+    const index = workflowStatuses.findIndex(ws => ws.statusId === statusId);
+    if (index > 0) {
+      const newStatuses = [...workflowStatuses];
+      [newStatuses[index - 1], newStatuses[index]] = [newStatuses[index], newStatuses[index - 1]];
+      // Update order values
+      newStatuses.forEach((ws, idx) => ws.order = idx);
+      setWorkflowStatuses(newStatuses);
+    }
+  };
+
+  const handleMoveStatusDown = (statusId: string) => {
+    const index = workflowStatuses.findIndex(ws => ws.statusId === statusId);
+    if (index < workflowStatuses.length - 1) {
+      const newStatuses = [...workflowStatuses];
+      [newStatuses[index], newStatuses[index + 1]] = [newStatuses[index + 1], newStatuses[index]];
+      // Update order values
+      newStatuses.forEach((ws, idx) => ws.order = idx);
+      setWorkflowStatuses(newStatuses);
+    }
+  };
+
+  const handleSaveWorkflowStatuses = () => {
+    if (!currentWorkflow) return;
+    
+    const statusesToSave = workflowStatuses.map(ws => ({
+      statusId: ws.statusId,
+      order: ws.order,
+      isRequired: ws.isRequired
+    }));
+    
+    saveWorkflowStatusesMutation.mutate({
+      workflowId: currentWorkflow.id,
+      statuses: statusesToSave
+    });
+  };
 
   const handleOpenDialog = (type: 'status' | 'priority' | 'category' | 'workflow', item?: TaskStatus | TaskPriority | TaskCategory | TeamWorkflow) => {
     setEditType(type);
@@ -945,6 +1034,15 @@ export default function TasksSettingsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleConfigureStatusFlow(workflow)}
+                                data-testid={`button-configure-${workflow.id}`}
+                                title="Configure Status Flow"
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1794,6 +1892,147 @@ export default function TasksSettingsPage() {
               data-testid="button-confirm-delete"
             >
               {deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending || deleteWorkflowMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Flow Configuration Dialog */}
+      <Dialog open={isStatusFlowDialogOpen} onOpenChange={setIsStatusFlowDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Configure Status Flow: {currentWorkflow?.name}</DialogTitle>
+            <DialogDescription>
+              Define which statuses are part of this workflow and their progression order. Users will see these statuses when creating tasks assigned to team members in departments using this workflow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* Available Statuses */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Available Statuses</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3">
+                {statuses
+                  .filter(status => !workflowStatuses.some(ws => ws.statusId === status.id))
+                  .map(status => (
+                    <div
+                      key={status.id}
+                      className="flex items-center justify-between p-2 border rounded hover:bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: status.color }}
+                        />
+                        <span className="text-sm">{status.name}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleAddStatusToWorkflow(status.id)}
+                        data-testid={`add-status-${status.id}`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Workflow Status Flow */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Workflow Status Flow</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3">
+                {workflowStatuses.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    No statuses added to workflow yet. Add statuses from the left panel.
+                  </div>
+                ) : (
+                  workflowStatuses
+                    .sort((a, b) => a.order - b.order)
+                    .map((workflowStatus, index) => {
+                      const status = statuses.find(s => s.id === workflowStatus.statusId);
+                      if (!status) return null;
+                      
+                      return (
+                        <div
+                          key={workflowStatus.statusId}
+                          className="flex items-center justify-between p-2 border rounded bg-background"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-6">
+                              {index + 1}.
+                            </span>
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: status.color }}
+                            />
+                            <span className="text-sm">{status.name}</span>
+                            {workflowStatus.isRequired && (
+                              <Badge variant="secondary" className="text-xs">Required</Badge>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleStatusRequired(workflowStatus.statusId)}
+                              data-testid={`toggle-required-${status.id}`}
+                              title={workflowStatus.isRequired ? "Mark as Optional" : "Mark as Required"}
+                            >
+                              {workflowStatus.isRequired ? "★" : "☆"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleMoveStatusUp(workflowStatus.statusId)}
+                              disabled={index === 0}
+                              data-testid={`move-up-${status.id}`}
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleMoveStatusDown(workflowStatus.statusId)}
+                              disabled={index === workflowStatuses.length - 1}
+                              data-testid={`move-down-${status.id}`}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveStatusFromWorkflow(workflowStatus.statusId)}
+                              data-testid={`remove-status-${status.id}`}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsStatusFlowDialogOpen(false)}
+              data-testid="button-cancel-status-flow"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveWorkflowStatuses}
+              disabled={saveWorkflowStatusesMutation.isPending}
+              data-testid="button-save-status-flow"
+            >
+              {saveWorkflowStatusesMutation.isPending ? "Saving..." : "Save Status Flow"}
             </Button>
           </DialogFooter>
         </DialogContent>

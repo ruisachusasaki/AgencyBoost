@@ -9238,6 +9238,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update team workflow statuses (replace all statuses for a workflow)
+  app.put("/api/team-workflows/:workflowId/statuses", async (req, res) => {
+    try {
+      const { workflowId } = req.params;
+      const { statuses } = req.body;
+
+      if (!Array.isArray(statuses)) {
+        return res.status(400).json({ message: "Statuses must be an array" });
+      }
+
+      // First, delete existing workflow statuses
+      await db.delete(teamWorkflowStatuses).where(eq(teamWorkflowStatuses.workflowId, workflowId));
+
+      // Then insert the new statuses
+      if (statuses.length > 0) {
+        const workflowStatusData = statuses.map((status: any) => ({
+          id: randomUUID(),
+          workflowId: workflowId,
+          statusId: status.statusId,
+          order: status.order,
+          isRequired: status.isRequired,
+        }));
+
+        await db.insert(teamWorkflowStatuses).values(workflowStatusData);
+      }
+
+      await createAuditLog("updated", "team_workflow_statuses", workflowId, JSON.stringify({
+        action: 'update_workflow_statuses',
+        statusCount: statuses.length,
+      }), null, req.session?.userId || null);
+
+      res.status(200).json({ message: "Workflow statuses updated successfully" });
+    } catch (error) {
+      console.error("Failed to update workflow statuses:", error);
+      res.status(500).json({ message: "Failed to update workflow statuses" });
+    }
+  });
+
   // Department workflow assignment
   app.patch("/api/departments/:id/workflow", async (req, res) => {
     try {
