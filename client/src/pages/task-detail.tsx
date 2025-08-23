@@ -575,7 +575,7 @@ export default function TaskDetail() {
                         {task?.startDate ? (
                           <Input
                             type="date"
-                            value={task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
+                            value={task?.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
                             onChange={(e) => updateTaskMutation.mutate({ 
                               startDate: e.target.value ? new Date(e.target.value) : null 
                             })}
@@ -600,7 +600,7 @@ export default function TaskDetail() {
                         {task?.dueDate ? (
                           <Input
                             type="date"
-                            value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
+                            value={task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
                             onChange={(e) => updateTaskMutation.mutate({ 
                               dueDate: e.target.value ? new Date(e.target.value) : null 
                             })}
@@ -737,7 +737,7 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Client</span>
                     </div>
                     <span className="text-sm text-slate-600">
-                      {getClientName(task.clientId) || "No client assigned"}
+                      {getClientName(task?.clientId) || "No client assigned"}
                     </span>
                   </div>
                   
@@ -748,7 +748,7 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Project</span>
                     </div>
                     <span className="text-sm text-slate-600">
-                      {getProjectName(task.projectId) || "No project assigned"}
+                      {getProjectName(task?.projectId) || "No project assigned"}
                     </span>
                   </div>
                 </div>
@@ -756,10 +756,12 @@ export default function TaskDetail() {
             </Card>
 
           {/* Task Description */}
-          <TaskDescriptionCard 
-            task={task} 
-            onUpdate={updateTask} 
-          />
+          {task?.id && task?.title && (
+            <TaskDescriptionCard 
+              task={task} 
+              onUpdate={updateTask} 
+            />
+          )}
 
           {/* Sub-tasks - ClickUp-style hierarchical tasks (up to 5 levels deep) */}
           <Card>
@@ -767,7 +769,7 @@ export default function TaskDetail() {
               <CardTitle className="flex items-center gap-2">
                 <FolderOpen className="h-5 w-5" />
                 Sub-tasks
-                {task.hasSubTasks && (
+                {task?.hasSubTasks && (
                   <Badge variant="secondary" className="ml-2">
                     Has sub-tasks
                   </Badge>
@@ -785,18 +787,20 @@ export default function TaskDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <SubTaskList 
-                    parentTaskId={task.id}
-                    level={0}
-                    maxLevel={5}
-                  />
+                  {task?.id && (
+                    <SubTaskList 
+                      parentTaskId={task.id}
+                      level={0}
+                      maxLevel={5}
+                    />
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
 
           {/* Task Attachments */}
-          <TaskAttachments taskId={task.id} />
+          {task?.id && <TaskAttachments taskId={task.id} />}
 
         </div>
 
@@ -834,15 +838,15 @@ export default function TaskDetail() {
 
           <CardContent className="pt-6">
             {/* Tab Content */}
-            {activeTab === "comments" && (
+            {activeTab === "comments" && task?.id && (
               <TaskComments taskId={task.id} />
             )}
             
-            {activeTab === "activity" && (
+            {activeTab === "activity" && task?.id && (
               <TaskActivities taskId={task.id} showCard={false} />
             )}
             
-            {activeTab === "dependencies" && (
+            {activeTab === "dependencies" && task?.id && (
               <TaskDependencies taskId={task.id} />
             )}
           </CardContent>
