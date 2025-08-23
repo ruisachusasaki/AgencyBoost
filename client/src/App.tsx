@@ -15,6 +15,7 @@ import Campaigns from "@/pages/campaigns";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
+import TaskDetailDebug from "@/pages/task-detail-debug";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import SocialMedia from "@/pages/social-media";
@@ -57,7 +58,7 @@ function Router() {
       <Route path="/marketing" component={Campaigns} />
       <Route path="/leads" component={Leads} />
       <Route path="/tasks" component={Tasks} />
-      <Route path="/tasks/:taskId" component={TaskDetail} />
+      <Route path="/tasks/:taskId" component={TaskDetailDebug} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
