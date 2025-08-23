@@ -54,9 +54,35 @@ export default function TaskDetail() {
     queryKey: ["/api/staff"],
   });
 
+  // TeamWorkflow type with statuses included
+  type TeamWorkflowWithStatuses = {
+    id: string;
+    name: string;
+    statuses?: {
+      id: string;
+      status: {
+        id: string;
+        name: string;
+        value: string;
+        color: string;
+        isDefault: boolean;
+      };
+      isRequired: boolean;
+      order: number;
+    }[];
+  };
+
+  const { data: teamWorkflows = [] } = useQuery<TeamWorkflowWithStatuses[]>({
+    queryKey: ["/api/team-workflows"],
+  });
+
   const { data: userPermissions } = useQuery({
     queryKey: ["/api/auth/permissions"],
   });
+
+  // Get workflow-specific statuses for this task
+  const selectedWorkflow = teamWorkflows.find(w => w.id === task?.workflowId);
+  const workflowStatuses = selectedWorkflow?.statuses || [];
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
@@ -424,10 +450,53 @@ export default function TaskDetail() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        {task.workflowId && task.workflowId !== "none" ? (
+                          // Show workflow-specific statuses
+                          workflowStatuses
+                            .sort((a: any, b: any) => a.order - b.order)
+                            .map((workflowStatus: any) => (
+                              <SelectItem key={workflowStatus.status.id} value={workflowStatus.status.value}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: workflowStatus.status.color }}
+                                  />
+                                  <span>{workflowStatus.status.name}</span>
+                                  {workflowStatus.isRequired && (
+                                    <span className="text-xs text-blue-600">*</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))
+                        ) : (
+                          // Show default statuses when no workflow selected
+                          <>
+                            <SelectItem value="pending">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                                <span>Pending</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="in_progress">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                <span>In Progress</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="completed">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-green-500" />
+                                <span>Completed</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="cancelled">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-red-500" />
+                                <span>Cancelled</span>
+                              </div>
+                            </SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

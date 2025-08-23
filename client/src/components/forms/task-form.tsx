@@ -179,13 +179,6 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   const selectedWorkflow = teamWorkflows.find(w => w.id === selectedWorkflowId);
   const workflowStatuses = selectedWorkflow?.statuses || [];
 
-  // Debug logs for troubleshooting
-  console.log("Debug - Task:", task);
-  console.log("Debug - Task workflowId:", task?.workflowId);
-  console.log("Debug - Selected workflowId:", selectedWorkflowId);
-  console.log("Debug - Team workflows:", teamWorkflows);
-  console.log("Debug - Selected workflow:", selectedWorkflow);
-  console.log("Debug - Workflow statuses:", workflowStatuses);
 
   const onSubmit = (data: any) => {
     // Clean up empty string IDs and "none" values
