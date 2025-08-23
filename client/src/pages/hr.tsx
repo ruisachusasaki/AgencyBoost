@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +16,9 @@ import {
   Calendar,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  BarChart3,
+  UserCheck
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 
@@ -85,16 +86,38 @@ export default function HRPage() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="time-off">Time Off</TabsTrigger>
-          <TabsTrigger value="staff-directory">Staff Directory</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 },
+            { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
+            { id: "staff-directory", name: "Staff Directory", icon: Users, count: staffData.length },
+            { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
+            { id: "reports", name: "Reports", icon: FileText, count: 0 }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} {tab.count > 0 && `(${tab.count})`}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="dashboard" className="space-y-6">
+      {/* Tab Content */}
+      {activeTab === "dashboard" && (
+        <div className="space-y-6">
           {/* Dashboard Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
@@ -215,9 +238,11 @@ export default function HRPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="time-off" className="space-y-6">
+      {activeTab === "time-off" && (
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Time Off Management</h2>
@@ -277,9 +302,11 @@ export default function HRPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="staff-directory" className="space-y-6">
+      {activeTab === "staff-directory" && (
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Staff Directory</h2>
@@ -329,9 +356,11 @@ export default function HRPage() {
               </Card>
             ))}
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="applications" className="space-y-6">
+      {activeTab === "applications" && (
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Applicant Tracking</h2>
@@ -375,9 +404,11 @@ export default function HRPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="reports" className="space-y-6">
+      {activeTab === "reports" && (
+        <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold">HR Reports</h2>
             <p className="text-slate-600">Analytics and insights for management</p>
@@ -404,8 +435,8 @@ export default function HRPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
