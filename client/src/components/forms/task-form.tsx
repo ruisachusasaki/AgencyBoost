@@ -216,7 +216,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -249,7 +249,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Workflow</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select workflow" />
@@ -276,7 +276,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
@@ -344,7 +344,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Priority</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select priority" />
@@ -379,7 +379,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select team member" />
@@ -446,7 +446,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Client (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select client" />
@@ -473,7 +473,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Project (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select project" />
