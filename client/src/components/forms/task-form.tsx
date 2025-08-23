@@ -124,6 +124,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   const selectedClientId = form.watch("clientId");
   const clientProjects = projects.filter(p => p.clientId === selectedClientId);
+  
+  const selectedWorkflowId = form.watch("workflowId");
+  const selectedWorkflow = teamWorkflows.find(w => w.id === selectedWorkflowId);
+  const workflowStatuses = selectedWorkflow?.statuses || [];
 
   const onSubmit = (data: any) => {
     // Clean up empty string IDs and "none" values
@@ -255,30 +259,53 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="pending">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                        <span>Pending</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="in_progress">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-500" />
-                        <span>In Progress</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="completed">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span>Completed</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="cancelled">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                        <span>Cancelled</span>
-                      </div>
-                    </SelectItem>
+                    {selectedWorkflowId && selectedWorkflowId !== "none" ? (
+                      // Show workflow-specific statuses
+                      workflowStatuses
+                        .sort((a, b) => a.order - b.order)
+                        .map((workflowStatus) => (
+                          <SelectItem key={workflowStatus.status.id} value={workflowStatus.status.value}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: workflowStatus.status.color }}
+                              />
+                              <span>{workflowStatus.status.name}</span>
+                              {workflowStatus.isRequired && (
+                                <span className="text-xs text-blue-600">*</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))
+                    ) : (
+                      // Show default statuses when no workflow selected
+                      <>
+                        <SelectItem value="pending">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                            <span>Pending</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="in_progress">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                            <span>In Progress</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="completed">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-green-500" />
+                            <span>Completed</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="cancelled">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                            <span>Cancelled</span>
+                          </div>
+                        </SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
