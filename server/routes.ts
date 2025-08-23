@@ -8757,6 +8757,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task Settings Management API Routes
 
   // Task Statuses Routes
+  // IMPORTANT: PUT /api/task-statuses/reorder must come before PUT /api/task-statuses/:id
+  // Reorder task statuses
+  app.put("/api/task-statuses/reorder", async (req, res) => {
+    try {
+      const { statuses } = req.body;
+      
+      if (!Array.isArray(statuses)) {
+        return res.status(400).json({ message: "Statuses must be an array" });
+      }
+
+      // Update each status with the new sort order
+      for (const status of statuses) {
+        await db.update(taskStatuses)
+          .set({ sortOrder: status.sortOrder, updatedAt: sql`now()` })
+          .where(eq(taskStatuses.id, status.id));
+      }
+
+      // Log the reorder operation
+      await createAuditLog(
+        "updated",
+        "task_status",
+        "bulk",
+        "Task Statuses",
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task statuses reordered`,
+        null,
+        { statusCount: statuses.length },
+        req
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering task statuses:", error);
+      res.status(500).json({ message: "Failed to reorder task statuses" });
+    }
+  });
+
   app.get("/api/task-statuses", async (req, res) => {
     try {
       const statuses = await db.select()
@@ -8873,42 +8910,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting task status:", error);
       res.status(500).json({ message: "Failed to delete task status" });
-    }
-  });
-
-  // Reorder task statuses
-  app.put("/api/task-statuses/reorder", async (req, res) => {
-    try {
-      const { statuses } = req.body;
-      
-      if (!Array.isArray(statuses)) {
-        return res.status(400).json({ message: "Statuses must be an array" });
-      }
-
-      // Update each status with the new sort order
-      for (const status of statuses) {
-        await db.update(taskStatuses)
-          .set({ sortOrder: status.sortOrder, updatedAt: sql`now()` })
-          .where(eq(taskStatuses.id, status.id));
-      }
-
-      // Log the reorder operation
-      await createAuditLog(
-        "updated",
-        "task_status",
-        "bulk",
-        "Task Statuses",
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
-        `Task statuses reordered`,
-        null,
-        { statusCount: statuses.length },
-        req
-      );
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error reordering task statuses:", error);
-      res.status(500).json({ message: "Failed to reorder task statuses" });
     }
   });
 
