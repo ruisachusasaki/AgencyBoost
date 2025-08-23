@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Clock, User, Calendar, Timer, Flag } from "lucide-react";
+import { Activity, Clock, User, Calendar, Timer, Flag, MessageSquare } from "lucide-react";
 import { TaskActivity } from "@shared/schema";
 
 interface TaskActivitiesProps {
@@ -145,6 +145,54 @@ export default function TaskActivities({ taskId, showCard = true }: TaskActiviti
                 <span className={`font-medium ${getPriorityColor(activity.newValue)}`}>
                   {getPriorityLabel(activity.newValue)}
                 </span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'annotation_created':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full flex-shrink-0">
+              <MessageSquare className="h-4 w-4 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> added an annotation:{' '}
+                <span className="italic text-slate-600">"{activity.description?.replace('Added annotation: ', '') || 'New annotation'}"</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'annotation_updated':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-orange-100 rounded-full flex-shrink-0">
+              <MessageSquare className="h-4 w-4 text-orange-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> updated an annotation:{' '}
+                <span className="italic text-slate-600">"{activity.description?.replace('Updated annotation: ', '') || 'Updated annotation'}"</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'annotation_deleted':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-red-100 rounded-full flex-shrink-0">
+              <MessageSquare className="h-4 w-4 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> deleted an annotation:{' '}
+                <span className="italic text-slate-600">"{activity.description?.replace('Deleted annotation: ', '') || 'Deleted annotation'}"</span>
               </p>
               <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
             </div>
