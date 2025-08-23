@@ -19,7 +19,7 @@ import { TaskPath } from "@/components/task-path";
 import { TaskDependencies } from "@/components/task-dependencies";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
-import { useTimer } from "@/contexts/TimerContext";
+// import { useTimer } from "@/contexts/TimerContext";
 
 export default function TaskDetail() {
   const { taskId } = useParams();
@@ -30,7 +30,8 @@ export default function TaskDetail() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [timeEstimateUnit, setTimeEstimateUnit] = useState<"minutes" | "hours">("minutes");
-  const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
+  // const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
+  const startTimer = () => {}, stopTimer = () => {}, isTimerRunning = false, currentTimer = null;
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: ["/api/tasks", taskId],
