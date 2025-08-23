@@ -462,9 +462,6 @@ export default function TaskDetail() {
                                     style={{ backgroundColor: workflowStatus.status.color }}
                                   />
                                   <span>{workflowStatus.status.name}</span>
-                                  {workflowStatus.isRequired && (
-                                    <span className="text-xs text-blue-600">*</span>
-                                  )}
                                 </div>
                               </SelectItem>
                             ))
