@@ -572,7 +572,7 @@ export default function Tasks() {
   // Bulk actions mutations
   const bulkDeleteMutation = useMutation({
     mutationFn: async (taskIds: string[]) => {
-      await apiRequest('/api/tasks/bulk-delete', 'DELETE', { taskIds });
+      await apiRequest('DELETE', '/api/tasks/bulk-delete', { taskIds });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
