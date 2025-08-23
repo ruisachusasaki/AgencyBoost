@@ -865,14 +865,18 @@ export default function Tasks() {
   const workflowStatuses = selectedWorkflow?.statuses || [];
   
   const taskStats = {
-    total: tasks.length,
+    total: tasks.filter(t => t.workflowId === selectedWorkflow?.id).length,
     byStatus: workflowStatuses.reduce((acc: any, workflowStatus: any) => {
-      acc[workflowStatus.status.value] = tasks.filter(t => t.status === workflowStatus.status.value).length;
+      acc[workflowStatus.status.value] = tasks.filter(t => 
+        t.status === workflowStatus.status.value && 
+        t.workflowId === selectedWorkflow?.id
+      ).length;
       return acc;
     }, {}),
     overdue: tasks.filter(t => 
       t.dueDate && 
       new Date(t.dueDate) < new Date() && 
+      t.workflowId === selectedWorkflow?.id &&
       !workflowStatuses.find((s: any) => s.status.value === t.status && (s.status.value === "completed" || s.status.value === "cancelled"))
     ).length,
   };
@@ -931,7 +935,10 @@ export default function Tasks() {
     }) || [];
 
     const getTasksByStatus = (status: string) => {
-      return tasks.filter(task => task.status === status);
+      return tasks.filter(task => 
+        task.status === status && 
+        task.workflowId === selectedWorkflow?.id
+      );
     };
 
     const TaskCard = ({ task, index }: { task: Task; index: number }) => (
