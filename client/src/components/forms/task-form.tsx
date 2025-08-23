@@ -93,10 +93,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   const selectedCategoryId = form.watch('categoryId');
   const selectedCategory = taskCategories.find((c: any) => c.id === selectedCategoryId);
   
-  // Fetch category-specific workflow if category has one
+  // Fetch category-specific workflow if category has one (and it's not "none")
   const { data: categoryWorkflow } = useQuery<TeamWorkflow>({
     queryKey: ["/api/team-workflows", selectedCategory?.workflowId],
-    enabled: !!selectedCategory?.workflowId,
+    enabled: !!selectedCategory?.workflowId && selectedCategory.workflowId !== "none",
   });
 
   // Determine which statuses to use (category workflow statuses or global statuses)

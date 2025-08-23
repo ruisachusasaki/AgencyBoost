@@ -222,7 +222,7 @@ export default function TasksSettingsPage() {
       description: "",
       color: "#6b7280",
       icon: "folder",
-      workflowId: "",
+      workflowId: "none",
       isDefault: false,
     },
   });
@@ -548,7 +548,7 @@ export default function TasksSettingsPage() {
           description: category.description || "",
           color: category.color,
           icon: category.icon || "folder",
-          workflowId: (category as any).workflowId || "",
+          workflowId: (category as any).workflowId || "none",
           isDefault: category.isDefault,
         });
       } else {
@@ -1747,7 +1747,7 @@ export default function TasksSettingsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No Workflow (Use all statuses)</SelectItem>
+                          <SelectItem value="none">No Workflow (Use all statuses)</SelectItem>
                           {workflows.filter(w => w.isActive).map((workflow) => (
                             <SelectItem key={workflow.id} value={workflow.id}>
                               {workflow.name}
