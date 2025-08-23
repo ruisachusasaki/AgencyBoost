@@ -3092,11 +3092,34 @@ export class DbStorage implements IStorage {
   async deleteWorkflowTemplate(id: string): Promise<boolean> { return this.memStorage.deleteWorkflowTemplate(id); }
 
   // Task Categories
-  async getTaskCategories(): Promise<TaskCategory[]> { return this.memStorage.getTaskCategories(); }
-  async getTaskCategory(id: string): Promise<TaskCategory | undefined> { return this.memStorage.getTaskCategory(id); }
-  async createTaskCategory(category: InsertTaskCategory): Promise<TaskCategory> { return this.memStorage.createTaskCategory(category); }
-  async updateTaskCategory(id: string, category: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined> { return this.memStorage.updateTaskCategory(id, category); }
-  async deleteTaskCategory(id: string): Promise<boolean> { return this.memStorage.deleteTaskCategory(id); }
+  async getTaskCategories(): Promise<TaskCategory[]> {
+    const result = await this.db.select().from(taskCategories);
+    return result;
+  }
+
+  async getTaskCategory(id: string): Promise<TaskCategory | undefined> {
+    const result = await this.db.select().from(taskCategories).where(eq(taskCategories.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createTaskCategory(category: InsertTaskCategory): Promise<TaskCategory> {
+    const result = await this.db.insert(taskCategories).values({
+      ...category,
+      id: sql`gen_random_uuid()`,
+      createdAt: new Date(),
+    }).returning();
+    return result[0];
+  }
+
+  async updateTaskCategory(id: string, category: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined> {
+    const result = await this.db.update(taskCategories).set(category).where(eq(taskCategories.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteTaskCategory(id: string): Promise<boolean> {
+    const result = await this.db.delete(taskCategories).where(eq(taskCategories.id, id)).returning();
+    return result.length > 0;
+  }
 
   // Enhanced Tasks  
   async getEnhancedTasks(): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasks(); }
