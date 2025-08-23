@@ -36,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskStatusSchema, insertTaskPrioritySchema } from "@shared/schema";
+import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema } from "@shared/schema";
 import { z } from "zod";
 
 // Color options for task statuses and priorities
@@ -90,16 +90,27 @@ type TaskPriority = {
   updatedAt: string;
 };
 
+type TaskCategory = {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  icon?: string;
+  isDefault: boolean;
+  createdAt: string;
+};
+
 type TaskStatusFormData = z.infer<typeof insertTaskStatusSchema>;
 type TaskPriorityFormData = z.infer<typeof insertTaskPrioritySchema>;
+type TaskCategoryFormData = z.infer<typeof insertTaskCategorySchema>;
 
 export default function TasksSettingsPage() {
   const [activeTab, setActiveTab] = useState("statuses");
-  const [editingItem, setEditingItem] = useState<TaskStatus | TaskPriority | null>(null);
+  const [editingItem, setEditingItem] = useState<TaskStatus | TaskPriority | TaskCategory | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<TaskStatus | TaskPriority | null>(null);
-  const [editType, setEditType] = useState<'status' | 'priority'>('status');
+  const [itemToDelete, setItemToDelete] = useState<TaskStatus | TaskPriority | TaskCategory | null>(null);
+  const [editType, setEditType] = useState<'status' | 'priority' | 'category'>('status');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -111,6 +122,11 @@ export default function TasksSettingsPage() {
   // Fetch task priorities
   const { data: priorities = [], isLoading: loadingPriorities } = useQuery<TaskPriority[]>({
     queryKey: ["/api/task-priorities"],
+  });
+
+  // Fetch task categories
+  const { data: categories = [], isLoading: loadingCategories } = useQuery<TaskCategory[]>({
+    queryKey: ["/api/task-categories"],
   });
 
   // Form for creating/editing statuses
@@ -141,6 +157,18 @@ export default function TasksSettingsPage() {
       isDefault: false,
       isActive: true,
       isSystemPriority: false,
+    },
+  });
+
+  // Form for creating/editing categories
+  const categoryForm = useForm<TaskCategoryFormData>({
+    resolver: zodResolver(insertTaskCategorySchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      color: "#6b7280",
+      icon: "folder",
+      isDefault: false,
     },
   });
 
@@ -222,7 +250,46 @@ export default function TasksSettingsPage() {
     },
   });
 
-  const handleOpenDialog = (type: 'status' | 'priority', item?: TaskStatus | TaskPriority) => {
+  // Category mutations
+  const createCategoryMutation = useMutation({
+    mutationFn: (data: TaskCategoryFormData) => apiRequest("/api/task-categories", "POST", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-categories"] });
+      toast({ title: "Success", description: "Task category created successfully" });
+      handleCloseDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create task category", variant: "destructive" });
+    },
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<TaskCategoryFormData> }) =>
+      apiRequest(`/api/task-categories/${id}`, "PUT", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-categories"] });
+      toast({ title: "Success", description: "Task category updated successfully" });
+      handleCloseDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update task category", variant: "destructive" });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/task-categories/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-categories"] });
+      toast({ title: "Success", description: "Task category deleted successfully" });
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete task category", variant: "destructive" });
+    },
+  });
+
+  const handleOpenDialog = (type: 'status' | 'priority' | 'category', item?: TaskStatus | TaskPriority | TaskCategory) => {
     setEditType(type);
     
     if (type === 'status') {
@@ -252,7 +319,7 @@ export default function TasksSettingsPage() {
           isSystemStatus: false,
         });
       }
-    } else {
+    } else if (type === 'priority') {
       const priority = item as TaskPriority;
       if (priority) {
         setEditingItem(priority);
@@ -281,6 +348,27 @@ export default function TasksSettingsPage() {
           isSystemPriority: false,
         });
       }
+    } else {
+      const category = item as TaskCategory;
+      if (category) {
+        setEditingItem(category);
+        categoryForm.reset({
+          name: category.name,
+          description: category.description || "",
+          color: category.color,
+          icon: category.icon || "folder",
+          isDefault: category.isDefault,
+        });
+      } else {
+        setEditingItem(null);
+        categoryForm.reset({
+          name: "",
+          description: "",
+          color: "#6b7280",
+          icon: "folder",
+          isDefault: false,
+        });
+      }
     }
     setIsDialogOpen(true);
   };
@@ -290,11 +378,12 @@ export default function TasksSettingsPage() {
     setEditingItem(null);
     statusForm.reset();
     priorityForm.reset();
+    categoryForm.reset();
   };
 
-  const handleSubmit = (data: TaskStatusFormData | TaskPriorityFormData) => {
-    // Auto-generate value from name if not provided
-    if (!data.value) {
+  const handleSubmit = (data: TaskStatusFormData | TaskPriorityFormData | TaskCategoryFormData) => {
+    // Auto-generate value from name if not provided for statuses and priorities
+    if ('value' in data && !data.value) {
       data.value = data.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
     }
 
@@ -304,16 +393,22 @@ export default function TasksSettingsPage() {
       } else {
         createStatusMutation.mutate(data as TaskStatusFormData);
       }
-    } else {
+    } else if (editType === 'priority') {
       if (editingItem) {
         updatePriorityMutation.mutate({ id: editingItem.id, data: data as TaskPriorityFormData });
       } else {
         createPriorityMutation.mutate(data as TaskPriorityFormData);
       }
+    } else {
+      if (editingItem) {
+        updateCategoryMutation.mutate({ id: editingItem.id, data: data as TaskCategoryFormData });
+      } else {
+        createCategoryMutation.mutate(data as TaskCategoryFormData);
+      }
     }
   };
 
-  const handleDelete = (item: TaskStatus | TaskPriority) => {
+  const handleDelete = (item: TaskStatus | TaskPriority | TaskCategory) => {
     setItemToDelete(item);
     setIsDeleteDialogOpen(true);
   };
@@ -322,8 +417,10 @@ export default function TasksSettingsPage() {
     if (itemToDelete) {
       if ('isSystemStatus' in itemToDelete) {
         deleteStatusMutation.mutate(itemToDelete.id);
-      } else {
+      } else if ('isSystemPriority' in itemToDelete) {
         deletePriorityMutation.mutate(itemToDelete.id);
+      } else {
+        deleteCategoryMutation.mutate(itemToDelete.id);
       }
     }
   };
@@ -332,7 +429,11 @@ export default function TasksSettingsPage() {
     return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
   };
 
-  const getCurrentForm = () => editType === 'status' ? statusForm : priorityForm;
+  const getCurrentForm = () => {
+    if (editType === 'status') return statusForm;
+    if (editType === 'priority') return priorityForm;
+    return categoryForm;
+  };
 
   return (
     <div className="space-y-6">
@@ -635,17 +736,95 @@ export default function TasksSettingsPage() {
                 Organize tasks into categories for better management and filtering.
               </p>
             </div>
-            <Button disabled data-testid="button-add-category">
+            <Button onClick={() => handleOpenDialog('category')} data-testid="button-add-category">
               <Plus className="h-4 w-4 mr-2" />
               Add Category
             </Button>
           </div>
 
           <Card>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Task Categories management coming soon. This will integrate with the existing task categories system.
-              </div>
+            <CardContent className="p-0">
+              {loadingCategories ? (
+                <div className="flex items-center justify-center h-48">
+                  <div className="text-muted-foreground">Loading task categories...</div>
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No task categories configured. Create your first category to get started.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Color</TableHead>
+                      <TableHead>Icon</TableHead>
+                      <TableHead>Default</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((category) => (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          <div className="font-medium">{category.name}</div>
+                          {category.description && (
+                            <div className="text-sm text-muted-foreground">
+                              {category.description}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            style={{ backgroundColor: category.color }} 
+                            className="text-white"
+                          >
+                            {category.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Folder className="h-4 w-4 mr-2" />
+                            <span className="text-sm">{category.icon || 'folder'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {category.isDefault && (
+                            <Badge variant="secondary">Default</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(category.createdAt).toLocaleDateString()}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDialog('category', category)}
+                              data-testid={`button-edit-${category.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(category)}
+                              data-testid={`button-delete-${category.id}`}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -687,90 +866,277 @@ export default function TasksSettingsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...getCurrentForm()}>
-            <form onSubmit={getCurrentForm().handleSubmit(handleSubmit)} className="space-y-4">
-              <FormField
-                control={getCurrentForm().control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{editType === 'status' ? 'Status' : 'Priority'} Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={editType === 'status' ? "e.g., In Progress" : "e.g., High Priority"}
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e.target.value);
-                          if (!editingItem) {
-                            getCurrentForm().setValue("value", generateValue(e.target.value));
-                          }
-                        }}
-                        data-testid="input-name"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={getCurrentForm().control}
-                name="value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{editType === 'status' ? 'Status' : 'Priority'} Value (Code)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={editType === 'status' ? "e.g., in_progress" : "e.g., high"}
-                        {...field}
-                        data-testid="input-value"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                    <p className="text-xs text-muted-foreground">
-                      Used internally in the system. Auto-generated from name if left empty.
-                    </p>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={getCurrentForm().control}
-                name="color"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Color</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center space-x-2">
+          {editType === 'status' && (
+            <Form {...statusForm}>
+              <form onSubmit={statusForm.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={statusForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status Name</FormLabel>
+                      <FormControl>
                         <Input
-                          type="color"
+                          placeholder="e.g., In Progress"
                           {...field}
-                          className="w-16 h-10 p-1 border rounded"
-                          data-testid="input-color"
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            if (!editingItem) {
+                              statusForm.setValue("value", generateValue(e.target.value));
+                            }
+                          }}
+                          data-testid="input-name"
                         />
-                        <div className="flex space-x-1">
-                          {colorOptions.map((color) => (
-                            <button
-                              key={color.value}
-                              type="button"
-                              className={`w-6 h-6 rounded-full border-2 ${color.class} ${
-                                field.value === color.value
-                                  ? "border-foreground"
-                                  : "border-transparent"
-                              }`}
-                              onClick={() => field.onChange(color.value)}
-                              title={color.label}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {editType === 'priority' && (
+                <FormField
+                  control={statusForm.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status Value (Code)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., in_progress"
+                          {...field}
+                          data-testid="input-value"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Used internally in the system. Auto-generated from name if left empty.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={statusForm.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="color"
+                            {...field}
+                            className="w-16 h-10 p-1 border rounded"
+                            data-testid="input-color"
+                          />
+                          <div className="flex space-x-1">
+                            {colorOptions.map((color) => (
+                              <button
+                                key={color.value}
+                                type="button"
+                                className={`w-6 h-6 rounded-full border-2 ${color.class} ${
+                                  field.value === color.value
+                                    ? "border-foreground"
+                                    : "border-transparent"
+                                }`}
+                                onClick={() => field.onChange(color.value)}
+                                title={color.label}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={statusForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Brief description of when this status should be used"
+                          {...field}
+                          value={field.value || ""}
+                          data-testid="input-description"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={statusForm.control}
+                    name="sortOrder"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sort Order</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            {...field}
+                            value={field.value || 0}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            data-testid="input-sort-order"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="space-y-4">
+                    <FormField
+                      control={statusForm.control}
+                      name="isDefault"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <FormLabel>Default Status</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-default"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={statusForm.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <FormLabel>Active</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-active"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createStatusMutation.isPending || updateStatusMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    {createStatusMutation.isPending || updateStatusMutation.isPending
+                      ? "Saving..."
+                      : editingItem
+                      ? "Update"
+                      : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
+
+          {editType === 'priority' && (
+            <Form {...priorityForm}>
+              <form onSubmit={priorityForm.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={priorityForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., High Priority"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            if (!editingItem) {
+                              priorityForm.setValue("value", generateValue(e.target.value));
+                            }
+                          }}
+                          data-testid="input-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={priorityForm.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority Value (Code)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., high"
+                          {...field}
+                          data-testid="input-value"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Used internally in the system. Auto-generated from name if left empty.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={priorityForm.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="color"
+                            {...field}
+                            className="w-16 h-10 p-1 border rounded"
+                            data-testid="input-color"
+                          />
+                          <div className="flex space-x-1">
+                            {colorOptions.map((color) => (
+                              <button
+                                key={color.value}
+                                type="button"
+                                className={`w-6 h-6 rounded-full border-2 ${color.class} ${
+                                  field.value === color.value
+                                    ? "border-foreground"
+                                    : "border-transparent"
+                                }`}
+                                onClick={() => field.onChange(color.value)}
+                                title={color.label}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={priorityForm.control}
                   name="icon"
@@ -794,42 +1160,19 @@ export default function TasksSettingsPage() {
                     </FormItem>
                   )}
                 />
-              )}
 
-              <FormField
-                control={getCurrentForm().control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={`Brief description of when this ${editType} should be used`}
-                        {...field}
-                        value={field.value || ""}
-                        data-testid="input-description"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={getCurrentForm().control}
-                  name="sortOrder"
+                  control={priorityForm.control}
+                  name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sort Order</FormLabel>
+                      <FormLabel>Description (Optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
+                        <Textarea
+                          placeholder="Brief description of when this priority should be used"
                           {...field}
-                          value={field.value || 0}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          data-testid="input-sort-order"
+                          value={field.value || ""}
+                          data-testid="input-description"
                         />
                       </FormControl>
                       <FormMessage />
@@ -837,70 +1180,226 @@ export default function TasksSettingsPage() {
                   )}
                 />
 
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
-                    control={getCurrentForm().control}
-                    name="isDefault"
+                    control={priorityForm.control}
+                    name="sortOrder"
                     render={({ field }) => (
-                      <FormItem className="flex items-center justify-between">
-                        <FormLabel>Default {editType === 'status' ? 'Status' : 'Priority'}</FormLabel>
+                      <FormItem>
+                        <FormLabel>Sort Order</FormLabel>
                         <FormControl>
-                          <Switch
-                            checked={field.value || false}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-default"
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            {...field}
+                            value={field.value || 0}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            data-testid="input-sort-order"
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <FormField
-                    control={getCurrentForm().control}
-                    name="isActive"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between">
-                        <FormLabel>Active</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={field.value || false}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-active"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-4">
+                    <FormField
+                      control={priorityForm.control}
+                      name="isDefault"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <FormLabel>Default Priority</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-default"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={priorityForm.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <FormLabel>Active</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-active"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCloseDialog}
-                  data-testid="button-cancel"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    (editType === 'status' && (createStatusMutation.isPending || updateStatusMutation.isPending)) ||
-                    (editType === 'priority' && (createPriorityMutation.isPending || updatePriorityMutation.isPending))
-                  }
-                  data-testid="button-save"
-                >
-                  {(editType === 'status' && (createStatusMutation.isPending || updateStatusMutation.isPending)) ||
-                   (editType === 'priority' && (createPriorityMutation.isPending || updatePriorityMutation.isPending))
-                    ? "Saving..."
-                    : editingItem
-                    ? "Update"
-                    : "Create"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createPriorityMutation.isPending || updatePriorityMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    {createPriorityMutation.isPending || updatePriorityMutation.isPending
+                      ? "Saving..."
+                      : editingItem
+                      ? "Update"
+                      : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
+
+          {editType === 'category' && (
+            <Form {...categoryForm}>
+              <form onSubmit={categoryForm.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={categoryForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Development"
+                          {...field}
+                          data-testid="input-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={categoryForm.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="color"
+                            {...field}
+                            className="w-16 h-10 p-1 border rounded"
+                            data-testid="input-color"
+                          />
+                          <div className="flex space-x-1">
+                            {colorOptions.map((color) => (
+                              <button
+                                key={color.value}
+                                type="button"
+                                className={`w-6 h-6 rounded-full border-2 ${color.class} ${
+                                  field.value === color.value
+                                    ? "border-foreground"
+                                    : "border-transparent"
+                                }`}
+                                onClick={() => field.onChange(color.value)}
+                                title={color.label}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={categoryForm.control}
+                  name="icon"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Icon</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., folder"
+                          {...field}
+                          value={field.value || ""}
+                          data-testid="input-icon"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={categoryForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Brief description of this category"
+                          {...field}
+                          value={field.value || ""}
+                          data-testid="input-description"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={categoryForm.control}
+                  name="isDefault"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between">
+                      <FormLabel>Default Category</FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value || false}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-default"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    {createCategoryMutation.isPending || updateCategoryMutation.isPending
+                      ? "Saving..."
+                      : editingItem
+                      ? "Update"
+                      : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -908,10 +1407,16 @@ export default function TasksSettingsPage() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Task {itemToDelete && 'isSystemStatus' in itemToDelete ? 'Status' : 'Priority'}</DialogTitle>
+            <DialogTitle>Delete Task {
+              itemToDelete && 'isSystemStatus' in itemToDelete ? 'Status' : 
+              itemToDelete && 'isSystemPriority' in itemToDelete ? 'Priority' : 'Category'
+            }</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete "{itemToDelete?.name}"? This action will
-              deactivate the {itemToDelete && 'isSystemStatus' in itemToDelete ? 'status' : 'priority'} and it won't be available for new tasks.
+              deactivate the {
+                itemToDelete && 'isSystemStatus' in itemToDelete ? 'status' : 
+                itemToDelete && 'isSystemPriority' in itemToDelete ? 'priority' : 'category'
+              } and it won't be available for new tasks.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -925,10 +1430,10 @@ export default function TasksSettingsPage() {
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={deleteStatusMutation.isPending || deletePriorityMutation.isPending}
+              disabled={deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteStatusMutation.isPending || deletePriorityMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteStatusMutation.isPending || deletePriorityMutation.isPending || deleteCategoryMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
