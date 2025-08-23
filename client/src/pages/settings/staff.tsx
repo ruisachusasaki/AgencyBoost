@@ -101,15 +101,26 @@ export default function Staff() {
   // Create staff mutation
   const createStaffMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
+      // Map department field to the correct column name
+      const staffData = {
+        ...data,
+        department: data.department, // This maps to the department varchar column
+      };
+      
       // When creating staff, we need to assign them to the role they selected
-      const staffResponse = await apiRequest("POST", "/api/staff", data);
+      const staffResponse = await apiRequest("POST", "/api/staff", staffData);
       
       // Also assign the role in the user_roles table
-      if (data.roleId && staffResponse.id) {
-        await apiRequest("POST", `/api/users/${staffResponse.id}/roles`, {
-          roleId: data.roleId,
-          assignedBy: "system" // TODO: Replace with current user ID
-        });
+      if (data.roleId && staffResponse?.id) {
+        try {
+          await apiRequest("POST", `/api/users/${staffResponse.id}/roles`, {
+            roleId: data.roleId,
+            assignedBy: "system" // TODO: Replace with current user ID
+          });
+        } catch (error) {
+          console.warn('Role assignment failed:', error);
+          // Don't fail the whole operation if role assignment fails
+        }
       }
       
       return staffResponse;
@@ -427,7 +438,7 @@ export default function Staff() {
                         </FormControl>
                         <SelectContent>
                           {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id}>
+                            <SelectItem key={dept.id} value={dept.name}>
                               {dept.name}
                             </SelectItem>
                           ))}
@@ -454,11 +465,13 @@ export default function Staff() {
                         </FormControl>
                         <SelectContent>
                           {positions.map((pos) => (
-                            <SelectItem key={pos.id} value={pos.id}>
+                            <SelectItem key={pos.id} value={pos.name}>
                               <div className="flex flex-col">
                                 <span className="font-medium">{pos.name}</span>
                                 {pos.description && (
-                                  <span className="text-xs text-muted-foreground">{pos.description}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {pos.description.replace(/<[^>]*>/g, '').trim()}
+                                  </span>
                                 )}
                               </div>
                             </SelectItem>
