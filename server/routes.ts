@@ -6417,10 +6417,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clientId = req.params.clientId;
       
-      // Get tasks from memory storage (temporary solution)  
-      const tasks = global.clientTasks?.[clientId] || [];
+      // Query tasks from database that are assigned to this client
+      const clientTasks = await db.select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        status: tasks.status,
+        priority: tasks.priority,
+        dueDate: tasks.dueDate,
+        startDate: tasks.startDate,
+        timeEstimate: tasks.timeEstimate,
+        timeTracked: tasks.timeTracked,
+        isRecurring: tasks.isRecurring,
+        recurringInterval: tasks.recurringInterval,
+        recurringUnit: tasks.recurringUnit,
+        recurringEndType: tasks.recurringEndType,
+        recurringEndDate: tasks.recurringEndDate,
+        recurringEndOccurrences: tasks.recurringEndOccurrences,
+        createIfOverdue: tasks.createIfOverdue,
+        completedAt: tasks.completedAt,
+        createdAt: tasks.createdAt,
+        assignedTo: tasks.assignedTo,
+        clientId: tasks.clientId,
+        projectId: tasks.projectId,
+        campaignId: tasks.campaignId,
+        workflowId: tasks.workflowId,
+        categoryId: tasks.categoryId,
+        assignedToUser: {
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+        },
+      })
+      .from(tasks)
+      .leftJoin(staff, eq(tasks.assignedTo, staff.id))
+      .where(eq(tasks.clientId, clientId))
+      .orderBy(tasks.createdAt);
       
-      res.json(tasks);
+      res.json(clientTasks);
     } catch (error) {
       console.error("Error fetching client tasks:", error);
       res.status(500).json({ error: "Failed to fetch client tasks" });
