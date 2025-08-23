@@ -170,7 +170,7 @@ export function ImageAnnotationModal({
 
   // Create annotation mutation
   const createAnnotationMutation = useMutation({
-    mutationFn: async (data: { x: number; y: number; content: string; mentions: string[] }) => {
+    mutationFn: async (data: { x: string; y: string; content: string; mentions: string[] }) => {
       return apiRequest("POST", `/api/files/${fileId}/annotations`, data);
     },
     onSuccess: () => {
@@ -256,8 +256,8 @@ export function ImageAnnotationModal({
     if (selectedAnnotation.isNew) {
       // Create new annotation
       createAnnotationMutation.mutate({
-        x: selectedAnnotation.x,
-        y: selectedAnnotation.y,
+        x: selectedAnnotation.x.toString(),
+        y: selectedAnnotation.y.toString(),
         content: newAnnotationContent,
         mentions: mentions,
       });
