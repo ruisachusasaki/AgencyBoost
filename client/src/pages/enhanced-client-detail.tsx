@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -4387,39 +4387,16 @@ export default function EnhancedClientDetail() {
                                       {isOverdue ? 'Overdue' : `Due ${dueDate.toLocaleDateString()}`}
                                     </span>
                                   )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      // Populate edit form with current task data
-                                      setEditingTaskId(task.id);
-                                      const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
-                                      setEditTask({
-                                        title: task.title,
-                                        description: task.description || "",
-                                        dueDate: taskDueDate ? taskDueDate.toISOString().split('T')[0] : "",
-                                        dueTime: taskDueDate ? taskDueDate.toTimeString().slice(0, 5) : "",
-                                        assignee: task.assignedTo || "",
-                                        recurring: task.isRecurring || false
-                                      });
-                                      if (task.isRecurring) {
-                                        setEditRecurringConfig({
-                                          interval: task.recurringInterval || 1,
-                                          unit: task.recurringUnit || "days",
-                                          endType: task.recurringEndType || "never",
-                                          endDate: task.recurringEndDate ? new Date(task.recurringEndDate).toISOString().split('T')[0] : "",
-                                          endAfter: task.recurringEndOccurrences || 1,
-                                          createIfOverdue: task.createIfOverdue || false
-                                        });
-                                      }
-                                      setEditAssigneeSearchTerm(task.assignedToUser ? `${task.assignedToUser.firstName} ${task.assignedToUser.lastName}` : "");
-                                      setIsEditTaskDialogOpen(true);
-                                    }}
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                    title="Edit task"
-                                  >
-                                    <Edit2 className="h-3 w-3" />
-                                  </Button>
+                                  <Link href={`/tasks/${task.id}`}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                                      title="Edit task"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  </Link>
                                   <Button
                                     variant="ghost"
                                     size="sm"
