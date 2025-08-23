@@ -60,10 +60,21 @@ export function IconPicker({ value, onChange, placeholder = "Type icon name...",
     if (!newValue.trim()) {
       setFilteredIcons(popularIcons);
     } else {
-      const filtered = allIconNames.filter(iconName =>
-        iconName.toLowerCase().includes(newValue.toLowerCase()) ||
-        iconName.replace(/([A-Z])/g, '-$1').toLowerCase().includes(newValue.toLowerCase())
-      ).slice(0, 20); // Limit to 20 results
+      // More comprehensive search - check multiple patterns
+      const searchTerm = newValue.toLowerCase();
+      const filtered = allIconNames.filter(iconName => {
+        const lowerIconName = iconName.toLowerCase();
+        return (
+          // Direct match
+          lowerIconName.includes(searchTerm) ||
+          // Remove "Icon" suffix and check
+          lowerIconName.replace('icon', '').includes(searchTerm) ||
+          // Remove "Lucide" prefix and check
+          lowerIconName.replace('lucide', '').includes(searchTerm) ||
+          // Convert camelCase to kebab-case and check
+          iconName.replace(/([A-Z])/g, '-$1').toLowerCase().slice(1).includes(searchTerm)
+        );
+      }).slice(0, 20); // Limit to 20 results
       setFilteredIcons(filtered);
     }
     
