@@ -11,8 +11,9 @@ interface IconPickerProps {
   className?: string;
 }
 
-// Common icons that are useful for task categories
-const popularIcons = [
+// Comprehensive list of available Lucide React icons
+const allIconNames = [
+  // Popular/common icons
   'folder', 'file', 'bookmark', 'tag', 'star', 'flag', 'bell', 
   'calendar', 'clock', 'users', 'user', 'settings', 'cog',
   'briefcase', 'home', 'heart', 'mail', 'phone', 'camera',
@@ -21,15 +22,39 @@ const popularIcons = [
   'target', 'award', 'shield', 'key', 'lock', 'unlock',
   'check', 'x', 'plus', 'minus', 'arrow-right', 'arrow-left',
   'chevron-down', 'chevron-up', 'circle', 'square', 'triangle',
-  'box', 'package', 'shopping-cart', 'credit-card', 'dollar-sign'
+  'box', 'package', 'shopping-cart', 'credit-card', 'dollar-sign',
+  
+  // Extended icon set
+  'activity', 'airplay', 'alert-circle', 'alert-triangle', 'align-center',
+  'anchor', 'aperture', 'archive', 'at-sign', 'bar-chart', 'battery',
+  'bluetooth', 'bold', 'bookmark-check', 'brain', 'building', 'bulb',
+  'calculator', 'calendar-check', 'car', 'chart-line', 'check-circle',
+  'check-square', 'chrome', 'clipboard', 'cloud', 'code', 'coffee',
+  'command', 'compass', 'cpu', 'crop', 'database', 'delete', 'diamond',
+  'disc', 'download', 'droplets', 'eye', 'eye-off', 'facebook',
+  'feather', 'file-text', 'film', 'fingerprint', 'fire', 'folder-open',
+  'gamepad2', 'gift', 'github', 'globe', 'graduation-cap', 'hard-drive',
+  'hash', 'headphones', 'hexagon', 'info', 'instagram', 'italic',
+  'laptop', 'layers', 'layout', 'life-buoy', 'link', 'linkedin',
+  'loader', 'map-pin', 'maximize', 'message-circle', 'mic', 'minimize',
+  'monitor', 'moon', 'mouse-pointer', 'move', 'navigation', 'octagon',
+  'palette', 'paperclip', 'pause', 'percent', 'pie-chart', 'play',
+  'power', 'printer', 'refresh-cw', 'repeat', 'rotate-3d', 'save',
+  'scissors', 'share', 'shopping-bag', 'shuffle', 'sidebar', 'skip-back',
+  'skip-forward', 'slack', 'smartphone', 'smile', 'speaker', 'stop-circle',
+  'sun', 'tablet', 'thermometer', 'thumbs-down', 'thumbs-up', 'toggle-left',
+  'toggle-right', 'tool', 'trash', 'trending-down', 'trending-up', 'triangle',
+  'truck', 'tv', 'twitter', 'umbrella', 'underline', 'upload', 'volume-2',
+  'watch', 'wifi', 'wind', 'zap', 'zoom-in', 'zoom-out'
 ];
 
-// Get all lucide icon names
-const allIconNames = Object.keys(LucideIcons).filter(name => 
-  name !== 'default' && 
-  name !== 'createLucideIcon' &&
-  typeof (LucideIcons as any)[name] === 'function'
-);
+// Popular icons shown first
+const popularIcons = [
+  'folder', 'file', 'bookmark', 'tag', 'star', 'flag', 'bell', 
+  'calendar', 'clock', 'users', 'user', 'settings', 'cog',
+  'briefcase', 'home', 'heart', 'mail', 'phone', 'camera',
+  'image', 'video', 'music', 'book', 'pen', 'edit'
+];
 
 export function IconPicker({ value, onChange, placeholder = "Type icon name...", className }: IconPickerProps) {
   const [inputValue, setInputValue] = useState(value || '');
@@ -75,6 +100,8 @@ export function IconPicker({ value, onChange, placeholder = "Type icon name...",
           iconName.replace(/([A-Z])/g, '-$1').toLowerCase().slice(1).includes(searchTerm)
         );
       }).slice(0, 20); // Limit to 20 results
+      
+      
       setFilteredIcons(filtered);
     }
     
