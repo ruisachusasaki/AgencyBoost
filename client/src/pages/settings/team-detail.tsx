@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ReactQuill from "react-quill";
@@ -49,6 +48,7 @@ type EditTeamFormData = z.infer<typeof editTeamFormSchema>;
 export default function TeamDetail() {
   const { toast } = useToast();
   const [, params] = useRoute("/settings/teams/:id");
+  const [activeTab, setActiveTab] = useState("members");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddPositionDialogOpen, setIsAddPositionDialogOpen] = useState(false);
   const [isEditTeamDialogOpen, setIsEditTeamDialogOpen] = useState(false);
@@ -456,14 +456,35 @@ export default function TeamDetail() {
       </div>
 
       {/* Tabs for Members and Positions */}
-      <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="members" data-testid="tab-members">Members</TabsTrigger>
-          <TabsTrigger value="positions" data-testid="tab-positions">Positions</TabsTrigger>
-        </TabsList>
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "members", name: "Members", icon: Users, count: staff.length },
+            { id: "positions", name: "Positions", icon: MapPin, count: positions.length }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                data-testid={`tab-${tab.id}`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} {tab.count > 0 && `(${tab.count})`}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        {/* Members Tab */}
-        <TabsContent value="members">
+      {/* Tab Content */}
+      {activeTab === "members" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -605,10 +626,12 @@ export default function TeamDetail() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* Positions Tab */}
-        <TabsContent value="positions">
+      {/* Positions Tab */}
+      {activeTab === "positions" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -756,8 +779,8 @@ export default function TeamDetail() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
       {/* Edit Team Dialog */}
       <Dialog open={isEditTeamDialogOpen} onOpenChange={setIsEditTeamDialogOpen}>
