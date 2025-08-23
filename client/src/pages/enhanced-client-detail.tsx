@@ -731,8 +731,8 @@ export default function EnhancedClientDetail() {
 
 
 
-  // Helper functions to get dynamic names from custom fields
-  const getClientDisplayName = () => {
+  // Memoized display names to prevent infinite re-renders
+  const clientDisplayName = useMemo(() => {
     if (!client || !customFieldsData) return client?.name || "";
     
     // Find First Name and Last Name fields by exact name match
@@ -757,9 +757,9 @@ export default function EnhancedClientDetail() {
     }
     // Otherwise fall back to database name
     return client.name || "";
-  };
+  }, [client, customFieldsData]);
 
-  const getBusinessDisplayName = () => {
+  const businessDisplayName = useMemo(() => {
     if (!client || !customFieldsData) return client?.company || "";
     
     // Find Business Name field by exact name match
@@ -776,7 +776,7 @@ export default function EnhancedClientDetail() {
     }
     // Otherwise fall back to database company
     return client.company || "";
-  };
+  }, [client, customFieldsData]);
 
   // Fetch client data
   const { data: client, isLoading, error } = useQuery<Client>({
@@ -2067,8 +2067,8 @@ export default function EnhancedClientDetail() {
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{getClientDisplayName()}</h1>
-              <p className="text-muted-foreground">{getBusinessDisplayName()}</p>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{clientDisplayName}</h1>
+              <p className="text-muted-foreground">{businessDisplayName}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
