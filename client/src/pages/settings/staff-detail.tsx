@@ -17,7 +17,7 @@ import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings, Department } from "@shared/schema";
+import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings, Department, Position } from "@shared/schema";
 
 const userTypes = [
   "Admin",
@@ -93,6 +93,19 @@ export default function StaffDetail() {
     }
   });
 
+  // Watch the department field to fetch positions when it changes
+  const selectedDepartment = form.watch("department");
+  
+  // Find the selected department to get its ID
+  const selectedDeptObj = departments.find(dept => dept.name === selectedDepartment);
+  
+  // Fetch positions for the selected department
+  const { data: departmentPositions = [] } = useQuery<Position[]>({
+    queryKey: ["/api/departments", selectedDeptObj?.id, "positions"],
+    queryFn: () => fetch(`/api/departments/${selectedDeptObj?.id}/positions`).then(res => res.json()),
+    enabled: !!selectedDeptObj?.id && selectedDepartment !== "none",
+  });
+
   // Update form values when staff member changes
   useEffect(() => {
     if (staffMember) {
@@ -109,11 +122,25 @@ export default function StaffDetail() {
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "none",
+        position: staffMember.position || "",
         managerId: staffMember.managerId || "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
     }
   }, [staffMember, form]);
+
+  // Clear position when department changes (since positions are department-specific)
+  useEffect(() => {
+    if (selectedDepartment && isEditing) {
+      // Only clear position if we're editing and the department actually changed
+      const currentPosition = form.getValues("position");
+      if (currentPosition && selectedDepartment !== "none") {
+        // Check if the current position exists in the new department's positions
+        // If not, we'll clear it when the positions load
+        form.setValue("position", "");
+      }
+    }
+  }, [selectedDepartment, form, isEditing]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
@@ -473,10 +500,34 @@ export default function StaffDetail() {
                     name="position"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Position</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g. Marketing Director, Account Manager" disabled={!isEditing} />
-                        </FormControl>
+                        <FormLabelWithTooltip tooltip="Choose a position from the selected department, or select a department first">
+                          Position
+                        </FormLabelWithTooltip>
+                        <Select
+                          value={field.value || ""}
+                          onValueChange={(value) => {
+                            field.onChange(value === "none" ? "" : value);
+                          }}
+                          disabled={!isEditing || !selectedDeptObj || selectedDepartment === "none"}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={
+                                !selectedDeptObj || selectedDepartment === "none" 
+                                  ? "Select a department first" 
+                                  : "Select position"
+                              } />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Position</SelectItem>
+                            {departmentPositions.map((position) => (
+                              <SelectItem key={position.id} value={position.name}>
+                                {position.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
