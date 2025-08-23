@@ -120,7 +120,7 @@ export default function Tasks() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      await apiRequest(`/api/tasks/${id}`, "PUT", { status });
+      await apiRequest("PUT", `/api/tasks/${id}`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });

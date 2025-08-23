@@ -286,7 +286,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 6. Priority */}
+          {/* 6. Priority */
           <FormField
             control={form.control}
             name="priority"
@@ -321,7 +321,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 7. Assigned To */}
+          {/* 7. Assigned To */
           <FormField
             control={form.control}
             name="assignedTo"
@@ -348,7 +348,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 8. Start Date */}
+          {/* 8. Start Date */
           <FormField
             control={form.control}
             name="startDate"
@@ -368,7 +368,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 9. Due Date */}
+          {/* 9. Due Date */
           <FormField
             control={form.control}
             name="dueDate"
@@ -388,7 +388,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 10. Client */}
+          {/* 10. Client */
           <FormField
             control={form.control}
             name="clientId"
@@ -415,7 +415,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 11. Project */}
+          {/* 11. Project */
           <FormField
             control={form.control}
             name="projectId"
