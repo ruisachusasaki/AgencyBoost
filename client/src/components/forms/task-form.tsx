@@ -56,6 +56,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   // Get default values from settings
   const defaultStatus = taskStatuses.find(s => s.isDefault)?.value || taskStatuses[0]?.value || "pending";
   const defaultPriority = taskPriorities.find(p => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
+  const defaultCategory = taskCategories.find(c => c.isDefault)?.id || null;
 
   const [isRecurringEnabled, setIsRecurringEnabled] = useState(task?.isRecurring || false);
 
@@ -66,6 +67,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       description: task?.description || "",
       status: task?.status || defaultStatus,
       priority: task?.priority || defaultPriority,
+      categoryId: task?.categoryId || defaultCategory,
       assignedTo: task?.assignedTo || "unassigned",
       clientId: task?.clientId || "",
       projectId: task?.projectId || "",
@@ -138,6 +140,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       projectId: data.projectId && data.projectId !== "none" ? data.projectId : null,
       campaignId: data.campaignId && data.campaignId !== "none" ? data.campaignId : null,
       assignedTo: data.assignedTo && data.assignedTo !== "unassigned" ? data.assignedTo : null,
+      categoryId: data.categoryId && data.categoryId !== "" ? data.categoryId : null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
     };
 
@@ -240,6 +243,38 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                         </SelectItem>
                       );
                     })}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="categoryId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category (Optional)</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">No Category</SelectItem>
+                    {taskCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span>{category.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

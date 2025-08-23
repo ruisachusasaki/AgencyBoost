@@ -35,19 +35,21 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [columns, setColumns] = useState<Column[]>([
-    { id: "name", label: "Task Name", width: "w-1/5" },
-    { id: "assignee", label: "Assignee", width: "w-1/7" },
-    { id: "dueDate", label: "Due Date", width: "w-1/7" },
-    { id: "status", label: "Status", width: "w-1/8" },
-    { id: "priority", label: "Priority", width: "w-1/8" },
-    { id: "client", label: "Client", width: "w-1/7" },
-    { id: "project", label: "Project", width: "w-1/7" },
+    { id: "name", label: "Task Name", width: "w-1/6" },
+    { id: "assignee", label: "Assignee", width: "w-1/8" },
+    { id: "dueDate", label: "Due Date", width: "w-1/8" },
+    { id: "status", label: "Status", width: "w-1/10" },
+    { id: "priority", label: "Priority", width: "w-1/10" },
+    { id: "category", label: "Category", width: "w-1/10" },
+    { id: "client", label: "Client", width: "w-1/8" },
+    { id: "project", label: "Project", width: "w-1/8" },
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
@@ -168,6 +170,18 @@ export default function Tasks() {
     return project?.name || "Unknown Project";
   };
 
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return null;
+    const category = taskCategories.find(c => c.id === categoryId);
+    return category?.name || "Unknown Category";
+  };
+
+  const getCategoryColor = (categoryId: string | null) => {
+    if (!categoryId) return '#6b7280';
+    const category = taskCategories.find(c => c.id === categoryId);
+    return category?.color || '#6b7280';
+  };
+
   const getCampaignName = (campaignId: string | null) => {
     if (!campaignId) return null;
     const campaign = campaigns.find(c => c.id === campaignId);
@@ -210,12 +224,15 @@ export default function Tasks() {
       const matchesProject = projectFilter === "all" || 
         (projectFilter === "none" && !task.projectId) ||
         task.projectId === projectFilter;
+      const matchesCategory = categoryFilter === "all" || 
+        (categoryFilter === "none" && !task.categoryId) ||
+        task.categoryId === categoryFilter;
 
       // Show/hide completed and cancelled tasks based on toggle settings
       const shouldShowCompleted = showCompleted || task.status !== "completed";
       const shouldShowCancelled = showCancelled || task.status !== "cancelled";
       
-      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && shouldShowCompleted && shouldShowCancelled;
+      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && shouldShowCompleted && shouldShowCancelled;
     })
     .sort((a, b) => {
       let aValue: any = '';
@@ -452,6 +469,19 @@ export default function Tasks() {
           <span className="text-sm">{getProjectName(task.projectId)}</span>
         ) : (
           <span className="text-slate-400 text-sm">No project</span>
+        );
+      
+      case "category":
+        return task.categoryId ? (
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: getCategoryColor(task.categoryId) }}
+            />
+            <span className="text-sm">{getCategoryName(task.categoryId)}</span>
+          </div>
+        ) : (
+          <span className="text-slate-400 text-sm">No category</span>
         );
       
       default:
@@ -1136,7 +1166,7 @@ export default function Tasks() {
             </div>
             
             {/* Filter Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
@@ -1226,6 +1256,28 @@ export default function Tasks() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Category Filter */}
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="none">No Category</SelectItem>
+                  {taskCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span>{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -1240,12 +1292,12 @@ export default function Tasks() {
           {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
-                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || projectFilter !== "all"
+                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || projectFilter !== "all" || categoryFilter !== "all"
                   ? "No tasks found matching your criteria." 
                   : "No tasks found."
                 }
               </p>
-              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && projectFilter === "all" && (
+              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && projectFilter === "all" && categoryFilter === "all" && (
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>Create Your First Task</Button>
