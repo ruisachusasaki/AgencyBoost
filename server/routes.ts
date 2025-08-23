@@ -3595,6 +3595,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Always return success for annotation creation
       res.status(201).json(annotation);
       
+      // Try to find associated task and create task activity (don't await)
+      (async () => {
+        try {
+          const { commentFiles, taskComments, taskActivities, staff } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          
+          // Find the task ID by tracing: fileId -> commentFiles -> taskComments -> taskId
+          const fileToComment = await db.select({
+            taskId: taskComments.taskId
+          })
+          .from(commentFiles)
+          .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+          .where(eq(commentFiles.id, req.params.fileId))
+          .limit(1);
+          
+          if (fileToComment.length > 0 && fileToComment[0].taskId) {
+            const taskId = fileToComment[0].taskId;
+            
+            // Get user name for activity
+            const userInfo = await db.select({
+              firstName: staff.firstName,
+              lastName: staff.lastName
+            })
+            .from(staff)
+            .where(eq(staff.id, userId))
+            .limit(1);
+            
+            const userName = userInfo.length > 0 
+              ? `${userInfo[0].firstName} ${userInfo[0].lastName}`
+              : 'Unknown User';
+            
+            // Create task activity for annotation
+            await db.insert(taskActivities).values({
+              taskId,
+              actionType: "annotation_created",
+              description: `Added annotation: "${req.body.content.substring(0, 50)}${req.body.content.length > 50 ? '...' : ''}"`,
+              userId,
+              userName,
+              details: {
+                annotationId: annotation.id,
+                fileId: req.params.fileId,
+                x: req.body.x,
+                y: req.body.y,
+                content: req.body.content,
+                mentions: mentions.length > 0 ? mentions : undefined
+              },
+            });
+            
+            console.log(`Task activity created for annotation on task: ${taskId}`);
+          }
+        } catch (activityError) {
+          console.log("Failed to create task activity for annotation:", activityError);
+        }
+      })();
+      
       // Try to create notifications asynchronously (don't await)
       if (mentions.length > 0) {
         console.log(`Annotation created with mentions: ${mentions.join(', ')}`);
@@ -3677,6 +3732,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Always return success for annotation update
       res.json(result[0]);
+      
+      // Try to find associated task and create task activity for update (don't await)
+      (async () => {
+        try {
+          const { commentFiles, taskComments, taskActivities, staff } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          
+          // Find the task ID by tracing: annotation -> fileId -> commentFiles -> taskComments -> taskId
+          const fileToComment = await db.select({
+            taskId: taskComments.taskId
+          })
+          .from(commentFiles)
+          .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+          .where(eq(commentFiles.id, result[0].fileId))
+          .limit(1);
+          
+          if (fileToComment.length > 0 && fileToComment[0].taskId) {
+            const taskId = fileToComment[0].taskId;
+            const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+            
+            // Get user name for activity
+            const userInfo = await db.select({
+              firstName: staff.firstName,
+              lastName: staff.lastName
+            })
+            .from(staff)
+            .where(eq(staff.id, userId))
+            .limit(1);
+            
+            const userName = userInfo.length > 0 
+              ? `${userInfo[0].firstName} ${userInfo[0].lastName}`
+              : 'Unknown User';
+            
+            // Create task activity for annotation update
+            await db.insert(taskActivities).values({
+              taskId,
+              actionType: "annotation_updated",
+              description: `Updated annotation: "${req.body.content.substring(0, 50)}${req.body.content.length > 50 ? '...' : ''}"`,
+              userId,
+              userName,
+              details: {
+                annotationId: req.params.annotationId,
+                fileId: result[0].fileId,
+                content: req.body.content,
+                mentions: req.body.mentions || []
+              },
+            });
+            
+            console.log(`Task activity created for annotation update on task: ${taskId}`);
+          }
+        } catch (activityError) {
+          console.log("Failed to create task activity for annotation update:", activityError);
+        }
+      })();
 
       // Try to create notifications asynchronously (don't await)
       if (mentions.length > 0) {
@@ -3747,7 +3856,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Annotation not found" });
       }
       
+      const deletedAnnotation = result[0];
       res.status(204).send();
+      
+      // Try to find associated task and create task activity for deletion (don't await)
+      (async () => {
+        try {
+          const { commentFiles, taskComments, taskActivities, staff } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          
+          // Find the task ID by tracing: annotation -> fileId -> commentFiles -> taskComments -> taskId
+          const fileToComment = await db.select({
+            taskId: taskComments.taskId
+          })
+          .from(commentFiles)
+          .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+          .where(eq(commentFiles.id, deletedAnnotation.fileId))
+          .limit(1);
+          
+          if (fileToComment.length > 0 && fileToComment[0].taskId) {
+            const taskId = fileToComment[0].taskId;
+            const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+            
+            // Get user name for activity
+            const userInfo = await db.select({
+              firstName: staff.firstName,
+              lastName: staff.lastName
+            })
+            .from(staff)
+            .where(eq(staff.id, userId))
+            .limit(1);
+            
+            const userName = userInfo.length > 0 
+              ? `${userInfo[0].firstName} ${userInfo[0].lastName}`
+              : 'Unknown User';
+            
+            // Create task activity for annotation deletion
+            await db.insert(taskActivities).values({
+              taskId,
+              actionType: "annotation_deleted",
+              description: `Deleted annotation: "${deletedAnnotation.content.substring(0, 50)}${deletedAnnotation.content.length > 50 ? '...' : ''}"`,
+              userId,
+              userName,
+              details: {
+                annotationId: deletedAnnotation.id,
+                fileId: deletedAnnotation.fileId,
+                content: deletedAnnotation.content,
+                mentions: deletedAnnotation.mentions || []
+              },
+            });
+            
+            console.log(`Task activity created for annotation deletion on task: ${taskId}`);
+          }
+        } catch (activityError) {
+          console.log("Failed to create task activity for annotation deletion:", activityError);
+        }
+      })();
     } catch (error) {
       console.error("Error deleting image annotation:", error);
       res.status(500).json({ error: "Failed to delete image annotation" });
