@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, Repeat } from "lucide-react";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff, type TaskStatus, type TaskPriority, type TaskCategory, type Department, type TeamWorkflow } from "@shared/schema";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Staff, type TaskPriority, type TaskCategory, type TeamWorkflow } from "@shared/schema";
 import { useState } from "react";
 
 interface TaskFormProps {
@@ -32,17 +32,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/projects"],
   });
 
-  const { data: campaigns = [] } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns"],
-  });
-
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
-  });
-
-  // Fetch dynamic task settings
-  const { data: taskStatuses = [] } = useQuery<TaskStatus[]>({
-    queryKey: ["/api/task-statuses"],
   });
 
   const { data: taskPriorities = [] } = useQuery<TaskPriority[]>({
@@ -53,14 +44,13 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/task-categories"],
   });
 
-  const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ["/api/departments"],
+  const { data: teamWorkflows = [] } = useQuery<TeamWorkflow[]>({
+    queryKey: ["/api/team-workflows"],
   });
 
   // Get default values from settings
-  const defaultStatus = taskStatuses.find((s: TaskStatus) => s.isDefault)?.value || taskStatuses[0]?.value || "pending";
   const defaultPriority = taskPriorities.find((p: TaskPriority) => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
-  const defaultCategory = taskCategories.find((c: TaskCategory) => c.isDefault)?.id || null;
+  const defaultCategory = taskCategories.find((c: TaskCategory) => c.isDefault)?.id || "";
 
   const [isRecurringEnabled, setIsRecurringEnabled] = useState(task?.isRecurring || false);
 
@@ -69,40 +59,24 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     defaultValues: {
       title: task?.title || "",
       description: task?.description || "",
-      status: task?.status || defaultStatus,
-      priority: task?.priority || defaultPriority,
       categoryId: task?.categoryId || defaultCategory,
-      assignedTo: task?.assignedTo || "unassigned",
+      workflowId: task?.workflowId || "",
+      priority: task?.priority || defaultPriority,
+      assignedTo: task?.assignedTo || null,
+      startDate: task?.startDate ? new Date(task.startDate) : null,
+      dueDate: task?.dueDate ? new Date(task.dueDate) : null,
       clientId: task?.clientId || "",
       projectId: task?.projectId || "",
-      campaignId: task?.campaignId || "",
-      startDate: task?.startDate ? new Date(task.startDate) : undefined,
-      dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
       // Recurring task defaults
       isRecurring: task?.isRecurring || false,
       recurringInterval: task?.recurringInterval || 1,
       recurringUnit: task?.recurringUnit || "days",
       recurringEndType: task?.recurringEndType || "never",
-      recurringEndDate: task?.recurringEndDate ? new Date(task.recurringEndDate) : undefined,
+      recurringEndDate: task?.recurringEndDate ? new Date(task.recurringEndDate) : null,
       recurringEndOccurrences: task?.recurringEndOccurrences || 10,
       createIfOverdue: task?.createIfOverdue || false,
     },
   });
-
-  // Get selected category and its workflow (after form is declared)
-  const selectedCategoryId = form.watch('categoryId');
-  const selectedCategory = taskCategories.find((c: any) => c.id === selectedCategoryId);
-  
-  // Fetch category-specific workflow if category has one (and it's not "none")
-  const { data: categoryWorkflow } = useQuery<TeamWorkflow>({
-    queryKey: ["/api/team-workflows", selectedCategory?.workflowId],
-    enabled: !!selectedCategory?.workflowId && selectedCategory.workflowId !== "none",
-  });
-
-  // Determine which statuses to use (category workflow statuses or global statuses)
-  const availableStatuses = categoryWorkflow?.statuses?.length 
-    ? categoryWorkflow.statuses.map((ws: any) => ws.status)
-    : taskStatuses;
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
@@ -149,17 +123,17 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   const selectedClientId = form.watch("clientId");
   const clientProjects = projects.filter(p => p.clientId === selectedClientId);
-  const clientCampaigns = campaigns.filter(c => c.clientId === selectedClientId);
 
   const onSubmit = (data: InsertTask) => {
     // Clean up empty string IDs and "none" values
     const cleanData = {
       ...data,
-      clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
-      projectId: data.projectId && data.projectId !== "none" ? data.projectId : null,
-      campaignId: data.campaignId && data.campaignId !== "none" ? data.campaignId : null,
-      assignedTo: data.assignedTo && data.assignedTo !== "unassigned" ? data.assignedTo : null,
+      clientId: data.clientId && data.clientId !== "none" && data.clientId !== "" ? data.clientId : null,
+      projectId: data.projectId && data.projectId !== "none" && data.projectId !== "" ? data.projectId : null,
+      assignedTo: data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "" ? data.assignedTo : null,
       categoryId: data.categoryId && data.categoryId !== "" ? data.categoryId : null,
+      workflowId: data.workflowId && data.workflowId !== "" ? data.workflowId : null,
+      startDate: data.startDate ? new Date(data.startDate) : null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
     };
 
@@ -175,6 +149,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto">
+        {/* 1. Task Title */}
         <FormField
           control={form.control}
           name="title"
@@ -189,6 +164,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
           )}
         />
 
+        {/* 2. Description */}
         <FormField
           control={form.control}
           name="description"
@@ -204,27 +180,29 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 3. Category */}
           <FormField
             control={form.control}
-            name="status"
+            name="categoryId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel>Category</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {availableStatuses.filter(status => status.isActive).map((status) => (
-                      <SelectItem key={status.id} value={status.value}>
+                    <SelectItem value="">No Category</SelectItem>
+                    {taskCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: status.color }}
+                            style={{ backgroundColor: category.color }}
                           />
-                          <span>{status.name}</span>
+                          <span>{category.name}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -235,13 +213,41 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
+          {/* 4. Workflow */}
+          <FormField
+            control={form.control}
+            name="workflowId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Workflow</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select workflow" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">No Workflow</SelectItem>
+                    {teamWorkflows.map((workflow) => (
+                      <SelectItem key={workflow.id} value={workflow.id}>
+                        {workflow.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 5. Priority */}
           <FormField
             control={form.control}
             name="priority"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Priority</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select priority" />
@@ -269,52 +275,21 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="categoryId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Category</SelectItem>
-                    {taskCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span>{category.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+          {/* 6. Assigned To */}
           <FormField
             control={form.control}
             name="assignedTo"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned To</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || "unassigned"}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select team member" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="">Unassigned</SelectItem>
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.firstName} {member.lastName}
@@ -327,6 +302,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
+          {/* 7. Start Date */}
           <FormField
             control={form.control}
             name="startDate"
@@ -338,7 +314,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     {...field} 
                     type="date"
                     value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -346,6 +322,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
+          {/* 8. Due Date */}
           <FormField
             control={form.control}
             name="dueDate"
@@ -357,7 +334,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     {...field} 
                     type="date"
                     value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -365,6 +342,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
+          {/* 9. Client */}
           <FormField
             control={form.control}
             name="clientId"
@@ -378,7 +356,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="none">No Client</SelectItem>
+                    <SelectItem value="">No Client</SelectItem>
                     {clients.map((client: Client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -391,6 +369,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
+          {/* 10. Project */}
           <FormField
             control={form.control}
             name="projectId"
@@ -404,36 +383,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="none">No Project</SelectItem>
+                    <SelectItem value="">No Project</SelectItem>
                     {clientProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="campaignId"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Campaign (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select campaign" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Campaign</SelectItem>
-                    {clientCampaigns.map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -559,7 +512,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                           {...field} 
                           type="date"
                           value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                           data-testid="input-recurring-end-date"
                         />
                       </FormControl>
@@ -600,30 +553,24 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                   <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                     <FormControl>
                       <Checkbox 
-                        checked={field.value}
+                        checked={field.value || false}
                         onCheckedChange={field.onChange}
                         data-testid="checkbox-create-if-overdue"
                       />
                     </FormControl>
                     <FormLabel className="text-sm font-normal">
-                      Create new task instances (recommended)
+                      Create new instance even if previous is overdue
                     </FormLabel>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <p className="text-xs text-gray-500 pl-6">
-                When enabled, each recurrence creates a separate task. When disabled, the same task reopens.
-              </p>
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onSuccess}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} data-testid="button-submit">
             {isLoading ? "Saving..." : task ? "Update Task" : "Create Task"}
           </Button>
         </div>

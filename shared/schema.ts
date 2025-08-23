@@ -480,6 +480,8 @@ export const tasks = pgTable("tasks", {
   description: text("description"),
   status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
   priority: text("priority").notNull().default("normal"), // urgent, high, normal, low
+  categoryId: varchar("category_id").references(() => taskCategories.id), // Category for workflow assignment
+  workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // Direct workflow assignment
   assignedTo: uuid("assigned_to").references(() => staff.id),
   clientId: varchar("client_id").references(() => clients.id),
   projectId: varchar("project_id").references(() => projects.id),
