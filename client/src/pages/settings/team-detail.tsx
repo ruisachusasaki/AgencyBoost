@@ -376,10 +376,6 @@ export default function TeamDetail() {
               {deleteTeamMutation.isPending ? "Deleting..." : "Delete Team"}
             </Button>
           )}
-          <Button size="sm" data-testid="button-add-member">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Member
-          </Button>
         </div>
       </div>
 
@@ -487,10 +483,9 @@ export default function TeamDetail() {
                 }
               </p>
               {!searchTerm && (
-                <Button data-testid="button-add-first-member">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add First Member
-                </Button>
+                <p className="text-sm text-gray-500 mt-2">
+                  Team members are automatically added when staff are assigned to this department in Settings → Staff
+                </p>
               )}
             </div>
           ) : (
