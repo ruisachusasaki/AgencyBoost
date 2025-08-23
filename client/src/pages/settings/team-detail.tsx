@@ -97,6 +97,16 @@ export default function TeamDetail() {
     enabled: !!teamId,
   });
 
+  // Fetch current user to check admin permissions
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/current-user');
+      if (!response.ok) throw new Error('Failed to fetch current user');
+      return response.json();
+    },
+  });
+
   // Create position mutation
   const createPositionMutation = useMutation({
     mutationFn: async (data: PositionFormData) => {
@@ -116,6 +126,32 @@ export default function TeamDetail() {
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to create position"
+      });
+    }
+  });
+
+  // Delete team mutation (Admin only)
+  const deleteTeamMutation = useMutation({
+    mutationFn: async (teamId: string) => {
+      const response = await fetch(`/api/departments/${teamId}`, { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error('Failed to delete team');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Team deleted successfully",
+      });
+      // Redirect to teams list after successful deletion
+      window.location.href = '/settings/staff';
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete team"
       });
     }
   });
@@ -204,6 +240,13 @@ export default function TeamDetail() {
   const handleDeletePosition = (positionId: string, positionName: string) => {
     if (!confirm(`Are you sure you want to delete the position "${positionName}"?`)) return;
     deletePositionMutation.mutate(positionId);
+  };
+
+  const handleDeleteTeam = () => {
+    if (!team || !teamId) return;
+    if (window.confirm(`Are you sure you want to delete the team "${team.name}"? This action cannot be undone and will remove all associated positions.`)) {
+      deleteTeamMutation.mutate(teamId);
+    }
   };
 
   const handleEditTeam = () => {
@@ -305,6 +348,23 @@ export default function TeamDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Team
           </Button>
+          {currentUser?.role === 'Admin' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-red-600 hover:text-red-700 hover:bg-red-50" 
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete the team "${team.name}"? This action cannot be undone and will remove all associated positions.`)) {
+                  deleteTeamMutation.mutate(teamId!);
+                }
+              }}
+              disabled={deleteTeamMutation.isPending}
+              data-testid="button-delete-team"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleteTeamMutation.isPending ? "Deleting..." : "Delete Team"}
+            </Button>
+          )}
           <Button size="sm" data-testid="button-add-member">
             <Plus className="h-4 w-4 mr-2" />
             Add Member
