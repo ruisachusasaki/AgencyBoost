@@ -253,7 +253,7 @@ export default function TasksSettingsPage() {
 
   // Category mutations
   const createCategoryMutation = useMutation({
-    mutationFn: (data: TaskCategoryFormData) => apiRequest("/api/task-categories", "POST", data),
+    mutationFn: (data: TaskCategoryFormData) => apiRequest("POST", "/api/task-categories", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-categories"] });
       toast({ title: "Success", description: "Task category created successfully" });
@@ -266,7 +266,7 @@ export default function TasksSettingsPage() {
 
   const updateCategoryMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<TaskCategoryFormData> }) =>
-      apiRequest(`/api/task-categories/${id}`, "PUT", data),
+      apiRequest("PUT", `/api/task-categories/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-categories"] });
       toast({ title: "Success", description: "Task category updated successfully" });
@@ -278,7 +278,7 @@ export default function TasksSettingsPage() {
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/task-categories/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/task-categories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-categories"] });
       toast({ title: "Success", description: "Task category deleted successfully" });
