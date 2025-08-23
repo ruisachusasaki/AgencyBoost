@@ -194,7 +194,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Category</SelectItem>
+                    <SelectItem value="none">No Category</SelectItem>
                     {taskCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Workflow</SelectItem>
+                    <SelectItem value="none">No Workflow</SelectItem>
                     {teamWorkflows.map((workflow) => (
                       <SelectItem key={workflow.id} value={workflow.id}>
                         {workflow.name}
@@ -289,7 +289,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.firstName} {member.lastName}
@@ -356,7 +356,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Client</SelectItem>
+                    <SelectItem value="none">No Client</SelectItem>
                     {clients.map((client: Client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -383,7 +383,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Project</SelectItem>
+                    <SelectItem value="none">No Project</SelectItem>
                     {clientProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
