@@ -27,6 +27,7 @@ const staffFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
   roleId: z.string().min(1, "Role is required"),
+  department: z.string().optional(),
   position: z.string().optional(),
 });
 
@@ -59,6 +60,8 @@ export default function Staff() {
       email: "",
       phone: "",
       roleId: "",
+      department: "",
+      position: "",
     }
   });
 
@@ -409,13 +412,59 @@ export default function Staff() {
                 />
                 <FormField
                   control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Team/Department</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select team/department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="position"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Position</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g. Marketing Director, Account Manager" />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select position" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {positions.map((pos) => (
+                            <SelectItem key={pos.id} value={pos.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{pos.name}</span>
+                                {pos.description && (
+                                  <span className="text-xs text-muted-foreground">{pos.description}</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -425,7 +474,9 @@ export default function Staff() {
                   name="roleId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabelWithTooltip tooltip="Software access and permissions level">
+                        Role (Software Permissions)
+                      </FormLabelWithTooltip>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
