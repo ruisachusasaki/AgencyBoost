@@ -232,7 +232,7 @@ export default function TasksSettingsPage() {
 
   // Status mutations
   const createStatusMutation = useMutation({
-    mutationFn: (data: TaskStatusFormData) => apiRequest("/api/task-statuses", "POST", data),
+    mutationFn: (data: TaskStatusFormData) => apiRequest("POST", "/api/task-statuses", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-statuses"] });
       toast({ title: "Success", description: "Task status created successfully" });
@@ -271,7 +271,7 @@ export default function TasksSettingsPage() {
 
   // Priority mutations
   const createPriorityMutation = useMutation({
-    mutationFn: (data: TaskPriorityFormData) => apiRequest("/api/task-priorities", "POST", data),
+    mutationFn: (data: TaskPriorityFormData) => apiRequest("POST", "/api/task-priorities", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-priorities"] });
       toast({ title: "Success", description: "Task priority created successfully" });
