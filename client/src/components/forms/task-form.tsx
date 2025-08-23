@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, Repeat } from "lucide-react";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff } from "@shared/schema";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Campaign, type Staff, type TaskStatus, type TaskPriority, type TaskCategory } from "@shared/schema";
 import { useState } from "react";
 
 interface TaskFormProps {
@@ -40,6 +40,23 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/staff"],
   });
 
+  // Fetch dynamic task settings
+  const { data: taskStatuses = [] } = useQuery<TaskStatus[]>({
+    queryKey: ["/api/task-statuses"],
+  });
+
+  const { data: taskPriorities = [] } = useQuery<TaskPriority[]>({
+    queryKey: ["/api/task-priorities"],
+  });
+
+  const { data: taskCategories = [] } = useQuery<TaskCategory[]>({
+    queryKey: ["/api/task-categories"],
+  });
+
+  // Get default values from settings
+  const defaultStatus = taskStatuses.find(s => s.isDefault)?.value || taskStatuses[0]?.value || "pending";
+  const defaultPriority = taskPriorities.find(p => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
+
   const [isRecurringEnabled, setIsRecurringEnabled] = useState(task?.isRecurring || false);
 
   const form = useForm<InsertTask>({
@@ -47,8 +64,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     defaultValues: {
       title: task?.title || "",
       description: task?.description || "",
-      status: task?.status || "pending",
-      priority: task?.priority || "normal",
+      status: task?.status || defaultStatus,
+      priority: task?.priority || defaultPriority,
       assignedTo: task?.assignedTo || "unassigned",
       clientId: task?.clientId || "",
       projectId: task?.projectId || "",
@@ -178,10 +195,17 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    {taskStatuses.filter(status => status.isActive).map((status) => (
+                      <SelectItem key={status.id} value={status.value}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: status.color }}
+                          />
+                          <span>{status.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -202,30 +226,20 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="urgent">
-                      <div className="flex items-center gap-2">
-                        <Flag className="h-3 w-3 text-red-500" />
-                        <span>Urgent</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="high">
-                      <div className="flex items-center gap-2">
-                        <Flag className="h-3 w-3 text-yellow-500" />
-                        <span>High</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="normal">
-                      <div className="flex items-center gap-2">
-                        <Flag className="h-3 w-3 text-blue-500" />
-                        <span>Normal</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="low">
-                      <div className="flex items-center gap-2">
-                        <Flag className="h-3 w-3 text-gray-500" />
-                        <span>Low</span>
-                      </div>
-                    </SelectItem>
+                    {taskPriorities.filter(priority => priority.isActive).map((priority) => {
+                      const IconComponent = priority.icon === 'flag' ? Flag : Flag; // For now using Flag, can be expanded
+                      return (
+                        <SelectItem key={priority.id} value={priority.value}>
+                          <div className="flex items-center gap-2">
+                            <IconComponent 
+                              className="h-3 w-3" 
+                              style={{ color: priority.color }}
+                            />
+                            <span>{priority.name}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <FormMessage />

@@ -13,7 +13,7 @@ import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, Client, Project, Campaign, Staff } from "@shared/schema";
+import type { Task, Client, Project, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -77,6 +77,19 @@ export default function Tasks() {
   // Fetch staff for assignee names
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
+  });
+
+  // Fetch dynamic task settings
+  const { data: taskStatuses = [] } = useQuery<TaskStatus[]>({
+    queryKey: ["/api/task-statuses"],
+  });
+
+  const { data: taskPriorities = [] } = useQuery<TaskPriority[]>({
+    queryKey: ["/api/task-priorities"],
+  });
+
+  const { data: taskCategories = [] } = useQuery<TaskCategory[]>({
+    queryKey: ["/api/task-categories"],
   });
 
   const deleteTaskMutation = useMutation({
@@ -226,9 +239,10 @@ export default function Tasks() {
           bValue = b.status.toLowerCase();
           break;
         case 'priority':
-          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
-          aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
-          bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+          const aPriority = taskPriorities.find(p => p.value === a.priority);
+          const bPriority = taskPriorities.find(p => p.value === b.priority);
+          aValue = aPriority?.sortOrder || 0;
+          bValue = bPriority?.sortOrder || 0;
           break;
         case 'clientId':
           aValue = (getClientName(a.clientId) || 'No client').toLowerCase();
@@ -1130,10 +1144,17 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  {taskStatuses.filter(status => status.isActive).map((status) => (
+                    <SelectItem key={status.id} value={status.value}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: status.color }}
+                        />
+                        <span>{status.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               
@@ -1160,10 +1181,17 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  {taskPriorities.filter(priority => priority.isActive).map((priority) => (
+                    <SelectItem key={priority.id} value={priority.value}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: priority.color }}
+                        />
+                        <span>{priority.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               
