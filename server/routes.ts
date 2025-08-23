@@ -9063,7 +9063,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(teamWorkflows.isActive, true))
         .orderBy(asc(teamWorkflows.name));
       
-      res.json(workflows);
+      // Get statuses for each workflow
+      const workflowsWithStatuses = await Promise.all(
+        workflows.map(async (workflow) => {
+          const workflowStatuses = await db
+            .select({
+              id: teamWorkflowStatuses.id,
+              workflowId: teamWorkflowStatuses.workflowId,
+              order: teamWorkflowStatuses.order,
+              isRequired: teamWorkflowStatuses.isRequired,
+              status: {
+                id: taskStatuses.id,
+                name: taskStatuses.name,
+                value: taskStatuses.value,
+                color: taskStatuses.color,
+                description: taskStatuses.description,
+                sortOrder: taskStatuses.sortOrder,
+                isDefault: taskStatuses.isDefault,
+                isActive: taskStatuses.isActive,
+                isSystemStatus: taskStatuses.isSystemStatus,
+                createdAt: taskStatuses.createdAt,
+                updatedAt: taskStatuses.updatedAt
+              }
+            })
+            .from(teamWorkflowStatuses)
+            .innerJoin(taskStatuses, eq(teamWorkflowStatuses.statusId, taskStatuses.id))
+            .where(eq(teamWorkflowStatuses.workflowId, workflow.id))
+            .orderBy(asc(teamWorkflowStatuses.order));
+
+          return { ...workflow, statuses: workflowStatuses };
+        })
+      );
+      
+      res.json(workflowsWithStatuses);
     } catch (error) {
       console.error("Error fetching team workflows:", error);
       res.status(500).json({ message: "Failed to fetch team workflows" });
