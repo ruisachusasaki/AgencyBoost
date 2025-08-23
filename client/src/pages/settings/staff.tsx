@@ -466,14 +466,7 @@ export default function Staff() {
                         <SelectContent>
                           {positions.map((pos) => (
                             <SelectItem key={pos.id} value={pos.name}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{pos.name}</span>
-                                {pos.description && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {pos.description.replace(/<[^>]*>/g, '').trim()}
-                                  </span>
-                                )}
-                              </div>
+                              {pos.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
