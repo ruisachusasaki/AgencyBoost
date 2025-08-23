@@ -101,6 +101,7 @@ export default function TaskDetail() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
+      if (!taskId) throw new Error('Task ID is required');
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
       });
@@ -205,6 +206,7 @@ export default function TaskDetail() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: Partial<Task>) => {
+      if (!taskId) throw new Error('Task ID is required');
       await apiRequest("PUT", `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
@@ -435,7 +437,7 @@ export default function TaskDetail() {
       </div>
 
       {/* Task Path - Breadcrumb Navigation for Sub-tasks */}
-      <TaskPath taskId={taskId!} className="mb-4" />
+      {taskId && <TaskPath taskId={taskId} className="mb-4" />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
