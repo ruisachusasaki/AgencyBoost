@@ -42,7 +42,12 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   // Check for existing running timers on app start
   useEffect(() => {
-    checkForRunningTimer();
+    // Wrap in try-catch to prevent runtime errors
+    try {
+      checkForRunningTimer();
+    } catch (error) {
+      console.error('Error initializing timer:', error);
+    }
   }, []);
 
   // Update elapsed time every second when timer is running
@@ -51,10 +56,17 @@ export function TimerProvider({ children }: TimerProviderProps) {
     
     if (currentTimer) {
       const updateElapsed = () => {
-        const now = new Date().getTime();
-        const startTime = new Date(currentTimer.startTime).getTime();
-        const elapsed = Math.floor((now - startTime) / 1000); // seconds
-        setElapsedTime(elapsed);
+        try {
+          const now = new Date().getTime();
+          const startTime = new Date(currentTimer.startTime).getTime();
+          // Validate dates before calculation
+          if (!isNaN(now) && !isNaN(startTime)) {
+            const elapsed = Math.floor((now - startTime) / 1000); // seconds
+            setElapsedTime(elapsed);
+          }
+        } catch (error) {
+          console.error('Error updating elapsed time:', error);
+        }
       };
       
       updateElapsed(); // Update immediately
@@ -68,10 +80,14 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   // Save timer state to localStorage
   useEffect(() => {
-    if (currentTimer) {
-      localStorage.setItem('activeTimer', JSON.stringify(currentTimer));
-    } else {
-      localStorage.removeItem('activeTimer');
+    try {
+      if (currentTimer) {
+        localStorage.setItem('activeTimer', JSON.stringify(currentTimer));
+      } else {
+        localStorage.removeItem('activeTimer');
+      }
+    } catch (error) {
+      console.error('Error saving timer to localStorage:', error);
     }
   }, [currentTimer]);
 
