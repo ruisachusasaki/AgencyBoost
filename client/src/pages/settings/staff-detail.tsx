@@ -129,10 +129,13 @@ export default function StaffDetail() {
     }
   }, [staffMember, form]);
 
-  // Clear position when department changes (since positions are department-specific)
+  // Track the initial department load to avoid clearing position on page load
+  const [initialDepartmentLoaded, setInitialDepartmentLoaded] = useState(false);
+
+  // Clear position when department changes during editing (since positions are department-specific)
   useEffect(() => {
-    if (selectedDepartment && isEditing) {
-      // Only clear position if we're editing and the department actually changed
+    if (selectedDepartment && isEditing && initialDepartmentLoaded) {
+      // Only clear position if we're actively editing and the department actually changed
       const currentPosition = form.getValues("position");
       if (currentPosition && selectedDepartment !== "none") {
         // Check if the current position exists in the new department's positions
@@ -140,7 +143,12 @@ export default function StaffDetail() {
         form.setValue("position", "");
       }
     }
-  }, [selectedDepartment, form, isEditing]);
+    
+    // Mark that we've loaded the initial department
+    if (selectedDepartment && !initialDepartmentLoaded) {
+      setInitialDepartmentLoaded(true);
+    }
+  }, [selectedDepartment, form, isEditing, initialDepartmentLoaded]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
