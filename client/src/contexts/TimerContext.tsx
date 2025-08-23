@@ -24,15 +24,7 @@ const TimerContext = createContext<TimerContextType | undefined>(undefined);
 export function useTimer() {
   const context = useContext(TimerContext);
   if (context === undefined) {
-    console.error('useTimer must be used within a TimerProvider');
-    // Return a default context instead of throwing to prevent runtime errors
-    return {
-      currentTimer: null,
-      isTimerRunning: false,
-      startTimer: () => {},
-      stopTimer: () => {},
-      elapsedTime: 0
-    };
+    throw new Error('useTimer must be used within a TimerProvider');
   }
   return context;
 }
@@ -50,12 +42,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   // Check for existing running timers on app start
   useEffect(() => {
-    // Wrap in try-catch to prevent runtime errors
-    try {
-      checkForRunningTimer();
-    } catch (error) {
-      console.error('Error initializing timer:', error);
-    }
+    checkForRunningTimer();
   }, []);
 
   // Update elapsed time every second when timer is running
@@ -64,17 +51,10 @@ export function TimerProvider({ children }: TimerProviderProps) {
     
     if (currentTimer) {
       const updateElapsed = () => {
-        try {
-          const now = new Date().getTime();
-          const startTime = new Date(currentTimer.startTime).getTime();
-          // Validate dates before calculation
-          if (!isNaN(now) && !isNaN(startTime)) {
-            const elapsed = Math.floor((now - startTime) / 1000); // seconds
-            setElapsedTime(elapsed);
-          }
-        } catch (error) {
-          console.error('Error updating elapsed time:', error);
-        }
+        const now = new Date().getTime();
+        const startTime = new Date(currentTimer.startTime).getTime();
+        const elapsed = Math.floor((now - startTime) / 1000); // seconds
+        setElapsedTime(elapsed);
       };
       
       updateElapsed(); // Update immediately
@@ -88,14 +68,10 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   // Save timer state to localStorage
   useEffect(() => {
-    try {
-      if (currentTimer) {
-        localStorage.setItem('activeTimer', JSON.stringify(currentTimer));
-      } else {
-        localStorage.removeItem('activeTimer');
-      }
-    } catch (error) {
-      console.error('Error saving timer to localStorage:', error);
+    if (currentTimer) {
+      localStorage.setItem('activeTimer', JSON.stringify(currentTimer));
+    } else {
+      localStorage.removeItem('activeTimer');
     }
   }, [currentTimer]);
 

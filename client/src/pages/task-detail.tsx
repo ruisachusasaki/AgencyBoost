@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
@@ -102,7 +101,6 @@ export default function TaskDetail() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
-      if (!taskId) throw new Error('Task ID is required');
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
       });
@@ -207,7 +205,6 @@ export default function TaskDetail() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: Partial<Task>) => {
-      if (!taskId) throw new Error('Task ID is required');
       await apiRequest("PUT", `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
@@ -256,17 +253,15 @@ export default function TaskDetail() {
   };
 
   // Check if this task has the running timer
-  const isThisTaskTimerRunning = isTimerRunning && currentTimer && currentTimer.taskId === taskId;
+  const isThisTaskTimerRunning = isTimerRunning && currentTimer?.taskId === taskId;
 
   const startTimeTracking = () => {
-    if (!task?.id || !task?.title) return;
+    if (!task) return;
     startTimer(task.id, task.title);
   };
 
   const stopTimeTracking = () => {
-    if (stopTimer) {
-      stopTimer();
-    }
+    stopTimer();
   };
 
   const getStaffName = (staffId: string | null) => {
@@ -276,7 +271,7 @@ export default function TaskDetail() {
   };
 
   const startTitleEdit = () => {
-    if (task?.title) {
+    if (task) {
       setTitleValue(task.title);
       setEditingTitle(true);
     }
@@ -383,25 +378,6 @@ export default function TaskDetail() {
     );
   }
 
-  // Ensure task has required properties before rendering
-  if (!task.id || !task.title) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => setLocation("/tasks")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Tasks
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-slate-600">Loading task details...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -428,15 +404,15 @@ export default function TaskDetail() {
                 title="Click to edit task title"
                 data-testid="task-title-edit"
               >
-{task?.title || "Loading..."}
+                {task.title}
               </h1>
             )}
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary" className={getStatusColor(task?.status || "pending")}>
-                {(task?.status || "pending").replace('_', ' ')}
+              <Badge variant="secondary" className={getStatusColor(task.status)}>
+                {task.status.replace('_', ' ')}
               </Badge>
-              <Badge variant="outline" className={getPriorityColor(task?.priority || "normal")}>
-                {task?.priority || "normal"} priority
+              <Badge variant="outline" className={getPriorityColor(task.priority)}>
+                {task.priority} priority
               </Badge>
             </div>
           </div>
@@ -459,7 +435,7 @@ export default function TaskDetail() {
       </div>
 
       {/* Task Path - Breadcrumb Navigation for Sub-tasks */}
-      {taskId && <TaskPath taskId={taskId} className="mb-4" />}
+      <TaskPath taskId={taskId!} className="mb-4" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -482,14 +458,14 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Status</span>
                     </div>
                     <Select
-                      value={task?.status || "pending"}
+                      value={task.status}
                       onValueChange={(value) => updateTaskMutation.mutate({ status: value })}
                     >
                       <SelectTrigger className="w-[140px] h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {task?.workflowId && task.workflowId !== "none" ? (
+                        {task.workflowId && task.workflowId !== "none" ? (
                           // Show workflow-specific statuses
                           workflowStatuses
                             .sort((a: any, b: any) => a.order - b.order)
@@ -544,12 +520,12 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Assignee</span>
                     </div>
                     <Select
-                      value={task?.assignedTo || "unassigned"}
+                      value={task.assignedTo || "unassigned"}
                       onValueChange={(value) => updateTaskMutation.mutate({ assignedTo: value === "unassigned" ? null : value })}
                     >
                       <SelectTrigger className="w-[180px] h-8">
                         <SelectValue placeholder="Select assignee">
-                          {getStaffName(task?.assignedTo)}
+                          {getStaffName(task.assignedTo)}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -575,10 +551,10 @@ export default function TaskDetail() {
                     <div className="flex items-center gap-2">
                       {/* Start Date */}
                       <div className="flex items-center gap-1">
-                        {task?.startDate ? (
+                        {task.startDate ? (
                           <Input
                             type="date"
-                            value={task?.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
+                            value={task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
                             onChange={(e) => updateTaskMutation.mutate({ 
                               startDate: e.target.value ? new Date(e.target.value) : null 
                             })}
@@ -600,15 +576,15 @@ export default function TaskDetail() {
                       
                       {/* Due Date */}
                       <div className="flex items-center gap-1">
-                        {task?.dueDate ? (
+                        {task.dueDate ? (
                           <Input
                             type="date"
-                            value={task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
+                            value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
                             onChange={(e) => updateTaskMutation.mutate({ 
                               dueDate: e.target.value ? new Date(e.target.value) : null 
                             })}
                             className={`w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200 ${
-                              task?.dueDate && new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
+                              new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
                                 ? 'text-red-600 font-medium' : ''
                             }`}
                           />
@@ -633,7 +609,7 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Priority</span>
                     </div>
                     <Select
-                      value={task?.priority || "normal"}
+                      value={task.priority}
                       onValueChange={(value) => updateTaskMutation.mutate({ priority: value })}
                     >
                       <SelectTrigger className="w-[120px] h-8">
@@ -682,10 +658,10 @@ export default function TaskDetail() {
                         onValueChange={(value: "minutes" | "hours") => {
                           setTimeEstimateUnit(value);
                           // Convert existing value to new unit
-                          if (task?.timeEstimate && typeof task.timeEstimate === 'number') {
+                          if (task?.timeEstimate) {
                             const displayValue = value === "hours" ? task.timeEstimate / 60 : task.timeEstimate;
                             // Update the field with the same value but potentially different precision
-                            if (value === "hours" && task.timeEstimate > 0 && task.timeEstimate % 60 !== 0) {
+                            if (value === "hours" && task.timeEstimate % 60 !== 0) {
                               // If switching to hours and not evenly divisible, keep as decimal
                               const hourValue = Math.round((task.timeEstimate / 60) * 100) / 100;
                               updateTaskMutation.mutate({ timeEstimate: Math.round(hourValue * 60) });
@@ -740,7 +716,7 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Client</span>
                     </div>
                     <span className="text-sm text-slate-600">
-                      {getClientName(task?.clientId) || "No client assigned"}
+                      {getClientName(task.clientId) || "No client assigned"}
                     </span>
                   </div>
                   
@@ -751,7 +727,7 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Project</span>
                     </div>
                     <span className="text-sm text-slate-600">
-                      {getProjectName(task?.projectId) || "No project assigned"}
+                      {getProjectName(task.projectId) || "No project assigned"}
                     </span>
                   </div>
                 </div>
@@ -759,12 +735,10 @@ export default function TaskDetail() {
             </Card>
 
           {/* Task Description */}
-          {task?.id && task?.title && (
-            <TaskDescriptionCard 
-              task={task} 
-              onUpdate={updateTask} 
-            />
-          )}
+          <TaskDescriptionCard 
+            task={task} 
+            onUpdate={updateTask} 
+          />
 
           {/* Sub-tasks - ClickUp-style hierarchical tasks (up to 5 levels deep) */}
           <Card>
@@ -772,7 +746,7 @@ export default function TaskDetail() {
               <CardTitle className="flex items-center gap-2">
                 <FolderOpen className="h-5 w-5" />
                 Sub-tasks
-                {task?.hasSubTasks && (
+                {task.hasSubTasks && (
                   <Badge variant="secondary" className="ml-2">
                     Has sub-tasks
                   </Badge>
@@ -790,20 +764,18 @@ export default function TaskDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {task?.id && (
-                    <SubTaskList 
-                      parentTaskId={task.id}
-                      level={0}
-                      maxLevel={5}
-                    />
-                  )}
+                  <SubTaskList 
+                    parentTaskId={task.id}
+                    level={0}
+                    maxLevel={5}
+                  />
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
 
           {/* Task Attachments */}
-          {task?.id && <TaskAttachments taskId={task.id} />}
+          <TaskAttachments taskId={task.id} />
 
         </div>
 
@@ -841,15 +813,15 @@ export default function TaskDetail() {
 
           <CardContent className="pt-6">
             {/* Tab Content */}
-            {activeTab === "comments" && task?.id && (
+            {activeTab === "comments" && (
               <TaskComments taskId={task.id} />
             )}
             
-            {activeTab === "activity" && task?.id && (
+            {activeTab === "activity" && (
               <TaskActivities taskId={task.id} showCard={false} />
             )}
             
-            {activeTab === "dependencies" && task?.id && (
+            {activeTab === "dependencies" && (
               <TaskDependencies taskId={task.id} />
             )}
           </CardContent>

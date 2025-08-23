@@ -944,9 +944,6 @@ export const insertImageAnnotationSchema = createInsertSchema(imageAnnotations).
   id: true,
   createdAt: true,
   updatedAt: true,
-}).extend({
-  x: z.coerce.string(), // Accept numbers and convert to strings
-  y: z.coerce.string(), // Accept numbers and convert to strings
 });
 
 // Types
