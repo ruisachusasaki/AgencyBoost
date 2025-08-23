@@ -3883,7 +3883,7 @@ export default function EnhancedClientDetail() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {clientTasksData?.map((task) => {
+                              {clientTasksData?.map((task: any) => {
                                 const statusColor = getStatusColor(task.status);
                                 const priorityColor = getPriorityColor(task.priority);
                                 
@@ -3922,7 +3922,7 @@ export default function EnhancedClientDetail() {
                                     </TableCell>
                                     <TableCell>
                                       <div className="text-sm text-gray-600">
-                                        {getStaffName(task.assignedTo)}
+                                        {getStaffName(task.assignedTo, staffData)}
                                       </div>
                                     </TableCell>
                                   </TableRow>
