@@ -8914,6 +8914,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task Priorities Routes
+  // IMPORTANT: PUT /api/task-priorities/reorder must come before PUT /api/task-priorities/:id
+  // Reorder task priorities
+  app.put("/api/task-priorities/reorder", async (req, res) => {
+    try {
+      const { priorities } = req.body;
+      
+      if (!Array.isArray(priorities)) {
+        return res.status(400).json({ message: "Priorities must be an array" });
+      }
+
+      // Update each priority with the new sort order
+      for (const priority of priorities) {
+        await db.update(taskPriorities)
+          .set({ sortOrder: priority.sortOrder, updatedAt: sql`now()` })
+          .where(eq(taskPriorities.id, priority.id));
+      }
+
+      // Log the reorder operation
+      await createAuditLog(
+        "updated",
+        "task_priority",
+        "bulk",
+        "Task Priorities",
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task priorities reordered`,
+        null,
+        { priorityCount: priorities.length },
+        req
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering task priorities:", error);
+      res.status(500).json({ message: "Failed to reorder task priorities" });
+    }
+  });
+
   app.get("/api/task-priorities", async (req, res) => {
     try {
       const priorities = await db.select()

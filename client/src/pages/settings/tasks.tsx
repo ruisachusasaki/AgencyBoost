@@ -290,6 +290,18 @@ export default function TasksSettingsPage() {
     },
   });
 
+  const reorderPrioritiesMutation = useMutation({
+    mutationFn: (reorderedPriorities: { id: string; sortOrder: number }[]) =>
+      apiRequest("PUT", "/api/task-priorities/reorder", { priorities: reorderedPriorities }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-priorities"] });
+      toast({ title: "Success", description: "Task priorities reordered successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to reorder task priorities", variant: "destructive" });
+    },
+  });
+
   // Priority mutations
   const createPriorityMutation = useMutation({
     mutationFn: (data: TaskPriorityFormData) => apiRequest("POST", "/api/task-priorities", data),
@@ -512,6 +524,27 @@ export default function TasksSettingsPage() {
     }));
 
     reorderStatusesMutation.mutate(reorderedStatuses);
+  };
+
+  const handlePriorityDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    const sortedPriorities = [...priorities].sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0));
+    const [movedPriority] = sortedPriorities.splice(sourceIndex, 1);
+    sortedPriorities.splice(destinationIndex, 0, movedPriority);
+
+    // Update sort orders (reverse order for priorities, higher = more important)
+    const reorderedPriorities = sortedPriorities.map((priority, index) => ({
+      id: priority.id,
+      sortOrder: sortedPriorities.length - index
+    }));
+
+    reorderPrioritiesMutation.mutate(reorderedPriorities);
   };
 
   const handleOpenDialog = (type: 'status' | 'priority' | 'category' | 'workflow', item?: TaskStatus | TaskPriority | TaskCategory | TeamWorkflow) => {
@@ -893,109 +926,129 @@ export default function TasksSettingsPage() {
                   No task priorities configured. Create your first priority to get started.
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">Order</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Icon</TableHead>
-                      <TableHead>Default</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>System</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {priorities
-                      .sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0))
-                      .map((priority) => (
-                        <TableRow key={priority.id}>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              <span className="ml-2 text-sm text-muted-foreground">
-                                {priority.sortOrder}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">{priority.name}</div>
-                            {priority.description && (
-                              <div className="text-sm text-muted-foreground">
-                                {priority.description}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {priority.value}
-                            </code>
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              style={{ backgroundColor: priority.color }} 
-                              className="text-white"
-                            >
-                              {priority.name}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Flag className="h-4 w-4" />
-                              <span className="ml-2 text-sm">{priority.icon}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {priority.isDefault && (
-                              <Badge variant="secondary">Default</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {priority.isActive ? (
-                                <Eye className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <EyeOff className="h-4 w-4 text-muted-foreground" />
-                              )}
-                              <span className="ml-2 text-sm">
-                                {priority.isActive ? "Active" : "Inactive"}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {priority.isSystemPriority && (
-                              <Badge variant="outline">System</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenDialog('priority', priority)}
-                                data-testid={`button-edit-${priority.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              {!priority.isSystemPriority && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(priority)}
-                                  data-testid={`button-delete-${priority.id}`}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
+                <DragDropContext onDragEnd={handlePriorityDragEnd}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Order</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Color</TableHead>
+                        <TableHead>Icon</TableHead>
+                        <TableHead>Default</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>System</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <Droppable droppableId="task-priorities">
+                      {(provided) => (
+                        <TableBody {...provided.droppableProps} ref={provided.innerRef}>
+                          {priorities
+                            .sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0))
+                            .map((priority, index) => (
+                              <Draggable key={priority.id} draggableId={priority.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <TableRow 
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={snapshot.isDragging ? "bg-slate-50" : ""}
+                                  >
+                                    <TableCell>
+                                      <div className="flex items-center">
+                                        <div
+                                          {...provided.dragHandleProps}
+                                          className="cursor-move text-muted-foreground hover:text-gray-600"
+                                        >
+                                          <GripVertical className="h-4 w-4" />
+                                        </div>
+                                        <span className="ml-2 text-sm text-muted-foreground">
+                                          {priority.sortOrder}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="font-medium">{priority.name}</div>
+                                      {priority.description && (
+                                        <div className="text-sm text-muted-foreground">
+                                          {priority.description}
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                                        {priority.value}
+                                      </code>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge 
+                                        style={{ backgroundColor: priority.color }} 
+                                        className="text-white"
+                                      >
+                                        {priority.name}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center">
+                                        <Flag className="h-4 w-4" />
+                                        <span className="ml-2 text-sm">{priority.icon}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      {priority.isDefault && (
+                                        <Badge variant="secondary">Default</Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center">
+                                        {priority.isActive ? (
+                                          <Eye className="h-4 w-4 text-green-600" />
+                                        ) : (
+                                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                        <span className="ml-2 text-sm">
+                                          {priority.isActive ? "Active" : "Inactive"}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      {priority.isSystemPriority && (
+                                        <Badge variant="outline">System</Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex justify-end space-x-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleOpenDialog('priority', priority)}
+                                          data-testid={`button-edit-${priority.id}`}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        {!priority.isSystemPriority && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(priority)}
+                                            data-testid={`button-delete-${priority.id}`}
+                                            className="text-destructive hover:text-destructive"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </Draggable>
+                            ))}
+                          {provided.placeholder}
+                        </TableBody>
+                      )}
+                    </Droppable>
+                  </Table>
+                </DragDropContext>
               )}
             </CardContent>
           </Card>
