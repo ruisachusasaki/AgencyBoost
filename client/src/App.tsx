@@ -17,6 +17,7 @@ import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
 import TaskDetailDebug from "@/pages/task-detail-debug";
 import TaskDetailMinimal from "@/pages/task-detail-minimal";
+import TaskDetailUltraBasic from "@/pages/task-detail-ultra-basic";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import SocialMedia from "@/pages/social-media";
@@ -59,7 +60,7 @@ function Router() {
       <Route path="/marketing" component={Campaigns} />
       <Route path="/leads" component={Leads} />
       <Route path="/tasks" component={Tasks} />
-      <Route path="/tasks/:taskId" component={TaskDetailMinimal} />
+      <Route path="/tasks/:taskId" component={TaskDetailUltraBasic} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
