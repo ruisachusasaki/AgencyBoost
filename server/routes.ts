@@ -3576,8 +3576,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const insertAnnotation = insertImageAnnotationSchema.parse({
         id: nanoid(),
         fileId: req.params.fileId,
-        x: req.body.x.toString(),
-        y: req.body.y.toString(),
+        x: req.body.x,
+        y: req.body.y,
         content: req.body.content,
         mentions: mentions,
         authorId: userId,  // Use authorId instead of userId
