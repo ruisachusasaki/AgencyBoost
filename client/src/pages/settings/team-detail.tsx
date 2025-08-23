@@ -801,33 +801,7 @@ export default function TeamDetail() {
                 )}
               />
 
-              <FormField
-                control={editTeamForm.control}
-                name="workflowId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabelWithTooltip tooltip="Assign a specific workflow to this team to control task status options for team members">
-                      Team Workflow
-                    </FormLabelWithTooltip>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select workflow (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No Workflow (Use all statuses)</SelectItem>
-                        {workflows.filter(w => w.isActive).map((workflow) => (
-                          <SelectItem key={workflow.id} value={workflow.id}>
-                            {workflow.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+{/* Team workflow assignment removed - workflows are now managed at the task category level */}
               <DialogFooter>
                 <Button 
                   type="button" 

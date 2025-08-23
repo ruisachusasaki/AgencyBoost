@@ -1101,6 +1101,7 @@ export const taskCategories = pgTable("task_categories", {
   description: text("description"),
   color: text("color").notNull(),
   icon: text("icon"),
+  workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // workflow for this category
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

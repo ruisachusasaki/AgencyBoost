@@ -215,6 +215,7 @@ export default function TasksSettingsPage() {
       description: "",
       color: "#6b7280",
       icon: "folder",
+      workflowId: "",
       isDefault: false,
     },
   });
@@ -540,6 +541,7 @@ export default function TasksSettingsPage() {
           description: category.description || "",
           color: category.color,
           icon: category.icon || "folder",
+          workflowId: category.workflowId || "",
           isDefault: category.isDefault,
         });
       } else {
@@ -1721,6 +1723,32 @@ export default function TasksSettingsPage() {
                           data-testid="switch-default"
                         />
                       </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={categoryForm.control}
+                  name="workflowId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Workflow (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a workflow for this category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No Workflow (Use all statuses)</SelectItem>
+                          {workflows.filter(w => w.isActive).map((workflow) => (
+                            <SelectItem key={workflow.id} value={workflow.id}>
+                              {workflow.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

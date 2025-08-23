@@ -89,19 +89,19 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     },
   });
 
-  // Get assigned user's department and workflow (after form is declared)
-  const assignedUser = staff.find((s: Staff) => s.id === form.watch('assignedTo'));
-  const assignedDepartment = departments.find((d: Department) => d.name === assignedUser?.department);
+  // Get selected category and its workflow (after form is declared)
+  const selectedCategoryId = form.watch('categoryId');
+  const selectedCategory = taskCategories.find((c: any) => c.id === selectedCategoryId);
   
-  // Fetch team-specific workflow if department has one
-  const { data: teamWorkflow } = useQuery<TeamWorkflow>({
-    queryKey: ["/api/team-workflows", assignedDepartment?.workflowId],
-    enabled: !!assignedDepartment?.workflowId,
+  // Fetch category-specific workflow if category has one
+  const { data: categoryWorkflow } = useQuery<TeamWorkflow>({
+    queryKey: ["/api/team-workflows", selectedCategory?.workflowId],
+    enabled: !!selectedCategory?.workflowId,
   });
 
-  // Determine which statuses to use (team workflow statuses or global statuses)
-  const availableStatuses = teamWorkflow?.statuses?.length 
-    ? teamWorkflow.statuses.map((ws: any) => ws.status)
+  // Determine which statuses to use (category workflow statuses or global statuses)
+  const availableStatuses = categoryWorkflow?.statuses?.length 
+    ? categoryWorkflow.statuses.map((ws: any) => ws.status)
     : taskStatuses;
 
   const createTaskMutation = useMutation({
