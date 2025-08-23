@@ -866,14 +866,14 @@ export default function Tasks() {
   
   const taskStats = {
     total: tasks.length,
-    byStatus: workflowStatuses.reduce((acc: any, status: any) => {
-      acc[status.name] = tasks.filter(t => t.status === status.name).length;
+    byStatus: workflowStatuses.reduce((acc: any, workflowStatus: any) => {
+      acc[workflowStatus.status.value] = tasks.filter(t => t.status === workflowStatus.status.value).length;
       return acc;
     }, {}),
     overdue: tasks.filter(t => 
       t.dueDate && 
       new Date(t.dueDate) < new Date() && 
-      !workflowStatuses.find((s: any) => s.name === t.status && (s.name === "completed" || s.name === "cancelled"))
+      !workflowStatuses.find((s: any) => s.status.value === t.status && (s.status.value === "completed" || s.status.value === "cancelled"))
     ).length,
   };
 
@@ -918,14 +918,14 @@ export default function Tasks() {
     const selectedWorkflow = workflows.find(w => w.id === selectedWorkflowId) || workflows[0];
     
     // Generate dynamic columns based on workflow statuses
-    const columns = selectedWorkflow?.statuses?.map((status: any, index: number) => {
+    const columns = selectedWorkflow?.statuses?.map((workflowStatus: any, index: number) => {
       const colors = [
         'bg-yellow-100', 'bg-blue-100', 'bg-green-100', 'bg-red-100', 
         'bg-purple-100', 'bg-orange-100', 'bg-pink-100', 'bg-gray-100'
       ];
       return {
-        id: status.name,
-        title: status.label || status.name,
+        id: workflowStatus.status.value, // Use the actual status value (e.g., "todo", "in_progress")
+        title: workflowStatus.status.name, // Use the display name (e.g., "To Do", "In Progress")
         color: colors[index % colors.length]
       };
     }) || [];
@@ -1139,16 +1139,16 @@ export default function Tasks() {
         </Card>
         
         {/* Dynamic workflow status cards */}
-        {workflowStatuses.slice(0, 2).map((status: any, index: number) => {
+        {workflowStatuses.slice(0, 2).map((workflowStatus: any, index: number) => {
           const colors = ['text-yellow-600', 'text-blue-600', 'text-green-600', 'text-purple-600'];
           return (
-            <Card key={status.name}>
+            <Card key={workflowStatus.status.value}>
               <CardContent className="p-4">
                 <div className="text-center">
                   <p className={`text-2xl font-bold ${colors[index] || 'text-slate-600'}`}>
-                    {taskStats.byStatus[status.name] || 0}
+                    {taskStats.byStatus[workflowStatus.status.value] || 0}
                   </p>
-                  <p className="text-sm text-slate-600">{status.label || status.name}</p>
+                  <p className="text-sm text-slate-600">{workflowStatus.status.name}</p>
                 </div>
               </CardContent>
             </Card>
