@@ -96,23 +96,35 @@ export default function Tasks() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest(`/api/tasks/${id}`, "DELETE");
-      if (!response.ok) {
-        throw new Error(`Failed to delete task: ${response.status}`);
+      console.log('Deleting task:', id);
+      try {
+        const response = await apiRequest(`/api/tasks/${id}`, "DELETE");
+        console.log('Delete response:', response.status, response.ok);
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.error('Delete failed:', response.status, errorText);
+          throw new Error(`Failed to delete task: ${response.status} - ${errorText}`);
+        }
+        console.log('Delete successful');
+        return null; // 204 No Content has no response body
+      } catch (error) {
+        console.error('Delete error:', error);
+        throw error;
       }
-      return null; // 204 No Content has no response body
     },
     onSuccess: () => {
+      console.log('Delete mutation success');
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Task deleted",
         description: "The task has been successfully deleted.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete task. Please try again.",
+        description: `Failed to delete task: ${error.message}`,
         variant: "destructive",
       });
     },
