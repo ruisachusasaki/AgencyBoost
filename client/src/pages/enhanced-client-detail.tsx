@@ -731,7 +731,23 @@ export default function EnhancedClientDetail() {
 
 
 
-  // Memoized display names to prevent infinite re-renders
+  // Fetch client data
+  const { data: client, isLoading, error } = useQuery<Client>({
+    queryKey: ['/api/clients', clientId],
+    enabled: !!clientId,
+  });
+
+  // Fetch custom field folders
+  const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
+    queryKey: ['/api/custom-field-folders'],
+  });
+
+  // Fetch custom fields
+  const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
+    queryKey: ['/api/custom-fields'],
+  });
+
+  // Memoized display names to prevent infinite re-renders (moved after data fetches)
   const clientDisplayName = useMemo(() => {
     if (!client || !customFieldsData) return client?.name || "";
     
@@ -777,22 +793,6 @@ export default function EnhancedClientDetail() {
     // Otherwise fall back to database company
     return client.company || "";
   }, [client, customFieldsData]);
-
-  // Fetch client data
-  const { data: client, isLoading, error } = useQuery<Client>({
-    queryKey: ['/api/clients', clientId],
-    enabled: !!clientId,
-  });
-
-  // Fetch custom field folders
-  const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
-    queryKey: ['/api/custom-field-folders'],
-  });
-
-  // Fetch custom fields
-  const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
-    queryKey: ['/api/custom-fields'],
-  });
 
   // Fetch tags data
   const { data: tagsData = [], isLoading: tagsLoading } = useQuery({
