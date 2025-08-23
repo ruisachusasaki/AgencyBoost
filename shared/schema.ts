@@ -567,6 +567,70 @@ export const imageAnnotations = pgTable("image_annotations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// HR System - Time Off Requests
+export const timeOffRequests = pgTable("time_off_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // vacation, sick_leave, personal_day
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  totalDays: integer("total_days").notNull(),
+  reason: text("reason"),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  approvedBy: uuid("approved_by").references(() => staff.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// HR System - Job Applications
+export const jobApplications = pgTable("job_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  positionId: varchar("position_id").notNull().references(() => positions.id, { onDelete: "cascade" }),
+  applicantName: text("applicant_name").notNull(),
+  applicantEmail: text("applicant_email").notNull(),
+  applicantPhone: text("applicant_phone"),
+  resumeUrl: text("resume_url"),
+  coverLetterUrl: text("cover_letter_url"),
+  portfolioUrl: text("portfolio_url"),
+  stage: text("stage").notNull().default("applied"), // applied, screening, interview, offer, hired, rejected
+  notes: text("notes"),
+  assignedRecruiter: uuid("assigned_recruiter").references(() => staff.id),
+  appliedAt: timestamp("applied_at").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  scheduledInterviewDate: timestamp("scheduled_interview_date"),
+  salaryExpectation: decimal("salary_expectation", { precision: 10, scale: 2 }),
+  experience: text("experience"), // junior, mid, senior
+  source: text("source"), // website, referral, linkedin, job_board
+});
+
+// HR System - Application Stage History
+export const applicationStageHistory = pgTable("application_stage_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => jobApplications.id, { onDelete: "cascade" }),
+  fromStage: text("from_stage"),
+  toStage: text("to_stage").notNull(),
+  changedBy: uuid("changed_by").notNull().references(() => staff.id),
+  notes: text("notes"),
+  changedAt: timestamp("changed_at").defaultNow(),
+});
+
+// HR System - Time Off Balances (for tracking remaining days)
+export const timeOffBalances = pgTable("time_off_balances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  year: integer("year").notNull(),
+  vacationDays: integer("vacation_days").default(20),
+  sickDays: integer("sick_days").default(10),
+  personalDays: integer("personal_days").default(5),
+  vacationUsed: integer("vacation_used").default(0),
+  sickUsed: integer("sick_used").default(0),
+  personalUsed: integer("personal_used").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Task Activities for audit trail
 export const taskActivities = pgTable("task_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -956,6 +1020,39 @@ export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type InsertTaskCommentReaction = z.infer<typeof insertTaskCommentReactionSchema>;
 export type InsertCommentFile = z.infer<typeof insertCommentFileSchema>;
 export type InsertImageAnnotation = z.infer<typeof insertImageAnnotationSchema>;
+
+// HR System Schema Exports and Types
+export const insertTimeOffRequestSchema = createInsertSchema(timeOffRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({
+  id: true,
+  appliedAt: true,
+  lastUpdated: true,
+});
+
+export const insertApplicationStageHistorySchema = createInsertSchema(applicationStageHistory).omit({
+  id: true,
+  changedAt: true,
+});
+
+export const insertTimeOffBalanceSchema = createInsertSchema(timeOffBalances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type TimeOffRequest = typeof timeOffRequests.$inferSelect;
+export type InsertTimeOffRequest = z.infer<typeof insertTimeOffRequestSchema>;
+export type JobApplication = typeof jobApplications.$inferSelect;
+export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
+export type ApplicationStageHistory = typeof applicationStageHistory.$inferSelect;
+export type InsertApplicationStageHistory = z.infer<typeof insertApplicationStageHistorySchema>;
+export type TimeOffBalance = typeof timeOffBalances.$inferSelect;
+export type InsertTimeOffBalance = z.infer<typeof insertTimeOffBalanceSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type CustomFieldFolder = typeof customFieldFolders.$inferSelect;

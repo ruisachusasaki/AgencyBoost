@@ -13,6 +13,7 @@ import {
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
+  insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -29,7 +30,8 @@ import {
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
-  taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses
+  taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
+  timeOffRequests, jobApplications, applicationStageHistory, timeOffBalances
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -9586,6 +9588,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error assigning workflow to department:", error);
       res.status(500).json({ message: "Failed to assign workflow to department" });
+    }
+  });
+
+  // HR System Routes
+  
+  // Staff Routes (already exist, but adding specific HR endpoints)
+  app.get("/api/staff", async (req, res) => {
+    try {
+      const staffList = await db.select().from(staff).orderBy(asc(staff.firstName));
+      res.json(staffList);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      res.status(500).json({ error: "Failed to fetch staff" });
+    }
+  });
+
+  // Time Off Request Routes
+  app.get("/api/hr/time-off-requests", async (req, res) => {
+    try {
+      const requests = await db.select().from(timeOffRequests).orderBy(desc(timeOffRequests.createdAt));
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching time off requests:", error);
+      res.status(500).json({ error: "Failed to fetch time off requests" });
+    }
+  });
+
+  app.post("/api/hr/time-off-requests", async (req, res) => {
+    try {
+      const validatedData = insertTimeOffRequestSchema.parse(req.body);
+      const [newRequest] = await db.insert(timeOffRequests).values(validatedData).returning();
+      
+      await createAuditLog(
+        "created",
+        "time_off_request",
+        newRequest.id,
+        `Time off request by ${validatedData.staffId}`,
+        validatedData.staffId,
+        `Created ${validatedData.type} request for ${validatedData.totalDays} days`,
+        null,
+        newRequest,
+        req
+      );
+      
+      res.json(newRequest);
+    } catch (error) {
+      console.error("Error creating time off request:", error);
+      res.status(500).json({ error: "Failed to create time off request" });
+    }
+  });
+
+  // Job Application Routes
+  app.get("/api/hr/job-applications", async (req, res) => {
+    try {
+      const applications = await db.select().from(jobApplications).orderBy(desc(jobApplications.appliedAt));
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching job applications:", error);
+      res.status(500).json({ error: "Failed to fetch job applications" });
+    }
+  });
+
+  app.post("/api/hr/job-applications", async (req, res) => {
+    try {
+      const validatedData = insertJobApplicationSchema.parse(req.body);
+      const [newApplication] = await db.insert(jobApplications).values(validatedData).returning();
+      
+      await createAuditLog(
+        "created",
+        "job_application",
+        newApplication.id,
+        `Job application from ${validatedData.applicantName}`,
+        req.session?.userId || "system",
+        `New job application for position ${validatedData.positionId}`,
+        null,
+        newApplication,
+        req
+      );
+      
+      res.json(newApplication);
+    } catch (error) {
+      console.error("Error creating job application:", error);
+      res.status(500).json({ error: "Failed to create job application" });
     }
   });
 

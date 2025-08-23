@@ -44,6 +44,7 @@ import TasksSettings from "@/pages/settings/tasks";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
+import HRPage from "@/pages/hr";
 
 function Router() {
   return (
@@ -62,6 +63,7 @@ function Router() {
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
       <Route path="/workflows" component={Workflows} />
+      <Route path="/hr" component={HRPage} />
       <Route path="/calendar" component={CalendarMain} />
       <Route path="/calendar/settings" component={CalendarSettings} />
       <Route path="/calendar-settings" component={CalendarSettings} />

@@ -19,7 +19,8 @@ import {
   GitBranch,
   Share2,
   Settings,
-  Layout
+  Layout,
+  UserCheck
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,6 +39,7 @@ const navigation = [
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendars", href: "/calendar", icon: Calendar },
   { name: "Workflows", href: "/workflows", icon: GitBranch },
+  { name: "HR", href: "/hr", icon: UserCheck },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Social Media", href: "/social-media", icon: Share2 },
