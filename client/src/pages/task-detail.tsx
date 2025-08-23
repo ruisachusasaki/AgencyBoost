@@ -586,7 +586,7 @@ export default function TaskDetail() {
                               dueDate: e.target.value ? new Date(e.target.value) : null 
                             })}
                             className={`w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200 ${
-                              new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
+                              task.dueDate && new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
                                 ? 'text-red-600 font-medium' : ''
                             }`}
                           />
@@ -660,10 +660,10 @@ export default function TaskDetail() {
                         onValueChange={(value: "minutes" | "hours") => {
                           setTimeEstimateUnit(value);
                           // Convert existing value to new unit
-                          if (task?.timeEstimate) {
+                          if (task?.timeEstimate && typeof task.timeEstimate === 'number') {
                             const displayValue = value === "hours" ? task.timeEstimate / 60 : task.timeEstimate;
                             // Update the field with the same value but potentially different precision
-                            if (value === "hours" && task.timeEstimate % 60 !== 0) {
+                            if (value === "hours" && task.timeEstimate > 0 && task.timeEstimate % 60 !== 0) {
                               // If switching to hours and not evenly divisible, keep as decimal
                               const hourValue = Math.round((task.timeEstimate / 60) * 100) / 100;
                               updateTaskMutation.mutate({ timeEstimate: Math.round(hourValue * 60) });
