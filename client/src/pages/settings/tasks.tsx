@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, X } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -265,7 +266,7 @@ export default function TasksSettingsPage() {
   });
 
   const deleteStatusMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/task-statuses/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/task-statuses/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-statuses"] });
       toast({ title: "Success", description: "Task status deleted successfully" });
@@ -274,6 +275,18 @@ export default function TasksSettingsPage() {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to delete task status", variant: "destructive" });
+    },
+  });
+
+  const reorderStatusesMutation = useMutation({
+    mutationFn: (reorderedStatuses: { id: string; sortOrder: number }[]) =>
+      apiRequest("PUT", "/api/task-statuses/reorder", { statuses: reorderedStatuses }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-statuses"] });
+      toast({ title: "Success", description: "Task statuses reordered successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to reorder task statuses", variant: "destructive" });
     },
   });
 
@@ -478,6 +491,27 @@ export default function TasksSettingsPage() {
       workflowId: currentWorkflow.id,
       statuses: statusesToSave
     });
+  };
+
+  const handleStatusDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    const sortedStatuses = [...statuses].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const [movedStatus] = sortedStatuses.splice(sourceIndex, 1);
+    sortedStatuses.splice(destinationIndex, 0, movedStatus);
+
+    // Update sort orders
+    const reorderedStatuses = sortedStatuses.map((status, index) => ({
+      id: status.id,
+      sortOrder: index + 1
+    }));
+
+    reorderStatusesMutation.mutate(reorderedStatuses);
   };
 
   const handleOpenDialog = (type: 'status' | 'priority' | 'category' | 'workflow', item?: TaskStatus | TaskPriority | TaskCategory | TeamWorkflow) => {
@@ -717,24 +751,33 @@ export default function TasksSettingsPage() {
                   No task statuses configured. Create your first status to get started.
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">Order</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Default</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>System</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {statuses
-                      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-                      .map((status) => (
-                        <TableRow key={status.id}>
+                <DragDropContext onDragEnd={handleStatusDragEnd}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Order</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Color</TableHead>
+                        <TableHead>Default</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>System</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <Droppable droppableId="task-statuses">
+                      {(provided) => (
+                        <TableBody {...provided.droppableProps} ref={provided.innerRef}>
+                          {statuses
+                            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                            .map((status, index) => (
+                              <Draggable key={status.id} draggableId={status.id} index={index}>
+                                {(provided) => (
+                                  <TableRow
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                  >
                           <TableCell>
                             <div className="flex items-center">
                               <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -809,10 +852,16 @@ export default function TasksSettingsPage() {
                               )}
                             </div>
                           </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
+                                  </TableRow>
+                                )}
+                              </Draggable>
+                            ))}
+                          {provided.placeholder}
+                        </TableBody>
+                      )}
+                    </Droppable>
+                  </Table>
+                </DragDropContext>
               )}
             </CardContent>
           </Card>
