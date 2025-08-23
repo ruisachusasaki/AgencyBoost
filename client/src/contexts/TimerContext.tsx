@@ -174,7 +174,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
         total + (entry.duration || 0), 0
       );
 
-      await apiRequest(`/api/tasks/${currentTimer.taskId}`, "PUT", {
+      await apiRequest("PUT", `/api/tasks/${currentTimer.taskId}`, {
         timeEntries: updatedEntries,
         timeTracked: totalTracked
       });
