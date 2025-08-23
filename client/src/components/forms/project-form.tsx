@@ -47,7 +47,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
     form.setValue("name", `${template.name} Project`);
     form.setValue("description", template.description || "");
     form.setValue("priority", template.priority);
-    form.setValue("budget", template.estimatedBudget || "");
+    form.setValue("budget", template.estimatedBudget || null);
     form.setValue("startDate", new Date());
     if (estimatedEnd) {
       form.setValue("endDate", estimatedEnd);
@@ -62,7 +62,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
       clientId: project?.clientId || "",
       status: project?.status || "planning",
       priority: project?.priority || "medium",
-      budget: project?.budget || "",
+      budget: project?.budget || null,
       progress: project?.progress || 0,
       startDate: project?.startDate ? new Date(project.startDate) : undefined,
       endDate: project?.endDate ? new Date(project.endDate) : undefined,
@@ -71,7 +71,14 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
 
   const createProjectMutation = useMutation({
     mutationFn: async (data: InsertProject) => {
-      await apiRequest("POST", "/api/projects", data);
+      // Clean up numeric fields before sending
+      const cleanedData = {
+        ...data,
+        budget: data.budget === "" ? null : data.budget,
+        progress: data.progress || 0,
+      };
+      console.log("Sending project data:", cleanedData);
+      await apiRequest("POST", "/api/projects", cleanedData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
