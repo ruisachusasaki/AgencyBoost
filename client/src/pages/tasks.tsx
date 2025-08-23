@@ -1105,7 +1105,7 @@ export default function Tasks() {
                         <Checkbox
                           id="multi-show-completed"
                           checked={showCompleted}
-                          onCheckedChange={setShowCompleted}
+                          onCheckedChange={(checked) => setShowCompleted(!!checked)}
                           data-testid="multi-toggle-completed-tasks"
                         />
                         <label
@@ -1119,7 +1119,7 @@ export default function Tasks() {
                         <Checkbox
                           id="multi-show-cancelled"
                           checked={showCancelled}
-                          onCheckedChange={setShowCancelled}
+                          onCheckedChange={(checked) => setShowCancelled(!!checked)}
                           data-testid="multi-toggle-cancelled-tasks"
                         />
                         <label
