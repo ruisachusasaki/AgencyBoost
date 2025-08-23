@@ -21,13 +21,14 @@ import {
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
-  insertTaskDependencySchema,
+  insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
-  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications
+  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
+  taskStatuses, taskPriorities, taskSettings
 } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
@@ -8751,6 +8752,304 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking for running timer:", error);
       res.status(500).json({ error: "Failed to check for running timer" });
+    }
+  });
+
+  // Task Settings Management API Routes
+
+  // Task Statuses Routes
+  app.get("/api/task-statuses", async (req, res) => {
+    try {
+      const statuses = await db.select()
+        .from(taskStatuses)
+        .where(eq(taskStatuses.isActive, true))
+        .orderBy(asc(taskStatuses.sortOrder), asc(taskStatuses.name));
+      
+      res.json(statuses);
+    } catch (error) {
+      console.error("Error fetching task statuses:", error);
+      res.status(500).json({ message: "Failed to fetch task statuses" });
+    }
+  });
+
+  app.post("/api/task-statuses", async (req, res) => {
+    try {
+      const validatedData = insertTaskStatusSchema.parse(req.body);
+      const [newStatus] = await db.insert(taskStatuses)
+        .values(validatedData)
+        .returning();
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "task_status",
+        newStatus.id,
+        newStatus.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task status created: ${newStatus.name}`,
+        null,
+        { name: newStatus.name, value: newStatus.value, color: newStatus.color },
+        req
+      );
+      
+      res.status(201).json(newStatus);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating task status:", error);
+      res.status(500).json({ message: "Failed to create task status" });
+    }
+  });
+
+  app.put("/api/task-statuses/:id", async (req, res) => {
+    try {
+      const validatedData = insertTaskStatusSchema.partial().parse(req.body);
+      const [updatedStatus] = await db.update(taskStatuses)
+        .set({ ...validatedData, updatedAt: sql`now()` })
+        .where(eq(taskStatuses.id, req.params.id))
+        .returning();
+      
+      if (!updatedStatus) {
+        return res.status(404).json({ message: "Task status not found" });
+      }
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "task_status",
+        updatedStatus.id,
+        updatedStatus.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task status updated: ${updatedStatus.name}`,
+        null,
+        validatedData,
+        req
+      );
+      
+      res.json(updatedStatus);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating task status:", error);
+      res.status(500).json({ message: "Failed to update task status" });
+    }
+  });
+
+  app.delete("/api/task-statuses/:id", async (req, res) => {
+    try {
+      const [statusToDelete] = await db.select()
+        .from(taskStatuses)
+        .where(eq(taskStatuses.id, req.params.id));
+      
+      if (!statusToDelete) {
+        return res.status(404).json({ message: "Task status not found" });
+      }
+      
+      if (statusToDelete.isSystemStatus) {
+        return res.status(400).json({ message: "Cannot delete system task status" });
+      }
+      
+      // Soft delete by setting isActive to false
+      const [deletedStatus] = await db.update(taskStatuses)
+        .set({ isActive: false, updatedAt: sql`now()` })
+        .where(eq(taskStatuses.id, req.params.id))
+        .returning();
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "task_status",
+        req.params.id,
+        statusToDelete.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task status deactivated: ${statusToDelete.name}`,
+        { name: statusToDelete.name },
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task status:", error);
+      res.status(500).json({ message: "Failed to delete task status" });
+    }
+  });
+
+  // Task Priorities Routes
+  app.get("/api/task-priorities", async (req, res) => {
+    try {
+      const priorities = await db.select()
+        .from(taskPriorities)
+        .where(eq(taskPriorities.isActive, true))
+        .orderBy(desc(taskPriorities.sortOrder), asc(taskPriorities.name));
+      
+      res.json(priorities);
+    } catch (error) {
+      console.error("Error fetching task priorities:", error);
+      res.status(500).json({ message: "Failed to fetch task priorities" });
+    }
+  });
+
+  app.post("/api/task-priorities", async (req, res) => {
+    try {
+      const validatedData = insertTaskPrioritySchema.parse(req.body);
+      const [newPriority] = await db.insert(taskPriorities)
+        .values(validatedData)
+        .returning();
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "task_priority",
+        newPriority.id,
+        newPriority.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task priority created: ${newPriority.name}`,
+        null,
+        { name: newPriority.name, value: newPriority.value, color: newPriority.color },
+        req
+      );
+      
+      res.status(201).json(newPriority);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating task priority:", error);
+      res.status(500).json({ message: "Failed to create task priority" });
+    }
+  });
+
+  app.put("/api/task-priorities/:id", async (req, res) => {
+    try {
+      const validatedData = insertTaskPrioritySchema.partial().parse(req.body);
+      const [updatedPriority] = await db.update(taskPriorities)
+        .set({ ...validatedData, updatedAt: sql`now()` })
+        .where(eq(taskPriorities.id, req.params.id))
+        .returning();
+      
+      if (!updatedPriority) {
+        return res.status(404).json({ message: "Task priority not found" });
+      }
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "task_priority",
+        updatedPriority.id,
+        updatedPriority.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task priority updated: ${updatedPriority.name}`,
+        null,
+        validatedData,
+        req
+      );
+      
+      res.json(updatedPriority);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating task priority:", error);
+      res.status(500).json({ message: "Failed to update task priority" });
+    }
+  });
+
+  app.delete("/api/task-priorities/:id", async (req, res) => {
+    try {
+      const [priorityToDelete] = await db.select()
+        .from(taskPriorities)
+        .where(eq(taskPriorities.id, req.params.id));
+      
+      if (!priorityToDelete) {
+        return res.status(404).json({ message: "Task priority not found" });
+      }
+      
+      if (priorityToDelete.isSystemPriority) {
+        return res.status(400).json({ message: "Cannot delete system task priority" });
+      }
+      
+      // Soft delete by setting isActive to false
+      const [deletedPriority] = await db.update(taskPriorities)
+        .set({ isActive: false, updatedAt: sql`now()` })
+        .where(eq(taskPriorities.id, req.params.id))
+        .returning();
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "task_priority",
+        req.params.id,
+        priorityToDelete.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Task priority deactivated: ${priorityToDelete.name}`,
+        { name: priorityToDelete.name },
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task priority:", error);
+      res.status(500).json({ message: "Failed to delete task priority" });
+    }
+  });
+
+  // Task Settings Routes
+  app.get("/api/task-settings", async (req, res) => {
+    try {
+      const settings = await db.select().from(taskSettings);
+      
+      // Transform into key-value object for easier consumption
+      const settingsObject = settings.reduce((acc, setting) => {
+        acc[setting.settingKey] = setting.settingValue;
+        return acc;
+      }, {} as Record<string, any>);
+      
+      res.json(settingsObject);
+    } catch (error) {
+      console.error("Error fetching task settings:", error);
+      res.status(500).json({ message: "Failed to fetch task settings" });
+    }
+  });
+
+  app.post("/api/task-settings", async (req, res) => {
+    try {
+      const validatedData = insertTaskSettingsSchema.parse(req.body);
+      
+      // Check if setting already exists
+      const [existingSetting] = await db.select()
+        .from(taskSettings)
+        .where(eq(taskSettings.settingKey, validatedData.settingKey));
+      
+      if (existingSetting) {
+        // Update existing setting
+        const [updatedSetting] = await db.update(taskSettings)
+          .set({ 
+            settingValue: validatedData.settingValue,
+            updatedBy: validatedData.updatedBy,
+            updatedAt: sql`now()` 
+          })
+          .where(eq(taskSettings.settingKey, validatedData.settingKey))
+          .returning();
+        
+        res.json(updatedSetting);
+      } else {
+        // Create new setting
+        const [newSetting] = await db.insert(taskSettings)
+          .values(validatedData)
+          .returning();
+        
+        res.status(201).json(newSetting);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error saving task setting:", error);
+      res.status(500).json({ message: "Failed to save task setting" });
     }
   });
 

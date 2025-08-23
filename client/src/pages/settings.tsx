@@ -12,7 +12,8 @@ import {
   Package,
   ScrollText,
   ShieldCheck,
-  Calendar
+  Calendar,
+  Layers
 } from "lucide-react";
 
 const settingsNavigation = [
@@ -27,6 +28,7 @@ const settingsNavigation = [
   { name: "Custom Fields", href: "/settings/custom-fields", icon: Database },
   { name: "Tags", href: "/settings/tags", icon: Tag },
   { name: "Products", href: "/settings/products", icon: Package },
+  { name: "Task Statuses", href: "/settings/task-statuses", icon: Layers },
   { name: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText },
 ];
 
@@ -79,6 +81,7 @@ function getSettingDescription(name: string): string {
     "Custom Fields": "Create and manage custom contact fields",
     "Tags": "Organize and manage system tags",
     "Products": "Manage your products and services catalog",
+    "Task Statuses": "Configure custom task status options",
     "Audit Logs": "View system activity and audit trail",
   };
   return descriptions[name] || "";

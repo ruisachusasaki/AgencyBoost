@@ -1958,6 +1958,83 @@ export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).om
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
 export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
 
+// Task Settings Tables - for admin configuration
+
+// Task Statuses - customizable status options for tasks
+export const taskStatuses = pgTable("task_statuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // e.g., "In Progress", "Under Review"
+  value: text("value").notNull().unique(), // e.g., "in_progress", "under_review" - used in code
+  color: text("color").notNull().default("#6b7280"), // hex color for badges
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0), // for custom ordering
+  isDefault: boolean("is_default").default(false), // one default status for new tasks
+  isActive: boolean("is_active").default(true),
+  isSystemStatus: boolean("is_system_status").default(false), // system statuses can't be deleted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Task Priorities - customizable priority levels for tasks  
+export const taskPriorities = pgTable("task_priorities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // e.g., "Critical", "High", "Medium"
+  value: text("value").notNull().unique(), // e.g., "critical", "high", "medium" - used in code
+  color: text("color").notNull().default("#6b7280"), // hex color for badges
+  icon: text("icon").default("flag"), // lucide icon name
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0), // for custom ordering (higher values = higher priority)
+  isDefault: boolean("is_default").default(false), // one default priority for new tasks
+  isActive: boolean("is_active").default(true),
+  isSystemPriority: boolean("is_system_priority").default(false), // system priorities can't be deleted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Note: taskCategories already exists earlier in schema, reusing that table
+
+// Task Global Settings - system-wide task configuration
+export const taskSettings = pgTable("task_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: text("setting_key").notNull().unique(), // e.g., "default_status", "require_due_date"
+  settingValue: jsonb("setting_value").notNull(), // flexible JSON value
+  description: text("description"),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Create insert schemas for the new task settings tables
+export const insertTaskStatusSchema = createInsertSchema(taskStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskPrioritySchema = createInsertSchema(taskPriorities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Using existing insertTaskCategorySchema defined earlier in file
+
+export const insertTaskSettingsSchema = createInsertSchema(taskSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+// Export types for the new tables
+export type TaskStatus = typeof taskStatuses.$inferSelect;
+export type InsertTaskStatus = z.infer<typeof insertTaskStatusSchema>;
+
+export type TaskPriority = typeof taskPriorities.$inferSelect;
+export type InsertTaskPriority = z.infer<typeof insertTaskPrioritySchema>;
+
+// Using existing TaskCategory and InsertTaskCategory types defined earlier in file
+
+export type TaskSettings = typeof taskSettings.$inferSelect;
+export type InsertTaskSettings = z.infer<typeof insertTaskSettingsSchema>;
+
 // Form folders - for organizing forms
 export const formFolders = pgTable("form_folders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

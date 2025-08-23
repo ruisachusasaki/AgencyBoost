@@ -40,6 +40,7 @@ import Tags from "@/pages/settings/tags";
 import Products from "@/pages/settings/products";
 import AuditLogs from "@/pages/settings/audit-logs";
 import PermissionAudit from "@/pages/settings/permission-audit";
+import TaskStatuses from "@/pages/settings/task-statuses";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
@@ -82,6 +83,7 @@ function Router() {
       <Route path="/settings/custom-fields/:id/edit" component={EditFolder} />
       <Route path="/settings/tags" component={Tags} />
       <Route path="/settings/products" component={Products} />
+      <Route path="/settings/task-statuses" component={TaskStatuses} />
       <Route path="/settings/audit-logs" component={AuditLogs} />
       <Route path="/form-builder">
         {() => <FormBuilder />}
