@@ -142,9 +142,11 @@ export default function StaffDetail() {
     if (selectedDepartment && isEditing && initialDepartmentLoaded) {
       // Only clear position if we're actively editing and the department actually changed
       const currentPosition = form.getValues("position");
+      console.log("Department change effect:", { selectedDepartment, currentPosition, isEditing, initialDepartmentLoaded });
       if (currentPosition && selectedDepartment !== "none") {
         // Check if the current position exists in the new department's positions
         // If not, we'll clear it when the positions load
+        console.log("Clearing position due to department change");
         form.setValue("position", "");
       }
     }
@@ -152,6 +154,7 @@ export default function StaffDetail() {
     // Mark that we've loaded the initial department
     if (selectedDepartment && !initialDepartmentLoaded) {
       setInitialDepartmentLoaded(true);
+      console.log("Initial department loaded:", selectedDepartment);
     }
   }, [selectedDepartment, form, isEditing, initialDepartmentLoaded]);
 
@@ -159,7 +162,9 @@ export default function StaffDetail() {
     mutationFn: async (data: StaffFormData) => {
       console.log("Submitting data:", data);
       const response = await apiRequest("PUT", `/api/staff/${id}`, data);
-      return await response.json();
+      const result = await response.json();
+      console.log("Server response:", result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
