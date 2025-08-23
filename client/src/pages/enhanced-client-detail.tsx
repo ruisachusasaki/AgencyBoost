@@ -3888,7 +3888,7 @@ export default function EnhancedClientDetail() {
                                 const priorityColor = getPriorityColor(task.priority);
                                 
                                 return (
-                                  <TableRow key={task.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setLocation(`/task/${task.id}`)}>
+                                  <TableRow key={task.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setLocation(`/tasks/${task.id}`)}>
                                     <TableCell>
                                       <div>
                                         <div className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
