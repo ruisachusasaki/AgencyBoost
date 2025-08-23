@@ -493,7 +493,7 @@ export default function Staff() {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>
+                            <SelectItem value="no-department-selected" disabled>
                               Please select a team/department first
                             </SelectItem>
                           )}
