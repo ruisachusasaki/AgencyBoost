@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { IconPicker } from "@/components/ui/icon-picker";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema } from "@shared/schema";
@@ -1146,6 +1147,7 @@ export default function TasksSettingsPage() {
                       <FormControl>
                         <select 
                           {...field}
+                          value={field.value || ""}
                           className="w-full p-2 border rounded"
                           data-testid="select-icon"
                         >
@@ -1328,11 +1330,11 @@ export default function TasksSettingsPage() {
                     <FormItem>
                       <FormLabel>Icon</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="e.g., folder"
-                          {...field}
+                        <IconPicker
                           value={field.value || ""}
-                          data-testid="input-icon"
+                          onChange={field.onChange}
+                          placeholder="Type icon name (e.g., folder, star, tag)"
+                          data-testid="picker-icon"
                         />
                       </FormControl>
                       <FormMessage />
