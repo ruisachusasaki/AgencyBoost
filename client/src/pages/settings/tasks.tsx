@@ -36,6 +36,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { IconPicker } from "@/components/ui/icon-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema } from "@shared/schema";
@@ -541,7 +548,7 @@ export default function TasksSettingsPage() {
           description: category.description || "",
           color: category.color,
           icon: category.icon || "folder",
-          workflowId: category.workflowId || "",
+          workflowId: (category as any).workflowId || "",
           isDefault: category.isDefault,
         });
       } else {
@@ -1733,7 +1740,7 @@ export default function TasksSettingsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Workflow (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a workflow for this category" />
