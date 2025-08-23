@@ -3847,92 +3847,46 @@ export default function EnhancedClientDetail() {
 
                 {/* Tasks Section */}
                 {activeRightSection === "tasks" && (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Client Tasks</h3>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setLocation('/tasks')}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          New Task
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setLocation('/tasks')}>
-                          View All Tasks
-                        </Button>
-                      </div>
                     </div>
                     
-                    <div className="space-y-3">
-                      {clientTasksData?.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <CheckSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                          <p>No tasks found for this client</p>
-                          <Button size="sm" variant="outline" className="mt-3" onClick={() => setLocation('/tasks')}>
-                            Create First Task
+                    {/* Simple Clean Interface */}
+                    <Card className="p-8 text-center">
+                      <div className="max-w-md mx-auto">
+                        <CheckSquare className="h-16 w-16 mx-auto mb-4 text-blue-500" />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">Manage Tasks</h4>
+                        <p className="text-gray-600 mb-6">
+                          View and manage all tasks for {client?.name} in the main Tasks page where you can filter, edit, and track progress.
+                        </p>
+                        
+                        <div className="space-y-3">
+                          <Button 
+                            onClick={() => setLocation(`/tasks?client=${clientId}`)} 
+                            className="w-full"
+                            size="lg"
+                          >
+                            <CheckSquare className="h-4 w-4 mr-2" />
+                            View All Tasks for This Client
+                          </Button>
+                          
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setLocation('/tasks')} 
+                            className="w-full"
+                            size="lg"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create New Task
                           </Button>
                         </div>
-                      ) : (
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-gray-50">
-                                <TableHead className="w-[40%]">Task</TableHead>
-                                <TableHead className="w-[15%]">Status</TableHead>
-                                <TableHead className="w-[15%]">Priority</TableHead>
-                                <TableHead className="w-[15%]">Due Date</TableHead>
-                                <TableHead className="w-[15%]">Assignee</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {clientTasksData?.map((task: any) => {
-                                const statusColor = getStatusColor(task.status);
-                                const priorityColor = getPriorityColor(task.priority);
-                                
-                                return (
-                                  <TableRow key={task.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setLocation(`/tasks/${task.id}`)}>
-                                    <TableCell>
-                                      <div>
-                                        <div className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                                          {task.title}
-                                        </div>
-                                        {task.description && (
-                                          <div className="text-sm text-gray-500 mt-1 line-clamp-1">
-                                            {task.description}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="secondary" className={`text-xs ${statusColor} border-none`}>
-                                        {task.status}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline" className={`text-xs ${priorityColor} border-current`}>
-                                        {task.priority}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      {task.dueDate ? (
-                                        <div className="text-sm text-gray-600">
-                                          {format(new Date(task.dueDate), 'MMM d, yyyy')}
-                                        </div>
-                                      ) : (
-                                        <span className="text-gray-400 text-sm">No due date</span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="text-sm text-gray-600">
-                                        {getStaffName(task.assignedTo, staffData)}
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </div>
+                        
+                        <p className="text-xs text-gray-500 mt-4">
+                          This will open the full task management interface with advanced filtering and editing capabilities.
+                        </p>
+                      </div>
+                    </Card>
                   </div>
                 )}
 
