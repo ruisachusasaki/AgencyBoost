@@ -755,52 +755,18 @@ export default function TaskDetail() {
               </CardContent>
             </Card>
 
-          {/* Task Description */}
-          {task?.id && task?.title && (
-            <TaskDescriptionCard 
-              task={task} 
-              onUpdate={updateTask} 
-            />
-          )}
-
-          {/* Sub-tasks - ClickUp-style hierarchical tasks (up to 5 levels deep) */}
+          {/* Simplified content for debugging */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FolderOpen className="h-5 w-5" />
-                Sub-tasks
-                {task?.hasSubTasks && (
-                  <Badge variant="secondary" className="ml-2">
-                    Has sub-tasks
-                  </Badge>
-                )}
-              </CardTitle>
+              <CardTitle>Basic Task Info</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="w-[40%]">Task Name</TableHead>
-                    <TableHead className="w-[20%]">Assignee</TableHead>
-                    <TableHead className="w-[20%]">Due Date</TableHead>
-                    <TableHead className="w-[20%]">Priority</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {task?.id && (
-                    <SubTaskList 
-                      parentTaskId={task.id}
-                      level={0}
-                      maxLevel={5}
-                    />
-                  )}
-                </TableBody>
-              </Table>
+            <CardContent>
+              <div className="space-y-2">
+                <p><strong>Description:</strong> {task?.description || "No description"}</p>
+                <p><strong>Created:</strong> {task?.createdAt ? new Date(task.createdAt).toLocaleDateString() : "Unknown"}</p>
+              </div>
             </CardContent>
           </Card>
-
-          {/* Task Attachments */}
-          {task?.id && <TaskAttachments taskId={task.id} />}
 
         </div>
 
@@ -838,16 +804,22 @@ export default function TaskDetail() {
 
           <CardContent className="pt-6">
             {/* Tab Content */}
-            {activeTab === "comments" && task?.id && (
-              <TaskComments taskId={task.id} />
+            {activeTab === "comments" && (
+              <div className="p-4">
+                <p>Comments section (simplified for debugging)</p>
+              </div>
             )}
             
-            {activeTab === "activity" && task?.id && (
-              <TaskActivities taskId={task.id} showCard={false} />
+            {activeTab === "activity" && (
+              <div className="p-4">
+                <p>Activity section (simplified for debugging)</p>
+              </div>
             )}
             
-            {activeTab === "dependencies" && task?.id && (
-              <TaskDependencies taskId={task.id} />
+            {activeTab === "dependencies" && (
+              <div className="p-4">
+                <p>Dependencies section (simplified for debugging)</p>
+              </div>
             )}
           </CardContent>
         </Card>
