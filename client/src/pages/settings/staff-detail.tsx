@@ -504,8 +504,8 @@ export default function StaffDetail() {
                           Position
                         </FormLabelWithTooltip>
                         <Select
-                          value={field.value || ""}
-                          onValueChange={field.onChange}
+                          value={field.value || "none"}
+                          onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
                           disabled={!isEditing || !selectedDeptObj || selectedDepartment === "none"}
                         >
                           <FormControl>
@@ -518,7 +518,7 @@ export default function StaffDetail() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No Position</SelectItem>
+                            <SelectItem value="none">No Position</SelectItem>
                             {departmentPositions.map((position) => (
                               <SelectItem key={position.id} value={position.name}>
                                 {position.name}
