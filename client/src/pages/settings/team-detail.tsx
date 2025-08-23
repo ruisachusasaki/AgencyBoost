@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -21,6 +22,16 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import type { Department, Staff, Position, InsertPosition, Role } from "@shared/schema";
 
+type TeamWorkflow = {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const positionFormSchema = z.object({
   name: z.string().min(1, "Position name is required"),
   description: z.string().optional(),
@@ -29,6 +40,7 @@ const positionFormSchema = z.object({
 const editTeamFormSchema = z.object({
   name: z.string().min(1, "Team name is required"),
   description: z.string().optional(),
+  workflowId: z.string().optional(),
 });
 
 type PositionFormData = z.infer<typeof positionFormSchema>;
@@ -57,6 +69,7 @@ export default function TeamDetail() {
     defaultValues: {
       name: "",
       description: "",
+      workflowId: "",
     }
   });
 
@@ -111,6 +124,22 @@ export default function TeamDetail() {
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ["/api/roles"],
   });
+
+  // Fetch team workflows for workflow assignment
+  const { data: workflows = [] } = useQuery<TeamWorkflow[]>({
+    queryKey: ["/api/team-workflows"],
+  });
+
+  // Update form when team data loads
+  useEffect(() => {
+    if (team) {
+      editTeamForm.reset({
+        name: team.name || "",
+        description: team.description || "",
+        workflowId: team.workflowId || "",
+      });
+    }
+  }, [team, editTeamForm]);
 
   // Create position mutation
   const createPositionMutation = useMutation({
@@ -767,6 +796,34 @@ export default function TeamDetail() {
                     <FormControl>
                       <Input placeholder="Brief description of this team" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editTeamForm.control}
+                name="workflowId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabelWithTooltip tooltip="Assign a specific workflow to this team to control task status options for team members">
+                      Team Workflow
+                    </FormLabelWithTooltip>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select workflow (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No Workflow (Use all statuses)</SelectItem>
+                        {workflows.filter(w => w.isActive).map((workflow) => (
+                          <SelectItem key={workflow.id} value={workflow.id}>
+                            {workflow.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
