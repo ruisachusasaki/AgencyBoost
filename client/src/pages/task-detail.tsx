@@ -380,6 +380,25 @@ export default function TaskDetail() {
     );
   }
 
+  // Ensure task has required properties before rendering
+  if (!task.id || !task.title) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/tasks")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tasks
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-slate-600">Loading task details...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -406,15 +425,15 @@ export default function TaskDetail() {
                 title="Click to edit task title"
                 data-testid="task-title-edit"
               >
-                {task.title}
+{task?.title || "Loading..."}
               </h1>
             )}
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary" className={getStatusColor(task.status)}>
-                {task.status.replace('_', ' ')}
+              <Badge variant="secondary" className={getStatusColor(task?.status || "pending")}>
+                {(task?.status || "pending").replace('_', ' ')}
               </Badge>
-              <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                {task.priority} priority
+              <Badge variant="outline" className={getPriorityColor(task?.priority || "normal")}>
+                {task?.priority || "normal"} priority
               </Badge>
             </div>
           </div>
@@ -460,14 +479,14 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Status</span>
                     </div>
                     <Select
-                      value={task.status}
+                      value={task?.status || "pending"}
                       onValueChange={(value) => updateTaskMutation.mutate({ status: value })}
                     >
                       <SelectTrigger className="w-[140px] h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {task.workflowId && task.workflowId !== "none" ? (
+                        {task?.workflowId && task.workflowId !== "none" ? (
                           // Show workflow-specific statuses
                           workflowStatuses
                             .sort((a: any, b: any) => a.order - b.order)
@@ -522,12 +541,12 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Assignee</span>
                     </div>
                     <Select
-                      value={task.assignedTo || "unassigned"}
+                      value={task?.assignedTo || "unassigned"}
                       onValueChange={(value) => updateTaskMutation.mutate({ assignedTo: value === "unassigned" ? null : value })}
                     >
                       <SelectTrigger className="w-[180px] h-8">
                         <SelectValue placeholder="Select assignee">
-                          {getStaffName(task.assignedTo)}
+                          {getStaffName(task?.assignedTo)}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -553,7 +572,7 @@ export default function TaskDetail() {
                     <div className="flex items-center gap-2">
                       {/* Start Date */}
                       <div className="flex items-center gap-1">
-                        {task.startDate ? (
+                        {task?.startDate ? (
                           <Input
                             type="date"
                             value={task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
@@ -578,7 +597,7 @@ export default function TaskDetail() {
                       
                       {/* Due Date */}
                       <div className="flex items-center gap-1">
-                        {task.dueDate ? (
+                        {task?.dueDate ? (
                           <Input
                             type="date"
                             value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
@@ -611,7 +630,7 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Priority</span>
                     </div>
                     <Select
-                      value={task.priority}
+                      value={task?.priority || "normal"}
                       onValueChange={(value) => updateTaskMutation.mutate({ priority: value })}
                     >
                       <SelectTrigger className="w-[120px] h-8">
