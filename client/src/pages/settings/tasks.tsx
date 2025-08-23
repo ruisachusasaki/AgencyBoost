@@ -305,7 +305,7 @@ export default function TasksSettingsPage() {
 
   const updatePriorityMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<TaskPriorityFormData> }) =>
-      apiRequest(`/api/task-priorities/${id}`, "PUT", data),
+      apiRequest("PUT", `/api/task-priorities/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-priorities"] });
       toast({ title: "Success", description: "Task priority updated successfully" });
@@ -317,7 +317,7 @@ export default function TasksSettingsPage() {
   });
 
   const deletePriorityMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/task-priorities/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/task-priorities/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-priorities"] });
       toast({ title: "Success", description: "Task priority deleted successfully" });
