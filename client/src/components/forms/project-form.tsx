@@ -10,8 +10,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertProjectSchema, type Project, type InsertProject, type Client, type ProjectTemplate } from "@shared/schema";
 import { useState } from "react";
-import { Layout, Calendar, CalendarIcon } from "lucide-react";
+import { Layout, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -246,7 +247,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
               <FormItem>
                 <FormLabel>Budget</FormLabel>
                 <FormControl>
-                  <Input {...field} type="number" placeholder="10000" />
+                  <Input {...field} type="number" placeholder="10000" value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -341,7 +342,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea {...field} placeholder="Project description" rows={3} />
+                <Textarea {...field} placeholder="Project description" rows={3} value={field.value || ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
