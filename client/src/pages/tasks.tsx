@@ -593,7 +593,7 @@ export default function Tasks() {
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ taskIds, updates }: { taskIds: string[], updates: any }) => {
-      await apiRequest('/api/tasks/bulk-update', 'PUT', { taskIds, updates });
+      await apiRequest('PUT', '/api/tasks/bulk-update', { taskIds, updates });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
