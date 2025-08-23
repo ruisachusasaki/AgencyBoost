@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import type { Department, Staff, Position, InsertPosition } from "@shared/schema";
+import type { Department, Staff, Position, InsertPosition, Role } from "@shared/schema";
 
 const positionFormSchema = z.object({
   name: z.string().min(1, "Position name is required"),
@@ -105,6 +105,11 @@ export default function TeamDetail() {
       if (!response.ok) throw new Error('Failed to fetch current user');
       return response.json();
     },
+  });
+
+  // Fetch roles for proper role name display
+  const { data: roles = [] } = useQuery<Role[]>({
+    queryKey: ["/api/roles"],
   });
 
   // Create position mutation
@@ -310,15 +315,21 @@ export default function TeamDetail() {
            email.includes(searchTerm.toLowerCase());
   });
 
-  const getRoleBadgeColor = (roleId: string) => {
-    // Simple role color mapping - you may want to fetch actual role names
+  const getRoleBadgeColor = (roleName: string) => {
+    // Role color mapping based on role names
     const roleColors: { [key: string]: string } = {
       'admin': 'bg-red-100 text-red-800',
       'manager': 'bg-blue-100 text-blue-800',
       'user': 'bg-green-100 text-green-800',
       'accounting': 'bg-purple-100 text-purple-800',
     };
-    return roleColors[roleId] || 'bg-gray-100 text-gray-800';
+    return roleColors[roleName.toLowerCase()] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getRoleName = (roleId: string | null) => {
+    if (!roleId) return "No role";
+    const role = roles.find(r => r.id === roleId);
+    return role ? role.name : "Unknown role";
   };
 
   return (
@@ -523,10 +534,10 @@ export default function TeamDetail() {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          className={getRoleBadgeColor(member.roleId || "")} 
+                          className={getRoleBadgeColor(getRoleName(member.roleId))} 
                           data-testid={`badge-member-role-${member.id}`}
                         >
-                          {member.roleId || "No role"}
+                          {getRoleName(member.roleId)}
                         </Badge>
                       </TableCell>
                       <TableCell>
