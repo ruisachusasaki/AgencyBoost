@@ -58,7 +58,7 @@ function Router() {
       <Route path="/marketing" component={Campaigns} />
       <Route path="/leads" component={Leads} />
       <Route path="/tasks" component={Tasks} />
-      <Route path="/tasks/:taskId" component={TaskDetailDebug} />
+      <Route path="/tasks/:taskId" component={TaskDetail} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />

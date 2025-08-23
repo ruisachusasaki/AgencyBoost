@@ -258,7 +258,7 @@ export default function TaskDetail() {
   const isThisTaskTimerRunning = isTimerRunning && currentTimer?.taskId === taskId;
 
   const startTimeTracking = () => {
-    if (!task) return;
+    if (!task?.id || !task?.title) return;
     startTimer(task.id, task.title);
   };
 
@@ -273,7 +273,7 @@ export default function TaskDetail() {
   };
 
   const startTitleEdit = () => {
-    if (task) {
+    if (task?.title) {
       setTitleValue(task.title);
       setEditingTitle(true);
     }
@@ -605,7 +605,7 @@ export default function TaskDetail() {
                               dueDate: e.target.value ? new Date(e.target.value) : null 
                             })}
                             className={`w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200 ${
-                              task.dueDate && new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
+                              task?.dueDate && new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
                                 ? 'text-red-600 font-medium' : ''
                             }`}
                           />
