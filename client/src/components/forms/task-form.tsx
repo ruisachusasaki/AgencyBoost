@@ -10,7 +10,31 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, Repeat } from "lucide-react";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Staff, type TaskPriority, type TaskCategory, type TeamWorkflow } from "@shared/schema";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Staff, type TaskPriority, type TaskCategory } from "@shared/schema";
+
+// TeamWorkflow type with statuses included
+type TeamWorkflowWithStatuses = {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  statuses?: {
+    id: string;
+    workflowId: string;
+    order: number;
+    isRequired: boolean;
+    status: {
+      id: string;
+      name: string;
+      value: string;
+      color: string;
+      isDefault: boolean;
+    };
+  }[];
+};
 import { useState } from "react";
 
 interface TaskFormProps {
@@ -44,7 +68,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/task-categories"],
   });
 
-  const { data: teamWorkflows = [] } = useQuery<TeamWorkflow[]>({
+  const { data: teamWorkflows = [] } = useQuery<TeamWorkflowWithStatuses[]>({
     queryKey: ["/api/team-workflows"],
   });
 
@@ -262,8 +286,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     {selectedWorkflowId && selectedWorkflowId !== "none" ? (
                       // Show workflow-specific statuses
                       workflowStatuses
-                        .sort((a, b) => a.order - b.order)
-                        .map((workflowStatus) => (
+                        .sort((a: any, b: any) => a.order - b.order)
+                        .map((workflowStatus: any) => (
                           <SelectItem key={workflowStatus.status.id} value={workflowStatus.status.value}>
                             <div className="flex items-center gap-2">
                               <div 
