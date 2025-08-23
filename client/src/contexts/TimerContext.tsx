@@ -24,7 +24,15 @@ const TimerContext = createContext<TimerContextType | undefined>(undefined);
 export function useTimer() {
   const context = useContext(TimerContext);
   if (context === undefined) {
-    throw new Error('useTimer must be used within a TimerProvider');
+    console.error('useTimer must be used within a TimerProvider');
+    // Return a default context instead of throwing to prevent runtime errors
+    return {
+      currentTimer: null,
+      isTimerRunning: false,
+      startTimer: () => {},
+      stopTimer: () => {},
+      elapsedTime: 0
+    };
   }
   return context;
 }
