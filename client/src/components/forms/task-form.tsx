@@ -256,14 +256,14 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Category</SelectItem>
+                    <SelectItem value="none">No Category</SelectItem>
                     {taskCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         <div className="flex items-center gap-2">
