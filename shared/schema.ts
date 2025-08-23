@@ -324,7 +324,6 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   clientId: varchar("client_id").notNull().references(() => clients.id),
-  departmentId: varchar("department_id").references(() => departments.id), // Assign project to team/department
   status: text("status").notNull().default("planning"), // planning, active, completed, cancelled, on_hold
   priority: text("priority").notNull().default("medium"), // low, medium, high
   budget: decimal("budget", { precision: 10, scale: 2 }),
