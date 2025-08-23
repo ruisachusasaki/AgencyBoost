@@ -35,7 +35,7 @@ type TeamWorkflowWithStatuses = {
     };
   }[];
 };
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface TaskFormProps {
   task?: Task | null;
@@ -102,6 +102,32 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       createIfOverdue: task?.createIfOverdue || false,
     },
   });
+
+  // Reset form when task or teamWorkflows data changes (important for edit mode)
+  useEffect(() => {
+    if (task && teamWorkflows.length > 0) {
+      form.reset({
+        title: task.title || "",
+        description: task.description || "",
+        categoryId: task.categoryId || defaultCategory,
+        workflowId: task.workflowId || "",
+        status: task.status || "pending",
+        priority: task.priority || defaultPriority,
+        assignedTo: task.assignedTo || null,
+        startDate: task.startDate ? new Date(task.startDate) : null,
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
+        clientId: task.clientId || "",
+        projectId: task.projectId || "",
+        isRecurring: task.isRecurring || false,
+        recurringInterval: task.recurringInterval || 1,
+        recurringUnit: (task.recurringUnit as "hours" | "days" | "weeks" | "months" | "years") || "days",
+        recurringEndType: (task.recurringEndType as "never" | "on_date" | "after_occurrences") || "never",
+        recurringEndDate: task.recurringEndDate ? new Date(task.recurringEndDate) : null,
+        recurringEndOccurrences: task.recurringEndOccurrences || 10,
+        createIfOverdue: task.createIfOverdue || false,
+      });
+    }
+  }, [task, teamWorkflows, defaultPriority, defaultCategory, form]);
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
