@@ -76,6 +76,21 @@ export default function TaskDetail() {
     queryKey: ["/api/team-workflows"],
   });
 
+  // Task priorities for dynamic priority dropdown
+  type TaskPriority = {
+    id: string;
+    name: string;
+    value: string;
+    color: string;
+    icon: string;
+    isDefault: boolean;
+    isActive: boolean;
+  };
+
+  const { data: taskPriorities = [] } = useQuery<TaskPriority[]>({
+    queryKey: ["/api/task-priorities"],
+  });
+
   const { data: userPermissions } = useQuery({
     queryKey: ["/api/auth/permissions"],
   });
@@ -601,30 +616,20 @@ export default function TaskDetail() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="urgent">
-                          <div className="flex items-center gap-2">
-                            <Flag className="h-3 w-3 text-red-500" />
-                            <span>Urgent</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="high">
-                          <div className="flex items-center gap-2">
-                            <Flag className="h-3 w-3 text-yellow-500" />
-                            <span>High</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="normal">
-                          <div className="flex items-center gap-2">
-                            <Flag className="h-3 w-3 text-blue-500" />
-                            <span>Normal</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="low">
-                          <div className="flex items-center gap-2">
-                            <Flag className="h-3 w-3 text-gray-500" />
-                            <span>Low</span>
-                          </div>
-                        </SelectItem>
+                        {taskPriorities.filter(priority => priority.isActive).map((priority) => {
+                          const IconComponent = priority.icon === 'flag' ? Flag : Flag; // For now using Flag, can be expanded
+                          return (
+                            <SelectItem key={priority.id} value={priority.value}>
+                              <div className="flex items-center gap-2">
+                                <IconComponent 
+                                  className="h-3 w-3" 
+                                  style={{ color: priority.color }}
+                                />
+                                <span>{priority.name}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
