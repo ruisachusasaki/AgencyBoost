@@ -27,7 +27,7 @@ import {
   type Workflow, type InsertWorkflow,
   type WorkflowExecution, type InsertWorkflowExecution,
   type WorkflowTemplate, type InsertWorkflowTemplate,
-  type TaskCategory, type InsertTaskCategory,
+  type TaskCategory, type InsertTaskCategory, taskCategories,
   type TaskTemplate, type InsertTaskTemplate,
   type EnhancedTask, type InsertEnhancedTask,
   type TaskHistory, type InsertTaskHistory,
