@@ -494,7 +494,7 @@ export const tasks = pgTable("tasks", {
   timeEntries: jsonb("time_entries").default(sql`'[]'`), // array of time tracking entries
   
   // Sub-task hierarchy support (up to 5 levels deep)
-  parentTaskId: varchar("parent_task_id").references(() => tasks.id),
+  parentTaskId: varchar("parent_task_id"), // Self-reference added after table definition
   level: integer("level").default(0), // 0 = root task, 1-5 = sub-task levels
   taskPath: text("task_path"), // Hierarchical path like "root_id/sub1_id/sub2_id" for efficient querying
   hasSubTasks: boolean("has_sub_tasks").default(false), // Cache field for performance

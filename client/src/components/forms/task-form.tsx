@@ -70,8 +70,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       // Recurring task defaults
       isRecurring: task?.isRecurring || false,
       recurringInterval: task?.recurringInterval || 1,
-      recurringUnit: task?.recurringUnit || "days",
-      recurringEndType: task?.recurringEndType || "never",
+      recurringUnit: (task?.recurringUnit as "hours" | "days" | "weeks" | "months" | "years") || "days",
+      recurringEndType: (task?.recurringEndType as "never" | "on_date" | "after_occurrences") || "never",
       recurringEndDate: task?.recurringEndDate ? new Date(task.recurringEndDate) : null,
       recurringEndOccurrences: task?.recurringEndOccurrences || 10,
       createIfOverdue: task?.createIfOverdue || false,
@@ -124,7 +124,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   const selectedClientId = form.watch("clientId");
   const clientProjects = projects.filter(p => p.clientId === selectedClientId);
 
-  const onSubmit = (data: InsertTask) => {
+  const onSubmit = (data: any) => {
     // Clean up empty string IDs and "none" values
     const cleanData = {
       ...data,

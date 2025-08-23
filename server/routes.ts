@@ -1144,7 +1144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           const task = taskToDelete[0];
-          const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
+          const isTaskOwner = task.assignedTo === userId;
 
           if (!canDelete && !isTaskOwner) {
             errors.push(`Access denied for task: ${taskId}`);
@@ -1228,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error in bulk delete tasks:", error);
-      res.status(500).json({ message: "Failed to bulk delete tasks", error: error.message });
+      res.status(500).json({ message: "Failed to bulk delete tasks", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -1268,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           const task = existingTask[0];
-          const isTaskOwner = task.createdBy === userId || task.assignedTo === userId;
+          const isTaskOwner = task.assignedTo === userId;
 
           if (!canEdit && !isTaskOwner) {
             errors.push(`Access denied for task: ${taskId}`);
@@ -1280,10 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Update the task
           await db.update(tasks)
-            .set({
-              ...validatedUpdates,
-              updatedAt: new Date()
-            })
+            .set(validatedUpdates)
             .where(eq(tasks.id, taskId));
 
           // Create audit log for bulk update
@@ -1318,7 +1315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid update data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to bulk update tasks", error: error.message });
+      res.status(500).json({ message: "Failed to bulk update tasks", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
