@@ -128,7 +128,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
     try {
       // Save the time entry to the database
-      await apiRequest(`/api/tasks/${taskId}`, "PUT", {
+      await apiRequest("PUT", `/api/tasks/${taskId}`, {
         timeEntries: [timeEntry] // The backend will handle merging with existing entries
       });
 
