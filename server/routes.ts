@@ -9640,7 +9640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get direct reports for managers
-  app.get("/api/staff/direct-reports", async (req, res) => {
+  app.get("/api/hr/direct-reports", async (req, res) => {
     try {
       const currentUserId = req.session?.userId;
       if (!currentUserId) {

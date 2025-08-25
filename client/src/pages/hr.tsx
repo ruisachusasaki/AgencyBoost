@@ -46,7 +46,7 @@ export default function HRPage() {
   });
   
   const { data: directReports = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/staff", "direct-reports"],
+    queryKey: ["/api/hr/direct-reports"],
     enabled: !!currentUser?.id,
   });
   
