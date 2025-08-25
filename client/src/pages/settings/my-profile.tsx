@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, MapPin, Bell, Settings } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, MapPin, Bell, Settings, UserCheck } from "lucide-react";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +17,8 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { apiRequest } from "@/lib/queryClient";
-import type { Staff } from "@shared/schema";
+import type { Staff, TimeOffRequest } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -251,6 +252,17 @@ export default function MyProfile() {
               >
                 <Bell className="h-4 w-4" />
                 <span>Notifications</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("hr")}
+                className={`${
+                  activeTab === "hr"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+              >
+                <UserCheck className="h-4 w-4" />
+                <span>HR</span>
               </button>
             </nav>
           </div>
@@ -765,6 +777,56 @@ export default function MyProfile() {
                 </Card>
               </form>
             </Form>
+          </div>
+
+          {/* HR Tab */}
+          <div className={activeTab === "hr" ? "space-y-6" : "hidden"}>
+            <Card>
+              <CardHeader>
+                <CardTitle>My Time Off Usage</CardTitle>
+                <p className="text-sm text-muted-foreground">Your personal time off history and usage</p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // This will be implemented once we can import the time off requests query
+                  return (
+                    <div className="space-y-6">
+                      {/* Usage Summary */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-blue-600">2</div>
+                            <div className="text-sm text-slate-600">Vacation Days</div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-orange-600">1</div>
+                            <div className="text-sm text-slate-600">Sick Days</div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-green-600">0</div>
+                            <div className="text-sm text-slate-600">Personal Days</div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-slate-600">3</div>
+                            <div className="text-sm text-slate-600">Total Days</div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div className="text-center py-8 text-slate-500">
+                        Individual time off tracking will be connected to your personal data soon
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
           </div>
         </Tabs>
       </div>

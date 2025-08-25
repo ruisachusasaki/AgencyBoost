@@ -143,8 +143,8 @@ export default function HRPage() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 },
-            { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
             { id: "staff-directory", name: "Staff Directory", icon: Users, count: staffData.length },
+            { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
             ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
             { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
             { id: "reports", name: "Reports", icon: FileText, count: 0 }
@@ -539,10 +539,88 @@ export default function HRPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Time Off Usage</CardTitle>
-                <CardDescription>Time off trends and patterns</CardDescription>
+                <CardDescription>Time off trends and patterns for {(currentUser as any)?.role === 'admin' ? 'all staff' : 'your team'}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-500 text-center py-8">Time off analytics coming soon</p>
+                {(() => {
+                  // Filter time off requests based on user role
+                  const relevantRequests = (currentUser as any)?.role === 'admin' 
+                    ? timeOffRequests 
+                    : timeOffRequests.filter(request => {
+                        const staff = staffData.find(s => s.id === request.staffId);
+                        return staff && directReports.some(dr => dr.id === staff.id);
+                      });
+
+                  if (relevantRequests.length === 0) {
+                    return <p className="text-slate-500 text-center py-8">No time off data available</p>;
+                  }
+
+                  // Calculate usage statistics
+                  const usageByStaff = relevantRequests.reduce((acc, request) => {
+                    const staff = staffData.find(s => s.id === request.staffId);
+                    if (!staff) return acc;
+                    
+                    const staffKey = `${staff.firstName} ${staff.lastName}`;
+                    if (!acc[staffKey]) {
+                      acc[staffKey] = {
+                        vacation: 0,
+                        sick: 0,
+                        personal: 0,
+                        total: 0,
+                        department: staff.department,
+                        position: staff.position
+                      };
+                    }
+                    
+                    const days = request.totalDays || 0;
+                    acc[staffKey][request.type as 'vacation' | 'sick' | 'personal'] += days;
+                    acc[staffKey].total += days;
+                    return acc;
+                  }, {} as Record<string, any>);
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 px-3 font-medium">Employee</th>
+                              <th className="text-left py-2 px-3 font-medium">Department</th>
+                              <th className="text-center py-2 px-3 font-medium">Vacation</th>
+                              <th className="text-center py-2 px-3 font-medium">Sick</th>
+                              <th className="text-center py-2 px-3 font-medium">Personal</th>
+                              <th className="text-center py-2 px-3 font-medium">Total Days</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(usageByStaff)
+                              .sort(([,a], [,b]) => b.total - a.total)
+                              .map(([name, usage]) => (
+                              <tr key={name} className="border-b">
+                                <td className="py-2 px-3">
+                                  <div>
+                                    <div className="font-medium">{name}</div>
+                                    <div className="text-xs text-slate-500">{usage.position}</div>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-3">{usage.department}</td>
+                                <td className="text-center py-2 px-3">{usage.vacation}</td>
+                                <td className="text-center py-2 px-3">{usage.sick}</td>
+                                <td className="text-center py-2 px-3">{usage.personal}</td>
+                                <td className="text-center py-2 px-3 font-medium">{usage.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {Object.keys(usageByStaff).length > 0 && (
+                        <div className="text-xs text-slate-500 mt-4">
+                          Showing data for {Object.keys(usageByStaff).length} employee{Object.keys(usageByStaff).length !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>
