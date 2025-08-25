@@ -320,7 +320,9 @@ export default function HRPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4 mb-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={member.profileImagePath || undefined} />
+                      <AvatarImage 
+                        src={member.profileImagePath ? `/objects${member.profileImagePath}` : undefined} 
+                      />
                       <AvatarFallback>
                         {member.firstName?.[0]}{member.lastName?.[0]}
                       </AvatarFallback>
