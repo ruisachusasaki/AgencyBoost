@@ -9639,6 +9639,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get direct reports for managers
+  app.get("/api/staff/direct-reports", async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const directReports = await db.select()
+        .from(staff)
+        .where(eq(staff.managerId, currentUserId))
+        .orderBy(asc(staff.firstName));
+      
+      res.json(directReports);
+    } catch (error) {
+      console.error("Error fetching direct reports:", error);
+      res.status(500).json({ error: "Failed to fetch direct reports" });
+    }
+  });
+
+  // Get pending time off requests for manager's direct reports
+  app.get("/api/hr/time-off-requests/pending-for-approval", async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      // Get all pending requests from direct reports with staff details
+      const pendingRequests = await db.select({
+        id: timeOffRequests.id,
+        type: timeOffRequests.type,
+        startDate: timeOffRequests.startDate,
+        endDate: timeOffRequests.endDate,
+        totalDays: timeOffRequests.totalDays,
+        totalHours: timeOffRequests.totalHours,
+        reason: timeOffRequests.reason,
+        status: timeOffRequests.status,
+        createdAt: timeOffRequests.createdAt,
+        staff: {
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          department: staff.department,
+          position: staff.position,
+        }
+      })
+      .from(timeOffRequests)
+      .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+      .where(
+        and(
+          eq(timeOffRequests.status, "pending"),
+          eq(staff.managerId, currentUserId)
+        )
+      )
+      .orderBy(desc(timeOffRequests.createdAt));
+
+      // Get day breakdown for each request
+      const requestsWithDayBreakdown = await Promise.all(
+        pendingRequests.map(async (request) => {
+          const dayBreakdown = await db.select()
+            .from(timeOffRequestDays)
+            .where(eq(timeOffRequestDays.timeOffRequestId, request.id))
+            .orderBy(asc(timeOffRequestDays.date));
+
+          return {
+            ...request,
+            dayBreakdown: dayBreakdown.map(day => ({
+              date: day.date,
+              hours: Number(day.hours)
+            }))
+          };
+        })
+      );
+
+      res.json(requestsWithDayBreakdown);
+    } catch (error) {
+      console.error("Error fetching pending approvals:", error);
+      res.status(500).json({ error: "Failed to fetch pending approvals" });
+    }
+  });
+
+  // Approve or reject time off request
+  app.put("/api/hr/time-off-requests/:requestId/approval", async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const { action, rejectionReason } = req.body;
+      const currentUserId = req.session?.userId;
+
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!["approve", "reject"].includes(action)) {
+        return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
+      }
+
+      // Verify that the request belongs to a direct report
+      const [requestWithStaff] = await db.select()
+        .from(timeOffRequests)
+        .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+        .where(
+          and(
+            eq(timeOffRequests.id, requestId),
+            eq(staff.managerId, currentUserId)
+          )
+        );
+
+      if (!requestWithStaff) {
+        return res.status(404).json({ error: "Time off request not found or you don't have permission to approve it" });
+      }
+
+      if (requestWithStaff.time_off_requests.status !== "pending") {
+        return res.status(400).json({ error: "Request has already been processed" });
+      }
+
+      // Update the request
+      const updateData: any = {
+        status: action === "approve" ? "approved" : "rejected",
+        approvedBy: currentUserId,
+        approvedAt: new Date(),
+      };
+
+      if (action === "reject" && rejectionReason) {
+        updateData.rejectionReason = rejectionReason;
+      }
+
+      const [updatedRequest] = await db.update(timeOffRequests)
+        .set(updateData)
+        .where(eq(timeOffRequests.id, requestId))
+        .returning();
+
+      // Create audit log
+      await createAuditLog(
+        "updated",
+        "time_off_request",
+        requestId,
+        `Time off request ${action}d`,
+        currentUserId,
+        `${action === "approve" ? "Approved" : "Rejected"} time off request${rejectionReason ? ` with reason: ${rejectionReason}` : ""}`,
+        requestWithStaff.time_off_requests,
+        updatedRequest,
+        req
+      );
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error processing time off request approval:", error);
+      res.status(500).json({ error: "Failed to process approval" });
+    }
+  });
+
   // Job Application Routes
   app.get("/api/hr/job-applications", async (req, res) => {
     try {

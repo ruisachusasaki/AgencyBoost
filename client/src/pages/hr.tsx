@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
+import ApprovalBoard from "@/components/hr/approval-board";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -38,6 +39,18 @@ export default function HRPage() {
   const { data: staffData = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
+  
+  // Check if current user is a manager (has direct reports)
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+  
+  const { data: directReports = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff", "direct-reports"],
+    enabled: !!currentUser?.id,
+  });
+  
+  const isManager = directReports.length > 0;
 
   // Fetch time off requests
   const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
@@ -131,6 +144,7 @@ export default function HRPage() {
             { id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 },
             { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
             { id: "staff-directory", name: "Staff Directory", icon: Users, count: staffData.length },
+            ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
             { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
             { id: "reports", name: "Reports", icon: FileText, count: 0 }
           ].map((tab) => {
@@ -505,6 +519,17 @@ export default function HRPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+      )}
+
+      {activeTab === "approvals" && isManager && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Time Off Approvals</h2>
+            <p className="text-slate-600">Review and approve time off requests from your team</p>
+          </div>
+
+          <ApprovalBoard />
         </div>
       )}
 
