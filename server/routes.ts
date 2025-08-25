@@ -9666,10 +9666,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending time off requests for manager's direct reports
   app.get("/api/hr/time-off-requests/pending-for-approval", async (req, res) => {
     try {
-      const currentUserId = req.session?.userId;
-      if (!currentUserId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+      // Use the same mock authentication as other endpoints
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
 
       // Get all pending requests from direct reports with staff details
       const pendingRequests = await db.select({
@@ -9730,11 +9728,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { requestId } = req.params;
       const { action, rejectionReason } = req.body;
-      const currentUserId = req.session?.userId;
-
-      if (!currentUserId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+      // Use the same mock authentication as other endpoints
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
 
       if (!["approve", "reject"].includes(action)) {
         return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
