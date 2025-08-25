@@ -99,11 +99,11 @@ export default function HRPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="text-yellow-600"><AlertCircle className="h-3 w-3 mr-1" />Pending</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 border-yellow-200 text-yellow-700 font-medium"><AlertCircle className="h-3 w-3 mr-1" />Pending Review</Badge>;
       case "approved":
-        return <Badge variant="outline" className="text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+        return <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700 font-medium"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
       case "rejected":
-        return <Badge variant="outline" className="text-red-600"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+        return <Badge variant="outline" className="bg-red-50 border-red-200 text-red-700 font-medium"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -319,8 +319,19 @@ export default function HRPage() {
                 <div className="space-y-4">
                   {timeOffRequests.map((request) => {
                     const staff = staffData.find(s => s.id === request.staffId);
+                    const isProcessed = request.status !== "pending";
+                    const cardClasses = isProcessed 
+                      ? `flex items-center justify-between p-4 border rounded-lg ${
+                          request.status === "approved" 
+                            ? "bg-green-50 border-green-200" 
+                            : request.status === "rejected" 
+                            ? "bg-red-50 border-red-200" 
+                            : ""
+                        }` 
+                      : "flex items-center justify-between p-4 border rounded-lg bg-yellow-50 border-yellow-200";
+                    
                     return (
-                      <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={request.id} className={cardClasses}>
                         <div className="flex items-center gap-4">
                           <Avatar>
                             <AvatarImage src={staff?.profileImagePath || undefined} />
@@ -338,6 +349,13 @@ export default function HRPage() {
                                 `${new Date(request.startDate).toLocaleDateString()} - ${new Date(request.endDate).toLocaleDateString()}`
                               }
                             </p>
+                            {isProcessed && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                {request.status === "approved" ? "✓ " : "✗ "}
+                                {request.status === "approved" ? "Approved" : "Rejected"} 
+                                {request.updatedAt && ` on ${new Date(request.updatedAt).toLocaleDateString()}`}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
@@ -345,6 +363,11 @@ export default function HRPage() {
                           {request.reason && (
                             <p className="text-xs text-slate-600 mt-1 max-w-xs truncate">
                               {request.reason}
+                            </p>
+                          )}
+                          {request.status === "rejected" && request.rejectionReason && (
+                            <p className="text-xs text-red-600 mt-1 max-w-xs truncate">
+                              Reason: {request.rejectionReason}
                             </p>
                           )}
                         </div>
