@@ -42,15 +42,16 @@ export default function HRPage() {
   
   // Check if current user is a manager (has direct reports)
   const { data: currentUser } = useQuery({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/auth/current-user"],
   });
   
-  const { data: directReports = [] } = useQuery<Staff[]>({
+  const { data: directReports = [], isLoading: directReportsLoading } = useQuery<Staff[]>({
     queryKey: ["/api/hr/direct-reports"],
     enabled: !!currentUser?.id,
   });
   
   const isManager = directReports.length > 0;
+  
 
   // Fetch time off requests
   const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
