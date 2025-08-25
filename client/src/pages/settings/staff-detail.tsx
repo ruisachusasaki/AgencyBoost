@@ -512,14 +512,19 @@ export default function StaffDetail() {
                   <FormField
                     control={form.control}
                     name="position"
-                    render={({ field }) => (
+                    render={({ field }) => {
+                      console.log("Rendering position field with value:", field.value, "Available positions:", departmentPositions.map(p => p.name));
+                      return (
                       <FormItem>
                         <FormLabelWithTooltip tooltip="Choose a position from the selected department, or select a department first">
                           Position
                         </FormLabelWithTooltip>
                         <Select
                           value={field.value || "none"}
-                          onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                          onValueChange={(value) => {
+                            console.log("Position field changing from", field.value, "to", value);
+                            field.onChange(value === "none" ? "" : value);
+                          }}
                           disabled={!isEditing || !selectedDeptObj || selectedDepartment === "none"}
                         >
                           <FormControl>
@@ -548,7 +553,8 @@ export default function StaffDetail() {
                         </Select>
                         <FormMessage />
                       </FormItem>
-                    )}
+                      );
+                    }}
                   />
                   <FormField
                     control={form.control}
