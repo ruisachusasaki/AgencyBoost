@@ -9666,8 +9666,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending time off requests for manager's direct reports
   app.get("/api/hr/time-off-requests/pending-for-approval", async (req, res) => {
     try {
+      console.log("DEBUG: Pending approvals endpoint called");
       // Use the same mock authentication as other endpoints
       const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      console.log("DEBUG: Using current user ID:", currentUserId);
 
       // Get all pending requests from direct reports with staff details
       const pendingRequests = await db.select({
