@@ -9698,25 +9698,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       )
       .orderBy(desc(timeOffRequests.createdAt));
 
-      // Get day breakdown for each request
-      const requestsWithDayBreakdown = await Promise.all(
-        pendingRequests.map(async (request) => {
-          const dayBreakdown = await db.select()
-            .from(timeOffRequestDays)
-            .where(eq(timeOffRequestDays.timeOffRequestId, request.id))
-            .orderBy(asc(timeOffRequestDays.date));
-
-          return {
-            ...request,
-            dayBreakdown: dayBreakdown.map(day => ({
-              date: day.date,
-              hours: Number(day.hours)
-            }))
-          };
-        })
-      );
-
-      res.json(requestsWithDayBreakdown);
+      // Return pending requests without day breakdown for now
+      res.json(pendingRequests);
     } catch (error) {
       console.error("Error fetching pending approvals:", error);
       res.status(500).json({ error: "Failed to fetch pending approvals" });
