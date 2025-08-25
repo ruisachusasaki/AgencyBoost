@@ -9669,37 +9669,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the same mock authentication as other endpoints
       const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
 
-      // Get all pending requests from direct reports with staff details
-      const pendingRequests = await db.select({
-        id: timeOffRequests.id,
-        type: timeOffRequests.type,
-        startDate: timeOffRequests.startDate,
-        endDate: timeOffRequests.endDate,
-        totalDays: timeOffRequests.totalDays,
-        totalHours: timeOffRequests.totalHours,
-        reason: timeOffRequests.reason,
-        status: timeOffRequests.status,
-        createdAt: timeOffRequests.createdAt,
-        staff: {
-          firstName: staff.firstName,
-          lastName: staff.lastName,
-          email: staff.email,
-          department: staff.department,
-          position: staff.position,
-        }
-      })
-      .from(timeOffRequests)
-      .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
-      .where(
-        and(
-          eq(timeOffRequests.status, "pending"),
-          eq(staff.managerId, currentUserId)
+      // Simple query to get pending requests for direct reports
+      const pendingRequests = await db.select()
+        .from(timeOffRequests)
+        .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+        .where(
+          and(
+            eq(timeOffRequests.status, "pending"),
+            eq(staff.managerId, currentUserId)
+          )
         )
-      )
-      .orderBy(desc(timeOffRequests.createdAt));
+        .orderBy(desc(timeOffRequests.createdAt));
 
-      // Return pending requests without day breakdown for now
-      res.json(pendingRequests);
+      // Format the response for the frontend
+      const formattedRequests = pendingRequests.map(row => ({
+        id: row.time_off_requests.id,
+        type: row.time_off_requests.type,
+        startDate: row.time_off_requests.startDate,
+        endDate: row.time_off_requests.endDate,
+        totalDays: row.time_off_requests.totalDays,
+        totalHours: row.time_off_requests.totalHours,
+        reason: row.time_off_requests.reason,
+        status: row.time_off_requests.status,
+        createdAt: row.time_off_requests.createdAt,
+        staff: {
+          firstName: row.staff.firstName,
+          lastName: row.staff.lastName,
+          email: row.staff.email,
+          department: row.staff.department,
+          position: row.staff.position,
+        }
+      }));
+
+      res.json(formattedRequests);
     } catch (error) {
       console.error("Error fetching pending approvals:", error);
       res.status(500).json({ error: "Failed to fetch pending approvals" });
