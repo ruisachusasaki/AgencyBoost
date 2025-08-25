@@ -508,10 +508,13 @@ export default function StaffDetail() {
                           Position
                         </FormLabelWithTooltip>
                         <Select
-                          value={field.value || "none"}
+                          value={field.value === "" ? "none" : (field.value || "none")}
                           onValueChange={(value) => {
-                            console.log("Position field changing from", field.value, "to", value);
-                            field.onChange(value === "none" ? "" : value);
+                            // Only process onChange if user is actively editing
+                            if (isEditing) {
+                              console.log("Position field changing from", field.value, "to", value);
+                              field.onChange(value === "none" ? "" : value);
+                            }
                           }}
                           disabled={!isEditing || !selectedDeptObj || selectedDepartment === "none"}
                         >

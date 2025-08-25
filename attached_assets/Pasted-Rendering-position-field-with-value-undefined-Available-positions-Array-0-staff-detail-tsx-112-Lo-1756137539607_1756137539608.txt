@@ -1,0 +1,28 @@
+Rendering position field with value: undefined Available positions: Array(0)
+staff-detail.tsx:112 Loading staff member: Alex Trujillo Department: Account Management Position: Account Manager
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(0)
+staff-detail.tsx:513 Position field changing from undefined to 
+staff-detail.tsx:504 Rendering position field with value:  Available positions: Array(0)
+staff-detail.tsx:504 Rendering position field with value:  Available positions: Array(0)
+staff-detail.tsx:504 Rendering position field with value:  Available positions: Array(1)
+staff-detail.tsx:504 Rendering position field with value:  Available positions: Array(1)
+staff-detail.tsx:513 Position field changing from  to Account Manager
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:229 Form data before processing: Object
+staff-detail.tsx:236 Submit data after processing: Object
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:147 Submitting data - Position: Account Manager Department: Account Management
+staff-detail.tsx:150 Server response - Position: Account Manager Department: Account Management
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:112 Loading staff member: Alex Trujillo Department: Account Management Position: Account Manager
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:504 Rendering position field with value: undefined Available positions: Array(0)
+staff-detail.tsx:112 Loading staff member: Alex Trujillo Department: Account Management Position: Account Manager
+staff-detail.tsx:504 Rendering position field with value: Account Manager Available positions: Array(1)
+staff-detail.tsx:513 Position field changing from undefined to 
+staff-detail.tsx:504 Rendering position field with value:  Available positions: Array(1)
+staff-detail.tsx:504 Rendering position field with value:  Available positions: Array(1)
+11024 log entries are not shown.
