@@ -109,7 +109,6 @@ export default function StaffDetail() {
   // Update form values when staff member changes
   useEffect(() => {
     if (staffMember) {
-      console.log("Loading staff member:", `${staffMember.firstName} ${staffMember.lastName}`, "Department:", staffMember.department, "Position:", staffMember.position);
       form.reset({
         firstName: staffMember.firstName,
         lastName: staffMember.lastName,
@@ -139,15 +138,13 @@ export default function StaffDetail() {
       console.log("Department changed during editing, clearing position");
       form.setValue("position", "");
     }
-    setPreviousDepartment(selectedDepartment);
+    setPreviousDepartment(selectedDepartment || "");
   }, [selectedDepartment, isEditing, form, previousDepartment]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
-      console.log("Submitting data - Position:", data.position, "Department:", data.department);
       const response = await apiRequest("PUT", `/api/staff/${id}`, data);
       const result = await response.json();
-      console.log("Server response - Position:", result.position, "Department:", result.department);
       return result;
     },
     onSuccess: () => {
@@ -501,7 +498,6 @@ export default function StaffDetail() {
                     control={form.control}
                     name="position"
                     render={({ field }) => {
-                      console.log("Rendering position field with value:", field.value, "Available positions:", departmentPositions.map(p => p.name));
                       return (
                       <FormItem>
                         <FormLabelWithTooltip tooltip="Choose a position from the selected department, or select a department first">
@@ -512,7 +508,6 @@ export default function StaffDetail() {
                           onValueChange={(value) => {
                             // Only process onChange if user is actively editing
                             if (isEditing) {
-                              console.log("Position field changing from", field.value, "to", value);
                               field.onChange(value === "none" ? "" : value);
                             }
                           }}
