@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   CalendarDays, 
   Users, 
@@ -24,6 +25,10 @@ import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
+  
+  // Filter states for staff directory
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [positionFilter, setPositionFilter] = useState("all");
 
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
@@ -46,6 +51,32 @@ export default function HRPage() {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     return app.appliedAt && new Date(app.appliedAt) > oneWeekAgo;
   });
+
+  // Extract unique departments and positions for filters
+  const uniqueDepartments = useMemo(() => {
+    const departments = Array.from(new Set(staffData
+      .map(member => member.department)
+      .filter(dept => dept && dept.trim() !== "")))
+      .sort();
+    return departments;
+  }, [staffData]);
+
+  const uniquePositions = useMemo(() => {
+    const positions = Array.from(new Set(staffData
+      .map(member => member.position)
+      .filter(pos => pos && pos.trim() !== "")))
+      .sort();
+    return positions;
+  }, [staffData]);
+
+  // Filter staff data based on selected filters
+  const filteredStaffData = useMemo(() => {
+    return staffData.filter(member => {
+      const matchesDepartment = departmentFilter === "all" || member.department === departmentFilter;
+      const matchesPosition = positionFilter === "all" || member.position === positionFilter;
+      return matchesDepartment && matchesPosition;
+    });
+  }, [staffData, departmentFilter, positionFilter]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -312,10 +343,40 @@ export default function HRPage() {
               <h2 className="text-2xl font-bold">Staff Directory</h2>
               <p className="text-slate-600">View all team members and their information</p>
             </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-600">Department:</label>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-40" data-testid="select-department-filter">
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {uniqueDepartments.map((department) => (
+                      <SelectItem key={department} value={department}>{department}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-600">Position:</label>
+                <Select value={positionFilter} onValueChange={setPositionFilter}>
+                  <SelectTrigger className="w-40" data-testid="select-position-filter">
+                    <SelectValue placeholder="All Positions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Positions</SelectItem>
+                    {uniquePositions.map((position) => (
+                      <SelectItem key={position} value={position}>{position}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {staffData.map((member) => (
+            {filteredStaffData.map((member) => (
               <Card key={member.id}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4 mb-4">
