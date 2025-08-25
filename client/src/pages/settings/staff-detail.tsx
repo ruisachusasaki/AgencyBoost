@@ -130,29 +130,17 @@ export default function StaffDetail() {
     }
   }, [staffMember, form]);
 
-  // Track the initial department load to avoid clearing position on page load
-  const [initialDepartmentLoaded, setInitialDepartmentLoaded] = useState(false);
-
-  // Clear position when department changes during editing (since positions are department-specific)
+  // Only clear position when actively changing departments during editing
+  const [previousDepartment, setPreviousDepartment] = useState<string>("");
+  
   useEffect(() => {
-    if (selectedDepartment && isEditing && initialDepartmentLoaded) {
-      // Only clear position if we're actively editing and the department actually changed
-      const currentPosition = form.getValues("position");
-      console.log("Department change effect:", { selectedDepartment, currentPosition, isEditing, initialDepartmentLoaded });
-      if (currentPosition && selectedDepartment !== "none") {
-        // Check if the current position exists in the new department's positions
-        // If not, we'll clear it when the positions load
-        console.log("Clearing position due to department change");
-        form.setValue("position", "");
-      }
+    if (isEditing && previousDepartment && previousDepartment !== selectedDepartment) {
+      // Only clear when user actively changes department during editing
+      console.log("Department changed during editing, clearing position");
+      form.setValue("position", "");
     }
-    
-    // Mark that we've loaded the initial department
-    if (selectedDepartment && !initialDepartmentLoaded) {
-      setInitialDepartmentLoaded(true);
-      console.log("Initial department loaded:", selectedDepartment);
-    }
-  }, [selectedDepartment, form, isEditing, initialDepartmentLoaded]);
+    setPreviousDepartment(selectedDepartment);
+  }, [selectedDepartment, isEditing, form, previousDepartment]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
