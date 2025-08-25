@@ -109,11 +109,7 @@ export default function StaffDetail() {
   // Update form values when staff member changes
   useEffect(() => {
     if (staffMember) {
-      console.log("Loading staff member:", {
-        name: `${staffMember.firstName} ${staffMember.lastName}`,
-        department: staffMember.department,
-        position: staffMember.position
-      });
+      console.log("Loading staff member:", `${staffMember.firstName} ${staffMember.lastName}`, "Department:", staffMember.department, "Position:", staffMember.position);
       form.reset({
         firstName: staffMember.firstName,
         lastName: staffMember.lastName,
@@ -160,10 +156,10 @@ export default function StaffDetail() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
-      console.log("Submitting data:", data);
+      console.log("Submitting data - Position:", data.position, "Department:", data.department);
       const response = await apiRequest("PUT", `/api/staff/${id}`, data);
       const result = await response.json();
-      console.log("Server response:", result);
+      console.log("Server response - Position:", result.position, "Department:", result.department);
       return result;
     },
     onSuccess: () => {
