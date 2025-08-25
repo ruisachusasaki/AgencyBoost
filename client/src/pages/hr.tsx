@@ -112,7 +112,10 @@ export default function HRPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Human Resources</h1>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
+            <UserCheck className="h-8 w-8 text-primary" />
+            <span>Human Resources</span>
+          </h1>
           <p className="text-slate-600">Manage staff, time off, and recruitment</p>
         </div>
       </div>
