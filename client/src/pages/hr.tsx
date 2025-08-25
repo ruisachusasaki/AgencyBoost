@@ -342,7 +342,10 @@ export default function HRPage() {
                           <div>
                             <p className="font-medium">{staff?.firstName} {staff?.lastName}</p>
                             <p className="text-sm text-slate-600">
-                              {request.type.replace('_', ' ')} • {request.totalDays} days
+                              {request.type === 'vacation' ? 'Vacation (PTO)' : 
+                               request.type === 'sick' ? 'Sick Leave' : 
+                               request.type === 'personal' ? 'Personal Time Off' : 
+                               request.type.replace('_', ' ')} • {request.totalDays} days
                             </p>
                             <p className="text-sm text-slate-600">
                               {request.startDate && request.endDate && 

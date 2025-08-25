@@ -26,7 +26,7 @@ const timeOffRequestSchema = z.object({
   endDate: z.date({
     required_error: "End date is required",
   }),
-  type: z.enum(["PTO", "Sick Leave", "Unpaid Time Off"], {
+  type: z.enum(["vacation", "sick", "personal"], {
     required_error: "Time off category is required",
   }),
   reason: z.string().optional(),
@@ -256,9 +256,9 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="PTO">PTO</SelectItem>
-                      <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                      <SelectItem value="Unpaid Time Off">Unpaid Time Off</SelectItem>
+                      <SelectItem value="vacation">Vacation (PTO)</SelectItem>
+                      <SelectItem value="sick">Sick Leave</SelectItem>
+                      <SelectItem value="personal">Personal Time Off</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
