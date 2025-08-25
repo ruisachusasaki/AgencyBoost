@@ -3963,6 +3963,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Staff member not found" });
       }
       
+      console.log(`Fetching staff ${req.params.id}:`, { 
+        name: `${staffMember.firstName} ${staffMember.lastName}`, 
+        position: staffMember.position, 
+        department: staffMember.department 
+      });
       res.json(staffMember);
     } catch (error) {
       console.error('Error fetching staff member:', error);
@@ -3986,6 +3991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/staff/:id", async (req, res) => {
     try {
+      console.log(`Updating staff ${req.params.id} with data:`, req.body);
       // Clean up the request body to handle empty date fields properly
       const cleanedBody = { ...req.body };
       
@@ -4023,6 +4029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Staff member not found" });
       }
       
+      console.log(`Staff ${req.params.id} updated successfully:`, updatedStaff);
       res.json(updatedStaff);
     } catch (error) {
       console.error('Error updating staff:', error);
