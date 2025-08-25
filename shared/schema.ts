@@ -571,10 +571,11 @@ export const imageAnnotations = pgTable("image_annotations", {
 export const timeOffRequests = pgTable("time_off_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // vacation, sick_leave, personal_day
+  type: text("type").notNull(), // PTO, Sick Leave, Unpaid Time Off
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   totalDays: integer("total_days").notNull(),
+  totalHours: decimal("total_hours", { precision: 5, scale: 2 }).notNull().default("0"),
   reason: text("reason"),
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   approvedBy: uuid("approved_by").references(() => staff.id),
@@ -582,6 +583,15 @@ export const timeOffRequests = pgTable("time_off_requests", {
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// HR System - Time Off Request Daily Details (for hour-by-hour breakdown)
+export const timeOffRequestDays = pgTable("time_off_request_days", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timeOffRequestId: varchar("time_off_request_id").notNull().references(() => timeOffRequests.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  hours: decimal("hours", { precision: 5, scale: 2 }).notNull().default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // HR System - Job Applications
@@ -1045,8 +1055,15 @@ export const insertTimeOffBalanceSchema = createInsertSchema(timeOffBalances).om
   updatedAt: true,
 });
 
+export const insertTimeOffRequestDaySchema = createInsertSchema(timeOffRequestDays).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type TimeOffRequest = typeof timeOffRequests.$inferSelect;
 export type InsertTimeOffRequest = z.infer<typeof insertTimeOffRequestSchema>;
+export type TimeOffRequestDay = typeof timeOffRequestDays.$inferSelect;
+export type InsertTimeOffRequestDay = z.infer<typeof insertTimeOffRequestDaySchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type ApplicationStageHistory = typeof applicationStageHistory.$inferSelect;

@@ -45,6 +45,7 @@ import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
 import HRPage from "@/pages/hr";
+import HRSettings from "@/pages/settings/hr-settings";
 
 function Router() {
   return (
@@ -78,6 +79,7 @@ function Router() {
       <Route path="/settings/staff/:id" component={StaffDetail} />
       <Route path="/settings/teams/:id" component={TeamDetail} />
       <Route path="/settings/support" component={Support} />
+      <Route path="/settings/hr-settings" component={HRSettings} />
       <Route path="/settings/roles-permissions" component={RolesPermissions} />
       <Route path="/settings/permission-audit" component={PermissionAudit} />
       <Route path="/settings/integrations" component={Integrations} />

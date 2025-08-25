@@ -13,13 +13,15 @@ import {
   ScrollText,
   ShieldCheck,
   Calendar,
-  Layers
+  Layers,
+  UserCheck
 } from "lucide-react";
 
 const settingsNavigation = [
   { name: "Business Profile", href: "/settings/business-profile", icon: Building },
   { name: "My Profile", href: "/settings/my-profile", icon: User },
   { name: "Staff", href: "/settings/staff", icon: Users },
+  { name: "HR Settings", href: "/settings/hr-settings", icon: UserCheck },
   { name: "Support", href: "/settings/support", icon: HeadphonesIcon },
   { name: "Roles & Permissions", href: "/settings/roles-permissions", icon: Shield },
   { name: "Permission Audit", href: "/settings/permission-audit", icon: ShieldCheck },
@@ -73,6 +75,7 @@ function getSettingDescription(name: string): string {
     "Business Profile": "Manage company information and branding",
     "My Profile": "Update your personal profile and preferences",
     "Staff": "Manage team members and user accounts",
+    "HR Settings": "Configure time off categories and HR policies",
     "Support": "Configure support departments and ticketing",
     "Roles & Permissions": "Create custom roles and set permissions",
     "Permission Audit": "Track permission changes and role assignments",

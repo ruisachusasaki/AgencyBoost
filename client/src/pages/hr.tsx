@@ -22,6 +22,7 @@ import {
   UserCheck
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
+import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -29,6 +30,9 @@ export default function HRPage() {
   // Filter states for staff directory
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [positionFilter, setPositionFilter] = useState("all");
+  
+  // Time off request form state
+  const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
 
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
@@ -282,7 +286,7 @@ export default function HRPage() {
               <h2 className="text-2xl font-bold">Time Off Management</h2>
               <p className="text-slate-600">Manage vacation, sick leave, and personal day requests</p>
             </div>
-            <Button>
+            <Button onClick={() => setIsTimeOffRequestOpen(true)} data-testid="button-new-request">
               <CalendarDays className="h-4 w-4 mr-2" />
               New Request
             </Button>
@@ -503,6 +507,12 @@ export default function HRPage() {
           </div>
         </div>
       )}
+
+      {/* Time Off Request Dialog */}
+      <TimeOffRequestForm 
+        open={isTimeOffRequestOpen} 
+        onOpenChange={setIsTimeOffRequestOpen} 
+      />
     </div>
   );
 }
