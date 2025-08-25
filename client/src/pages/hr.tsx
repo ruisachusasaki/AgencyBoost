@@ -47,7 +47,7 @@ export default function HRPage() {
   
   const { data: directReports = [], isLoading: directReportsLoading } = useQuery<Staff[]>({
     queryKey: ["/api/hr/direct-reports"],
-    enabled: !!currentUser?.id,
+    enabled: !!(currentUser as any)?.id,
   });
   
   const isManager = directReports.length > 0;
@@ -401,7 +401,7 @@ export default function HRPage() {
                   <SelectContent>
                     <SelectItem value="all">All Departments</SelectItem>
                     {uniqueDepartments.map((department) => (
-                      <SelectItem key={department} value={department}>{department}</SelectItem>
+                      <SelectItem key={department} value={department || ''}>{department}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -415,7 +415,7 @@ export default function HRPage() {
                   <SelectContent>
                     <SelectItem value="all">All Positions</SelectItem>
                     {uniquePositions.map((position) => (
-                      <SelectItem key={position} value={position}>{position}</SelectItem>
+                      <SelectItem key={position} value={position || ''}>{position}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
