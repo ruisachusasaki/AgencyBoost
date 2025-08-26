@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,9 @@ export default function HRPage() {
   
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
+  
+  // Job opening modal state
+  const [isJobOpeningModalOpen, setIsJobOpeningModalOpen] = useState(false);
 
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
@@ -133,6 +137,7 @@ export default function HRPage() {
         benefits: ""
       });
       setSelectedDepartmentId("");
+      setIsJobOpeningModalOpen(false);
     },
   });
 
@@ -866,179 +871,197 @@ export default function HRPage() {
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Job Openings Management</h2>
-              <p className="text-slate-600">Create and manage job openings for your department</p>
+              <p className="text-slate-600">Manage and track job openings for your department</p>
             </div>
+            <Dialog open={isJobOpeningModalOpen} onOpenChange={setIsJobOpeningModalOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-open-create-modal">
+                  Create Job Opening
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Job Opening</DialogTitle>
+                  <DialogDescription>Fill out the details for a new position opening</DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Department Selection */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Department *</label>
+                      <Select value={jobOpeningForm.departmentId} onValueChange={handleDepartmentChange} data-testid="select-department">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((dept: any) => (
+                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Position Selection */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Position *</label>
+                      <Select 
+                        value={jobOpeningForm.positionId}
+                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, positionId: value}))}
+                        disabled={!selectedDepartmentId} 
+                        data-testid="select-position"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Position" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {positions.map((pos: any) => (
+                            <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Employment Type */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Employment Type *</label>
+                      <Select 
+                        value={jobOpeningForm.employmentType}
+                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, employmentType: value}))}
+                        data-testid="select-employment-type"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Employment Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full_time">Full-Time</SelectItem>
+                          <SelectItem value="part_time">Part-Time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Hiring Manager */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Hiring Manager *</label>
+                      <Select 
+                        value={jobOpeningForm.hiringManagerId}
+                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value}))}
+                        data-testid="select-hiring-manager"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Hiring Manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staffData.filter(staff => staff.position?.toLowerCase().includes('manager') || staff.position?.toLowerCase().includes('director')).map((manager: any) => (
+                            <SelectItem key={manager.id} value={manager.id}>
+                              {manager.firstName} {manager.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Compensation */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Compensation</label>
+                      <Input 
+                        type="number" 
+                        placeholder="50000" 
+                        value={jobOpeningForm.compensation}
+                        onChange={(e) => setJobOpeningForm(prev => ({...prev, compensation: e.target.value}))}
+                        data-testid="input-compensation"
+                      />
+                    </div>
+
+                    {/* Compensation Type */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Compensation Type</label>
+                      <Select 
+                        value={jobOpeningForm.compensationType}
+                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, compensationType: value}))}
+                        data-testid="select-compensation-type"
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="annual">Annual</SelectItem>
+                          <SelectItem value="hourly">Hourly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Job Description */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Job Description</label>
+                    <textarea 
+                      className="w-full min-h-[100px] p-3 border rounded-md resize-none"
+                      placeholder="Describe the role, responsibilities, and requirements..."
+                      value={jobOpeningForm.jobDescription}
+                      onChange={(e) => setJobOpeningForm(prev => ({...prev, jobDescription: e.target.value}))}
+                      data-testid="textarea-job-description"
+                    />
+                  </div>
+
+                  {/* Requirements */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Requirements</label>
+                    <textarea 
+                      className="w-full min-h-[80px] p-3 border rounded-md resize-none"
+                      placeholder="List required skills, education, experience..."
+                      value={jobOpeningForm.requirements}
+                      onChange={(e) => setJobOpeningForm(prev => ({...prev, requirements: e.target.value}))}
+                      data-testid="textarea-requirements"
+                    />
+                  </div>
+
+                  {/* Benefits */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Benefits</label>
+                    <textarea 
+                      className="w-full min-h-[80px] p-3 border rounded-md resize-none"
+                      placeholder="Health insurance, 401k, vacation days..."
+                      value={jobOpeningForm.benefits}
+                      onChange={(e) => setJobOpeningForm(prev => ({...prev, benefits: e.target.value}))}
+                      data-testid="textarea-benefits"
+                    />
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    onClick={handleCreateJobOpening}
+                    disabled={createJobOpeningMutation.isPending}
+                    data-testid="button-create-opening"
+                  >
+                    {createJobOpeningMutation.isPending ? "Creating..." : "Create Job Opening"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
-          {/* Create New Job Opening Form */}
+          {/* Existing Job Openings - Now the main content */}
           <Card>
             <CardHeader>
-              <CardTitle>Create New Job Opening</CardTitle>
-              <CardDescription>Fill out the details for a new position opening</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Department Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Department *</label>
-                  <Select value={jobOpeningForm.departmentId} onValueChange={handleDepartmentChange} data-testid="select-department">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept: any) => (
-                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Position Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Position *</label>
-                  <Select 
-                    value={jobOpeningForm.positionId}
-                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, positionId: value}))}
-                    disabled={!selectedDepartmentId} 
-                    data-testid="select-position"
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {positions.map((pos: any) => (
-                        <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Employment Type */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Employment Type *</label>
-                  <Select 
-                    value={jobOpeningForm.employmentType}
-                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, employmentType: value}))}
-                    data-testid="select-employment-type"
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Employment Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="full_time">Full-Time</SelectItem>
-                      <SelectItem value="part_time">Part-Time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Hiring Manager */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Hiring Manager *</label>
-                  <Select 
-                    value={jobOpeningForm.hiringManagerId}
-                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value}))}
-                    data-testid="select-hiring-manager"
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Hiring Manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staffData.filter(staff => staff.position?.toLowerCase().includes('manager') || staff.position?.toLowerCase().includes('director')).map((manager: any) => (
-                        <SelectItem key={manager.id} value={manager.id}>
-                          {manager.firstName} {manager.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Compensation */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Compensation</label>
-                  <Input 
-                    type="number" 
-                    placeholder="50000" 
-                    value={jobOpeningForm.compensation}
-                    onChange={(e) => setJobOpeningForm(prev => ({...prev, compensation: e.target.value}))}
-                    data-testid="input-compensation"
-                  />
-                </div>
-
-                {/* Compensation Type */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Compensation Type</label>
-                  <Select 
-                    value={jobOpeningForm.compensationType}
-                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, compensationType: value}))}
-                    data-testid="select-compensation-type"
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="annual">Annual</SelectItem>
-                      <SelectItem value="hourly">Hourly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Job Description */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Job Description</label>
-                <textarea 
-                  className="w-full min-h-[100px] p-3 border rounded-md resize-none"
-                  placeholder="Describe the role, responsibilities, and requirements..."
-                  value={jobOpeningForm.jobDescription}
-                  onChange={(e) => setJobOpeningForm(prev => ({...prev, jobDescription: e.target.value}))}
-                  data-testid="textarea-job-description"
-                />
-              </div>
-
-              {/* Requirements */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Requirements</label>
-                <textarea 
-                  className="w-full min-h-[80px] p-3 border rounded-md resize-none"
-                  placeholder="List required skills, education, experience..."
-                  value={jobOpeningForm.requirements}
-                  onChange={(e) => setJobOpeningForm(prev => ({...prev, requirements: e.target.value}))}
-                  data-testid="textarea-requirements"
-                />
-              </div>
-
-              {/* Benefits */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Benefits</label>
-                <textarea 
-                  className="w-full min-h-[80px] p-3 border rounded-md resize-none"
-                  placeholder="Health insurance, 401k, vacation days..."
-                  value={jobOpeningForm.benefits}
-                  onChange={(e) => setJobOpeningForm(prev => ({...prev, benefits: e.target.value}))}
-                  data-testid="textarea-benefits"
-                />
-              </div>
-
-              <Button 
-                className="w-full" 
-                onClick={handleCreateJobOpening}
-                disabled={createJobOpeningMutation.isPending}
-                data-testid="button-create-opening"
-              >
-                {createJobOpeningMutation.isPending ? "Creating..." : "Create Job Opening"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Existing Job Openings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Existing Job Openings</CardTitle>
-              <CardDescription>Manage and track your department's job openings</CardDescription>
+              <CardTitle>Job Openings</CardTitle>
+              <CardDescription>View and manage all job openings</CardDescription>
             </CardHeader>
             <CardContent>
               {jobOpenings.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No job openings created yet</p>
+                <div className="text-center py-12">
+                  <div className="text-slate-400 mb-4">
+                    <FileText className="h-12 w-12 mx-auto" />
+                  </div>
+                  <p className="text-slate-500 mb-4">No job openings created yet</p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsJobOpeningModalOpen(true)}
+                    data-testid="button-create-first-opening"
+                  >
+                    Create Your First Job Opening
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {jobOpenings.map((opening: any) => (
@@ -1047,7 +1070,7 @@ export default function HRPage() {
                         <div className="flex items-center gap-4">
                           <div>
                             <h3 className="font-medium">{opening.positionName}</h3>
-                            <p className="text-sm text-slate-600">{opening.departmentName} • {opening.employmentType.replace('_', ' ')}</p>
+                            <p className="text-sm text-slate-600">{opening.departmentName} • {opening.employmentType?.replace('_', ' ')}</p>
                             <p className="text-sm text-slate-600">
                               Hiring Manager: {opening.hiringManagerName}
                             </p>
@@ -1070,7 +1093,7 @@ export default function HRPage() {
                             'bg-red-100 text-red-800 border-red-200'
                           }
                         >
-                          {opening.status.replace('_', ' ').toUpperCase()}
+                          {opening.status?.replace('_', ' ').toUpperCase()}
                         </Badge>
                         <Badge 
                           variant="outline"

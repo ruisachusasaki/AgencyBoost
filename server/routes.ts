@@ -40,6 +40,7 @@ import { randomUUID } from "crypto";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
 import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
 
@@ -9827,6 +9828,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/job-openings", async (req, res) => {
     try {
       const { status, departmentId, hiringManagerId } = req.query;
+      const hiringManager = alias(staff, 'hiring_manager');
+      const creator = alias(staff, 'creator');
+      const approver = alias(staff, 'approver');
+
       let query = db.select({
         id: jobOpenings.id,
         departmentId: jobOpenings.departmentId,
@@ -9835,7 +9840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         positionName: positions.name,
         status: jobOpenings.status,
         hiringManagerId: jobOpenings.hiringManagerId,
-        hiringManagerName: sql<string>`CONCAT(hiring_manager.first_name, ' ', hiring_manager.last_name)`,
+        hiringManagerName: sql<string>`CONCAT(${hiringManager.firstName}, ' ', ${hiringManager.lastName})`,
         employmentType: jobOpenings.employmentType,
         compensation: jobOpenings.compensation,
         compensationType: jobOpenings.compensationType,
@@ -9843,10 +9848,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirements: jobOpenings.requirements,
         benefits: jobOpenings.benefits,
         createdById: jobOpenings.createdById,
-        createdByName: sql<string>`CONCAT(creator.first_name, ' ', creator.last_name)`,
+        createdByName: sql<string>`CONCAT(${creator.firstName}, ' ', ${creator.lastName})`,
         approvalStatus: jobOpenings.approvalStatus,
         approvedById: jobOpenings.approvedById,
-        approvedByName: sql<string>`CONCAT(approver.first_name, ' ', approver.last_name)`,
+        approvedByName: sql<string>`CONCAT(${approver.firstName}, ' ', ${approver.lastName})`,
         approvedAt: jobOpenings.approvedAt,
         rejectionReason: jobOpenings.rejectionReason,
         isPublic: jobOpenings.isPublic,
@@ -9857,9 +9862,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .from(jobOpenings)
       .leftJoin(departments, eq(jobOpenings.departmentId, departments.id))
       .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
-      .leftJoin(staff.as('hiring_manager'), eq(jobOpenings.hiringManagerId, staff.as('hiring_manager').id))
-      .leftJoin(staff.as('creator'), eq(jobOpenings.createdById, staff.as('creator').id))
-      .leftJoin(staff.as('approver'), eq(jobOpenings.approvedById, staff.as('approver').id))
+      .leftJoin(hiringManager, eq(jobOpenings.hiringManagerId, hiringManager.id))
+      .leftJoin(creator, eq(jobOpenings.createdById, creator.id))
+      .leftJoin(approver, eq(jobOpenings.approvedById, approver.id))
       .orderBy(desc(jobOpenings.createdAt));
 
       // Apply filters if provided
@@ -9919,6 +9924,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/job-openings/:id", async (req, res) => {
     try {
+      const hiringManager = alias(staff, 'hiring_manager');
+      const creator = alias(staff, 'creator');
+      const approver = alias(staff, 'approver');
+
       const [opening] = await db.select({
         id: jobOpenings.id,
         departmentId: jobOpenings.departmentId,
@@ -9928,7 +9937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         positionDescription: positions.description,
         status: jobOpenings.status,
         hiringManagerId: jobOpenings.hiringManagerId,
-        hiringManagerName: sql<string>`CONCAT(hiring_manager.first_name, ' ', hiring_manager.last_name)`,
+        hiringManagerName: sql<string>`CONCAT(${hiringManager.firstName}, ' ', ${hiringManager.lastName})`,
         employmentType: jobOpenings.employmentType,
         compensation: jobOpenings.compensation,
         compensationType: jobOpenings.compensationType,
@@ -9936,10 +9945,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirements: jobOpenings.requirements,
         benefits: jobOpenings.benefits,
         createdById: jobOpenings.createdById,
-        createdByName: sql<string>`CONCAT(creator.first_name, ' ', creator.last_name)`,
+        createdByName: sql<string>`CONCAT(${creator.firstName}, ' ', ${creator.lastName})`,
         approvalStatus: jobOpenings.approvalStatus,
         approvedById: jobOpenings.approvedById,
-        approvedByName: sql<string>`CONCAT(approver.first_name, ' ', approver.last_name)`,
+        approvedByName: sql<string>`CONCAT(${approver.firstName}, ' ', ${approver.lastName})`,
         approvedAt: jobOpenings.approvedAt,
         rejectionReason: jobOpenings.rejectionReason,
         isPublic: jobOpenings.isPublic,
@@ -9950,9 +9959,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .from(jobOpenings)
       .leftJoin(departments, eq(jobOpenings.departmentId, departments.id))
       .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
-      .leftJoin(staff.as('hiring_manager'), eq(jobOpenings.hiringManagerId, staff.as('hiring_manager').id))
-      .leftJoin(staff.as('creator'), eq(jobOpenings.createdById, staff.as('creator').id))
-      .leftJoin(staff.as('approver'), eq(jobOpenings.approvedById, staff.as('approver').id))
+      .leftJoin(hiringManager, eq(jobOpenings.hiringManagerId, hiringManager.id))
+      .leftJoin(creator, eq(jobOpenings.createdById, creator.id))
+      .leftJoin(approver, eq(jobOpenings.approvedById, approver.id))
       .where(eq(jobOpenings.id, req.params.id));
 
       if (!opening) {
