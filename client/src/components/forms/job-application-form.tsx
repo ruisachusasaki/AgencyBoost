@@ -77,13 +77,19 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
 
   const submitApplicationMutation = useMutation({
     mutationFn: async (data: InsertJobApplication) => {
-      await apiRequest("/api/job-applications", {
+      const response = await fetch("/api/job-applications", {
         method: "POST",
         body: JSON.stringify(data),
         headers: {
           "Content-Type": "application/json",
         },
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -98,15 +104,31 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
       console.error("Application submission error:", error);
       toast({
         title: "Submission Failed",
-        description: "There was an error submitting your application. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error submitting your application. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: InsertJobApplication) => {
-    console.log("Submitting application:", data);
-    submitApplicationMutation.mutate(data);
+    console.log("Submitting application data:", data);
+    
+    // Map the form data to include custom fields
+    const submitData = {
+      ...data,
+      // Store custom field data in the customFieldData JSON column
+      customFieldData: Object.keys(data).reduce((acc: Record<string, any>, key) => {
+        // Skip standard fields that are already in the schema
+        const standardFields = ['positionId', 'applicantName', 'applicantEmail', 'applicantPhone', 'resumeUrl', 'coverLetterUrl', 'portfolioUrl', 'experience', 'salaryExpectation', 'notes'];
+        if (!standardFields.includes(key) && data[key as keyof typeof data]) {
+          acc[key] = data[key as keyof typeof data];
+        }
+        return acc;
+      }, {})
+    };
+    
+    console.log("Final submit data:", submitData);
+    submitApplicationMutation.mutate(submitData);
   };
 
   // Get selected position details
@@ -127,7 +149,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
   }
 
   // Get configured form fields, sorted by order
-  const configuredFields = formConfig?.fields?.sort((a: any, b: any) => a.order - b.order) || [];
+  const configuredFields = (formConfig?.fields || []).sort((a: any, b: any) => a.order - b.order);
 
   console.log("Form configuration:", formConfig);
   console.log("Configured fields:", configuredFields);

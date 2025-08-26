@@ -630,6 +630,7 @@ export const jobApplications = pgTable("job_applications", {
   salaryExpectation: decimal("salary_expectation", { precision: 10, scale: 2 }),
   experience: text("experience"), // junior, mid, senior
   source: text("source"), // website, referral, linkedin, job_board
+  customFieldData: jsonb("custom_field_data") // for storing custom form field values
 });
 
 // HR System - Application Stage History
