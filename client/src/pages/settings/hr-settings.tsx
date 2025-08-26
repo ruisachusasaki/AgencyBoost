@@ -150,11 +150,11 @@ export default function HRSettingsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Back to Settings Button */}
-      <div className="mb-4">
+      <div className="flex items-center space-x-2">
         <Link href="/settings">
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground" data-testid="button-back-to-settings">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Settings
+          <Button variant="outline" size="sm" className="flex items-center space-x-2" data-testid="button-back-to-settings">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
           </Button>
         </Link>
       </div>
