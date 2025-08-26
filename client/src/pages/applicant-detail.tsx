@@ -29,6 +29,9 @@ export default function ApplicantDetailPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [cursorPosition, setCursorPosition] = useState(0);
 
   // Fetch applicant details
   const { data: application, isLoading } = useQuery<JobApplication>({
@@ -40,6 +43,17 @@ export default function ApplicantDetailPage() {
   const { data: comments = [] } = useQuery<JobApplicationComment[]>({
     queryKey: ["/api/hr/job-applications", id, "comments"],
     enabled: !!id,
+  });
+
+  // Fetch job application form config for field labels
+  const { data: formConfig } = useQuery({
+    queryKey: ["/api/job-application-form-config"],
+    enabled: !!application?.customFieldData,
+  });
+
+  // Fetch staff for @mentions
+  const { data: staff = [] } = useQuery({
+    queryKey: ["/api/staff"],
   });
 
   // Update application mutation
@@ -101,6 +115,44 @@ export default function ApplicantDetailPage() {
       await addCommentMutation.mutateAsync(newComment.trim());
     }
   };
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart;
+    
+    setNewComment(value);
+    setCursorPosition(position);
+    
+    // Check for @mention
+    const beforeCursor = value.slice(0, position);
+    const atIndex = beforeCursor.lastIndexOf('@');
+    
+    if (atIndex !== -1) {
+      const query = beforeCursor.slice(atIndex + 1);
+      if (query.length === 0 || /^\w*$/.test(query)) {
+        setMentionQuery(query);
+        setShowMentions(true);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (staffMember: any) => {
+    const beforeCursor = newComment.slice(0, cursorPosition);
+    const afterCursor = newComment.slice(cursorPosition);
+    const atIndex = beforeCursor.lastIndexOf('@');
+    
+    const newValue = beforeCursor.slice(0, atIndex) + `@${staffMember.firstName} ${staffMember.lastName} ` + afterCursor;
+    setNewComment(newValue);
+    setShowMentions(false);
+  };
+
+  const filteredStaff = staff.filter((member: any) => 
+    `${member.firstName} ${member.lastName}`.toLowerCase().includes(mentionQuery.toLowerCase())
+  );
 
   const getStatusBadgeColor = (stage: string) => {
     const colors = {
@@ -332,26 +384,32 @@ export default function ApplicantDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {Object.entries(application.customFieldData).map(([key, value]) => (
-                    <div key={key}>
-                      <p className="text-sm text-gray-500 mb-1 capitalize">
-                        {key.replace(/^field_\d+$/, 'Custom Field').replace(/_/g, ' ')}
-                      </p>
-                      {typeof value === 'string' && value.startsWith('http') ? (
-                        <a 
-                          href={value} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          View Link
-                        </a>
-                      ) : (
-                        <p className="font-medium">{value as string}</p>
-                      )}
-                    </div>
-                  ))}
+                  {Object.entries(application.customFieldData).map(([key, value]) => {
+                    // Find the field label from form config
+                    const field = formConfig?.fields?.find((f: any) => f.name === key);
+                    const fieldLabel = field?.label || key.replace(/^field_\d+$/, 'Custom Field').replace(/_/g, ' ');
+                    
+                    return (
+                      <div key={key}>
+                        <p className="text-sm text-gray-500 mb-1 capitalize">
+                          {fieldLabel}
+                        </p>
+                        {typeof value === 'string' && value.startsWith('http') ? (
+                          <a 
+                            href={value} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            View Link
+                          </a>
+                        ) : (
+                          <p className="font-medium">{value as string}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}
@@ -434,22 +492,50 @@ export default function ApplicantDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Add Comment */}
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add an internal comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                  />
-                  <Button 
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim() || addCommentMutation.isPending}
-                    size="sm"
-                    className="w-full"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {addCommentMutation.isPending ? "Adding..." : "Add Comment"}
-                  </Button>
+                <div className="space-y-2 relative">
+                  <div className="relative">
+                    <Textarea
+                      placeholder="Add an internal comment... Use @name to mention team members"
+                      value={newComment}
+                      onChange={handleCommentChange}
+                      rows={3}
+                    />
+                    
+                    {/* Mention Dropdown */}
+                    {showMentions && filteredStaff.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-auto">
+                        {filteredStaff.slice(0, 5).map((member: any) => (
+                          <button
+                            key={member.id}
+                            onClick={() => insertMention(member)}
+                            className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={member.profileImagePath} />
+                              <AvatarFallback className="text-xs">
+                                {member.firstName[0]}{member.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{member.firstName} {member.lastName}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-500">
+                      Use @name to mention team members and send them a notification
+                    </p>
+                    <Button 
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || addCommentMutation.isPending}
+                      size="sm"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      {addCommentMutation.isPending ? "Adding..." : "Add Comment"}
+                    </Button>
+                  </div>
                 </div>
 
                 <Separator />

@@ -10478,12 +10478,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, use a default author ID - in a real app, this would come from the authenticated user
       const defaultAuthorId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
+      // First, get the author's name
+      const [author] = await db
+        .select({
+          firstName: staff.firstName,
+          lastName: staff.lastName
+        })
+        .from(staff)
+        .where(eq(staff.id, defaultAuthorId));
+      
+      const authorName = author ? `${author.firstName} ${author.lastName}` : 'Unknown User';
+      
+      // Check for @mentions and create notifications
+      const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
+      const mentions = [...content.matchAll(mentionRegex)];
+      
       const [newComment] = await db
         .insert(jobApplicationComments)
         .values({
           applicationId: id,
           content: content.trim(),
-          authorId: defaultAuthorId
+          authorId: defaultAuthorId,
+          authorName: authorName
         })
         .returning();
       
@@ -10491,20 +10507,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to create comment" });
       }
       
-      // Fetch the comment with author details
-      const [commentWithAuthor] = await db
-        .select({
-          id: jobApplicationComments.id,
-          content: jobApplicationComments.content,
-          authorId: jobApplicationComments.authorId,
-          authorName: sql`${staff.firstName} || ' ' || ${staff.lastName}`,
-          createdAt: jobApplicationComments.createdAt
-        })
-        .from(jobApplicationComments)
-        .leftJoin(staff, eq(jobApplicationComments.authorId, staff.id))
-        .where(eq(jobApplicationComments.id, newComment.id));
+      // Create notifications for @mentions
+      if (mentions.length > 0) {
+        for (const match of mentions) {
+          const mentionedName = match[1].trim();
+          
+          // Find staff member by name (first + last name)
+          const [mentionedStaff] = await db
+            .select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName })
+            .from(staff)
+            .where(sql`LOWER(${staff.firstName} || ' ' || ${staff.lastName}) = LOWER(${mentionedName})`);
+          
+          if (mentionedStaff) {
+            // Create notification
+            await db.insert(notifications).values({
+              recipientId: mentionedStaff.id,
+              title: "You were mentioned in a comment",
+              message: `${authorName} mentioned you in a job application comment: "${content.substring(0, 100)}${content.length > 100 ? '...' : ''}"`,
+              type: "mention",
+              relatedEntityType: "job_application",
+              relatedEntityId: id,
+              createdBy: defaultAuthorId
+            });
+          }
+        }
+      }
       
-      res.status(201).json(commentWithAuthor);
+      // Return the comment
+      res.status(201).json({
+        id: newComment.id,
+        content: newComment.content,
+        authorId: newComment.authorId,
+        authorName: authorName,
+        createdAt: newComment.createdAt
+      });
     } catch (error) {
       console.error("Error creating comment:", error);
       res.status(500).json({ message: "Failed to create comment" });
