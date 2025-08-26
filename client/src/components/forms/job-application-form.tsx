@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FileText, MapPin, DollarSign, Clock, Briefcase, Mail, Phone, User, Link as LinkIcon, Send, Loader } from "lucide-react";
@@ -25,24 +25,24 @@ function stripHtml(html: string): string {
 
 interface JobApplicationFormProps {
   onSuccess?: () => void;
+  preSelectedPosition?: string;
 }
 
 interface JobOpening {
   id: string;
-  departmentName: string;
   positionTitle: string;
+  departmentName: string;
   employmentType: string;
   location?: string;
-  compensation?: string;
+  compensation?: number;
   compensationType?: string;
   jobDescription?: string;
   benefits?: string;
-  status: string;
-  approvalStatus: string;
 }
 
-export default function JobApplicationForm({ onSuccess }: JobApplicationFormProps) {
+export default function JobApplicationForm({ onSuccess, preSelectedPosition }: JobApplicationFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Fetch available job openings
   const { data: jobOpenings, isLoading: jobOpeningsLoading } = useQuery<JobOpening[]>({
@@ -62,49 +62,45 @@ export default function JobApplicationForm({ onSuccess }: JobApplicationFormProp
   const form = useForm<InsertJobApplication>({
     resolver: zodResolver(insertJobApplicationSchema),
     defaultValues: {
-      positionId: "",
+      positionId: preSelectedPosition || "",
       applicantName: "",
       applicantEmail: "",
       applicantPhone: "",
       resumeUrl: "",
       coverLetterUrl: "",
       portfolioUrl: "",
-      salaryExpectation: null,
       experience: "",
-      source: "website",
+      salaryExpectation: null,
       notes: "",
     },
   });
 
   const submitApplicationMutation = useMutation({
     mutationFn: async (data: InsertJobApplication) => {
-      const response = await fetch(`/api/job-applications`, {
+      await apiRequest("/api/job-applications", {
         method: "POST",
+        body: JSON.stringify(data),
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
       });
-      if (!response.ok) {
-        throw new Error("Failed to submit application");
-      }
-      return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Application Submitted",
+        title: "Application Submitted!",
         description: "Your job application has been submitted successfully. We'll be in touch soon!",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/job-applications"] });
       form.reset();
       onSuccess?.();
     },
     onError: (error) => {
+      console.error("Application submission error:", error);
       toast({
         title: "Submission Failed",
         description: "There was an error submitting your application. Please try again.",
         variant: "destructive",
       });
-      console.error("Application submission error:", error);
     },
   });
 
@@ -202,321 +198,215 @@ export default function JobApplicationForm({ onSuccess }: JobApplicationFormProp
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Position Selection - FIRST FIELD */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
-                  <Briefcase className="h-4 w-4" />
-                  <h3 className="font-semibold">Position Selection</h3>
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="positionId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4" />
-                        Position Applied For *
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-position">
-                            <SelectValue placeholder="Select a position to apply for" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {openPositions.length > 0 ? (
-                            openPositions.map((position) => (
-                              <SelectItem key={position.id} value={position.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{position.positionTitle}</span>
-                                  <span className="text-sm text-muted-foreground">
-                                    {position.departmentName} • {position.employmentType}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-positions" disabled>
-                              No open positions available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              {/* Personal Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
-                  <User className="h-4 w-4" />
-                  <h3 className="font-semibold">Personal Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Full Name */}
-                  <FormField
-                    control={form.control}
-                    name="applicantName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Full Name *
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter your full name" 
-                            {...field}
-                            value={field.value || ""} 
-                            data-testid="input-applicant-name"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+              {/* Dynamic Form Fields */}
+              {configuredFields.map((field: any, index: number) => {
+                // Render form field based on configured type
+                return (
+                  <div key={field.id} className="space-y-4">
+                    {field.type === 'job_selection' && (
+                      <FormField
+                        control={form.control}
+                        name="positionId"
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Briefcase className="h-4 w-4" />
+                              {field.label} {field.required && '*'}
+                            </FormLabel>
+                            <Select onValueChange={formField.onChange} value={formField.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-position">
+                                  <SelectValue placeholder="Select a position to apply for" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {openPositions.length > 0 ? (
+                                  openPositions.map((position) => (
+                                    <SelectItem key={position.id} value={position.id}>
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{position.positionTitle}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                          {position.departmentName} • {position.employmentType}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="no-positions" disabled>
+                                    No open positions available
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
 
-                  {/* Email */}
-                  <FormField
-                    control={form.control}
-                    name="applicantEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          Email Address *
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="email" 
-                            placeholder="your.email@example.com" 
-                            {...field}
-                            value={field.value || ""} 
-                            data-testid="input-applicant-email"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {(field.type === 'text' || field.type === 'email' || field.type === 'phone') && (
+                      <FormField
+                        control={form.control}
+                        name={field.id === 'full_name' ? 'applicantName' : 
+                              field.id === 'email' ? 'applicantEmail' : 
+                              field.id === 'phone' ? 'applicantPhone' : 
+                              field.id}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              {field.id === 'full_name' && <User className="h-4 w-4" />}
+                              {field.id === 'email' && <Mail className="h-4 w-4" />}
+                              {field.id === 'phone' && <Phone className="h-4 w-4" />}
+                              {field.label} {field.required && '*'}
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text'}
+                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                {...formField}
+                                value={formField.value || ""} 
+                                data-testid={`input-${field.id}`}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
 
-                  {/* Phone */}
-                  <FormField
-                    control={form.control}
-                    name="applicantPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          Phone Number
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="tel" 
-                            placeholder="+1 (555) 123-4567" 
-                            {...field}
-                            value={field.value || ""} 
-                            data-testid="input-applicant-phone"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {field.type === 'url' && (
+                      <FormField
+                        control={form.control}
+                        name={field.id === 'resume_url' ? 'resumeUrl' : 
+                              field.id === 'cover_letter' ? 'coverLetterUrl' : 
+                              field.id === 'portfolio_url' ? 'portfolioUrl' : 
+                              field.id}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <LinkIcon className="h-4 w-4" />
+                              {field.label} {field.required && '*'}
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="url"
+                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()} URL`}
+                                {...formField}
+                                value={formField.value || ""} 
+                                data-testid={`input-${field.id}`}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
 
-                  {/* Experience Level */}
-                  <FormField
-                    control={form.control}
-                    name="experience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Experience Level *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-experience">
-                              <SelectValue placeholder="Select experience level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Entry Level">Entry Level (0-2 years)</SelectItem>
-                            <SelectItem value="Mid Level">Mid Level (3-5 years)</SelectItem>
-                            <SelectItem value="Senior Level">Senior Level (6+ years)</SelectItem>
-                            <SelectItem value="Executive Level">Executive Level</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                    {field.type === 'textarea' && (
+                      <FormField
+                        control={form.control}
+                        name={field.id === 'notes' ? 'notes' : field.id}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {field.label} {field.required && '*'}
+                            </FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                className="min-h-[100px]"
+                                {...formField}
+                                value={formField.value || ""} 
+                                data-testid={`textarea-${field.id}`}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
-                </div>
-              </div>
 
-              <Separator />
-
-              {/* Document Links Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
-                  <FileText className="h-4 w-4" />
-                  <h3 className="font-semibold">Documents & Portfolio</h3>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {/* Resume URL */}
-                  <FormField
-                    control={form.control}
-                    name="resumeUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Resume/CV URL *
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="url" 
-                            placeholder="https://drive.google.com/..." 
-                            {...field}
-                            value={field.value || ""} 
-                            data-testid="input-resume-url"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {field.type === 'select' && (
+                      <FormField
+                        control={form.control}
+                        name={field.id === 'experience_level' ? 'experience' : field.id}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {field.label} {field.required && '*'}
+                            </FormLabel>
+                            <Select onValueChange={formField.onChange} value={formField.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid={`select-${field.id}`}>
+                                  <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {field.options?.map((option: string) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
 
-                  {/* Cover Letter URL */}
-                  <FormField
-                    control={form.control}
-                    name="coverLetterUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Cover Letter URL
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="url" 
-                            placeholder="https://..." 
-                            {...field}
-                            value={field.value || ""} 
-                            data-testid="input-cover-letter-url"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {field.type === 'number' && (
+                      <FormField
+                        control={form.control}
+                        name={field.id === 'salary_expectation' ? 'salaryExpectation' : field.id}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4" />
+                              {field.label} {field.required && '*'}
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number"
+                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                {...formField}
+                                value={formField.value || ""} 
+                                data-testid={`input-${field.id}`}
+                                onChange={(e) => formField.onChange(e.target.value ? Number(e.target.value) : null)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
 
-                  {/* Portfolio URL */}
-                  <FormField
-                    control={form.control}
-                    name="portfolioUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <LinkIcon className="h-4 w-4" />
-                          Portfolio/Website URL
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="url" 
-                            placeholder="https://..." 
-                            {...field}
-                            value={field.value || ""} 
-                            data-testid="input-portfolio-url"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {/* Add separator between fields (not after last field) */}
+                    {index < configuredFields.length - 1 && (
+                      <div className="border-t pt-4 mt-6" />
                     )}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Additional Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
-                  <DollarSign className="h-4 w-4" />
-                  <h3 className="font-semibold">Additional Information</h3>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {/* Salary Expectation */}
-                  <FormField
-                    control={form.control}
-                    name="salaryExpectation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          Salary Expectation (Annual USD)
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="75000" 
-                            {...field} 
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
-                            data-testid="input-salary-expectation"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Additional Notes */}
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Additional Information</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Tell us why you're interested in this position or any additional information you'd like us to know..."
-                            rows={4}
-                            {...field}
-                            value={field.value || ""}
-                            data-testid="textarea-notes"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                  </div>
+                );
+              })}
 
               {/* Submit Button */}
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end pt-6">
                 <Button 
                   type="submit" 
-                  disabled={submitApplicationMutation.isPending || !selectedPositionId}
-                  className="min-w-[140px]"
+                  disabled={submitApplicationMutation.isPending}
+                  className="min-w-[120px]"
                   data-testid="button-submit-application"
                 >
                   {submitApplicationMutation.isPending ? (
-                    <>
-                      <Loader className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
+                    <div className="flex items-center gap-2">
+                      <Loader className="h-4 w-4 animate-spin" />
+                      <span>Submitting...</span>
+                    </div>
                   ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Submit Application
-                    </>
+                    <div className="flex items-center gap-2">
+                      <Send className="h-4 w-4" />
+                      <span>Submit Application</span>
+                    </div>
                   )}
                 </Button>
               </div>
