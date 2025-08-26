@@ -874,11 +874,17 @@ export default function HRPage() {
                           value={application.stage}
                           onValueChange={async (newStage) => {
                             try {
-                              await apiRequest(`/api/hr/job-applications/${application.id}`, {
+                              const response = await fetch(`/api/hr/job-applications/${application.id}`, {
                                 method: 'PATCH',
-                                body: { stage: newStage }
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ stage: newStage }),
                               });
-                              queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                              
+                              if (response.ok) {
+                                queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                              }
                             } catch (error) {
                               console.error('Failed to update status:', error);
                             }
@@ -917,11 +923,17 @@ export default function HRPage() {
                               key={star}
                               onClick={async () => {
                                 try {
-                                  await apiRequest(`/api/hr/job-applications/${application.id}`, {
+                                  const response = await fetch(`/api/hr/job-applications/${application.id}`, {
                                     method: 'PATCH',
-                                    body: { rating: star }
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ rating: star }),
                                   });
-                                  queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                                  
+                                  if (response.ok) {
+                                    queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                                  }
                                 } catch (error) {
                                   console.error('Failed to update rating:', error);
                                 }

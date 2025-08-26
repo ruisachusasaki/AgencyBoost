@@ -10391,27 +10391,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       
       const [application] = await db
-        .select({
-          id: jobApplications.id,
-          applicantName: jobApplications.applicantName,
-          applicantEmail: jobApplications.applicantEmail,
-          applicantPhone: jobApplications.applicantPhone,
-          positionId: jobApplications.positionId,
-          positionTitle: sql`COALESCE(${jobOpenings.positionTitle}, 'Unknown Position')`.as('positionTitle'),
-          resumeUrl: jobApplications.resumeUrl,
-          coverLetterUrl: jobApplications.coverLetterUrl,
-          portfolioUrl: jobApplications.portfolioUrl,
-          experience: jobApplications.experience,
-          salaryExpectation: jobApplications.salaryExpectation,
-          notes: jobApplications.notes,
-          stage: jobApplications.stage,
-          rating: jobApplications.rating,
-          appliedAt: jobApplications.appliedAt,
-          lastUpdated: jobApplications.lastUpdated,
-          customFieldData: jobApplications.customFieldData
-        })
+        .select()
         .from(jobApplications)
-        .leftJoin(jobOpenings, eq(jobApplications.positionId, jobOpenings.id))
         .where(eq(jobApplications.id, id));
       
       if (!application) {

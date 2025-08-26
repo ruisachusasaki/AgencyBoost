@@ -45,10 +45,19 @@ export default function ApplicantDetailPage() {
   // Update application mutation
   const updateApplicationMutation = useMutation({
     mutationFn: async (updateData: { stage?: string; rating?: number }) => {
-      return await apiRequest(`/api/hr/job-applications/${id}`, {
+      const response = await fetch(`/api/hr/job-applications/${id}`, {
         method: 'PATCH',
-        body: updateData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update application');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/job-applications", id] });
@@ -59,10 +68,19 @@ export default function ApplicantDetailPage() {
   // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest(`/api/hr/job-applications/${id}/comments`, {
+      const response = await fetch(`/api/hr/job-applications/${id}/comments`, {
         method: 'POST',
-        body: { content }
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add comment');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/job-applications", id, "comments"] });
@@ -330,7 +348,7 @@ export default function ApplicantDetailPage() {
                           View Link
                         </a>
                       ) : (
-                        <p className="font-medium">{String(value)}</p>
+                        <p className="font-medium">{value as string}</p>
                       )}
                     </div>
                   ))}
