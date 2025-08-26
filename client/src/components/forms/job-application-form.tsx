@@ -50,6 +50,12 @@ export default function JobApplicationForm({ onSuccess }: JobApplicationFormProp
     retry: false,
   });
 
+  // Fetch form configuration
+  const { data: formConfig, isLoading: formConfigLoading } = useQuery({
+    queryKey: ["/api/job-application-form-config"],
+    retry: false,
+  });
+
   // Backend already filters for open and approved positions
   const openPositions = jobOpenings || [];
   
@@ -111,7 +117,7 @@ export default function JobApplicationForm({ onSuccess }: JobApplicationFormProp
   const selectedPositionId = form.watch("positionId");
   const selectedPosition = openPositions.find(p => p.id === selectedPositionId);
 
-  if (jobOpeningsLoading) {
+  if (jobOpeningsLoading || formConfigLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -123,6 +129,12 @@ export default function JobApplicationForm({ onSuccess }: JobApplicationFormProp
       </Card>
     );
   }
+
+  // Get configured form fields, sorted by order
+  const configuredFields = formConfig?.fields?.sort((a: any, b: any) => a.order - b.order) || [];
+
+  console.log("Form configuration:", formConfig);
+  console.log("Configured fields:", configuredFields);
 
   return (
     <div className="space-y-6">
