@@ -2457,12 +2457,14 @@ export const resourceLinks = pgTable("resource_links", {
 // Insert schemas for Resources system
 export const insertResourceCategorySchema = createInsertSchema(resourceCategories).omit({
   id: true,
+  createdBy: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const insertResourceSchema = createInsertSchema(resources).omit({
   id: true,
+  createdBy: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -2480,6 +2482,7 @@ export const insertResourcePrerequisiteSchema = createInsertSchema(resourcePrere
 
 export const insertResourceLinkSchema = createInsertSchema(resourceLinks).omit({
   id: true,
+  createdBy: true,
   createdAt: true,
   updatedAt: true,
 });
