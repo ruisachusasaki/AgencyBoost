@@ -45,6 +45,7 @@ Filter Preferences: Simplified filtering with only essential filters (search and
 - **Enhanced HR Date Picker UX**: Time Off Request form with controlled date picker state for automatic closing and smart month navigation.
 - **Optimized HR Filter Layout**: Department and position filters sized appropriately for longer department names without text overflow.
 - **Job Application Form Configuration System**: Fully functional drag-and-drop form editor in Settings > HR Settings with backend persistence, auto-save functionality (1-second debounce), field reordering protection for system fields, and seamless form field management with database storage in `job_application_form_config` table.
+- **Public Job Application System**: Complete external applicant functionality with public careers page (/careers), customizable job application form with dynamic custom fields, proper database foreign key relationships, and successful form submission handling with custom field data persistence.
 
 ### CSS Architecture Guidelines
 - **Problem**: Broad CSS selectors cause styling issues.
