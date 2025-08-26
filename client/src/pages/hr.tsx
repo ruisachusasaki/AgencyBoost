@@ -407,7 +407,7 @@ export default function HRPage() {
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-slate-600">Department:</label>
                 <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                  <SelectTrigger className="w-40" data-testid="select-department-filter">
+                  <SelectTrigger className="w-48" data-testid="select-department-filter">
                     <SelectValue placeholder="All Departments" />
                   </SelectTrigger>
                   <SelectContent>
@@ -421,7 +421,7 @@ export default function HRPage() {
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-slate-600">Position:</label>
                 <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger className="w-40" data-testid="select-position-filter">
+                  <SelectTrigger className="w-48" data-testid="select-position-filter">
                     <SelectValue placeholder="All Positions" />
                   </SelectTrigger>
                   <SelectContent>
