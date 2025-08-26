@@ -19,11 +19,13 @@ import {
   Users,
   CalendarDays,
   Clock,
-  Briefcase
+  Briefcase,
+  ArrowLeft
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 import JobApplicationFormEditor from "@/components/hr/job-application-form-editor";
 
 // Schema for time off categories
@@ -147,6 +149,16 @@ export default function HRSettingsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Back to Settings Button */}
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground" data-testid="button-back-to-settings">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">

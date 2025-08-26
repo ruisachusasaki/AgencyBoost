@@ -36,9 +36,11 @@ import {
   Monitor,
   AlertCircle,
   Save,
-  X
+  X,
+  ArrowLeft
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Link } from "wouter";
 
 interface ResourceCategory {
   id: string;
@@ -250,21 +252,56 @@ export default function ResourcesSettings() {
 
   return (
     <div className="space-y-6" data-testid="resources-settings">
+      {/* Back to Settings Button */}
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground" data-testid="button-back-to-settings">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
+      </div>
+
       <div>
-        <h1 className="text-3xl font-bold">Resources Settings</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <BookOpen className="h-8 w-8 text-primary" />
+          <span>Resources Settings</span>
+        </h1>
         <p className="text-muted-foreground">Manage resource categories, permissions, and LMS configuration</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList data-testid="tabs-resources-settings">
-          <TabsTrigger value="categories" data-testid="tab-categories">Categories</TabsTrigger>
-          <TabsTrigger value="resources" data-testid="tab-resources">Resources</TabsTrigger>
-          <TabsTrigger value="permissions" data-testid="tab-permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="settings" data-testid="tab-settings">LMS Settings</TabsTrigger>
-        </TabsList>
+      {/* Tabs - Matching Custom Fields Style */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "categories", name: "Categories", icon: Folder, count: categories.length },
+            { id: "resources", name: "Resources", icon: BookOpen, count: resources.length },
+            { id: "permissions", name: "Permissions", icon: Shield, count: 0 },
+            { id: "settings", name: "LMS Settings", icon: Settings, count: 0 }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                data-testid={`tab-${tab.id}`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} {tab.count > 0 && `(${tab.count})`}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
         {/* Categories Tab */}
-        <TabsContent value="categories" className="space-y-4">
+        {activeTab === "categories" && (
+          <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Resource Categories</h2>
             <Dialog open={showCreateCategory} onOpenChange={setShowCreateCategory}>
@@ -458,10 +495,12 @@ export default function ResourcesSettings() {
               </TableBody>
             </Table>
           </Card>
-        </TabsContent>
+          </div>
+        )}
 
         {/* Resources Tab */}
-        <TabsContent value="resources" className="space-y-4">
+        {activeTab === "resources" && (
+          <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">All Resources</h2>
             <Button onClick={() => window.location.href = '/resources'} data-testid="button-go-to-resources">
@@ -542,10 +581,12 @@ export default function ResourcesSettings() {
               </TableBody>
             </Table>
           </Card>
-        </TabsContent>
+          </div>
+        )}
 
         {/* Permissions Tab */}
-        <TabsContent value="permissions" className="space-y-4">
+        {activeTab === "permissions" && (
+          <div className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Role-Based Permissions</h2>
             <p className="text-muted-foreground">Configure which roles can access specific resource categories</p>
@@ -586,10 +627,12 @@ export default function ResourcesSettings() {
               </Card>
             ))}
           </div>
-        </TabsContent>
+          </div>
+        )}
 
         {/* LMS Settings Tab */}
-        <TabsContent value="settings" className="space-y-4">
+        {activeTab === "settings" && (
+          <div className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Learning Management System Settings</h2>
             <p className="text-muted-foreground">Configure global LMS behavior and features</p>
@@ -666,8 +709,8 @@ export default function ResourcesSettings() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+          </div>
+        )}
 
       {/* Edit Category Dialog */}
       <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
