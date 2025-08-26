@@ -788,39 +788,93 @@ export default function MyProfile() {
               </CardHeader>
               <CardContent>
                 {(() => {
-                  // This will be implemented once we can import the time off requests query
+                  // Get time off requests for current user from the API
+                  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
+                    queryKey: ["/api/hr/time-off-requests"],
+                  });
+
+                  const myTimeOffRequests = timeOffRequests.filter(request => request.staffId === currentUserId);
+
+                  if (myTimeOffRequests.length === 0) {
+                    return <p className="text-slate-500 text-center py-8">No time off requests found</p>;
+                  }
+
+                  // Calculate my actual usage statistics
+                  const myUsage = myTimeOffRequests.reduce((acc, request) => {
+                    const days = request.totalDays || 0;
+                    acc[request.type as 'vacation' | 'sick' | 'personal'] += days;
+                    acc.total += days;
+                    return acc;
+                  }, { vacation: 0, sick: 0, personal: 0, total: 0 });
+
                   return (
                     <div className="space-y-6">
                       {/* Usage Summary */}
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-blue-600">2</div>
+                            <div className="text-2xl font-bold text-blue-600">{myUsage.vacation}</div>
                             <div className="text-sm text-slate-600">Vacation Days</div>
                           </CardContent>
                         </Card>
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-orange-600">1</div>
+                            <div className="text-2xl font-bold text-orange-600">{myUsage.sick}</div>
                             <div className="text-sm text-slate-600">Sick Days</div>
                           </CardContent>
                         </Card>
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-green-600">0</div>
+                            <div className="text-2xl font-bold text-green-600">{myUsage.personal}</div>
                             <div className="text-sm text-slate-600">Personal Days</div>
                           </CardContent>
                         </Card>
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-slate-600">3</div>
+                            <div className="text-2xl font-bold text-slate-600">{myUsage.total}</div>
                             <div className="text-sm text-slate-600">Total Days</div>
                           </CardContent>
                         </Card>
                       </div>
 
-                      <div className="text-center py-8 text-slate-500">
-                        Individual time off tracking will be connected to your personal data soon
+                      {/* Recent Requests */}
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Recent Time Off Requests</h3>
+                        <div className="space-y-3">
+                          {myTimeOffRequests
+                            .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
+                            .slice(0, 5)
+                            .map((request) => (
+                            <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div>
+                                <div className="font-medium">
+                                  {request.type === 'vacation' ? 'Vacation' : 
+                                   request.type === 'sick' ? 'Sick Leave' : 
+                                   'Personal Time Off'}
+                                </div>
+                                <div className="text-sm text-slate-600">
+                                  {request.startDate && request.endDate && 
+                                    `${new Date(request.startDate).toLocaleDateString()} - ${new Date(request.endDate).toLocaleDateString()}`
+                                  } • {request.totalDays} days
+                                </div>
+                                {request.reason && (
+                                  <div className="text-xs text-slate-500 mt-1">{request.reason}</div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                {request.status === "pending" && (
+                                  <Badge variant="outline" className="bg-yellow-50 border-yellow-200 text-yellow-700">Pending</Badge>
+                                )}
+                                {request.status === "approved" && (
+                                  <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">Approved</Badge>
+                                )}
+                                {request.status === "rejected" && (
+                                  <Badge variant="outline" className="bg-red-50 border-red-200 text-red-700">Rejected</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   );
