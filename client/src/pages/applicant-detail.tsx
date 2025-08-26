@@ -32,6 +32,7 @@ export default function ApplicantDetailPage() {
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
   // Fetch applicant details
   const { data: application, isLoading } = useQuery<JobApplication>({
@@ -132,11 +133,34 @@ export default function ApplicantDetailPage() {
       if (query.length === 0 || /^\w*$/.test(query)) {
         setMentionQuery(query);
         setShowMentions(true);
+        setSelectedMentionIndex(0);
       } else {
         setShowMentions(false);
       }
     } else {
       setShowMentions(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMentions && filteredStaff.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < Math.min(filteredStaff.length - 1, 4) ? prev + 1 : prev
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedMentionIndex(prev => prev > 0 ? prev - 1 : 0);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const selectedStaff = filteredStaff[selectedMentionIndex];
+        if (selectedStaff) {
+          insertMention(selectedStaff);
+        }
+      } else if (e.key === 'Escape') {
+        setShowMentions(false);
+      }
     }
   };
 
@@ -385,13 +409,13 @@ export default function ApplicantDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {Object.entries(application.customFieldData).map(([key, value]) => {
-                    // Find the field label from form config
-                    const field = formConfig?.fields?.find((f: any) => f.name === key);
+                    // Find the field label from form config using the field ID
+                    const field = formConfig?.fields?.find((f: any) => f.id === key);
                     const fieldLabel = field?.label || key.replace(/^field_\d+$/, 'Custom Field').replace(/_/g, ' ');
                     
                     return (
                       <div key={key}>
-                        <p className="text-sm text-gray-500 mb-1 capitalize">
+                        <p className="text-sm text-gray-500 mb-1">
                           {fieldLabel}
                         </p>
                         {typeof value === 'string' && value.startsWith('http') ? (
@@ -498,17 +522,22 @@ export default function ApplicantDetailPage() {
                       placeholder="Add an internal comment... Use @name to mention team members"
                       value={newComment}
                       onChange={handleCommentChange}
+                      onKeyDown={handleKeyDown}
                       rows={3}
                     />
                     
                     {/* Mention Dropdown */}
                     {showMentions && filteredStaff.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-auto">
-                        {filteredStaff.slice(0, 5).map((member: any) => (
+                        {filteredStaff.slice(0, 5).map((member: any, index: number) => (
                           <button
                             key={member.id}
                             onClick={() => insertMention(member)}
-                            className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                            className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
+                              index === selectedMentionIndex 
+                                ? 'bg-blue-50 border-l-2 border-blue-500' 
+                                : 'hover:bg-gray-50'
+                            }`}
                           >
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={member.profileImagePath} />
