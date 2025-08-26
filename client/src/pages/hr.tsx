@@ -49,6 +49,8 @@ export default function HRPage() {
   
   // Job opening modal state
   const [isJobOpeningModalOpen, setIsJobOpeningModalOpen] = useState(false);
+  const [isEditJobOpeningModalOpen, setIsEditJobOpeningModalOpen] = useState(false);
+  const [editingJobOpening, setEditingJobOpening] = useState<any>(null);
   
   // Hiring manager search state
   const [hiringManagerSearchOpen, setHiringManagerSearchOpen] = useState(false);
@@ -144,23 +146,70 @@ export default function HRPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
-      // Reset form
-      setJobOpeningForm({
-        departmentId: "",
-        positionId: "",
-        employmentType: "",
-        hiringManagerId: "",
-        compensation: "",
-        compensationType: "annual",
-        jobDescription: "",
-        benefits: "",
-        usePositionDescription: true
-      });
-      setPositionDescription("");
-      setSelectedDepartmentId("");
+      resetJobOpeningForm();
       setIsJobOpeningModalOpen(false);
     },
   });
+
+  // Update Job Opening Mutation  
+  const updateJobOpeningMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/job-openings/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update job opening");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
+      resetJobOpeningForm();
+      setIsEditJobOpeningModalOpen(false);
+      setEditingJobOpening(null);
+    },
+  });
+
+  // Approve/Reject Job Opening Mutation
+  const approveJobOpeningMutation = useMutation({
+    mutationFn: async ({ id, action, rejectionReason }: { id: string; action: 'approve' | 'reject'; rejectionReason?: string }) => {
+      const response = await fetch(`/api/job-openings/${id}/approve`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action, rejectionReason }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} job opening`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
+    },
+  });
+
+  // Reset form function
+  const resetJobOpeningForm = () => {
+    setJobOpeningForm({
+      departmentId: "",
+      positionId: "",
+      employmentType: "",
+      hiringManagerId: "",
+      compensation: "",
+      compensationType: "annual",
+      jobDescription: "",
+      benefits: "",
+      usePositionDescription: true
+    });
+    setPositionDescription("");
+    setSelectedDepartmentId("");
+  };
 
   // Handle form submission
   const handleCreateJobOpening = () => {
@@ -180,6 +229,55 @@ export default function HRPage() {
     
     console.log("Submitting job opening data:", jobOpeningData);
     createJobOpeningMutation.mutate(jobOpeningData);
+  };
+
+  // Handle edit job opening
+  const handleEditJobOpening = (opening: any) => {
+    setEditingJobOpening(opening);
+    // Populate form with existing data
+    setJobOpeningForm({
+      departmentId: opening.departmentId || "",
+      positionId: opening.positionId || "",
+      employmentType: opening.employmentType || "",
+      hiringManagerId: opening.hiringManagerId || "",
+      compensation: opening.compensation || "",
+      compensationType: opening.compensationType || "annual",
+      jobDescription: opening.jobDescription || "",
+      benefits: opening.benefits || "",
+      usePositionDescription: false // Default to custom when editing
+    });
+    setSelectedDepartmentId(opening.departmentId || "");
+    setPositionDescription(opening.jobDescription || "");
+    setIsEditJobOpeningModalOpen(true);
+  };
+
+  // Handle update job opening
+  const handleUpdateJobOpening = () => {
+    if (!editingJobOpening) return;
+    
+    // Basic validation
+    if (!jobOpeningForm.departmentId || !jobOpeningForm.positionId || !jobOpeningForm.employmentType || !jobOpeningForm.hiringManagerId) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const jobOpeningData = {
+      ...jobOpeningForm,
+      compensation: jobOpeningForm.compensation || null,
+    };
+    
+    // Remove the usePositionDescription field before sending to API
+    delete jobOpeningData.usePositionDescription;
+    
+    updateJobOpeningMutation.mutate({ 
+      id: editingJobOpening.id, 
+      data: jobOpeningData 
+    });
+  };
+
+  // Handle approve/reject job opening
+  const handleApproveJobOpening = (id: string, action: 'approve' | 'reject', rejectionReason?: string) => {
+    approveJobOpeningMutation.mutate({ id, action, rejectionReason });
   };
 
   // Update form when department changes
@@ -1175,6 +1273,229 @@ export default function HRPage() {
             </Dialog>
           </div>
 
+          {/* Edit Job Opening Modal */}
+          <Dialog open={isEditJobOpeningModalOpen} onOpenChange={setIsEditJobOpeningModalOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Job Opening</DialogTitle>
+                <DialogDescription>Update the details for this position</DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Department Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Department *</label>
+                    <Select value={jobOpeningForm.departmentId} onValueChange={handleDepartmentChange} data-testid="select-edit-department">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((dept: any) => (
+                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Position Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Position *</label>
+                    <Select 
+                      value={jobOpeningForm.positionId}
+                      onValueChange={handlePositionChange}
+                      disabled={!selectedDepartmentId} 
+                      data-testid="select-edit-position"
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {positions.map((position: any) => (
+                          <SelectItem key={position.id} value={position.id}>{position.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Employment Type */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Employment Type *</label>
+                    <Select value={jobOpeningForm.employmentType} onValueChange={(value) => setJobOpeningForm(prev => ({...prev, employmentType: value}))} data-testid="select-edit-employment-type">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Employment Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full_time">Full Time</SelectItem>
+                        <SelectItem value="part_time">Part Time</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Hiring Manager - with search */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Hiring Manager *</label>
+                    <Popover open={hiringManagerSearchOpen} onOpenChange={setHiringManagerSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={hiringManagerSearchOpen}
+                          className="w-full justify-between"
+                          data-testid="button-edit-hiring-manager"
+                        >
+                          {jobOpeningForm.hiringManagerId ? 
+                            (() => {
+                              const selectedStaff = filteredStaff.find(s => s.id === jobOpeningForm.hiringManagerId);
+                              return selectedStaff ? `${selectedStaff.firstName} ${selectedStaff.lastName}` : "Select hiring manager...";
+                            })()
+                            : "Select hiring manager..."
+                          }
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput 
+                            placeholder="Search staff members..." 
+                            value={hiringManagerSearchValue}
+                            onValueChange={setHiringManagerSearchValue}
+                          />
+                          <CommandEmpty>No staff members found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-y-auto">
+                            {filteredStaff.map((staff) => (
+                              <CommandItem
+                                key={staff.id}
+                                value={`${staff.firstName} ${staff.lastName}`}
+                                onSelect={() => {
+                                  setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
+                                  setHiringManagerSearchValue("");
+                                  setHiringManagerSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{staff.firstName} {staff.lastName}</span>
+                                  <span className="text-sm text-slate-500">{staff.department} • {staff.position}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Compensation */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Compensation</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        className="flex-1 p-2 border rounded-md"
+                        placeholder="50000"
+                        value={jobOpeningForm.compensation}
+                        onChange={(e) => setJobOpeningForm(prev => ({...prev, compensation: e.target.value}))}
+                        data-testid="input-edit-compensation"
+                      />
+                      <Select value={jobOpeningForm.compensationType} onValueChange={(value) => setJobOpeningForm(prev => ({...prev, compensationType: value}))} data-testid="select-edit-compensation-type">
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="annual">Annual</SelectItem>
+                          <SelectItem value="hourly">Hourly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Description */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Description & Requirements *</label>
+                  
+                  {positionDescription && (
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={jobOpeningForm.usePositionDescription ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setJobOpeningForm(prev => ({...prev, usePositionDescription: true, jobDescription: positionDescription}));
+                        }}
+                        data-testid="button-edit-use-default-description"
+                      >
+                        Use Position Default
+                      </Button>
+                      <Button 
+                        variant={!jobOpeningForm.usePositionDescription ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setJobOpeningForm(prev => ({...prev, usePositionDescription: false}));
+                        }}
+                        data-testid="button-edit-use-custom-description"
+                      >
+                        Custom Description
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Show preview of position description when available */}
+                  {positionDescription && jobOpeningForm.usePositionDescription && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-700 font-medium mb-1">Using position description:</p>
+                      <div 
+                        className="text-sm text-blue-600" 
+                        dangerouslySetInnerHTML={{ __html: positionDescription }}
+                      />
+                    </div>
+                  )}
+                  
+                  <textarea 
+                    className="w-full min-h-[120px] p-3 border rounded-md resize-none"
+                    placeholder={jobOpeningForm.usePositionDescription && positionDescription 
+                      ? "Position description will be used automatically"
+                      : "Describe the role, responsibilities, and requirements..."
+                    }
+                    value={jobOpeningForm.jobDescription}
+                    onChange={(e) => {
+                      if (!jobOpeningForm.usePositionDescription) {
+                        setJobOpeningForm(prev => ({...prev, jobDescription: e.target.value}));
+                      }
+                    }}
+                    disabled={jobOpeningForm.usePositionDescription && !!positionDescription}
+                    data-testid="textarea-edit-job-description"
+                  />
+                </div>
+
+                {/* Benefits */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Benefits</label>
+                  <textarea 
+                    className="w-full min-h-[80px] p-3 border rounded-md resize-none"
+                    placeholder="Health insurance, 401k, vacation days..."
+                    value={jobOpeningForm.benefits}
+                    onChange={(e) => setJobOpeningForm(prev => ({...prev, benefits: e.target.value}))}
+                    data-testid="textarea-edit-benefits"
+                  />
+                </div>
+
+                <Button 
+                  className="w-full" 
+                  onClick={handleUpdateJobOpening}
+                  disabled={updateJobOpeningMutation.isPending}
+                  data-testid="button-update-opening"
+                >
+                  {updateJobOpeningMutation.isPending ? "Updating..." : "Update Job Opening"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Existing Job Openings - Now the main content */}
           <Card>
             <CardHeader>
@@ -1241,7 +1562,34 @@ export default function HRPage() {
                            opening.approvalStatus === 'approved' ? '✅ Approved' : 
                            '❌ Rejected'}
                         </Badge>
-                        <Button variant="outline" size="sm" data-testid={`button-edit-${opening.id}`}>
+                        {opening.approvalStatus === 'pending' && isManager && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleApproveJobOpening(opening.id, 'approve')}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              data-testid={`button-approve-${opening.id}`}
+                            >
+                              ✓ Approve
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleApproveJobOpening(opening.id, 'reject', 'Rejected by manager')}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              data-testid={`button-reject-${opening.id}`}
+                            >
+                              ✕ Reject
+                            </Button>
+                          </>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditJobOpening(opening)}
+                          data-testid={`button-edit-${opening.id}`}
+                        >
                           Edit
                         </Button>
                       </div>
