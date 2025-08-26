@@ -573,11 +573,11 @@ export default function HRPage() {
                     
                     const staffKey = `${staff.firstName} ${staff.lastName}`;
                     if (!acc[staffKey]) {
-                      // Get staff's annual entitlements
+                      // Use policy allocations as primary source, only fall back to staff if policy doesn't exist
                       const staffAllocations = {
-                        vacation: staff.vacationDaysAnnually ?? policyAllocations.vacation,
-                        sick: staff.sickDaysAnnually ?? policyAllocations.sick,
-                        personal: staff.personalDaysAnnually ?? policyAllocations.personal
+                        vacation: policyAllocations.vacation,
+                        sick: policyAllocations.sick,
+                        personal: policyAllocations.personal
                       };
                       
                       acc[staffKey] = {
@@ -612,10 +612,11 @@ export default function HRPage() {
                     
                     const staffKey = `${staff.firstName} ${staff.lastName}`;
                     if (!usageByStaff[staffKey]) {
+                      // Use policy allocations as primary source, only fall back to staff if policy doesn't exist  
                       const staffAllocations = {
-                        vacation: staff.vacationDaysAnnually ?? policyAllocations.vacation,
-                        sick: staff.sickDaysAnnually ?? policyAllocations.sick,
-                        personal: staff.personalDaysAnnually ?? policyAllocations.personal
+                        vacation: policyAllocations.vacation,
+                        sick: policyAllocations.sick,
+                        personal: policyAllocations.personal
                       };
                       
                       usageByStaff[staffKey] = {
