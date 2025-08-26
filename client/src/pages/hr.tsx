@@ -1122,7 +1122,10 @@ export default function HRPage() {
                     {positionDescription && jobOpeningForm.usePositionDescription && (
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                         <p className="text-sm text-blue-700 font-medium mb-1">Using position description:</p>
-                        <p className="text-sm text-blue-600">{positionDescription}</p>
+                        <div 
+                          className="text-sm text-blue-600" 
+                          dangerouslySetInnerHTML={{ __html: positionDescription }}
+                        />
                       </div>
                     )}
                     
