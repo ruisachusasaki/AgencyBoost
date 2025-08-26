@@ -9937,10 +9937,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job Application Form Configuration Routes
   app.get("/api/job-application-form-config", async (req, res) => {
     try {
-      const [config] = await db.select()
-        .from(jobApplicationFormConfig)
-        .orderBy(desc(jobApplicationFormConfig.updatedAt))
-        .limit(1);
+      let config;
+      try {
+        [config] = await db.select()
+          .from(jobApplicationFormConfig)
+          .orderBy(desc(jobApplicationFormConfig.updatedAt))
+          .limit(1);
+      } catch (tableError) {
+        // Table might not exist yet, return default config
+        console.log("Job application form config table not found, using defaults");
+        config = null;
+      }
       
       if (!config) {
         // Return default configuration if none exists
