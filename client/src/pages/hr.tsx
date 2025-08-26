@@ -63,6 +63,11 @@ export default function HRPage() {
     queryKey: ["/api/hr/job-applications"],
   });
 
+  // Fetch time off policies to get current allocations
+  const { data: policies = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies"],
+  });
+
   const pendingTimeOffRequests = timeOffRequests.filter(req => req.status === "pending");
   const recentApplications = jobApplications.filter(app => {
     const oneWeekAgo = new Date();
@@ -539,7 +544,7 @@ export default function HRPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Time Off Usage</CardTitle>
-                <CardDescription>Time off trends and patterns for {(currentUser as any)?.role === 'admin' ? 'all staff' : 'your team'}</CardDescription>
+                <CardDescription>Remaining time off days for {(currentUser as any)?.role === 'admin' ? 'all staff' : 'your team'}</CardDescription>
               </CardHeader>
               <CardContent>
                 {(() => {
@@ -551,32 +556,81 @@ export default function HRPage() {
                         return staff && directReports.some(dr => dr.id === staff.id);
                       });
 
-                  if (relevantRequests.length === 0) {
-                    return <p className="text-slate-500 text-center py-8">No time off data available</p>;
-                  }
+                  // Always show staff data, even if no requests exist
 
-                  // Calculate usage statistics
+                  // Get policy allocations
+                  const currentPolicy = policies[0];
+                  const policyAllocations = {
+                    vacation: currentPolicy?.vacationDaysDefault ?? 15,
+                    sick: currentPolicy?.sickDaysDefault ?? 10,
+                    personal: currentPolicy?.personalDaysDefault ?? 3
+                  };
+
+                  // Calculate usage and remaining statistics
                   const usageByStaff = relevantRequests.reduce((acc, request) => {
                     const staff = staffData.find(s => s.id === request.staffId);
                     if (!staff) return acc;
                     
                     const staffKey = `${staff.firstName} ${staff.lastName}`;
                     if (!acc[staffKey]) {
+                      // Get staff's annual entitlements
+                      const staffAllocations = {
+                        vacation: staff.vacationDaysAnnually ?? policyAllocations.vacation,
+                        sick: staff.sickDaysAnnually ?? policyAllocations.sick,
+                        personal: staff.personalDaysAnnually ?? policyAllocations.personal
+                      };
+                      
                       acc[staffKey] = {
-                        vacation: 0,
-                        sick: 0,
-                        personal: 0,
-                        total: 0,
+                        usedVacation: 0,
+                        usedSick: 0,
+                        usedPersonal: 0,
+                        totalUsed: 0,
+                        allocatedVacation: staffAllocations.vacation,
+                        allocatedSick: staffAllocations.sick,
+                        allocatedPersonal: staffAllocations.personal,
                         department: staff.department,
                         position: staff.position
                       };
                     }
                     
                     const days = request.totalDays || 0;
-                    acc[staffKey][request.type as 'vacation' | 'sick' | 'personal'] += days;
-                    acc[staffKey].total += days;
+                    if (request.type === 'vacation') acc[staffKey].usedVacation += days;
+                    if (request.type === 'sick') acc[staffKey].usedSick += days;
+                    if (request.type === 'personal') acc[staffKey].usedPersonal += days;
+                    acc[staffKey].totalUsed += days;
                     return acc;
                   }, {} as Record<string, any>);
+
+                  // Add staff members who have no time off requests but need to show their full allocation
+                  const relevantStaffIds = (currentUser as any)?.role === 'admin' 
+                    ? staffData.map(s => s.id)
+                    : directReports.map(dr => dr.id);
+                    
+                  relevantStaffIds.forEach(staffId => {
+                    const staff = staffData.find(s => s.id === staffId);
+                    if (!staff) return;
+                    
+                    const staffKey = `${staff.firstName} ${staff.lastName}`;
+                    if (!usageByStaff[staffKey]) {
+                      const staffAllocations = {
+                        vacation: staff.vacationDaysAnnually ?? policyAllocations.vacation,
+                        sick: staff.sickDaysAnnually ?? policyAllocations.sick,
+                        personal: staff.personalDaysAnnually ?? policyAllocations.personal
+                      };
+                      
+                      usageByStaff[staffKey] = {
+                        usedVacation: 0,
+                        usedSick: 0,
+                        usedPersonal: 0,
+                        totalUsed: 0,
+                        allocatedVacation: staffAllocations.vacation,
+                        allocatedSick: staffAllocations.sick,
+                        allocatedPersonal: staffAllocations.personal,
+                        department: staff.department,
+                        position: staff.position
+                      };
+                    }
+                  });
 
                   return (
                     <div className="space-y-4">
@@ -586,30 +640,44 @@ export default function HRPage() {
                             <tr className="border-b">
                               <th className="text-left py-2 px-3 font-medium">Employee</th>
                               <th className="text-left py-2 px-3 font-medium">Department</th>
-                              <th className="text-center py-2 px-3 font-medium">Vacation</th>
-                              <th className="text-center py-2 px-3 font-medium">Sick</th>
-                              <th className="text-center py-2 px-3 font-medium">Personal</th>
-                              <th className="text-center py-2 px-3 font-medium">Total Days</th>
+                              <th className="text-center py-2 px-3 font-medium">Vacation Remaining</th>
+                              <th className="text-center py-2 px-3 font-medium">Sick Remaining</th>
+                              <th className="text-center py-2 px-3 font-medium">Total Remaining</th>
                             </tr>
                           </thead>
                           <tbody>
                             {Object.entries(usageByStaff)
-                              .sort(([,a], [,b]) => b.total - a.total)
-                              .map(([name, usage]) => (
-                              <tr key={name} className="border-b">
-                                <td className="py-2 px-3">
-                                  <div>
-                                    <div className="font-medium">{name}</div>
-                                    <div className="text-xs text-slate-500">{usage.position}</div>
-                                  </div>
-                                </td>
-                                <td className="py-2 px-3">{usage.department}</td>
-                                <td className="text-center py-2 px-3">{usage.vacation}</td>
-                                <td className="text-center py-2 px-3">{usage.sick}</td>
-                                <td className="text-center py-2 px-3">{usage.personal}</td>
-                                <td className="text-center py-2 px-3 font-medium">{usage.total}</td>
-                              </tr>
-                            ))}
+                              .sort(([,a], [,b]) => {
+                                const aTotal = (a.allocatedVacation + a.allocatedSick) - a.totalUsed;
+                                const bTotal = (b.allocatedVacation + b.allocatedSick) - b.totalUsed;
+                                return bTotal - aTotal;
+                              })
+                              .map(([name, usage]) => {
+                                const remainingVacation = Math.max(0, usage.allocatedVacation - usage.usedVacation);
+                                const remainingSick = Math.max(0, usage.allocatedSick - usage.usedSick);
+                                const totalRemaining = remainingVacation + remainingSick;
+                                
+                                return (
+                                  <tr key={name} className="border-b">
+                                    <td className="py-2 px-3">
+                                      <div>
+                                        <div className="font-medium">{name}</div>
+                                        <div className="text-xs text-slate-500">{usage.position}</div>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3">{usage.department}</td>
+                                    <td className="text-center py-2 px-3">
+                                      <span className="text-blue-600 font-medium">{remainingVacation}</span>
+                                      <span className="text-xs text-slate-500 ml-1">/ {usage.allocatedVacation}</span>
+                                    </td>
+                                    <td className="text-center py-2 px-3">
+                                      <span className="text-orange-600 font-medium">{remainingSick}</span>
+                                      <span className="text-xs text-slate-500 ml-1">/ {usage.allocatedSick}</span>
+                                    </td>
+                                    <td className="text-center py-2 px-3 font-medium">{totalRemaining}</td>
+                                  </tr>
+                                );
+                              })}
                           </tbody>
                         </table>
                       </div>
