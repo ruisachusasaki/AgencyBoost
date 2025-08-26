@@ -10409,10 +10409,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Position:", position[0]);
       console.log("Position name:", positionName);
       
-      // Build the insert data object
+      // Build the insert data object using the correct position ID from the job opening
       const insertData = {
         id: sql`gen_random_uuid()`,
-        positionId: validatedData.positionId,
+        positionId: jobOpening[0].positionId, // Use the position ID from the job opening, not the job opening ID
         positionTitle: positionName, // Add the required position title
         applicantName: validatedData.applicantName,
         applicantEmail: validatedData.applicantEmail,
