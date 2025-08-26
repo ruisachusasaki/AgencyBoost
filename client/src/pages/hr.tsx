@@ -118,9 +118,12 @@ export default function HRPage() {
     compensation: "",
     compensationType: "annual",
     jobDescription: "",
-    requirements: "",
-    benefits: ""
+    benefits: "",
+    usePositionDescription: true // New flag for using position description
   });
+  
+  // Track position descriptions
+  const [positionDescription, setPositionDescription] = useState("");
 
   const queryClient = useQueryClient();
 
@@ -150,9 +153,10 @@ export default function HRPage() {
         compensation: "",
         compensationType: "annual",
         jobDescription: "",
-        requirements: "",
-        benefits: ""
+        benefits: "",
+        usePositionDescription: true
       });
+      setPositionDescription("");
       setSelectedDepartmentId("");
       setIsJobOpeningModalOpen(false);
     },
@@ -181,6 +185,44 @@ export default function HRPage() {
       ...prev,
       departmentId,
       positionId: "" // Reset position when department changes
+    }));
+    setPositionDescription(""); // Reset position description
+  };
+
+  // Handle position change and fetch description
+  const handlePositionChange = async (positionId: string) => {
+    setJobOpeningForm(prev => ({...prev, positionId}));
+    
+    if (positionId) {
+      try {
+        const response = await fetch(`/api/positions/${positionId}`);
+        if (response.ok) {
+          const position = await response.json();
+          setPositionDescription(position.description || "");
+          
+          // If using position description, update job description
+          if (jobOpeningForm.usePositionDescription) {
+            setJobOpeningForm(prev => ({
+              ...prev,
+              jobDescription: position.description || ""
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching position description:", error);
+        setPositionDescription("");
+      }
+    } else {
+      setPositionDescription("");
+    }
+  };
+  
+  // Handle toggle for using position description
+  const handleUsePositionDescriptionToggle = (useDefault: boolean) => {
+    setJobOpeningForm(prev => ({
+      ...prev,
+      usePositionDescription: useDefault,
+      jobDescription: useDefault ? positionDescription : ""
     }));
   };
 
@@ -924,7 +966,7 @@ export default function HRPage() {
                       <label className="text-sm font-medium">Position *</label>
                       <Select 
                         value={jobOpeningForm.positionId}
-                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, positionId: value}))}
+                        onValueChange={handlePositionChange}
                         disabled={!selectedDepartmentId} 
                         data-testid="select-position"
                       >
@@ -1048,27 +1090,56 @@ export default function HRPage() {
                     </div>
                   </div>
 
-                  {/* Job Description */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Job Description</label>
+                  {/* Job Description & Requirements - Combined Field */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Job Description & Requirements</label>
+                      {positionDescription && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant={jobOpeningForm.usePositionDescription ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleUsePositionDescriptionToggle(true)}
+                            data-testid="button-use-default-description"
+                          >
+                            Use Position Default
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={!jobOpeningForm.usePositionDescription ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleUsePositionDescriptionToggle(false)}
+                            data-testid="button-use-custom-description"
+                          >
+                            Custom Description
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Show preview of position description when available */}
+                    {positionDescription && jobOpeningForm.usePositionDescription && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <p className="text-sm text-blue-700 font-medium mb-1">Using position description:</p>
+                        <p className="text-sm text-blue-600">{positionDescription}</p>
+                      </div>
+                    )}
+                    
                     <textarea 
-                      className="w-full min-h-[100px] p-3 border rounded-md resize-none"
-                      placeholder="Describe the role, responsibilities, and requirements..."
+                      className="w-full min-h-[120px] p-3 border rounded-md resize-none"
+                      placeholder={jobOpeningForm.usePositionDescription && positionDescription 
+                        ? "Position description will be used automatically"
+                        : "Describe the role, responsibilities, and requirements..."
+                      }
                       value={jobOpeningForm.jobDescription}
-                      onChange={(e) => setJobOpeningForm(prev => ({...prev, jobDescription: e.target.value}))}
+                      onChange={(e) => {
+                        if (!jobOpeningForm.usePositionDescription) {
+                          setJobOpeningForm(prev => ({...prev, jobDescription: e.target.value}));
+                        }
+                      }}
+                      disabled={jobOpeningForm.usePositionDescription && !!positionDescription}
                       data-testid="textarea-job-description"
-                    />
-                  </div>
-
-                  {/* Requirements */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Requirements</label>
-                    <textarea 
-                      className="w-full min-h-[80px] p-3 border rounded-md resize-none"
-                      placeholder="List required skills, education, experience..."
-                      value={jobOpeningForm.requirements}
-                      onChange={(e) => setJobOpeningForm(prev => ({...prev, requirements: e.target.value}))}
-                      data-testid="textarea-requirements"
                     />
                   </div>
 
