@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,6 +200,31 @@ export default function JobApplicationFormEditor() {
 
   const sortedFields = [...fields].sort((a, b) => a.order - b.order);
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(sortedFields);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update order values
+    const updatedFields = items.map((field, index) => ({
+      ...field,
+      order: index
+    }));
+
+    // Update all fields with new orders
+    setFields(prev => {
+      const fieldMap = new Map(updatedFields.map(field => [field.id, field]));
+      return prev.map(field => fieldMap.get(field.id) || field);
+    });
+
+    toast({
+      title: "Success",
+      description: "Field order updated successfully",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -225,50 +251,84 @@ export default function JobApplicationFormEditor() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {sortedFields.map((field) => (
-              <div
-                key={field.id}
-                className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50"
-              >
-                <div className="flex items-center gap-3">
-                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                  {getFieldIcon(field.type)}
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      {field.label}
-                      {field.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
-                      {field.id === 'job_opening' && <Badge variant="default" className="text-xs">System Field</Badge>}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {field.type} • {field.placeholder || 'No placeholder'}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditField(field)}
-                    data-testid={`button-edit-field-${field.id}`}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  {field.id !== 'job_opening' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteField(field.id)}
-                      data-testid={`button-delete-field-${field.id}`}
-                      className="text-destructive hover:text-destructive"
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="form-fields">
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-3"
+                >
+                  {sortedFields.map((field, index) => (
+                    <Draggable 
+                      key={field.id} 
+                      draggableId={field.id} 
+                      index={index}
+                      isDragDisabled={field.id === 'job_opening'} // Disable dragging for system field
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                            snapshot.isDragging 
+                              ? 'bg-blue-50 border-blue-300 shadow-lg' 
+                              : 'bg-gray-50/50 hover:bg-gray-100/50'
+                          } ${field.id === 'job_opening' ? 'opacity-75' : ''}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div 
+                              {...provided.dragHandleProps}
+                              className={`${
+                                field.id === 'job_opening' 
+                                  ? 'cursor-not-allowed text-muted-foreground/50' 
+                                  : 'cursor-move text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                            {getFieldIcon(field.type)}
+                            <div>
+                              <div className="font-medium flex items-center gap-2">
+                                {field.label}
+                                {field.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
+                                {field.id === 'job_opening' && <Badge variant="default" className="text-xs">System Field</Badge>}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {field.type} • {field.placeholder || 'No placeholder'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditField(field)}
+                              data-testid={`button-edit-field-${field.id}`}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            {field.id !== 'job_opening' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteField(field.id)}
+                                data-testid={`button-delete-field-${field.id}`}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </CardContent>
       </Card>
 
