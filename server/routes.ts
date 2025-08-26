@@ -9888,46 +9888,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get public job openings (no authentication required)
   app.get("/api/job-openings/public", async (req, res) => {
     try {
-      const hiringManager = alias(staff, 'hiring_manager');
-      const creator = alias(staff, 'creator');
-      const approver = alias(staff, 'approver');
+      // Simple query to avoid Drizzle ORM complex join issues
+      const openings = await db.select()
+        .from(jobOpenings)
+        .where(and(
+          eq(jobOpenings.status, 'open'),
+          eq(jobOpenings.approvalStatus, 'approved'),
+          eq(jobOpenings.isPublic, true)
+        ))
+        .orderBy(desc(jobOpenings.createdAt));
 
-      // Only fetch open and approved positions
-      const query = db.select({
-        id: jobOpenings.id,
-        departmentId: jobOpenings.departmentId,
-        departmentName: departments.name,
-        positionId: jobOpenings.positionId,
-        positionTitle: positions.name,
-        status: jobOpenings.status,
-        hiringManagerId: jobOpenings.hiringManagerId,
-        hiringManagerName: sql<string>`CONCAT(${hiringManager.firstName}, ' ', ${hiringManager.lastName})`,
-        employmentType: jobOpenings.employmentType,
-        compensation: jobOpenings.compensation,
-        compensationType: jobOpenings.compensationType,
-        jobDescription: jobOpenings.jobDescription,
-        requirements: jobOpenings.requirements,
-        benefits: jobOpenings.benefits,
-        location: jobOpenings.location,
-        approvalStatus: jobOpenings.approvalStatus,
-        isPublic: jobOpenings.isPublic,
-        createdAt: jobOpenings.createdAt,
-      })
-      .from(jobOpenings)
-      .leftJoin(departments, eq(jobOpenings.departmentId, departments.id))
-      .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
-      .leftJoin(hiringManager, eq(jobOpenings.hiringManagerId, hiringManager.id))
-      .leftJoin(creator, eq(jobOpenings.createdById, creator.id))
-      .leftJoin(approver, eq(jobOpenings.approvedById, approver.id))
-      .where(and(
-        eq(jobOpenings.status, 'open'),
-        eq(jobOpenings.approvalStatus, 'approved'),
-        eq(jobOpenings.isPublic, true)
-      ))
-      .orderBy(desc(jobOpenings.createdAt));
+      // Get department and position names separately to avoid join issues
+      const enrichedOpenings = [];
+      for (const opening of openings) {
+        let departmentName = 'Unknown Department';
+        let positionTitle = 'Unknown Position';
 
-      const openings = await query;
-      res.json(openings);
+        try {
+          if (opening.departmentId) {
+            const deptResult = await db.select({ name: departments.name })
+              .from(departments)
+              .where(eq(departments.id, opening.departmentId))
+              .limit(1);
+            if (deptResult[0]) departmentName = deptResult[0].name;
+          }
+
+          if (opening.positionId) {
+            const posResult = await db.select({ name: positions.name })
+              .from(positions)
+              .where(eq(positions.id, opening.positionId))
+              .limit(1);
+            if (posResult[0]) positionTitle = posResult[0].name;
+          }
+        } catch (joinError) {
+          console.log("Non-critical error fetching related data:", joinError);
+        }
+
+        enrichedOpenings.push({
+          id: opening.id,
+          departmentName,
+          positionTitle,
+          employmentType: opening.employmentType,
+          compensation: opening.compensation,
+          compensationType: opening.compensationType,
+          jobDescription: opening.jobDescription,
+          requirements: opening.requirements,
+          benefits: opening.benefits,
+        });
+      }
+
+      res.json(enrichedOpenings);
     } catch (error) {
       console.error("Error fetching public job openings:", error);
       res.status(500).json({ error: "Failed to fetch job openings" });
