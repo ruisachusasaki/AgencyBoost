@@ -20,6 +20,7 @@ import {
   CalendarDays,
   Clock
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -247,21 +248,7 @@ export default function HRSettingsPage() {
 
         {/* Policies Tab */}
         <TabsContent value="policies" className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium">Time Off Policies</h3>
-            <p className="text-muted-foreground">
-              Configure approval workflows and time off accrual rules.
-            </p>
-          </div>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8 text-muted-foreground">
-                Time off policies configuration coming soon. This will include approval workflows, 
-                accrual rates, and carryover rules.
-              </div>
-            </CardContent>
-          </Card>
+          <TimeOffPolicyManager />
         </TabsContent>
 
         {/* General Settings Tab */}
@@ -370,6 +357,223 @@ export default function HRSettingsPage() {
                 </Button>
                 <Button type="submit" data-testid="button-save">
                   {editingCategory ? "Update" : "Create"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Time Off Policy Manager Component
+function TimeOffPolicyManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Fetch policies
+  const { data: policies = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies"],
+  });
+
+  // Create/Update mutation
+  const mutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/hr/time-off-policies", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies"] });
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Time off policy saved successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to save policy. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const form = useForm({
+    defaultValues: {
+      name: "Standard Company Policy",
+      description: "Default company time off policy",
+      vacationDaysDefault: 15,
+      sickDaysDefault: 10,
+      personalDaysDefault: 3,
+      carryOverAllowed: false,
+      maxCarryOverDays: 0,
+      effectiveDate: new Date().toISOString().split('T')[0],
+      policyDocument: ""
+    }
+  });
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading policies...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-medium">Time Off Policies</h3>
+          <p className="text-muted-foreground">
+            Configure company-wide time off allocations and policies
+          </p>
+        </div>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          {policies.length > 0 ? "Edit Policy" : "Create Policy"}
+        </Button>
+      </div>
+
+      {policies.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{policies[0].name}</CardTitle>
+            <CardDescription>{policies[0].description}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{policies[0].vacationDaysDefault}</div>
+                <div className="text-sm text-blue-700">Annual Vacation Days</div>
+              </div>
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">{policies[0].sickDaysDefault}</div>
+                <div className="text-sm text-orange-700">Annual Sick Days</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{policies[0].personalDaysDefault}</div>
+                <div className="text-sm text-green-700">Annual Personal Days</div>
+              </div>
+            </div>
+            
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p><strong>Effective Date:</strong> {new Date(policies[0].effectiveDate).toLocaleDateString()}</p>
+              <p><strong>Carry Over:</strong> {policies[0].carryOverAllowed ? `Yes (Max ${policies[0].maxCarryOverDays} days)` : 'Not allowed'}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No time off policy configured</p>
+            <p className="text-sm text-muted-foreground mb-4">Create a policy to set default time off allocations for all employees</p>
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Policy
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Time Off Policy</DialogTitle>
+            <DialogDescription>
+              Configure default time off allocations for all employees
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(data => mutation.mutate(data))} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Policy Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="effectiveDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Brief description of this policy" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="vacationDaysDefault"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vacation Days (Annual)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sickDaysDefault"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sick Days (Annual)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="personalDaysDefault"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Personal Days (Annual)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={mutation.isPending}>
+                  {mutation.isPending ? "Saving..." : "Save Policy"}
                 </Button>
               </div>
             </form>
