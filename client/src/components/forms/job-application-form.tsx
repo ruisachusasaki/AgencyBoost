@@ -112,6 +112,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
 
   const onSubmit = (data: InsertJobApplication) => {
     console.log("Submitting application data:", data);
+    console.log("Form validation passed!");
     
     // Map the form data to include custom fields
     const formValues = form.getValues();
@@ -426,6 +427,12 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
                   disabled={submitApplicationMutation.isPending}
                   className="min-w-[120px]"
                   data-testid="button-submit-application"
+                  onClick={() => {
+                    console.log("Submit button clicked!");
+                    console.log("Form errors:", form.formState.errors);
+                    console.log("Form is valid:", form.formState.isValid);
+                    console.log("Form values:", form.getValues());
+                  }}
                 >
                   {submitApplicationMutation.isPending ? (
                     <div className="flex items-center gap-2">
