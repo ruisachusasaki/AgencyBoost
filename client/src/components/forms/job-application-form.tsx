@@ -70,7 +70,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
       coverLetterUrl: "",
       portfolioUrl: "",
       experience: "",
-      salaryExpectation: null,
+      salaryExpectation: "",
       notes: "",
     },
   });
@@ -372,7 +372,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
                                 {...formField}
                                 value={formField.value || ""} 
                                 data-testid={`input-${field.id}`}
-                                onChange={(e) => formField.onChange(e.target.value ? Number(e.target.value) : null)}
+                                onChange={(e) => formField.onChange(e.target.value || "")}
                               />
                             </FormControl>
                             <FormMessage />
