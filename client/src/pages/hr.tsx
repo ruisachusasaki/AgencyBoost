@@ -174,7 +174,11 @@ export default function HRPage() {
       ...jobOpeningForm,
       compensation: jobOpeningForm.compensation ? parseFloat(jobOpeningForm.compensation) : null,
     };
-
+    
+    // Remove the usePositionDescription field before sending to API
+    delete jobOpeningData.usePositionDescription;
+    
+    console.log("Submitting job opening data:", jobOpeningData);
     createJobOpeningMutation.mutate(jobOpeningData);
   };
 

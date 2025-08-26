@@ -9887,13 +9887,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/job-openings", async (req, res) => {
     try {
+      console.log("POST /api/job-openings - Request body:", req.body);
       // For now, use the same mock user pattern as other routes
       const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      console.log("Using mock user ID:", currentUserId);
       
       const validatedData = insertJobOpeningSchema.parse({
         ...req.body,
         createdById: currentUserId
       });
+      console.log("Validated data:", validatedData);
 
       const [newOpening] = await db.insert(jobOpenings).values(validatedData).returning();
       
