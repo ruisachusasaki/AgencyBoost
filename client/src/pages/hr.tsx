@@ -38,7 +38,6 @@ export default function HRPage() {
   // Filter states for time off reports
   const [reportSearchTerm, setReportSearchTerm] = useState("");
   const [reportDepartmentFilter, setReportDepartmentFilter] = useState("all");
-  const [reportPositionFilter, setReportPositionFilter] = useState("all");
   
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
@@ -646,8 +645,7 @@ export default function HRPage() {
                     .filter(([name, usage]) => {
                       const matchesSearch = name.toLowerCase().includes(reportSearchTerm.toLowerCase());
                       const matchesDepartment = reportDepartmentFilter === "all" || usage.department === reportDepartmentFilter;
-                      const matchesPosition = reportPositionFilter === "all" || usage.position === reportPositionFilter;
-                      return matchesSearch && matchesDepartment && matchesPosition;
+                      return matchesSearch && matchesDepartment;
                     })
                     .sort(([,a], [,b]) => {
                       const aTotal = (a.allocatedVacation + a.allocatedSick) - a.totalUsed;
@@ -678,17 +676,6 @@ export default function HRPage() {
                               <SelectItem value="all">All Departments</SelectItem>
                               {uniqueDepartments.filter((dept): dept is string => !!dept).map(dept => (
                                 <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select value={reportPositionFilter} onValueChange={setReportPositionFilter}>
-                            <SelectTrigger className="w-40" data-testid="select-position-filter">
-                              <SelectValue placeholder="Position" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Positions</SelectItem>
-                              {uniquePositions.filter((pos): pos is string => !!pos).map(pos => (
-                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -753,7 +740,6 @@ export default function HRPage() {
                             onClick={() => {
                               setReportSearchTerm("");
                               setReportDepartmentFilter("all");
-                              setReportPositionFilter("all");
                             }}
                             className="mt-2"
                             data-testid="button-clear-filters"
