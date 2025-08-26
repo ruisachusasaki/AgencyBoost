@@ -7,6 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Briefcase, MapPin, DollarSign, Building2, Clock, CheckCircle } from "lucide-react";
 import JobApplicationForm from "@/components/forms/job-application-form";
 
+// Utility function to strip HTML tags and convert to plain text
+function stripHtml(html: string): string {
+  // Create a temporary div element to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || '';
+}
+
 interface JobOpening {
   id: string;
   departmentName: string;
@@ -172,7 +180,7 @@ export default function CareersPage() {
 
                     {position.jobDescription && (
                       <div className="text-sm text-gray-600 line-clamp-3">
-                        {position.jobDescription}
+                        {stripHtml(position.jobDescription)}
                       </div>
                     )}
                   </CardContent>

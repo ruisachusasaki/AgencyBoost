@@ -15,6 +15,14 @@ import { insertJobApplicationSchema, type InsertJobApplication } from "@shared/s
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+// Utility function to strip HTML tags and convert to plain text
+function stripHtml(html: string): string {
+  // Create a temporary div element to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || '';
+}
+
 interface JobApplicationFormProps {
   onSuccess?: () => void;
 }
@@ -152,7 +160,7 @@ export default function JobApplicationForm({ onSuccess }: JobApplicationFormProp
                 <div>
                   <h4 className="font-semibold mb-2">Job Description</h4>
                   <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {selectedPosition.jobDescription}
+                    {stripHtml(selectedPosition.jobDescription)}
                   </div>
                 </div>
               )}
