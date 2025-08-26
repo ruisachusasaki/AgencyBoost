@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Briefcase, MapPin, DollarSign, Building2, Clock, CheckCircle } from "lucide-react";
-import JobApplicationForm from "@/components/forms/job-application-form";
+import JobApplicationFormSimple from "@/components/forms/job-application-form-simple";
 
 // Utility function to strip HTML tags and convert to plain text
 function stripHtml(html: string): string {
@@ -145,18 +145,8 @@ export default function CareersPage() {
                           </DialogHeader>
                           
                           {selectedPosition && (
-                            <JobApplicationForm
-                              position={{
-                                id: selectedPosition.id,
-                                title: selectedPosition.positionTitle,
-                                department: selectedPosition.departmentName,
-                                employmentType: selectedPosition.employmentType,
-                                location: selectedPosition.location,
-                                compensation: selectedPosition.compensation,
-                                compensationType: selectedPosition.compensationType,
-                                jobDescription: selectedPosition.jobDescription,
-                                benefits: selectedPosition.benefits,
-                              }}
+                            <JobApplicationFormSimple
+                              preSelectedPosition={selectedPosition.id}
                               onSuccess={handleApplicationSuccess}
                             />
                           )}
@@ -198,7 +188,7 @@ export default function CareersPage() {
               Ready to join our team? Fill out the application form below to get started.
             </p>
           </div>
-          <JobApplicationForm onSuccess={handleApplicationSuccess} />
+          <JobApplicationFormSimple onSuccess={handleApplicationSuccess} />
         </div>
 
         {/* Company Info Section */}

@@ -61,6 +61,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
   
   const form = useForm<InsertJobApplication>({
     resolver: zodResolver(insertJobApplicationSchema),
+    mode: 'onChange',
     defaultValues: {
       positionId: preSelectedPosition || "",
       applicantName: "",
@@ -157,11 +158,16 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
     );
   }
 
-  // Get configured form fields, sorted by order
+  // Get configured form fields, sorted by order  
   const configuredFields = (formConfig?.fields || []).sort((a: any, b: any) => a.order - b.order);
 
   console.log("Form configuration:", formConfig);
   console.log("Configured fields:", configuredFields);
+  
+  // Log if there are any JavaScript errors
+  window.addEventListener('error', (e) => {
+    console.error('JavaScript error:', e.error);
+  });
 
   return (
     <div className="space-y-6">
