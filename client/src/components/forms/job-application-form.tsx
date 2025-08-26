@@ -114,17 +114,25 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
     console.log("Submitting application data:", data);
     
     // Map the form data to include custom fields
+    const formValues = form.getValues();
+    console.log("All form values:", formValues);
+    
+    // Extract custom field values
+    const customFieldData: Record<string, any> = {};
+    configuredFields.forEach((field: any) => {
+      if (field.id.startsWith('field_') || !['job_opening', 'full_name', 'email', 'phone', 'resume_url', 'cover_letter_url', 'portfolio_url', 'experience_level', 'salary_expectation', 'notes'].includes(field.id)) {
+        const value = formValues[field.id as keyof typeof formValues];
+        if (value) {
+          customFieldData[field.id] = value;
+        }
+      }
+    });
+    
+    console.log("Custom field data:", customFieldData);
+    
     const submitData = {
       ...data,
-      // Store custom field data in the customFieldData JSON column
-      customFieldData: Object.keys(data).reduce((acc: Record<string, any>, key) => {
-        // Skip standard fields that are already in the schema
-        const standardFields = ['positionId', 'applicantName', 'applicantEmail', 'applicantPhone', 'resumeUrl', 'coverLetterUrl', 'portfolioUrl', 'experience', 'salaryExpectation', 'notes'];
-        if (!standardFields.includes(key) && data[key as keyof typeof data]) {
-          acc[key] = data[key as keyof typeof data];
-        }
-        return acc;
-      }, {})
+      customFieldData
     };
     
     console.log("Final submit data:", submitData);
