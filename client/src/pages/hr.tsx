@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,9 @@ import {
   Check,
   ChevronsUpDown,
   Star,
-  Eye
+  Eye,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -59,6 +62,10 @@ export default function HRPage() {
   // Hiring manager search state
   const [hiringManagerSearchOpen, setHiringManagerSearchOpen] = useState(false);
   const [hiringManagerSearchValue, setHiringManagerSearchValue] = useState("");
+
+  // Application sorting state
+  const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'stage' | 'rating' | 'appliedAt' | null>(null);
+  const [applicationSortDirection, setApplicationSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
@@ -397,6 +404,75 @@ export default function HRPage() {
       </Badge>
     );
   };
+
+  // Application sorting handler
+  const handleApplicationSort = (field: 'applicantName' | 'stage' | 'rating' | 'appliedAt') => {
+    if (applicationSortField === field) {
+      setApplicationSortDirection(applicationSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setApplicationSortField(field);
+      setApplicationSortDirection('asc');
+    }
+  };
+
+  // Filter and sort applications
+  const sortedApplications = useMemo(() => {
+    let sorted = [...jobApplications];
+    
+    if (applicationSortField) {
+      sorted.sort((a, b) => {
+        let aValue: any = a[applicationSortField];
+        let bValue: any = b[applicationSortField];
+        
+        if (applicationSortField === 'appliedAt') {
+          aValue = new Date(aValue).getTime();
+          bValue = new Date(bValue).getTime();
+        } else if (applicationSortField === 'rating') {
+          aValue = aValue || 0;
+          bValue = bValue || 0;
+        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+        
+        if (applicationSortDirection === 'asc') {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        }
+      });
+    }
+    
+    return sorted;
+  }, [jobApplications, applicationSortField, applicationSortDirection]);
+
+  // Application Sortable Header Component
+  const ApplicationSortableHeader = ({ field, children }: { field: 'applicantName' | 'stage' | 'rating' | 'appliedAt'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleApplicationSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              applicationSortField === field && applicationSortDirection === 'asc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              applicationSortField === field && applicationSortDirection === 'desc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -752,131 +828,136 @@ export default function HRPage() {
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Applications</CardTitle>
-              <CardDescription>Track candidates through the hiring process</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {jobApplications.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No job applications</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Candidate Name</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Rating</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Application Date</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jobApplications.map((application) => (
-                        <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="space-y-1">
-                              <button
-                                onClick={() => window.location.href = `/hr/applicant/${application.id}`}
-                                className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
-                                data-testid={`link-applicant-${application.id}`}
-                              >
-                                {application.applicantName}
-                              </button>
-                              <div className="text-sm text-gray-600">{application.applicantEmail}</div>
-                              <div className="text-sm text-gray-600">{application.positionTitle}</div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Select
-                              value={application.stage}
-                              onValueChange={async (newStage) => {
+          {jobApplications.length === 0 ? (
+            <div className="text-center py-12">
+              <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No applications yet</h3>
+              <p className="text-gray-500">
+                Job applications will appear here when candidates apply.
+              </p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <Table className="bg-white">
+                <TableHeader>
+                  <TableRow>
+                    <ApplicationSortableHeader field="applicantName">Candidate Name</ApplicationSortableHeader>
+                    <ApplicationSortableHeader field="stage">Status</ApplicationSortableHeader>
+                    <ApplicationSortableHeader field="rating">Rating</ApplicationSortableHeader>
+                    <ApplicationSortableHeader field="appliedAt">Application Date</ApplicationSortableHeader>
+                    <TableHead className="w-[15%]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedApplications.map((application) => (
+                    <TableRow key={application.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div className="space-y-1">
+                          <button
+                            onClick={() => window.location.href = `/hr/applicant/${application.id}`}
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                            data-testid={`link-applicant-${application.id}`}
+                          >
+                            {application.applicantName}
+                          </button>
+                          <div className="text-sm text-gray-600">{application.applicantEmail}</div>
+                          <div className="text-sm text-gray-600">{application.positionTitle}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={application.stage}
+                          onValueChange={async (newStage) => {
+                            try {
+                              await apiRequest(`/api/hr/job-applications/${application.id}`, {
+                                method: 'PATCH',
+                                body: { stage: newStage }
+                              });
+                              queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                            } catch (error) {
+                              console.error('Failed to update status:', error);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-[150px]" data-testid={`select-status-${application.id}`}>
+                            <SelectValue placeholder="Select status">
+                              {application.stage === 'new' && 'New'}
+                              {application.stage === 'review' && 'Review'}
+                              {application.stage === 'interview' && 'Interview'}
+                              {application.stage === 'not_selected' && 'Not Selected'}
+                              {application.stage === 'test_sent' && 'Test Sent'}
+                              {application.stage === 'send_offer' && 'Send Offer'}
+                              {application.stage === 'offer_sent' && 'Offer Sent'}
+                              {application.stage === 'offer_accepted' && 'Offer Accepted'}
+                              {application.stage === 'offer_rejected' && 'Offer Rejected'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">New</SelectItem>
+                            <SelectItem value="review">Review</SelectItem>
+                            <SelectItem value="interview">Interview</SelectItem>
+                            <SelectItem value="not_selected">Not Selected</SelectItem>
+                            <SelectItem value="test_sent">Test Sent</SelectItem>
+                            <SelectItem value="send_offer">Send Offer</SelectItem>
+                            <SelectItem value="offer_sent">Offer Sent</SelectItem>
+                            <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
+                            <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onClick={async () => {
                                 try {
                                   await apiRequest(`/api/hr/job-applications/${application.id}`, {
                                     method: 'PATCH',
-                                    body: { stage: newStage }
+                                    body: { rating: star }
                                   });
                                   queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
                                 } catch (error) {
-                                  console.error('Failed to update status:', error);
+                                  console.error('Failed to update rating:', error);
                                 }
                               }}
+                              className="hover:scale-110 transition-transform"
+                              data-testid={`rating-star-${star}`}
                             >
-                              <SelectTrigger className="w-40" data-testid={`select-status-${application.id}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="new">New</SelectItem>
-                                <SelectItem value="review">Review</SelectItem>
-                                <SelectItem value="interview">Interview</SelectItem>
-                                <SelectItem value="not_selected">Not Selected</SelectItem>
-                                <SelectItem value="test_sent">Test Sent</SelectItem>
-                                <SelectItem value="send_offer">Send Offer</SelectItem>
-                                <SelectItem value="offer_sent">Offer Sent</SelectItem>
-                                <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
-                                <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                  key={star}
-                                  onClick={async () => {
-                                    try {
-                                      await apiRequest(`/api/hr/job-applications/${application.id}`, {
-                                        method: 'PATCH',
-                                        body: { rating: star }
-                                      });
-                                      queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
-                                    } catch (error) {
-                                      console.error('Failed to update rating:', error);
-                                    }
-                                  }}
-                                  className="text-yellow-400 hover:text-yellow-500 transition-colors"
-                                  data-testid={`star-${application.id}-${star}`}
-                                >
-                                  <Star
-                                    className={`h-4 w-4 ${
-                                      star <= (application.rating || 0) ? 'fill-current' : 'stroke-current fill-transparent'
-                                    }`}
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {application.appliedAt && new Date(application.appliedAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.location.href = `/hr/applicant/${application.id}`}
-                                data-testid={`button-view-${application.id}`}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                              <Star 
+                                className={`h-4 w-4 ${
+                                  star <= (application.rating || 0) 
+                                    ? 'text-yellow-400 fill-yellow-400' 
+                                    : 'text-gray-300'
+                                }`} 
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-900">
+                          {application.appliedAt ? new Date(application.appliedAt).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.location.href = `/hr/applicant/${application.id}`}
+                          className="flex items-center gap-2"
+                          data-testid={`view-application-${application.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          VIEW
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
 

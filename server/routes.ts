@@ -10397,7 +10397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           applicantEmail: jobApplications.applicantEmail,
           applicantPhone: jobApplications.applicantPhone,
           positionId: jobApplications.positionId,
-          positionTitle: jobOpenings.positionTitle,
+          positionTitle: sql`COALESCE(${jobOpenings.positionTitle}, 'Unknown Position')`.as('positionTitle'),
           resumeUrl: jobApplications.resumeUrl,
           coverLetterUrl: jobApplications.coverLetterUrl,
           portfolioUrl: jobApplications.portfolioUrl,
