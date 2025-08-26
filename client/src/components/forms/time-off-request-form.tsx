@@ -49,6 +49,8 @@ interface TimeOffRequestFormProps {
 
 export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffRequestFormProps) {
   const [dayHours, setDayHours] = useState<DayHours[]>([]);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -165,7 +167,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>From Date</FormLabel>
-                    <Popover>
+                    <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -189,7 +191,10 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setStartDateOpen(false);
+                          }}
                           disabled={(date) => date < new Date()}
                           initialFocus
                         />
@@ -206,7 +211,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>To Date</FormLabel>
-                    <Popover>
+                    <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -230,8 +235,13 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setEndDateOpen(false);
+                          }}
                           disabled={(date) => date < (watchedStartDate || new Date())}
+                          month={watchedStartDate || new Date()}
+                          onMonthChange={() => {}} // Prevent external month changes
                           initialFocus
                         />
                       </PopoverContent>
