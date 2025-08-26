@@ -10409,8 +10409,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Position:", position[0]);
       console.log("Position name:", positionName);
       
-      // Directly insert into database since storage method has issues
-      const result = await db.insert(jobApplications).values({
+      // Build the insert data object
+      const insertData = {
         id: sql`gen_random_uuid()`,
         positionId: validatedData.positionId,
         positionTitle: positionName, // Add the required position title
@@ -10427,7 +10427,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stage: 'applied',
         appliedAt: new Date(),
         lastUpdated: new Date()
-      }).returning();
+      };
+      
+      console.log("Insert data:", insertData);
+      
+      // Directly insert into database since storage method has issues
+      const result = await db.insert(jobApplications).values(insertData).returning();
       
       const application = result[0];
       console.log("Created job application:", application);

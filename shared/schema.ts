@@ -614,7 +614,8 @@ export const timeOffRequestDays = pgTable("time_off_request_days", {
 // HR System - Job Applications
 export const jobApplications = pgTable("job_applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  positionId: varchar("position_id").notNull().references(() => positions.id, { onDelete: "cascade" }),
+  positionId: varchar("position_id"),
+  positionTitle: varchar("position_title").notNull(), // Add the missing position_title column
   applicantName: text("applicant_name").notNull(),
   applicantEmail: text("applicant_email").notNull(),
   applicantPhone: text("applicant_phone"),
