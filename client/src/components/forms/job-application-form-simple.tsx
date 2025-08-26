@@ -131,8 +131,13 @@ export default function JobApplicationFormSimple({ onSuccess, preSelectedPositio
       }
     });
     
+    // Get the selected position title
+    const selectedPosition = openPositions.find(p => p.id === formData.positionId);
+    const positionTitle = selectedPosition?.positionTitle || "";
+    
     const submitData = {
       ...formData,
+      positionTitle,
       customFieldData
     };
     
