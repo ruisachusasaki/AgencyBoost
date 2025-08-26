@@ -240,10 +240,10 @@ export default function HRPage() {
     };
     
     // Remove the usePositionDescription field before sending to API
-    delete jobOpeningData.usePositionDescription;
+    const { usePositionDescription, ...submitData } = jobOpeningData;
     
-    console.log("Submitting job opening data:", jobOpeningData);
-    createJobOpeningMutation.mutate(jobOpeningData);
+    console.log("Submitting job opening data:", submitData);
+    createJobOpeningMutation.mutate(submitData);
   };
 
   // Handle edit job opening
@@ -282,11 +282,11 @@ export default function HRPage() {
     };
     
     // Remove the usePositionDescription field before sending to API
-    delete jobOpeningData.usePositionDescription;
+    const { usePositionDescription, ...updateData } = jobOpeningData;
     
     updateJobOpeningMutation.mutate({ 
       id: editingJobOpening.id, 
-      data: jobOpeningData 
+      data: updateData 
     });
   };
 
@@ -398,9 +398,9 @@ export default function HRPage() {
     
     // Role-based filtering for staff directory
     if (!canViewAllData && isManager) {
-      staffToShow = [...directReports, currentUser].filter(Boolean); // Manager sees their team + themselves
+      staffToShow = [...(directReports as Staff[]), currentUser].filter(Boolean) as Staff[]; // Manager sees their team + themselves
     } else if (!canViewAllData && !isManager) {
-      staffToShow = [currentUser].filter(Boolean); // Regular users see only themselves
+      staffToShow = [currentUser].filter(Boolean) as Staff[]; // Regular users see only themselves
     }
     
     // Apply department and position filters
@@ -557,6 +557,7 @@ export default function HRPage() {
             ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
             { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
             { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
+            { id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 },
             ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
             { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
             { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
@@ -1075,6 +1076,147 @@ export default function HRPage() {
               </Table>
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === "time-off-calendar" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Time Off Calendar</h2>
+            <p className="text-slate-600">See who's off and when to help plan workload and approval decisions</p>
+          </div>
+
+          {(() => {
+            // Get approved time off requests for the next 60 days
+            const today = new Date();
+            const sixtyDaysFromNow = new Date();
+            sixtyDaysFromNow.setDate(today.getDate() + 60);
+
+            // Filter approved time off requests within date range
+            const approvedTimeOff = filteredTimeOffRequests.filter(request => {
+              if (request.status !== 'approved') return false;
+              
+              const startDate = new Date(request.startDate);
+              const endDate = new Date(request.endDate);
+              
+              return (startDate <= sixtyDaysFromNow && endDate >= today);
+            });
+
+            // Group time off by date ranges
+            const timeOffByDateRange = approvedTimeOff.reduce((acc, request) => {
+              const staff = staffData.find(s => s.id === request.staffId);
+              if (!staff) return acc;
+
+              const startDate = new Date(request.startDate);
+              const endDate = new Date(request.endDate);
+              
+              // Create date range key
+              const startStr = startDate.toLocaleDateString();
+              const endStr = endDate.toLocaleDateString();
+              const dateRangeKey = startStr === endStr ? startStr : `${startStr} - ${endStr}`;
+              
+              if (!acc[dateRangeKey]) {
+                acc[dateRangeKey] = {
+                  startDate,
+                  endDate,
+                  requests: []
+                };
+              }
+              
+              acc[dateRangeKey].requests.push({
+                ...request,
+                staffName: `${staff.firstName} ${staff.lastName}`,
+                department: staff.department,
+                position: staff.position
+              });
+              
+              return acc;
+            }, {} as Record<string, any>);
+
+            // Sort by date
+            const sortedTimeOff = Object.entries(timeOffByDateRange)
+              .sort(([,a], [,b]) => a.startDate.getTime() - b.startDate.getTime());
+
+            const getTypeColor = (type: string) => {
+              switch (type) {
+                case 'vacation': return 'bg-blue-100 text-blue-800';
+                case 'sick': return 'bg-red-100 text-red-800';
+                case 'personal': return 'bg-green-100 text-green-800';
+                case 'bereavement': return 'bg-gray-100 text-gray-800';
+                case 'maternity': return 'bg-purple-100 text-purple-800';
+                case 'paternity': return 'bg-indigo-100 text-indigo-800';
+                default: return 'bg-slate-100 text-slate-800';
+              }
+            };
+
+            return (
+              <div className="space-y-4">
+                {sortedTimeOff.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <Calendar className="h-12 w-12 mx-auto text-slate-400 mb-4" />
+                      <p className="text-slate-500 text-lg">No approved time off in the next 60 days</p>
+                      <p className="text-slate-400 text-sm mt-2">Time off requests will appear here once approved</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  sortedTimeOff.map(([dateRange, data]) => (
+                    <Card key={dateRange} className="overflow-hidden">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-blue-600" />
+                            {dateRange}
+                          </CardTitle>
+                          <Badge variant="outline" className="text-xs">
+                            {data.requests.length} {data.requests.length === 1 ? 'person' : 'people'} off
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-3">
+                          {data.requests.map((request: any) => (
+                            <div key={request.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback className="text-sm font-medium">
+                                    {request.staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-slate-900">{request.staffName}</p>
+                                  <p className="text-sm text-slate-600">{request.department} • {request.position}</p>
+                                  {request.reason && (
+                                    <p className="text-xs text-slate-500 mt-1 italic">"{request.reason}"</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <Badge className={getTypeColor(request.type)}>
+                                  {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
+                                </Badge>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {request.totalDays} {request.totalDays === 1 ? 'day' : 'days'}
+                                  {request.totalHours && ` (${request.totalHours}h)`}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+                
+                {sortedTimeOff.length > 0 && (
+                  <div className="text-center text-sm text-slate-500 pt-4 border-t">
+                    Showing approved time off for the next 60 days • 
+                    {canViewAllData ? ' All staff' : isManager ? ' Your team' : ' Your requests only'}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
