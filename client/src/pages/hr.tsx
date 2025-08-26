@@ -1558,9 +1558,22 @@ export default function HRPage() {
                             'bg-red-50 text-red-700 border-red-200'
                           }
                         >
-                          {opening.approvalStatus === 'pending' ? '⏳ Pending Approval' :
-                           opening.approvalStatus === 'approved' ? '✅ Approved' : 
-                           '❌ Rejected'}
+                          {opening.approvalStatus === 'pending' ? (
+                            <>
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending Approval
+                            </>
+                          ) : opening.approvalStatus === 'approved' ? (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approved
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Rejected
+                            </>
+                          )}
                         </Badge>
                         {opening.approvalStatus === 'pending' && isManager && (
                           <>
