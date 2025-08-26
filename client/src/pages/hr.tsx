@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { 
   CalendarDays, 
   Users, 
@@ -19,7 +20,9 @@ import {
   Phone,
   MapPin,
   BarChart3,
-  UserCheck
+  UserCheck,
+  Search,
+  Filter
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
@@ -31,6 +34,11 @@ export default function HRPage() {
   // Filter states for staff directory
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [positionFilter, setPositionFilter] = useState("all");
+  
+  // Filter states for time off reports
+  const [reportSearchTerm, setReportSearchTerm] = useState("");
+  const [reportDepartmentFilter, setReportDepartmentFilter] = useState("all");
+  const [reportPositionFilter, setReportPositionFilter] = useState("all");
   
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
@@ -633,8 +641,60 @@ export default function HRPage() {
                     }
                   });
 
+                  // Filter staff data for reports based on search and filters
+                  const filteredUsageData = Object.entries(usageByStaff)
+                    .filter(([name, usage]) => {
+                      const matchesSearch = name.toLowerCase().includes(reportSearchTerm.toLowerCase());
+                      const matchesDepartment = reportDepartmentFilter === "all" || usage.department === reportDepartmentFilter;
+                      const matchesPosition = reportPositionFilter === "all" || usage.position === reportPositionFilter;
+                      return matchesSearch && matchesDepartment && matchesPosition;
+                    })
+                    .sort(([,a], [,b]) => {
+                      const aTotal = (a.allocatedVacation + a.allocatedSick) - a.totalUsed;
+                      const bTotal = (b.allocatedVacation + b.allocatedSick) - b.totalUsed;
+                      return bTotal - aTotal;
+                    });
+
                   return (
                     <div className="space-y-4">
+                      {/* Search and Filter Controls */}
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                          <Input
+                            placeholder="Search employees..."
+                            value={reportSearchTerm}
+                            onChange={(e) => setReportSearchTerm(e.target.value)}
+                            className="pl-10"
+                            data-testid="input-search-employees"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Select value={reportDepartmentFilter} onValueChange={setReportDepartmentFilter}>
+                            <SelectTrigger className="w-40" data-testid="select-department-filter">
+                              <SelectValue placeholder="Department" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Departments</SelectItem>
+                              {uniqueDepartments.filter((dept): dept is string => !!dept).map(dept => (
+                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={reportPositionFilter} onValueChange={setReportPositionFilter}>
+                            <SelectTrigger className="w-40" data-testid="select-position-filter">
+                              <SelectValue placeholder="Position" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Positions</SelectItem>
+                              {uniquePositions.filter((pos): pos is string => !!pos).map(pos => (
+                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
@@ -647,13 +707,7 @@ export default function HRPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {Object.entries(usageByStaff)
-                              .sort(([,a], [,b]) => {
-                                const aTotal = (a.allocatedVacation + a.allocatedSick) - a.totalUsed;
-                                const bTotal = (b.allocatedVacation + b.allocatedSick) - b.totalUsed;
-                                return bTotal - aTotal;
-                              })
-                              .map(([name, usage]) => {
+                            {filteredUsageData.map(([name, usage]) => {
                                 const remainingVacation = Math.max(0, usage.allocatedVacation - usage.usedVacation);
                                 const remainingSick = Math.max(0, usage.allocatedSick - usage.usedSick);
                                 const totalRemaining = remainingVacation + remainingSick;
@@ -682,9 +736,30 @@ export default function HRPage() {
                           </tbody>
                         </table>
                       </div>
-                      {Object.keys(usageByStaff).length > 0 && (
+                      {filteredUsageData.length > 0 && (
                         <div className="text-xs text-slate-500 mt-4">
-                          Showing data for {Object.keys(usageByStaff).length} employee{Object.keys(usageByStaff).length !== 1 ? 's' : ''}
+                          Showing {filteredUsageData.length} of {Object.keys(usageByStaff).length} employee{Object.keys(usageByStaff).length !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      {filteredUsageData.length === 0 && Object.keys(usageByStaff).length > 0 && (
+                        <div className="text-center py-8">
+                          <div className="text-slate-400 mb-2">
+                            <Filter className="h-8 w-8 mx-auto" />
+                          </div>
+                          <p className="text-slate-500">No employees found matching your filters</p>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setReportSearchTerm("");
+                              setReportDepartmentFilter("all");
+                              setReportPositionFilter("all");
+                            }}
+                            className="mt-2"
+                            data-testid="button-clear-filters"
+                          >
+                            Clear filters
+                          </Button>
                         </div>
                       )}
                     </div>
