@@ -183,6 +183,17 @@ export default function CareersPage() {
           </>
         )}
 
+        {/* Application Form Section */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Apply for a Position</h2>
+            <p className="text-gray-600">
+              Ready to join our team? Fill out the application form below to get started.
+            </p>
+          </div>
+          <JobApplicationForm onSuccess={handleApplicationSuccess} />
+        </div>
+
         {/* Company Info Section */}
         <div className="mt-16 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Why Work With Us?</h2>

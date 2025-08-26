@@ -9885,6 +9885,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get public job openings (no authentication required)
+  app.get("/api/job-openings/public", async (req, res) => {
+    try {
+      const hiringManager = alias(staff, 'hiring_manager');
+      const creator = alias(staff, 'creator');
+      const approver = alias(staff, 'approver');
+
+      // Only fetch open and approved positions
+      const query = db.select({
+        id: jobOpenings.id,
+        departmentId: jobOpenings.departmentId,
+        departmentName: departments.name,
+        positionId: jobOpenings.positionId,
+        positionTitle: positions.name,
+        status: jobOpenings.status,
+        hiringManagerId: jobOpenings.hiringManagerId,
+        hiringManagerName: sql<string>`CONCAT(${hiringManager.firstName}, ' ', ${hiringManager.lastName})`,
+        employmentType: jobOpenings.employmentType,
+        compensation: jobOpenings.compensation,
+        compensationType: jobOpenings.compensationType,
+        jobDescription: jobOpenings.jobDescription,
+        requirements: jobOpenings.requirements,
+        benefits: jobOpenings.benefits,
+        location: jobOpenings.location,
+        approvalStatus: jobOpenings.approvalStatus,
+        isPublic: jobOpenings.isPublic,
+        createdAt: jobOpenings.createdAt,
+      })
+      .from(jobOpenings)
+      .leftJoin(departments, eq(jobOpenings.departmentId, departments.id))
+      .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
+      .leftJoin(hiringManager, eq(jobOpenings.hiringManagerId, hiringManager.id))
+      .leftJoin(creator, eq(jobOpenings.createdById, creator.id))
+      .leftJoin(approver, eq(jobOpenings.approvedById, approver.id))
+      .where(and(
+        eq(jobOpenings.status, 'open'),
+        eq(jobOpenings.approvalStatus, 'approved'),
+        eq(jobOpenings.isPublic, true)
+      ))
+      .orderBy(desc(jobOpenings.createdAt));
+
+      const openings = await query;
+      res.json(openings);
+    } catch (error) {
+      console.error("Error fetching public job openings:", error);
+      res.status(500).json({ error: "Failed to fetch job openings" });
+    }
+  });
+
   app.post("/api/job-openings", async (req, res) => {
     try {
       console.log("POST /api/job-openings - Request body:", req.body);

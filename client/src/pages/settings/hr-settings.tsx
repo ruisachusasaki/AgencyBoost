@@ -18,11 +18,13 @@ import {
   Settings, 
   Users,
   CalendarDays,
-  Clock
+  Clock,
+  Briefcase
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import JobApplicationFormEditor from "@/components/hr/job-application-form-editor";
 
 // Schema for time off categories
 const timeOffCategorySchema = z.object({
@@ -156,7 +158,7 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             Time Off Categories
@@ -164,6 +166,10 @@ export default function HRSettingsPage() {
           <TabsTrigger value="policies" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Policies
+          </TabsTrigger>
+          <TabsTrigger value="job-application-form" className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            Job Application Form
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -249,6 +255,11 @@ export default function HRSettingsPage() {
         {/* Policies Tab */}
         <TabsContent value="policies" className="space-y-6">
           <TimeOffPolicyManager />
+        </TabsContent>
+
+        {/* Job Application Form Tab */}
+        <TabsContent value="job-application-form" className="space-y-6">
+          <JobApplicationFormEditor />
         </TabsContent>
 
         {/* General Settings Tab */}
