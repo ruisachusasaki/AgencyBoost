@@ -10395,7 +10395,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the request body
       const validatedData = insertJobApplicationSchema.parse(req.body);
       
-      const application = await storage.createJobApplication(validatedData);
+      // Directly insert into database since storage method has issues
+      const result = await db.insert(jobApplications).values({
+        id: sql`gen_random_uuid()`,
+        positionId: validatedData.positionId,
+        applicantName: validatedData.applicantName,
+        applicantEmail: validatedData.applicantEmail,
+        applicantPhone: validatedData.applicantPhone,
+        resumeUrl: validatedData.resumeUrl,
+        coverLetterUrl: validatedData.coverLetterUrl,
+        portfolioUrl: validatedData.portfolioUrl,
+        notes: validatedData.notes,
+        salaryExpectation: validatedData.salaryExpectation,
+        experience: validatedData.experience,
+        customFieldData: validatedData.customFieldData,
+        stage: 'applied',
+        appliedAt: new Date(),
+        lastUpdated: new Date()
+      }).returning();
+      
+      const application = result[0];
+      console.log("Created job application:", application);
       res.status(201).json(application);
     } catch (error: any) {
       console.error("Error creating job application:", error);
