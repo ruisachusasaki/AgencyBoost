@@ -14,11 +14,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CalendarIcon, Info } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { PolicyTooltip } from "@/components/hr/policy-tooltip";
 
 const timeOffRequestSchema = z.object({
   startDate: z.date({
@@ -249,12 +248,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    Time Off Category
-                    <PolicyTooltip type="policy-overview">
-                      <Info className="h-4 w-4" />
-                    </PolicyTooltip>
-                  </FormLabel>
+                  <FormLabel>Time Off Category</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-time-off-type">
@@ -262,30 +256,9 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="vacation">
-                        <div className="flex items-center gap-2">
-                          Vacation (PTO)
-                          <PolicyTooltip type="vacation" allocation={15}>
-                            <Info className="h-3 w-3" />
-                          </PolicyTooltip>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="sick">
-                        <div className="flex items-center gap-2">
-                          Sick Leave
-                          <PolicyTooltip type="sick" allocation={10}>
-                            <Info className="h-3 w-3" />
-                          </PolicyTooltip>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="personal">
-                        <div className="flex items-center gap-2">
-                          Personal Time Off
-                          <PolicyTooltip type="personal" allocation={3}>
-                            <Info className="h-3 w-3" />
-                          </PolicyTooltip>
-                        </div>
-                      </SelectItem>
+                      <SelectItem value="vacation">Vacation (PTO)</SelectItem>
+                      <SelectItem value="sick">Sick Leave</SelectItem>
+                      <SelectItem value="personal">Personal Time Off</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -297,12 +270,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
             {dayHours.length > 0 && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label className="text-base font-medium flex items-center gap-2">
-                    Hours per Day
-                    <PolicyTooltip type="calculation">
-                      <Info className="h-4 w-4" />
-                    </PolicyTooltip>
-                  </Label>
+                  <Label className="text-base font-medium">Hours per Day</Label>
                   <div className="text-sm text-muted-foreground">
                     Total: {getTotalHours()} hours ({dayHours.length} days)
                   </div>

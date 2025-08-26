@@ -22,15 +22,11 @@ import {
   BarChart3,
   UserCheck,
   Search,
-  Filter,
-  Info,
-  HelpCircle
+  Filter
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
-import { PolicyTooltip } from "@/components/hr/policy-tooltip";
-import { StatusTooltip } from "@/components/hr/status-tooltip";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -202,12 +198,7 @@ export default function HRPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  Pending Time Off
-                  <PolicyTooltip type="policy-overview">
-                    <Info className="h-3 w-3" />
-                  </PolicyTooltip>
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Pending Time Off</CardTitle>
                 <CalendarDays className="h-4 w-4 text-slate-600" />
               </CardHeader>
               <CardContent>
@@ -270,9 +261,7 @@ export default function HRPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <StatusTooltip type="time-off-status" status={request.status}>
-                              {getStatusBadge(request.status)}
-                            </StatusTooltip>
+                            {getStatusBadge(request.status)}
                             <p className="text-xs text-slate-600 mt-1">
                               {request.startDate && new Date(request.startDate).toLocaleDateString()}
                             </p>
@@ -302,9 +291,7 @@ export default function HRPage() {
                           <p className="text-sm text-slate-600">{application.applicantEmail}</p>
                         </div>
                         <div className="text-right">
-                          <StatusTooltip type="application-stage" status={application.stage}>
-                            {getApplicationStageBadge(application.stage)}
-                          </StatusTooltip>
+                          {getApplicationStageBadge(application.stage)}
                           <p className="text-xs text-slate-600 mt-1">
                             {application.appliedAt && new Date(application.appliedAt).toLocaleDateString()}
                           </p>
@@ -563,12 +550,7 @@ export default function HRPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Time Off Usage
-                  <PolicyTooltip type="remaining-balance">
-                    <Info className="h-4 w-4" />
-                  </PolicyTooltip>
-                </CardTitle>
+                <CardTitle>Time Off Usage</CardTitle>
                 <CardDescription>Remaining time off days for {(currentUser as any)?.role === 'Admin' ? 'all staff' : 'your team'}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -706,30 +688,9 @@ export default function HRPage() {
                             <tr className="border-b">
                               <th className="text-left py-2 px-3 font-medium">Employee</th>
                               <th className="text-left py-2 px-3 font-medium">Department</th>
-                              <th className="text-center py-2 px-3 font-medium">
-                                <div className="flex items-center justify-center gap-1">
-                                  Vacation Remaining
-                                  <PolicyTooltip 
-                                    type="vacation" 
-                                    allocation={policyAllocations.vacation}
-                                  />
-                                </div>
-                              </th>
-                              <th className="text-center py-2 px-3 font-medium">
-                                <div className="flex items-center justify-center gap-1">
-                                  Sick Remaining
-                                  <PolicyTooltip 
-                                    type="sick" 
-                                    allocation={policyAllocations.sick}
-                                  />
-                                </div>
-                              </th>
-                              <th className="text-center py-2 px-3 font-medium">
-                                <div className="flex items-center justify-center gap-1">
-                                  Total Remaining
-                                  <PolicyTooltip type="calculation" />
-                                </div>
-                              </th>
+                              <th className="text-center py-2 px-3 font-medium">Vacation Remaining</th>
+                              <th className="text-center py-2 px-3 font-medium">Sick Remaining</th>
+                              <th className="text-center py-2 px-3 font-medium">Total Remaining</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -748,40 +709,14 @@ export default function HRPage() {
                                     </td>
                                     <td className="py-2 px-3">{usage.department}</td>
                                     <td className="text-center py-2 px-3">
-                                      <div className="flex items-center justify-center gap-1">
-                                        <span className="text-blue-600 font-medium">{remainingVacation}</span>
-                                        <span className="text-xs text-slate-500">/ {usage.allocatedVacation}</span>
-                                        <PolicyTooltip 
-                                          type="vacation" 
-                                          allocation={usage.allocatedVacation}
-                                          used={usage.usedVacation}
-                                          remaining={remainingVacation}
-                                        />
-                                      </div>
+                                      <span className="text-blue-600 font-medium">{remainingVacation}</span>
+                                      <span className="text-xs text-slate-500 ml-1">/ {usage.allocatedVacation}</span>
                                     </td>
                                     <td className="text-center py-2 px-3">
-                                      <div className="flex items-center justify-center gap-1">
-                                        <span className="text-orange-600 font-medium">{remainingSick}</span>
-                                        <span className="text-xs text-slate-500">/ {usage.allocatedSick}</span>
-                                        <PolicyTooltip 
-                                          type="sick" 
-                                          allocation={usage.allocatedSick}
-                                          used={usage.usedSick}
-                                          remaining={remainingSick}
-                                        />
-                                      </div>
+                                      <span className="text-orange-600 font-medium">{remainingSick}</span>
+                                      <span className="text-xs text-slate-500 ml-1">/ {usage.allocatedSick}</span>
                                     </td>
-                                    <td className="text-center py-2 px-3">
-                                      <div className="flex items-center justify-center gap-1">
-                                        <span className="font-medium">{totalRemaining}</span>
-                                        <PolicyTooltip 
-                                          type="calculation" 
-                                          allocation={usage.allocatedVacation + usage.allocatedSick}
-                                          used={usage.usedVacation + usage.usedSick}
-                                          remaining={totalRemaining}
-                                        />
-                                      </div>
-                                    </td>
+                                    <td className="text-center py-2 px-3 font-medium">{totalRemaining}</td>
                                   </tr>
                                 );
                               })}
