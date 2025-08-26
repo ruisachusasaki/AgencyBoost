@@ -48,6 +48,8 @@ import HRPage from "@/pages/hr";
 import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
 import CareersPage from "@/pages/careers";
+import Resources from "@/pages/resources";
+import ResourcesSettings from "@/pages/settings/resources";
 
 function Router() {
   return (
@@ -66,6 +68,7 @@ function Router() {
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
       <Route path="/workflows" component={Workflows} />
+      <Route path="/resources" component={Resources} />
       <Route path="/hr" component={HRPage} />
       <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
       <Route path="/calendar" component={CalendarMain} />
@@ -83,6 +86,7 @@ function Router() {
       <Route path="/settings/teams/:id" component={TeamDetail} />
       <Route path="/settings/support" component={Support} />
       <Route path="/settings/hr-settings" component={HRSettings} />
+      <Route path="/settings/resources" component={ResourcesSettings} />
       <Route path="/settings/roles-permissions" component={RolesPermissions} />
       <Route path="/settings/permission-audit" component={PermissionAudit} />
       <Route path="/settings/integrations" component={Integrations} />

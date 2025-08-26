@@ -2379,3 +2379,123 @@ export type TaskDependency = typeof taskDependencies.$inferSelect;
 export type InsertTaskDependency = z.infer<typeof insertTaskDependencySchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one
+
+// Resource Categories - for organizing resources into folders/categories
+export const resourceCategories = pgTable("resource_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentId: varchar("parent_id"), // For nested categories - self reference
+  icon: text("icon"), // Icon class or name
+  color: text("color"), // Color for UI theming
+  order: integer("order").default(0),
+  isActive: boolean("is_active").default(true),
+  visibleToRoles: text("visible_to_roles").array().default([]), // Empty array means visible to all
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Resources - main table for all resource types
+export const resources = pgTable("resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content"), // HTML content for text-based resources
+  type: text("type").notNull(), // video, document, pdf, image, presentation, link, quiz
+  url: text("url"), // External URL for videos, documents, links
+  thumbnail: text("thumbnail"), // Thumbnail image URL
+  categoryId: varchar("category_id").references(() => resourceCategories.id),
+  duration: integer("duration"), // Duration in minutes for videos/courses
+  isRequired: boolean("is_required").default(false), // If completion is mandatory
+  isActive: boolean("is_active").default(true),
+  order: integer("order").default(0),
+  visibleToRoles: text("visible_to_roles").array().default([]), // Empty array means visible to all
+  tags: text("tags").array().default([]),
+  metadata: jsonb("metadata").default({}), // Additional metadata for different resource types
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Resource Progress - track user completion and progress
+export const resourceProgress = pgTable("resource_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  resourceId: varchar("resource_id").notNull().references(() => resources.id),
+  status: text("status").notNull().default("not_started"), // not_started, in_progress, completed
+  progressPercent: integer("progress_percent").default(0), // 0-100
+  timeSpent: integer("time_spent").default(0), // Time spent in minutes
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Resource Prerequisites - define which resources must be completed before others
+export const resourcePrerequisites = pgTable("resource_prerequisites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resourceId: varchar("resource_id").notNull().references(() => resources.id),
+  prerequisiteId: varchar("prerequisite_id").notNull().references(() => resources.id),
+  isRequired: boolean("is_required").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Resource Links - specific table for link-type resources (requested table format)
+export const resourceLinks = pgTable("resource_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  url: text("url").notNull(),
+  description: text("description"),
+  categoryId: varchar("category_id").references(() => resourceCategories.id),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for Resources system
+export const insertResourceCategorySchema = createInsertSchema(resourceCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertResourceSchema = createInsertSchema(resources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertResourceProgressSchema = createInsertSchema(resourceProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertResourcePrerequisiteSchema = createInsertSchema(resourcePrerequisites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertResourceLinkSchema = createInsertSchema(resourceLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for Resources system
+export type ResourceCategory = typeof resourceCategories.$inferSelect;
+export type InsertResourceCategory = z.infer<typeof insertResourceCategorySchema>;
+
+export type Resource = typeof resources.$inferSelect;
+export type InsertResource = z.infer<typeof insertResourceSchema>;
+
+export type ResourceProgress = typeof resourceProgress.$inferSelect;
+export type InsertResourceProgress = z.infer<typeof insertResourceProgressSchema>;
+
+export type ResourcePrerequisite = typeof resourcePrerequisites.$inferSelect;
+export type InsertResourcePrerequisite = z.infer<typeof insertResourcePrerequisiteSchema>;
+
+export type ResourceLink = typeof resourceLinks.$inferSelect;
+export type InsertResourceLink = z.infer<typeof insertResourceLinkSchema>;
