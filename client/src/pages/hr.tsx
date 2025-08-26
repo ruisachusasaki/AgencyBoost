@@ -172,7 +172,7 @@ export default function HRPage() {
 
     const jobOpeningData = {
       ...jobOpeningForm,
-      compensation: jobOpeningForm.compensation ? parseFloat(jobOpeningForm.compensation) : null,
+      compensation: jobOpeningForm.compensation || null,
     };
     
     // Remove the usePositionDescription field before sending to API
