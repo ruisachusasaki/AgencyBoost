@@ -1571,7 +1571,8 @@ export default function HRPage() {
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                               data-testid={`button-approve-${opening.id}`}
                             >
-                              ✓ Approve
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
                             </Button>
                             <Button 
                               variant="outline" 
@@ -1580,7 +1581,8 @@ export default function HRPage() {
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               data-testid={`button-reject-${opening.id}`}
                             >
-                              ✕ Reject
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
                             </Button>
                           </>
                         )}
