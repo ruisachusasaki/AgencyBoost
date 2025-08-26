@@ -85,7 +85,7 @@ export default function HRPage() {
     });
   }, [staffData, hiringManagerSearchValue]);
   
-  // Check if current user is a manager (has direct reports)
+  // Check if current user is a manager (has direct reports) and get role info
   const { data: currentUser } = useQuery({
     queryKey: ["/api/auth/current-user"],
   });
@@ -96,6 +96,9 @@ export default function HRPage() {
   });
   
   const isManager = directReports.length > 0;
+  const isAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.id === 'e56be30d-c086-446c-ada4-7ccef37ad7fb';
+  const canViewAllData = isAdmin;
+  const canManageJobOpenings = isManager || isAdmin;
   
 
   // Fetch time off requests
@@ -103,27 +106,26 @@ export default function HRPage() {
     queryKey: ["/api/hr/time-off-requests"],
   });
 
-  // Fetch job applications
+  // Fetch job applications (role-based filtering handled on backend)
   const { data: jobApplications = [] } = useQuery<JobApplication[]>({
     queryKey: ["/api/hr/job-applications"],
   });
 
-  // Fetch job openings
+  // Fetch job openings (visible to all, but creation restricted to managers/admins)
   const { data: jobOpenings = [] } = useQuery<any[]>({
     queryKey: ["/api/job-openings"],
-    enabled: isManager,
   });
 
   // Fetch departments and staff for dropdowns
   const { data: departments = [] } = useQuery<any[]>({
     queryKey: ["/api/departments"],
-    enabled: isManager,
+    enabled: canManageJobOpenings,
   });
 
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const { data: positions = [] } = useQuery<any[]>({
     queryKey: ["/api/departments", selectedDepartmentId, "positions"],
-    enabled: isManager && !!selectedDepartmentId,
+    enabled: canManageJobOpenings && !!selectedDepartmentId,
   });
 
   // Job Opening Form State
@@ -346,8 +348,28 @@ export default function HRPage() {
     queryKey: ["/api/hr/time-off-policies"],
   });
 
-  const pendingTimeOffRequests = timeOffRequests.filter(req => req.status === "pending");
-  const recentApplications = jobApplications.filter(app => {
+  // Role-based data filtering
+  const filteredTimeOffRequests = useMemo(() => {
+    if (canViewAllData) {
+      return timeOffRequests; // Admins see all requests
+    } else if (isManager) {
+      // Managers see requests from their team
+      const teamStaffIds = directReports.map(staff => staff.id);
+      return timeOffRequests.filter(request => teamStaffIds.includes(request.staffId));
+    }
+    return []; // Regular users don't see time off requests in dashboard
+  }, [timeOffRequests, directReports, canViewAllData, isManager]);
+
+  const filteredJobApplications = useMemo(() => {
+    // Backend already filters applications based on hiring manager
+    return jobApplications;
+  }, [jobApplications]);
+
+  // Active job openings count
+  const activeJobOpenings = jobOpenings.filter(job => job.status === 'active' || job.isActive !== false);
+
+  const pendingTimeOffRequests = filteredTimeOffRequests.filter(req => req.status === "pending");
+  const recentApplications = filteredJobApplications.filter(app => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     return app.appliedAt && new Date(app.appliedAt) > oneWeekAgo;
@@ -370,14 +392,24 @@ export default function HRPage() {
     return positions;
   }, [staffData]);
 
-  // Filter staff data based on selected filters
+  // Filter staff data based on selected filters and role permissions
   const filteredStaffData = useMemo(() => {
-    return staffData.filter(member => {
+    let staffToShow = staffData;
+    
+    // Role-based filtering for staff directory
+    if (!canViewAllData && isManager) {
+      staffToShow = [...directReports, currentUser].filter(Boolean); // Manager sees their team + themselves
+    } else if (!canViewAllData && !isManager) {
+      staffToShow = [currentUser].filter(Boolean); // Regular users see only themselves
+    }
+    
+    // Apply department and position filters
+    return staffToShow.filter(member => {
       const matchesDepartment = departmentFilter === "all" || member.department === departmentFilter;
       const matchesPosition = positionFilter === "all" || member.position === positionFilter;
       return matchesDepartment && matchesPosition;
     });
-  }, [staffData, departmentFilter, positionFilter]);
+  }, [staffData, directReports, currentUser, departmentFilter, positionFilter, canViewAllData, isManager]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -522,13 +554,13 @@ export default function HRPage() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           {[
-            { id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 },
-            { id: "staff-directory", name: "Staff Directory", icon: Users, count: staffData.length },
+            ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
+            { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
             { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
             ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
-            ...(isManager ? [{ id: "job-openings", name: "Job Openings", icon: FileText, count: 0 }] : []),
+            { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
             { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
-            { id: "reports", name: "Reports", icon: FileText, count: 0 }
+            ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -560,8 +592,8 @@ export default function HRPage() {
                 <Users className="h-4 w-4 text-slate-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{staffData.length}</div>
-                <p className="text-xs text-slate-600">Active employees</p>
+                <div className="text-2xl font-bold">{canViewAllData ? staffData.length : (isManager ? directReports.length + 1 : 1)}</div>
+                <p className="text-xs text-slate-600">{canViewAllData ? 'Active employees' : 'Team members'}</p>
               </CardContent>
             </Card>
 
@@ -593,7 +625,7 @@ export default function HRPage() {
                 <FileText className="h-4 w-4 text-slate-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">3</div>
+                <div className="text-2xl font-bold">{activeJobOpenings.length}</div>
                 <p className="text-xs text-slate-600">Active job postings</p>
               </CardContent>
             </Card>
@@ -1060,7 +1092,39 @@ export default function HRPage() {
                 <CardDescription>Employee distribution across departments</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-500 text-center py-8">Department analytics coming soon</p>
+                {(() => {
+                  // Calculate department headcount based on role permissions
+                  const staffToAnalyze = canViewAllData ? staffData : (isManager ? directReports : []);
+                  
+                  const departmentCounts = staffToAnalyze.reduce((acc, staff) => {
+                    const dept = staff.department || 'Unassigned';
+                    acc[dept] = (acc[dept] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+
+                  const sortedDepartments = Object.entries(departmentCounts)
+                    .sort(([,a], [,b]) => b - a);
+
+                  return (
+                    <div className="space-y-3">
+                      {sortedDepartments.length === 0 ? (
+                        <p className="text-slate-500 text-center py-8">No department data available</p>
+                      ) : (
+                        sortedDepartments.map(([department, count]) => (
+                          <div key={department} className="flex justify-between items-center p-3 border rounded-lg">
+                            <div>
+                              <p className="font-medium">{department}</p>
+                              <p className="text-sm text-slate-600">{count} {count === 1 ? 'employee' : 'employees'}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-slate-900">{count}</div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -1284,19 +1348,20 @@ export default function HRPage() {
         </div>
       )}
 
-      {activeTab === "job-openings" && isManager && (
+      {activeTab === "job-openings" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">Job Openings Management</h2>
               <p className="text-slate-600">Manage and track job openings for your department</p>
             </div>
-            <Dialog open={isJobOpeningModalOpen} onOpenChange={setIsJobOpeningModalOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-open-create-modal">
-                  Create Job Opening
-                </Button>
-              </DialogTrigger>
+            {canManageJobOpenings && (
+              <Dialog open={isJobOpeningModalOpen} onOpenChange={setIsJobOpeningModalOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-open-create-modal">
+                    Create Job Opening
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Job Opening</DialogTitle>
@@ -1528,6 +1593,7 @@ export default function HRPage() {
                 </div>
               </DialogContent>
             </Dialog>
+            )}
           </div>
 
           {/* Edit Job Opening Modal */}

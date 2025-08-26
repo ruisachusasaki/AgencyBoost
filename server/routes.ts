@@ -10341,7 +10341,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job Application Routes
   app.get("/api/hr/job-applications", async (req, res) => {
     try {
-      const applications = await db.select().from(jobApplications).orderBy(desc(jobApplications.appliedAt));
+      // Get current user ID (mock for now, in production this would come from authentication)
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      
+      // Check if user is admin
+      const adminUserIds = ["e56be30d-c086-446c-ada4-7ccef37ad7fb"];
+      const isAdmin = adminUserIds.includes(currentUserId);
+      
+      let applications;
+      
+      if (isAdmin) {
+        // Admin sees all applications
+        applications = await db.select().from(jobApplications).orderBy(desc(jobApplications.appliedAt));
+      } else {
+        // Non-admin users see only applications for job openings where they are the hiring manager
+        applications = await db.select({
+          id: jobApplications.id,
+          applicantName: jobApplications.applicantName,
+          applicantEmail: jobApplications.applicantEmail,
+          applicantPhone: jobApplications.applicantPhone,
+          positionTitle: jobApplications.positionTitle,
+          stage: jobApplications.stage,
+          rating: jobApplications.rating,
+          appliedAt: jobApplications.appliedAt,
+          resumeUrl: jobApplications.resumeUrl,
+          coverLetter: jobApplications.coverLetter,
+          notes: jobApplications.notes,
+          customFields: jobApplications.customFields,
+          jobOpeningId: jobApplications.jobOpeningId
+        })
+        .from(jobApplications)
+        .innerJoin(jobOpenings, eq(jobApplications.jobOpeningId, jobOpenings.id))
+        .where(eq(jobOpenings.hiringManagerId, currentUserId))
+        .orderBy(desc(jobApplications.appliedAt));
+      }
+      
       res.json(applications);
     } catch (error) {
       console.error("Error fetching job applications:", error);
