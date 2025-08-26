@@ -8,6 +8,7 @@ Preferred communication style: Simple, everyday language.
 Bundle architecture preference: Collection-based bundles.
 UX Organization: Project Templates integrated as tabs under Projects section rather than separate navigation.
 Checkbox Design: Bulk action checkboxes should be square, task completion checkboxes should be circular.
+Filter Preferences: Simplified filtering with only essential filters (search and department, not position) for time off reports.
 
 ## System Architecture
 
@@ -41,6 +42,8 @@ Checkbox Design: Bulk action checkboxes should be square, task completion checkb
 - **Comments System with Threading**: Comprehensive commenting system with nested replies, @mention notifications with keyboard navigation, and threaded conversations. Includes emoji picker.
 - **Advanced File Upload and Media System**: Complete multimedia support for task comments including inline image display, browser-based voice recording (MediaRecorder API), file attachments with type detection, secure object storage integration, and inline HTML5 audio players.
 - **Image Annotation System**: Fully functional collaborative feedback system for uploaded images and PDFs with @mention functionality, real-time annotation display, and complete CRUD operations.
+- **Enhanced HR Date Picker UX**: Time Off Request form with controlled date picker state for automatic closing and smart month navigation.
+- **Optimized HR Filter Layout**: Department and position filters sized appropriately for longer department names without text overflow.
 
 ### CSS Architecture Guidelines
 - **Problem**: Broad CSS selectors cause styling issues.
