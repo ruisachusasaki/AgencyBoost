@@ -1137,17 +1137,7 @@ export default function HRPage() {
             const sortedTimeOff = Object.entries(timeOffByDateRange)
               .sort(([,a], [,b]) => a.startDate.getTime() - b.startDate.getTime());
 
-            const getTypeColor = (type: string) => {
-              switch (type) {
-                case 'vacation': return 'bg-blue-100 text-blue-800';
-                case 'sick': return 'bg-red-100 text-red-800';
-                case 'personal': return 'bg-green-100 text-green-800';
-                case 'bereavement': return 'bg-gray-100 text-gray-800';
-                case 'maternity': return 'bg-purple-100 text-purple-800';
-                case 'paternity': return 'bg-indigo-100 text-indigo-800';
-                default: return 'bg-slate-100 text-slate-800';
-              }
-            };
+            // Removed type color function for privacy
 
             return (
               <div className="space-y-4">
@@ -1186,14 +1176,11 @@ export default function HRPage() {
                                 <div>
                                   <p className="font-medium text-slate-900">{request.staffName}</p>
                                   <p className="text-sm text-slate-600">{request.department} • {request.position}</p>
-                                  {request.reason && (
-                                    <p className="text-xs text-slate-500 mt-1 italic">"{request.reason}"</p>
-                                  )}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <Badge className={getTypeColor(request.type)}>
-                                  {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
+                                <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                                  Time Off
                                 </Badge>
                                 <p className="text-sm text-slate-600 mt-1">
                                   {request.totalDays} {request.totalDays === 1 ? 'day' : 'days'}
