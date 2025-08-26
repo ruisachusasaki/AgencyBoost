@@ -64,7 +64,7 @@ export default function HRPage() {
   const [hiringManagerSearchValue, setHiringManagerSearchValue] = useState("");
 
   // Application sorting state
-  const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'stage' | 'rating' | 'appliedAt' | null>(null);
+  const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt' | null>(null);
   const [applicationSortDirection, setApplicationSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch staff data
@@ -406,7 +406,7 @@ export default function HRPage() {
   };
 
   // Application sorting handler
-  const handleApplicationSort = (field: 'applicantName' | 'stage' | 'rating' | 'appliedAt') => {
+  const handleApplicationSort = (field: 'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt') => {
     if (applicationSortField === field) {
       setApplicationSortDirection(applicationSortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -447,7 +447,7 @@ export default function HRPage() {
   }, [jobApplications, applicationSortField, applicationSortDirection]);
 
   // Application Sortable Header Component
-  const ApplicationSortableHeader = ({ field, children }: { field: 'applicantName' | 'stage' | 'rating' | 'appliedAt'; children: React.ReactNode }) => (
+  const ApplicationSortableHeader = ({ field, children }: { field: 'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt'; children: React.ReactNode }) => (
     <TableHead 
       className="cursor-pointer hover:bg-gray-50 select-none"
       onClick={() => handleApplicationSort(field)}
@@ -842,6 +842,7 @@ export default function HRPage() {
                 <TableHeader>
                   <TableRow>
                     <ApplicationSortableHeader field="applicantName">Candidate Name</ApplicationSortableHeader>
+                    <ApplicationSortableHeader field="positionTitle">Position</ApplicationSortableHeader>
                     <ApplicationSortableHeader field="stage">Status</ApplicationSortableHeader>
                     <ApplicationSortableHeader field="rating">Rating</ApplicationSortableHeader>
                     <ApplicationSortableHeader field="appliedAt">Application Date</ApplicationSortableHeader>
@@ -861,7 +862,11 @@ export default function HRPage() {
                             {application.applicantName}
                           </button>
                           <div className="text-sm text-gray-600">{application.applicantEmail}</div>
-                          <div className="text-sm text-gray-600">{application.positionTitle}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-900">
+                          {application.positionTitle || 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell>
