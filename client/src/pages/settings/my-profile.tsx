@@ -800,13 +800,28 @@ export default function MyProfile() {
                     return <p className="text-slate-500 text-center py-8">No time off requests found</p>;
                   }
 
-                  // Calculate my actual usage statistics
-                  const myUsage = myTimeOffRequests.reduce((acc, request) => {
+                  // Calculate usage and remaining days
+                  const usedDays = myTimeOffRequests.reduce((acc, request) => {
                     const days = request.totalDays || 0;
                     acc[request.type as 'vacation' | 'sick' | 'personal'] += days;
                     acc.total += days;
                     return acc;
                   }, { vacation: 0, sick: 0, personal: 0, total: 0 });
+
+                  // Get current user's annual entitlements (default values if not set)
+                  const annualEntitlements = {
+                    vacation: currentUser?.vacationDaysAnnually || 15,
+                    sick: currentUser?.sickDaysAnnually || 10, 
+                    personal: currentUser?.personalDaysAnnually || 3
+                  };
+
+                  // Calculate remaining days
+                  const remainingDays = {
+                    vacation: Math.max(0, annualEntitlements.vacation - usedDays.vacation),
+                    sick: Math.max(0, annualEntitlements.sick - usedDays.sick),
+                    personal: Math.max(0, annualEntitlements.personal - usedDays.personal),
+                    total: Math.max(0, (annualEntitlements.vacation + annualEntitlements.sick + annualEntitlements.personal) - usedDays.total)
+                  };
 
                   return (
                     <div className="space-y-6">
@@ -814,26 +829,30 @@ export default function MyProfile() {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-blue-600">{myUsage.vacation}</div>
-                            <div className="text-sm text-slate-600">Vacation Days</div>
+                            <div className="text-2xl font-bold text-blue-600">{remainingDays.vacation}</div>
+                            <div className="text-sm text-slate-600">Vacation Days Left</div>
+                            <div className="text-xs text-slate-500 mt-1">{usedDays.vacation} used of {annualEntitlements.vacation}</div>
                           </CardContent>
                         </Card>
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-orange-600">{myUsage.sick}</div>
-                            <div className="text-sm text-slate-600">Sick Days</div>
+                            <div className="text-2xl font-bold text-orange-600">{remainingDays.sick}</div>
+                            <div className="text-sm text-slate-600">Sick Days Left</div>
+                            <div className="text-xs text-slate-500 mt-1">{usedDays.sick} used of {annualEntitlements.sick}</div>
                           </CardContent>
                         </Card>
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-green-600">{myUsage.personal}</div>
-                            <div className="text-sm text-slate-600">Personal Days</div>
+                            <div className="text-2xl font-bold text-green-600">{remainingDays.personal}</div>
+                            <div className="text-sm text-slate-600">Personal Days Left</div>
+                            <div className="text-xs text-slate-500 mt-1">{usedDays.personal} used of {annualEntitlements.personal}</div>
                           </CardContent>
                         </Card>
                         <Card>
                           <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-slate-600">{myUsage.total}</div>
-                            <div className="text-sm text-slate-600">Total Days</div>
+                            <div className="text-2xl font-bold text-slate-600">{remainingDays.total}</div>
+                            <div className="text-sm text-slate-600">Total Days Left</div>
+                            <div className="text-xs text-slate-500 mt-1">{usedDays.total} used of {annualEntitlements.vacation + annualEntitlements.sick + annualEntitlements.personal}</div>
                           </CardContent>
                         </Card>
                       </div>

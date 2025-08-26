@@ -567,6 +567,23 @@ export const imageAnnotations = pgTable("image_annotations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// HR System - Time Off Policies (company-wide settings)
+export const timeOffPolicies = pgTable("time_off_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  vacationDaysDefault: integer("vacation_days_default").default(15),
+  sickDaysDefault: integer("sick_days_default").default(10),
+  personalDaysDefault: integer("personal_days_default").default(3),
+  carryOverAllowed: boolean("carry_over_allowed").default(false),
+  maxCarryOverDays: integer("max_carry_over_days").default(0),
+  policyDocument: text("policy_document"), // Rich text content
+  effectiveDate: date("effective_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // HR System - Time Off Requests
 export const timeOffRequests = pgTable("time_off_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1594,6 +1611,11 @@ export const staff = pgTable("staff", {
   birthdate: date("birthdate"),
   assignedCalendarId: varchar("assigned_calendar_id"), // Links to calendar assignment
   
+  // Time off entitlements (annual allocation)
+  vacationDaysAnnually: integer("vacation_days_annually").default(15), // Default 15 vacation days per year
+  sickDaysAnnually: integer("sick_days_annually").default(10), // Default 10 sick days per year
+  personalDaysAnnually: integer("personal_days_annually").default(3), // Default 3 personal days per year
+
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

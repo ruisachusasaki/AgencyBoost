@@ -31,7 +31,7 @@ import {
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
-  timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, timeOffBalances
+  timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, timeOffBalances
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -9717,6 +9717,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching pending approvals:", error);
       res.status(500).json({ error: "Failed to fetch pending approvals" });
+    }
+  });
+
+  // Time Off Policies routes
+  app.get("/api/hr/time-off-policies", async (req, res) => {
+    try {
+      const policies = await db.select().from(timeOffPolicies).orderBy(desc(timeOffPolicies.createdAt));
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching time off policies:", error);
+      res.status(500).json({ message: "Failed to fetch time off policies" });
+    }
+  });
+
+  app.post("/api/hr/time-off-policies", async (req, res) => {
+    try {
+      const [policy] = await db.insert(timeOffPolicies).values(req.body).returning();
+      res.status(201).json(policy);
+    } catch (error) {
+      console.error("Error creating time off policy:", error);
+      res.status(500).json({ message: "Failed to create time off policy" });
+    }
+  });
+
+  app.patch("/api/hr/time-off-policies/:id", async (req, res) => {
+    try {
+      const [policy] = await db.update(timeOffPolicies)
+        .set(req.body)
+        .where(eq(timeOffPolicies.id, req.params.id))
+        .returning();
+      res.json(policy);
+    } catch (error) {
+      console.error("Error updating time off policy:", error);
+      res.status(500).json({ message: "Failed to update time off policy" });
     }
   });
 
