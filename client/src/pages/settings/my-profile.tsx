@@ -71,6 +71,11 @@ export default function MyProfile() {
     queryKey: ["/api/hr/time-off-requests"],
   });
 
+  // Fetch time off policies to get current allocations
+  const { data: policies = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies"],
+  });
+
   // Fetch calendars for assignment
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<Array<{
     id: string;
@@ -808,11 +813,12 @@ export default function MyProfile() {
                     return acc;
                   }, { vacation: 0, sick: 0, personal: 0, total: 0 });
 
-                  // Get current user's annual entitlements (default values if not set)
+                  // Get current user's annual entitlements from policy or fallback to staff record or defaults
+                  const currentPolicy = policies[0]; // Use the latest/active policy
                   const annualEntitlements = {
-                    vacation: currentUser?.vacationDaysAnnually || 15,
-                    sick: currentUser?.sickDaysAnnually || 10, 
-                    personal: currentUser?.personalDaysAnnually || 3
+                    vacation: currentPolicy?.vacationDaysDefault || currentUser?.vacationDaysAnnually || 15,
+                    sick: currentPolicy?.sickDaysDefault || currentUser?.sickDaysAnnually || 10, 
+                    personal: currentPolicy?.personalDaysDefault || currentUser?.personalDaysAnnually || 3
                   };
 
                   // Calculate remaining days
