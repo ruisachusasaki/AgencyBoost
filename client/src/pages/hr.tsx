@@ -544,12 +544,12 @@ export default function HRPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Time Off Usage</CardTitle>
-                <CardDescription>Remaining time off days for {(currentUser as any)?.role === 'admin' ? 'all staff' : 'your team'}</CardDescription>
+                <CardDescription>Remaining time off days for {(currentUser as any)?.role === 'Admin' ? 'all staff' : 'your team'}</CardDescription>
               </CardHeader>
               <CardContent>
                 {(() => {
                   // Filter time off requests based on user role
-                  const relevantRequests = (currentUser as any)?.role === 'admin' 
+                  const relevantRequests = (currentUser as any)?.role === 'Admin' 
                     ? timeOffRequests 
                     : timeOffRequests.filter(request => {
                         const staff = staffData.find(s => s.id === request.staffId);
@@ -602,7 +602,7 @@ export default function HRPage() {
                   }, {} as Record<string, any>);
 
                   // Add staff members who have no time off requests but need to show their full allocation
-                  const relevantStaffIds = (currentUser as any)?.role === 'admin' 
+                  const relevantStaffIds = (currentUser as any)?.role === 'Admin' 
                     ? staffData.map(s => s.id)
                     : directReports.map(dr => dr.id);
                     
