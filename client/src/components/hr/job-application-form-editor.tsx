@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,11 +120,60 @@ const defaultFields: FormField[] = [
 ];
 
 export default function JobApplicationFormEditor() {
-  const [fields, setFields] = useState<FormField[]>(defaultFields);
+  // Load form configuration from backend
+  const { data: configData, isLoading } = useQuery<{ fields: FormField[] }>({
+    queryKey: ['/api/job-application-form-config'],
+    retry: false,
+  });
+
+  const [fields, setFields] = useState<FormField[]>([]);
   const [editingField, setEditingField] = useState<FormField | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Initialize fields from backend data
+  useEffect(() => {
+    if (configData?.fields) {
+      setFields(configData.fields);
+    }
+  }, [configData]);
+
+  // Save configuration mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: async (fieldsData: FormField[]) => {
+      return await apiRequest('PUT', '/api/job-application-form-config', { fields: fieldsData });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/job-application-form-config'] });
+      toast({
+        title: "Success",
+        description: "Form configuration saved successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to save form configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-save fields when they change
+  useEffect(() => {
+    if (fields.length > 0 && configData?.fields) {
+      // Only save if the fields have actually changed from what's loaded from the backend
+      const hasChanges = JSON.stringify(fields) !== JSON.stringify(configData.fields);
+      if (hasChanges) {
+        const timeoutId = setTimeout(() => {
+          saveConfigMutation.mutate(fields);
+        }, 1000); // Debounce saves by 1 second
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [fields, configData?.fields, saveConfigMutation]);
 
   const getFieldIcon = (type: string) => {
     switch (type) {
@@ -219,8 +268,9 @@ export default function JobApplicationFormEditor() {
       return prev.map(field => fieldMap.get(field.id) || field);
     });
 
+    // Note: Auto-save will handle persisting the reorder
     toast({
-      title: "Success",
+      title: "Success", 
       description: "Field order updated successfully",
     });
   };

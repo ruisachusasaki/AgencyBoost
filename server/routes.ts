@@ -14,7 +14,7 @@ import {
   insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
-  insertJobOpeningSchema,
+  insertJobOpeningSchema, insertJobApplicationFormConfigSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -33,7 +33,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, timeOffBalances,
-  jobOpenings
+  jobOpenings, jobApplicationFormConfig
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -9931,6 +9931,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching public job openings:", error);
       res.status(500).json({ error: "Failed to fetch job openings" });
+    }
+  });
+
+  // Job Application Form Configuration Routes
+  app.get("/api/job-application-form-config", async (req, res) => {
+    try {
+      const [config] = await db.select()
+        .from(jobApplicationFormConfig)
+        .orderBy(desc(jobApplicationFormConfig.updatedAt))
+        .limit(1);
+      
+      if (!config) {
+        // Return default configuration if none exists
+        const defaultConfig = {
+          fields: [
+            {
+              id: 'job_opening',
+              label: 'Position Applied For',
+              type: 'job_selection',
+              required: true,
+              order: 0
+            },
+            {
+              id: 'full_name',
+              label: 'Full Name',
+              type: 'text',
+              placeholder: 'Enter your full name',
+              required: true,
+              order: 1
+            },
+            {
+              id: 'email',
+              label: 'Email Address',
+              type: 'email',
+              placeholder: 'your.email@example.com',
+              required: true,
+              order: 2
+            },
+            {
+              id: 'phone',
+              label: 'Phone Number',
+              type: 'phone',
+              placeholder: '+1 (555) 123-4567',
+              required: false,
+              order: 3
+            },
+            {
+              id: 'resume_url',
+              label: 'Resume/CV URL',
+              type: 'url',
+              placeholder: 'https://drive.google.com/...',
+              required: true,
+              order: 4
+            },
+            {
+              id: 'cover_letter_url',
+              label: 'Cover Letter URL',
+              type: 'url',
+              placeholder: 'https://...',
+              required: false,
+              order: 5
+            },
+            {
+              id: 'portfolio_url',
+              label: 'Portfolio/Website URL',
+              type: 'url',
+              placeholder: 'https://...',
+              required: false,
+              order: 6
+            },
+            {
+              id: 'experience_level',
+              label: 'Experience Level',
+              type: 'select',
+              required: true,
+              options: ['Entry Level', 'Mid Level', 'Senior Level', 'Executive Level'],
+              order: 7
+            },
+            {
+              id: 'salary_expectation',
+              label: 'Salary Expectation (Annual USD)',
+              type: 'number',
+              placeholder: '75000',
+              required: false,
+              order: 8
+            },
+            {
+              id: 'additional_info',
+              label: 'Additional Information',
+              type: 'textarea',
+              placeholder: 'Tell us why you\'re interested in this position...',
+              required: false,
+              order: 9
+            }
+          ]
+        };
+        return res.json(defaultConfig);
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching job application form config:", error);
+      res.status(500).json({ error: "Failed to fetch form configuration" });
+    }
+  });
+
+  app.put("/api/job-application-form-config", async (req, res) => {
+    try {
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Mock user for now
+      const validatedData = insertJobApplicationFormConfigSchema.parse({
+        ...req.body,
+        updatedBy: currentUserId
+      });
+
+      // Delete existing config and insert new one (simpler than upsert)
+      await db.delete(jobApplicationFormConfig);
+      const [newConfig] = await db.insert(jobApplicationFormConfig)
+        .values(validatedData)
+        .returning();
+
+      res.json(newConfig);
+    } catch (error) {
+      console.error("Error saving job application form config:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save form configuration" });
     }
   });
 

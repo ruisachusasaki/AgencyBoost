@@ -2309,6 +2309,22 @@ export const insertFormSchema = createInsertSchema(forms).omit({
   updatedAt: true,
 });
 
+// Job Application Form Configuration - stores the customizable form field configuration
+export const jobApplicationFormConfig = pgTable("job_application_form_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fields: jsonb("fields").notNull(), // Array of form field configurations
+  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertJobApplicationFormConfigSchema = createInsertSchema(jobApplicationFormConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type JobApplicationFormConfig = typeof jobApplicationFormConfig.$inferSelect;
+export type InsertJobApplicationFormConfig = z.infer<typeof insertJobApplicationFormConfigSchema>;
+
 export const insertFormFieldSchema = createInsertSchema(formFields).omit({
   id: true,
   createdAt: true,
