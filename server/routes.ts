@@ -10395,20 +10395,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the request body
       const validatedData = insertJobApplicationSchema.parse(req.body);
       
-      // Get the job opening and position details to get the position title
-      const jobOpeningQuery = await db.select({
-        jobOpening: jobOpenings,
-        position: positions
-      }).from(jobOpenings)
-      .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
-      .where(eq(jobOpenings.id, validatedData.positionId))
-      .limit(1);
-      
-      if (!jobOpeningQuery.length) {
+      // Get the job opening first
+      const jobOpening = await db.select().from(jobOpenings).where(eq(jobOpenings.id, validatedData.positionId)).limit(1);
+      if (!jobOpening.length) {
         return res.status(400).json({ message: "Invalid position ID" });
       }
       
-      const positionName = jobOpeningQuery[0].position?.name || "Unknown Position";
+      // Then get the position name using the position_id from job opening
+      const position = await db.select().from(positions).where(eq(positions.id, jobOpening[0].positionId)).limit(1);
+      const positionName = position.length > 0 ? position[0].name : "Unknown Position";
+      
+      console.log("Job opening:", jobOpening[0]);
+      console.log("Position:", position[0]);
+      console.log("Position name:", positionName);
       
       // Directly insert into database since storage method has issues
       const result = await db.insert(jobApplications).values({
