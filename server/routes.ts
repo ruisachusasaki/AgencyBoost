@@ -14,6 +14,7 @@ import {
   insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
+  insertJobOpeningSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -31,7 +32,8 @@ import {
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
-  timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, timeOffBalances
+  timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, timeOffBalances,
+  jobOpenings
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -9818,6 +9820,324 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing time off request approval:", error);
       res.status(500).json({ error: "Failed to process approval" });
+    }
+  });
+
+  // Job Openings Management Routes
+  app.get("/api/job-openings", async (req, res) => {
+    try {
+      const { status, departmentId, hiringManagerId } = req.query;
+      let query = db.select({
+        id: jobOpenings.id,
+        departmentId: jobOpenings.departmentId,
+        departmentName: departments.name,
+        positionId: jobOpenings.positionId,
+        positionName: positions.name,
+        status: jobOpenings.status,
+        hiringManagerId: jobOpenings.hiringManagerId,
+        hiringManagerName: sql<string>`CONCAT(hiring_manager.first_name, ' ', hiring_manager.last_name)`,
+        employmentType: jobOpenings.employmentType,
+        compensation: jobOpenings.compensation,
+        compensationType: jobOpenings.compensationType,
+        jobDescription: jobOpenings.jobDescription,
+        requirements: jobOpenings.requirements,
+        benefits: jobOpenings.benefits,
+        createdById: jobOpenings.createdById,
+        createdByName: sql<string>`CONCAT(creator.first_name, ' ', creator.last_name)`,
+        approvalStatus: jobOpenings.approvalStatus,
+        approvedById: jobOpenings.approvedById,
+        approvedByName: sql<string>`CONCAT(approver.first_name, ' ', approver.last_name)`,
+        approvedAt: jobOpenings.approvedAt,
+        rejectionReason: jobOpenings.rejectionReason,
+        isPublic: jobOpenings.isPublic,
+        externalPostingUrl: jobOpenings.externalPostingUrl,
+        createdAt: jobOpenings.createdAt,
+        updatedAt: jobOpenings.updatedAt,
+      })
+      .from(jobOpenings)
+      .leftJoin(departments, eq(jobOpenings.departmentId, departments.id))
+      .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
+      .leftJoin(staff.as('hiring_manager'), eq(jobOpenings.hiringManagerId, staff.as('hiring_manager').id))
+      .leftJoin(staff.as('creator'), eq(jobOpenings.createdById, staff.as('creator').id))
+      .leftJoin(staff.as('approver'), eq(jobOpenings.approvedById, staff.as('approver').id))
+      .orderBy(desc(jobOpenings.createdAt));
+
+      // Apply filters if provided
+      const conditions = [];
+      if (status) conditions.push(eq(jobOpenings.status, status as string));
+      if (departmentId) conditions.push(eq(jobOpenings.departmentId, departmentId as string));
+      if (hiringManagerId) conditions.push(eq(jobOpenings.hiringManagerId, hiringManagerId as string));
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+
+      const openings = await query;
+      res.json(openings);
+    } catch (error) {
+      console.error("Error fetching job openings:", error);
+      res.status(500).json({ error: "Failed to fetch job openings" });
+    }
+  });
+
+  app.post("/api/job-openings", async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const validatedData = insertJobOpeningSchema.parse({
+        ...req.body,
+        createdById: currentUserId
+      });
+
+      const [newOpening] = await db.insert(jobOpenings).values(validatedData).returning();
+      
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "job_opening",
+        newOpening.id,
+        `Job opening created`,
+        currentUserId,
+        `New job opening created for ${validatedData.employmentType} position`,
+        null,
+        newOpening,
+        req
+      );
+      
+      res.status(201).json(newOpening);
+    } catch (error) {
+      console.error("Error creating job opening:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create job opening" });
+    }
+  });
+
+  app.get("/api/job-openings/:id", async (req, res) => {
+    try {
+      const [opening] = await db.select({
+        id: jobOpenings.id,
+        departmentId: jobOpenings.departmentId,
+        departmentName: departments.name,
+        positionId: jobOpenings.positionId,
+        positionName: positions.name,
+        positionDescription: positions.description,
+        status: jobOpenings.status,
+        hiringManagerId: jobOpenings.hiringManagerId,
+        hiringManagerName: sql<string>`CONCAT(hiring_manager.first_name, ' ', hiring_manager.last_name)`,
+        employmentType: jobOpenings.employmentType,
+        compensation: jobOpenings.compensation,
+        compensationType: jobOpenings.compensationType,
+        jobDescription: jobOpenings.jobDescription,
+        requirements: jobOpenings.requirements,
+        benefits: jobOpenings.benefits,
+        createdById: jobOpenings.createdById,
+        createdByName: sql<string>`CONCAT(creator.first_name, ' ', creator.last_name)`,
+        approvalStatus: jobOpenings.approvalStatus,
+        approvedById: jobOpenings.approvedById,
+        approvedByName: sql<string>`CONCAT(approver.first_name, ' ', approver.last_name)`,
+        approvedAt: jobOpenings.approvedAt,
+        rejectionReason: jobOpenings.rejectionReason,
+        isPublic: jobOpenings.isPublic,
+        externalPostingUrl: jobOpenings.externalPostingUrl,
+        createdAt: jobOpenings.createdAt,
+        updatedAt: jobOpenings.updatedAt,
+      })
+      .from(jobOpenings)
+      .leftJoin(departments, eq(jobOpenings.departmentId, departments.id))
+      .leftJoin(positions, eq(jobOpenings.positionId, positions.id))
+      .leftJoin(staff.as('hiring_manager'), eq(jobOpenings.hiringManagerId, staff.as('hiring_manager').id))
+      .leftJoin(staff.as('creator'), eq(jobOpenings.createdById, staff.as('creator').id))
+      .leftJoin(staff.as('approver'), eq(jobOpenings.approvedById, staff.as('approver').id))
+      .where(eq(jobOpenings.id, req.params.id));
+
+      if (!opening) {
+        return res.status(404).json({ error: "Job opening not found" });
+      }
+
+      res.json(opening);
+    } catch (error) {
+      console.error("Error fetching job opening:", error);
+      res.status(500).json({ error: "Failed to fetch job opening" });
+    }
+  });
+
+  app.put("/api/job-openings/:id", async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const validatedData = insertJobOpeningSchema.partial().parse(req.body);
+      
+      // Get current job opening to check permissions
+      const [currentOpening] = await db.select()
+        .from(jobOpenings)
+        .where(eq(jobOpenings.id, req.params.id));
+
+      if (!currentOpening) {
+        return res.status(404).json({ error: "Job opening not found" });
+      }
+
+      // Only creator or hiring manager can update
+      if (currentOpening.createdById !== currentUserId && currentOpening.hiringManagerId !== currentUserId) {
+        return res.status(403).json({ error: "Not authorized to update this job opening" });
+      }
+
+      const [updatedOpening] = await db.update(jobOpenings)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(jobOpenings.id, req.params.id))
+        .returning();
+
+      // Create audit log
+      await createAuditLog(
+        "updated",
+        "job_opening",
+        updatedOpening.id,
+        `Job opening updated`,
+        currentUserId,
+        `Updated job opening details`,
+        currentOpening,
+        updatedOpening,
+        req
+      );
+      
+      res.json(updatedOpening);
+    } catch (error) {
+      console.error("Error updating job opening:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update job opening" });
+    }
+  });
+
+  app.put("/api/job-openings/:id/approve", async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      const { action, rejectionReason } = req.body; // action: 'approve' | 'reject'
+
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      if (!["approve", "reject"].includes(action)) {
+        return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
+      }
+
+      // Get the job opening with creator details
+      const [openingWithCreator] = await db.select({
+        opening: jobOpenings,
+        creatorManagerId: staff.managerId,
+      })
+      .from(jobOpenings)
+      .leftJoin(staff, eq(jobOpenings.createdById, staff.id))
+      .where(eq(jobOpenings.id, req.params.id));
+
+      if (!openingWithCreator) {
+        return res.status(404).json({ error: "Job opening not found" });
+      }
+
+      // Check if current user is the manager of the creator (manager's manager approval)
+      if (openingWithCreator.creatorManagerId !== currentUserId) {
+        return res.status(403).json({ error: "Only the creator's manager can approve job openings" });
+      }
+
+      if (openingWithCreator.opening.approvalStatus !== "pending") {
+        return res.status(400).json({ error: "Job opening has already been processed" });
+      }
+
+      // Update the approval status
+      const updateData: any = {
+        approvalStatus: action === "approve" ? "approved" : "rejected",
+        approvedById: currentUserId,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      if (action === "approve") {
+        // If approved, set status to 'open' so it becomes available for applications
+        updateData.status = "open";
+      }
+
+      if (action === "reject" && rejectionReason) {
+        updateData.rejectionReason = rejectionReason;
+      }
+
+      const [updatedOpening] = await db.update(jobOpenings)
+        .set(updateData)
+        .where(eq(jobOpenings.id, req.params.id))
+        .returning();
+
+      // Create audit log
+      await createAuditLog(
+        "updated",
+        "job_opening",
+        req.params.id,
+        `Job opening ${action}d`,
+        currentUserId,
+        `${action === "approve" ? "Approved" : "Rejected"} job opening${rejectionReason ? ` with reason: ${rejectionReason}` : ""}`,
+        openingWithCreator.opening,
+        updatedOpening,
+        req
+      );
+
+      res.json(updatedOpening);
+    } catch (error) {
+      console.error("Error processing job opening approval:", error);
+      res.status(500).json({ error: "Failed to process approval" });
+    }
+  });
+
+  // Get departments for dropdown
+  app.get("/api/departments", async (req, res) => {
+    try {
+      const departmentList = await db.select({
+        id: departments.id,
+        name: departments.name,
+        description: departments.description,
+        isActive: departments.isActive,
+      })
+      .from(departments)
+      .where(eq(departments.isActive, true))
+      .orderBy(asc(departments.name));
+      
+      res.json(departmentList);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ error: "Failed to fetch departments" });
+    }
+  });
+
+  // Get positions for a department
+  app.get("/api/departments/:departmentId/positions", async (req, res) => {
+    try {
+      const { departmentId } = req.params;
+      
+      const positionsList = await db.select({
+        id: positions.id,
+        name: positions.name,
+        description: positions.description,
+        isActive: positions.isActive,
+      })
+      .from(positions)
+      .where(
+        and(
+          eq(positions.departmentId, departmentId),
+          eq(positions.isActive, true)
+        )
+      )
+      .orderBy(asc(positions.name));
+      
+      res.json(positionsList);
+    } catch (error) {
+      console.error("Error fetching positions:", error);
+      res.status(500).json({ error: "Failed to fetch positions" });
     }
   });
 

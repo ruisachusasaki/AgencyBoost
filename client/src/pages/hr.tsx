@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,98 @@ export default function HRPage() {
   const { data: jobApplications = [] } = useQuery<JobApplication[]>({
     queryKey: ["/api/hr/job-applications"],
   });
+
+  // Fetch job openings
+  const { data: jobOpenings = [] } = useQuery<any[]>({
+    queryKey: ["/api/job-openings"],
+    enabled: isManager,
+  });
+
+  // Fetch departments and staff for dropdowns
+  const { data: departments = [] } = useQuery<any[]>({
+    queryKey: ["/api/departments"],
+    enabled: isManager,
+  });
+
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
+  const { data: positions = [] } = useQuery<any[]>({
+    queryKey: ["/api/departments", selectedDepartmentId, "positions"],
+    enabled: isManager && !!selectedDepartmentId,
+  });
+
+  // Job Opening Form State
+  const [jobOpeningForm, setJobOpeningForm] = useState({
+    departmentId: "",
+    positionId: "",
+    employmentType: "",
+    hiringManagerId: "",
+    compensation: "",
+    compensationType: "annual",
+    jobDescription: "",
+    requirements: "",
+    benefits: ""
+  });
+
+  const queryClient = useQueryClient();
+
+  // Create Job Opening Mutation
+  const createJobOpeningMutation = useMutation({
+    mutationFn: async (jobOpeningData: any) => {
+      const response = await fetch("/api/job-openings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(jobOpeningData),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to create job opening");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
+      // Reset form
+      setJobOpeningForm({
+        departmentId: "",
+        positionId: "",
+        employmentType: "",
+        hiringManagerId: "",
+        compensation: "",
+        compensationType: "annual",
+        jobDescription: "",
+        requirements: "",
+        benefits: ""
+      });
+      setSelectedDepartmentId("");
+    },
+  });
+
+  // Handle form submission
+  const handleCreateJobOpening = () => {
+    // Basic validation
+    if (!jobOpeningForm.departmentId || !jobOpeningForm.positionId || !jobOpeningForm.employmentType || !jobOpeningForm.hiringManagerId) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const jobOpeningData = {
+      ...jobOpeningForm,
+      compensation: jobOpeningForm.compensation ? parseFloat(jobOpeningForm.compensation) : null,
+    };
+
+    createJobOpeningMutation.mutate(jobOpeningData);
+  };
+
+  // Update form when department changes
+  const handleDepartmentChange = (departmentId: string) => {
+    setSelectedDepartmentId(departmentId);
+    setJobOpeningForm(prev => ({
+      ...prev,
+      departmentId,
+      positionId: "" // Reset position when department changes
+    }));
+  };
 
   // Fetch time off policies to get current allocations
   const { data: policies = [] } = useQuery<any[]>({
@@ -158,6 +250,7 @@ export default function HRPage() {
             { id: "staff-directory", name: "Staff Directory", icon: Users, count: staffData.length },
             { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
             ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
+            ...(isManager ? [{ id: "job-openings", name: "Job Openings", icon: FileText, count: 0 }] : []),
             { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
             { id: "reports", name: "Reports", icon: FileText, count: 0 }
           ].map((tab) => {
@@ -765,6 +858,242 @@ export default function HRPage() {
           </div>
 
           <ApprovalBoard />
+        </div>
+      )}
+
+      {activeTab === "job-openings" && isManager && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Job Openings Management</h2>
+              <p className="text-slate-600">Create and manage job openings for your department</p>
+            </div>
+          </div>
+
+          {/* Create New Job Opening Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Job Opening</CardTitle>
+              <CardDescription>Fill out the details for a new position opening</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Department Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Department *</label>
+                  <Select value={jobOpeningForm.departmentId} onValueChange={handleDepartmentChange} data-testid="select-department">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept: any) => (
+                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Position Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Position *</label>
+                  <Select 
+                    value={jobOpeningForm.positionId}
+                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, positionId: value}))}
+                    disabled={!selectedDepartmentId} 
+                    data-testid="select-position"
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((pos: any) => (
+                        <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Employment Type */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Employment Type *</label>
+                  <Select 
+                    value={jobOpeningForm.employmentType}
+                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, employmentType: value}))}
+                    data-testid="select-employment-type"
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Employment Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full_time">Full-Time</SelectItem>
+                      <SelectItem value="part_time">Part-Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Hiring Manager */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Hiring Manager *</label>
+                  <Select 
+                    value={jobOpeningForm.hiringManagerId}
+                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value}))}
+                    data-testid="select-hiring-manager"
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Hiring Manager" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffData.filter(staff => staff.position?.toLowerCase().includes('manager') || staff.position?.toLowerCase().includes('director')).map((manager: any) => (
+                        <SelectItem key={manager.id} value={manager.id}>
+                          {manager.firstName} {manager.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Compensation */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Compensation</label>
+                  <Input 
+                    type="number" 
+                    placeholder="50000" 
+                    value={jobOpeningForm.compensation}
+                    onChange={(e) => setJobOpeningForm(prev => ({...prev, compensation: e.target.value}))}
+                    data-testid="input-compensation"
+                  />
+                </div>
+
+                {/* Compensation Type */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Compensation Type</label>
+                  <Select 
+                    value={jobOpeningForm.compensationType}
+                    onValueChange={(value) => setJobOpeningForm(prev => ({...prev, compensationType: value}))}
+                    data-testid="select-compensation-type"
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="annual">Annual</SelectItem>
+                      <SelectItem value="hourly">Hourly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Job Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Job Description</label>
+                <textarea 
+                  className="w-full min-h-[100px] p-3 border rounded-md resize-none"
+                  placeholder="Describe the role, responsibilities, and requirements..."
+                  value={jobOpeningForm.jobDescription}
+                  onChange={(e) => setJobOpeningForm(prev => ({...prev, jobDescription: e.target.value}))}
+                  data-testid="textarea-job-description"
+                />
+              </div>
+
+              {/* Requirements */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Requirements</label>
+                <textarea 
+                  className="w-full min-h-[80px] p-3 border rounded-md resize-none"
+                  placeholder="List required skills, education, experience..."
+                  value={jobOpeningForm.requirements}
+                  onChange={(e) => setJobOpeningForm(prev => ({...prev, requirements: e.target.value}))}
+                  data-testid="textarea-requirements"
+                />
+              </div>
+
+              {/* Benefits */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Benefits</label>
+                <textarea 
+                  className="w-full min-h-[80px] p-3 border rounded-md resize-none"
+                  placeholder="Health insurance, 401k, vacation days..."
+                  value={jobOpeningForm.benefits}
+                  onChange={(e) => setJobOpeningForm(prev => ({...prev, benefits: e.target.value}))}
+                  data-testid="textarea-benefits"
+                />
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={handleCreateJobOpening}
+                disabled={createJobOpeningMutation.isPending}
+                data-testid="button-create-opening"
+              >
+                {createJobOpeningMutation.isPending ? "Creating..." : "Create Job Opening"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Existing Job Openings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Existing Job Openings</CardTitle>
+              <CardDescription>Manage and track your department's job openings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {jobOpenings.length === 0 ? (
+                <p className="text-slate-500 text-center py-8">No job openings created yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {jobOpenings.map((opening: any) => (
+                    <div key={opening.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <h3 className="font-medium">{opening.positionName}</h3>
+                            <p className="text-sm text-slate-600">{opening.departmentName} • {opening.employmentType.replace('_', ' ')}</p>
+                            <p className="text-sm text-slate-600">
+                              Hiring Manager: {opening.hiringManagerName}
+                            </p>
+                            {opening.compensation && (
+                              <p className="text-sm text-slate-600">
+                                ${parseInt(opening.compensation).toLocaleString()}{opening.compensationType === 'hourly' ? '/hr' : '/year'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={opening.status === 'open' ? 'default' : opening.status === 'draft' ? 'secondary' : 'outline'}
+                          className={
+                            opening.status === 'open' ? 'bg-green-100 text-green-800 border-green-200' :
+                            opening.status === 'draft' ? 'bg-gray-100 text-gray-800 border-gray-200' :
+                            opening.status === 'on_hold' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                            opening.status === 'filled' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                            'bg-red-100 text-red-800 border-red-200'
+                          }
+                        >
+                          {opening.status.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            opening.approvalStatus === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                            opening.approvalStatus === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          }
+                        >
+                          {opening.approvalStatus === 'pending' ? '⏳ Pending Approval' :
+                           opening.approvalStatus === 'approved' ? '✅ Approved' : 
+                           '❌ Rejected'}
+                        </Badge>
+                        <Button variant="outline" size="sm" data-testid={`button-edit-${opening.id}`}>
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 

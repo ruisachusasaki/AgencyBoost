@@ -1630,6 +1630,44 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
 export type Staff = typeof staff.$inferSelect;
 export type InsertStaff = z.infer<typeof insertStaffSchema>;
 
+// Job Openings Management
+export const jobOpenings = pgTable("job_openings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  departmentId: varchar("department_id").notNull().references(() => departments.id),
+  positionId: varchar("position_id").notNull().references(() => positions.id),
+  status: text("status").notNull().default("draft"), // draft, open, on_hold, filled, canceled
+  hiringManagerId: uuid("hiring_manager_id").notNull().references(() => staff.id),
+  employmentType: text("employment_type").notNull(), // full_time, part_time
+  compensation: decimal("compensation", { precision: 12, scale: 2 }),
+  compensationType: text("compensation_type").default("annual"), // annual, hourly
+  jobDescription: text("job_description"), // Can be overridden from position description
+  requirements: text("requirements"),
+  benefits: text("benefits"),
+  
+  // Approval workflow
+  createdById: uuid("created_by_id").notNull().references(() => staff.id),
+  approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
+  approvedById: uuid("approved_by_id").references(() => staff.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Posting information
+  isPublic: boolean("is_public").default(false), // Whether visible on public job board
+  externalPostingUrl: text("external_posting_url"), // Link to external job posting
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertJobOpeningSchema = createInsertSchema(jobOpenings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type JobOpening = typeof jobOpenings.$inferSelect;
+export type InsertJobOpening = z.infer<typeof insertJobOpeningSchema>;
+
 // Department and Position schema exports
 export const insertDepartmentSchema = createInsertSchema(departments).omit({
   id: true,
