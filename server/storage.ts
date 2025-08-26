@@ -53,6 +53,8 @@ import {
   type TemplateTask, type InsertTemplateTask, templateTasks,
   type Department, type InsertDepartment, departments,
   type Position, type InsertPosition, positions,
+  type JobApplication, type InsertJobApplication, jobApplications,
+  type JobOpening, type InsertJobOpening, jobOpenings,
   customFieldFileUploads, forms, formFields, formSubmissions, tags
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -316,6 +318,16 @@ export interface IStorage {
   createPosition(position: InsertPosition): Promise<Position>;
   updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position | undefined>;
   deletePosition(id: string): Promise<boolean>;
+
+  // Job Openings
+  getJobOpenings(): Promise<JobOpening[]>;
+  createJobOpening(jobOpening: InsertJobOpening): Promise<JobOpening>;
+  updateJobOpening(id: string, updates: Partial<InsertJobOpening>): Promise<JobOpening>;
+  approveJobOpening(id: string): Promise<JobOpening>;
+
+  // Job Applications
+  getJobApplications(): Promise<JobApplication[]>;
+  createJobApplication(application: InsertJobApplication): Promise<JobApplication>;
   
   // Roles
   getRoles(): Promise<Role[]>;
@@ -3805,6 +3817,72 @@ class MinimalStorage implements Partial<IStorage> {
   // Additional form methods to ensure they're available at runtime
   async getFormsMethods(): Promise<string[]> {
     return ['getForms', 'getForm', 'createForm', 'updateForm', 'deleteForm', 'getFormFields', 'createFormField', 'updateFormField', 'deleteFormField', 'getFormSubmissions', 'getFormSubmission', 'createFormSubmission'];
+  }
+
+  // Job Openings
+  async getJobOpenings(): Promise<JobOpening[]> {
+    try {
+      return await db.select().from(jobOpenings).orderBy(desc(jobOpenings.createdAt));
+    } catch (error) {
+      console.error("Error getting job openings:", error);
+      return [];
+    }
+  }
+
+  async createJobOpening(jobOpening: InsertJobOpening): Promise<JobOpening> {
+    try {
+      const result = await db.insert(jobOpenings).values(jobOpening).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating job opening:", error);
+      throw error;
+    }
+  }
+
+  async updateJobOpening(id: string, updates: Partial<InsertJobOpening>): Promise<JobOpening> {
+    try {
+      const result = await db.update(jobOpenings)
+        .set(updates)
+        .where(eq(jobOpenings.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating job opening:", error);
+      throw error;
+    }
+  }
+
+  async approveJobOpening(id: string): Promise<JobOpening> {
+    try {
+      const result = await db.update(jobOpenings)
+        .set({ status: 'open', updatedAt: new Date() })
+        .where(eq(jobOpenings.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error approving job opening:", error);
+      throw error;
+    }
+  }
+
+  // Job Applications
+  async getJobApplications(): Promise<JobApplication[]> {
+    try {
+      return await db.select().from(jobApplications).orderBy(desc(jobApplications.createdAt));
+    } catch (error) {
+      console.error("Error getting job applications:", error);
+      return [];
+    }
+  }
+
+  async createJobApplication(application: InsertJobApplication): Promise<JobApplication> {
+    try {
+      const result = await db.insert(jobApplications).values(application).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating job application:", error);
+      throw error;
+    }
   }
 }
 

@@ -46,6 +46,7 @@ import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
 import HRPage from "@/pages/hr";
 import HRSettings from "@/pages/settings/hr-settings";
+import CareersPage from "@/pages/careers";
 
 function Router() {
   return (
@@ -96,6 +97,7 @@ function Router() {
         {(params) => <FormBuilder formId={params.id} />}
       </Route>
       <Route path="/forms-test" component={FormsTest} />
+      <Route path="/careers" component={CareersPage} />
       <Route component={NotFound} />
     </Switch>
   );

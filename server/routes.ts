@@ -10179,5 +10179,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // Public endpoint for job openings (no authentication required)
+  app.get('/api/job-openings/public', async (req, res) => {
+    try {
+      const jobOpenings = await storage.getJobOpenings();
+      res.json(jobOpenings);
+    } catch (error) {
+      console.error("Error fetching public job openings:", error);
+      res.status(500).json({ message: "Failed to fetch job openings" });
+    }
+  });
+
+  // Public endpoint for submitting job applications (no authentication required)
+  app.post('/api/job-applications', async (req, res) => {
+    try {
+      console.log("Received job application:", req.body);
+      const insertJobApplicationSchema = (await import('@shared/schema')).insertJobApplicationSchema;
+      
+      // Validate the request body
+      const validatedData = insertJobApplicationSchema.parse(req.body);
+      
+      const application = await storage.createJobApplication(validatedData);
+      res.status(201).json(application);
+    } catch (error: any) {
+      console.error("Error creating job application:", error);
+      if (error.issues) {
+        // Zod validation error
+        res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues.map((issue: any) => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create job application" });
+      }
+    }
+  });
+
   return httpServer;
 }
