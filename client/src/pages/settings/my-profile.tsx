@@ -66,6 +66,11 @@ export default function MyProfile() {
     },
   });
 
+  // Fetch time off requests for HR tab
+  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
+    queryKey: ["/api/hr/time-off-requests"],
+  });
+
   // Fetch calendars for assignment
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<Array<{
     id: string;
@@ -788,11 +793,7 @@ export default function MyProfile() {
               </CardHeader>
               <CardContent>
                 {(() => {
-                  // Get time off requests for current user from the API
-                  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
-                    queryKey: ["/api/hr/time-off-requests"],
-                  });
-
+                  // Filter time off requests for current user
                   const myTimeOffRequests = timeOffRequests.filter(request => request.staffId === currentUserId);
 
                   if (myTimeOffRequests.length === 0) {
