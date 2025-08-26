@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { 
   CalendarDays, 
@@ -23,7 +25,9 @@ import {
   BarChart3,
   UserCheck,
   Search,
-  Filter
+  Filter,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
@@ -45,11 +49,24 @@ export default function HRPage() {
   
   // Job opening modal state
   const [isJobOpeningModalOpen, setIsJobOpeningModalOpen] = useState(false);
+  
+  // Hiring manager search state
+  const [hiringManagerSearchOpen, setHiringManagerSearchOpen] = useState(false);
+  const [hiringManagerSearchValue, setHiringManagerSearchValue] = useState("");
 
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
+  
+  // Filtered staff for hiring manager search
+  const filteredStaff = useMemo(() => {
+    return staffData.filter(staff => {
+      const fullName = `${staff.firstName} ${staff.lastName}`.toLowerCase();
+      const searchTerm = hiringManagerSearchValue.toLowerCase();
+      return fullName.includes(searchTerm);
+    });
+  }, [staffData, hiringManagerSearchValue]);
   
   // Check if current user is a manager (has direct reports)
   const { data: currentUser } = useQuery({
@@ -943,22 +960,61 @@ export default function HRPage() {
                     {/* Hiring Manager */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Hiring Manager *</label>
-                      <Select 
-                        value={jobOpeningForm.hiringManagerId}
-                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value}))}
-                        data-testid="select-hiring-manager"
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Hiring Manager" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {staffData.filter(staff => staff.position?.toLowerCase().includes('manager') || staff.position?.toLowerCase().includes('director')).map((manager: any) => (
-                            <SelectItem key={manager.id} value={manager.id}>
-                              {manager.firstName} {manager.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={hiringManagerSearchOpen} onOpenChange={setHiringManagerSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={hiringManagerSearchOpen}
+                            className="w-full justify-between"
+                            data-testid="select-hiring-manager"
+                          >
+                            {jobOpeningForm.hiringManagerId
+                              ? staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)
+                                  ? `${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.firstName} ${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.lastName}`
+                                  : "Select Hiring Manager"
+                              : "Select Hiring Manager"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput 
+                              placeholder="Search staff members..." 
+                              value={hiringManagerSearchValue}
+                              onValueChange={setHiringManagerSearchValue}
+                            />
+                            <CommandList>
+                              <CommandEmpty>No staff member found.</CommandEmpty>
+                              <CommandGroup>
+                                {filteredStaff.map((staff) => (
+                                  <CommandItem
+                                    key={staff.id}
+                                    value={`${staff.firstName} ${staff.lastName}`}
+                                    onSelect={() => {
+                                      setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
+                                      setHiringManagerSearchOpen(false);
+                                      setHiringManagerSearchValue("");
+                                    }}
+                                  >
+                                    <Check
+                                      className={`mr-2 h-4 w-4 ${
+                                        jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
+                                      }`}
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <div>
+                                        <div className="font-medium">{staff.firstName} {staff.lastName}</div>
+                                        <div className="text-sm text-slate-500">{staff.department} • {staff.position}</div>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     {/* Compensation */}
