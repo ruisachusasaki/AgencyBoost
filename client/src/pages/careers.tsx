@@ -31,9 +31,8 @@ export default function CareersPage() {
     retry: false,
   });
 
-  const openPositions = jobOpenings?.filter(
-    (job) => job.status === "open" && job.approvalStatus === "approved"
-  ) || [];
+  // Backend already filters for open and approved positions
+  const openPositions = jobOpenings || [];
 
   const handleApplicationSuccess = () => {
     setApplicationSubmitted(true);

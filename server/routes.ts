@@ -9934,6 +9934,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           jobDescription: opening.jobDescription,
           requirements: opening.requirements,
           benefits: opening.benefits,
+          location: opening.location,
+          status: opening.status,
+          approvalStatus: opening.approvalStatus,
         });
       }
 
