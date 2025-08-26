@@ -10030,31 +10030,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, use the same mock user pattern as other routes
       const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
       const { action, rejectionReason } = req.body; // action: 'approve' | 'reject'
+      
+      console.log("Approval request:", { id: req.params.id, action, currentUserId });
 
       if (!["approve", "reject"].includes(action)) {
         return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
       }
 
-      // Get the job opening with creator details
-      const [openingWithCreator] = await db.select({
-        opening: jobOpenings,
-        creatorManagerId: staff.managerId,
-      })
-      .from(jobOpenings)
-      .leftJoin(staff, eq(jobOpenings.createdById, staff.id))
-      .where(eq(jobOpenings.id, req.params.id));
+      // Get the job opening directly (simplified approach)
+      const [opening] = await db.select()
+        .from(jobOpenings)
+        .where(eq(jobOpenings.id, req.params.id));
 
-      if (!openingWithCreator) {
+      if (!opening) {
         return res.status(404).json({ error: "Job opening not found" });
       }
+      
+      console.log("Found opening:", { id: opening.id, status: opening.status, approvalStatus: opening.approvalStatus });
 
-      // For now, allow any manager to approve job openings (simplified permissions)
-      // TODO: In production, implement proper manager hierarchy check
-      // if (openingWithCreator.creatorManagerId !== currentUserId) {
-      //   return res.status(403).json({ error: "Only the creator's manager can approve job openings" });
-      // }
-
-      if (openingWithCreator.opening.approvalStatus !== "pending") {
+      if (opening.approvalStatus !== "pending") {
         return res.status(400).json({ error: "Job opening has already been processed" });
       }
 
@@ -10079,6 +10073,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set(updateData)
         .where(eq(jobOpenings.id, req.params.id))
         .returning();
+        
+      console.log("Updated opening:", updatedOpening);
 
       // Create audit log
       await createAuditLog(
@@ -10088,7 +10084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `Job opening ${action}d`,
         currentUserId,
         `${action === "approve" ? "Approved" : "Rejected"} job opening${rejectionReason ? ` with reason: ${rejectionReason}` : ""}`,
-        openingWithCreator.opening,
+        opening,
         updatedOpening,
         req
       );
