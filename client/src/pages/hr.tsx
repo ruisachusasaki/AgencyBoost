@@ -51,6 +51,10 @@ export default function HRPage() {
   const [reportSearchTerm, setReportSearchTerm] = useState("");
   const [reportDepartmentFilter, setReportDepartmentFilter] = useState("all");
   
+  // Filter states for applications
+  const [applicationPositionFilter, setApplicationPositionFilter] = useState("all");
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState("all");
+  
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
   
@@ -415,12 +419,40 @@ export default function HRPage() {
     }
   };
 
+  // Get unique positions and statuses for filters
+  const uniqueApplicationPositions = useMemo(() => {
+    const positions = jobApplications
+      .map(app => app.positionTitle)
+      .filter(position => position && position.trim() !== '')
+      .filter((position, index, arr) => arr.indexOf(position) === index);
+    return positions.sort();
+  }, [jobApplications]);
+
+  const uniqueApplicationStatuses = useMemo(() => {
+    const statuses = jobApplications
+      .map(app => app.stage)
+      .filter(status => status && status.trim() !== '')
+      .filter((status, index, arr) => arr.indexOf(status) === index);
+    return statuses.sort();
+  }, [jobApplications]);
+
   // Filter and sort applications
   const sortedApplications = useMemo(() => {
-    let sorted = [...jobApplications];
+    let filtered = [...jobApplications];
     
+    // Apply position filter
+    if (applicationPositionFilter && applicationPositionFilter !== "all") {
+      filtered = filtered.filter(app => app.positionTitle === applicationPositionFilter);
+    }
+    
+    // Apply status filter
+    if (applicationStatusFilter && applicationStatusFilter !== "all") {
+      filtered = filtered.filter(app => app.stage === applicationStatusFilter);
+    }
+    
+    // Apply sorting
     if (applicationSortField) {
-      sorted.sort((a, b) => {
+      filtered.sort((a, b) => {
         let aValue: any = a[applicationSortField];
         let bValue: any = b[applicationSortField];
         
@@ -443,8 +475,8 @@ export default function HRPage() {
       });
     }
     
-    return sorted;
-  }, [jobApplications, applicationSortField, applicationSortDirection]);
+    return filtered;
+  }, [jobApplications, applicationPositionFilter, applicationStatusFilter, applicationSortField, applicationSortDirection]);
 
   // Application Sortable Header Component
   const ApplicationSortableHeader = ({ field, children }: { field: 'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt'; children: React.ReactNode }) => (
@@ -825,6 +857,42 @@ export default function HRPage() {
             <div>
               <h2 className="text-2xl font-bold">Applicant Tracking</h2>
               <p className="text-slate-600">Manage job applications and recruitment pipeline</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-600">Position:</label>
+                <Select value={applicationPositionFilter} onValueChange={setApplicationPositionFilter}>
+                  <SelectTrigger className="w-48" data-testid="select-application-position-filter">
+                    <SelectValue placeholder="All Positions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Positions</SelectItem>
+                    {uniqueApplicationPositions.map((position) => (
+                      <SelectItem key={position} value={position}>{position}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-600">Status:</label>
+                <Select value={applicationStatusFilter} onValueChange={setApplicationStatusFilter}>
+                  <SelectTrigger className="w-48" data-testid="select-application-status-filter">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="interview">Interview</SelectItem>
+                    <SelectItem value="not_selected">Not Selected</SelectItem>
+                    <SelectItem value="test_sent">Test Sent</SelectItem>
+                    <SelectItem value="send_offer">Send Offer</SelectItem>
+                    <SelectItem value="offer_sent">Offer Sent</SelectItem>
+                    <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
+                    <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
