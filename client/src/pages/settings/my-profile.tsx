@@ -816,9 +816,9 @@ export default function MyProfile() {
                   // Get current user's annual entitlements from policy or fallback to staff record or defaults
                   const currentPolicy = policies[0]; // Use the latest/active policy
                   const annualEntitlements = {
-                    vacation: currentPolicy?.vacationDaysDefault || currentUser?.vacationDaysAnnually || 15,
-                    sick: currentPolicy?.sickDaysDefault || currentUser?.sickDaysAnnually || 10, 
-                    personal: currentPolicy?.personalDaysDefault || currentUser?.personalDaysAnnually || 3
+                    vacation: currentPolicy?.vacationDaysDefault ?? currentUser?.vacationDaysAnnually ?? 15,
+                    sick: currentPolicy?.sickDaysDefault ?? currentUser?.sickDaysAnnually ?? 10, 
+                    personal: currentPolicy?.personalDaysDefault ?? currentUser?.personalDaysAnnually ?? 3
                   };
 
                   // Calculate remaining days
@@ -832,7 +832,7 @@ export default function MyProfile() {
                   return (
                     <div className="space-y-6">
                       {/* Usage Summary */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className={`grid grid-cols-1 gap-4 ${annualEntitlements.personal > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
                         <Card>
                           <CardContent className="p-4 text-center">
                             <div className="text-2xl font-bold text-blue-600">{remainingDays.vacation}</div>
@@ -847,13 +847,15 @@ export default function MyProfile() {
                             <div className="text-xs text-slate-500 mt-1">{usedDays.sick} used of {annualEntitlements.sick}</div>
                           </CardContent>
                         </Card>
-                        <Card>
-                          <CardContent className="p-4 text-center">
-                            <div className="text-2xl font-bold text-green-600">{remainingDays.personal}</div>
-                            <div className="text-sm text-slate-600">Personal Days Left</div>
-                            <div className="text-xs text-slate-500 mt-1">{usedDays.personal} used of {annualEntitlements.personal}</div>
-                          </CardContent>
-                        </Card>
+                        {annualEntitlements.personal > 0 && (
+                          <Card>
+                            <CardContent className="p-4 text-center">
+                              <div className="text-2xl font-bold text-green-600">{remainingDays.personal}</div>
+                              <div className="text-sm text-slate-600">Personal Days Left</div>
+                              <div className="text-xs text-slate-500 mt-1">{usedDays.personal} used of {annualEntitlements.personal}</div>
+                            </CardContent>
+                          </Card>
+                        )}
                         <Card>
                           <CardContent className="p-4 text-center">
                             <div className="text-2xl font-bold text-slate-600">{remainingDays.total}</div>
