@@ -32,7 +32,7 @@ import {
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
-  timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, timeOffBalances,
+  timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
   jobOpenings, jobApplicationFormConfig
 } from "@shared/schema";
 import { z } from "zod";
@@ -43,7 +43,6 @@ import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-o
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
-
 // Extend Express Request to include session
 declare global {
   namespace Express {
@@ -10386,6 +10385,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single job application by ID
+  app.get('/api/hr/job-applications/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [application] = await db
+        .select({
+          id: jobApplications.id,
+          applicantName: jobApplications.applicantName,
+          applicantEmail: jobApplications.applicantEmail,
+          applicantPhone: jobApplications.applicantPhone,
+          positionId: jobApplications.positionId,
+          positionTitle: jobOpenings.positionTitle,
+          resumeUrl: jobApplications.resumeUrl,
+          coverLetterUrl: jobApplications.coverLetterUrl,
+          portfolioUrl: jobApplications.portfolioUrl,
+          experience: jobApplications.experience,
+          salaryExpectation: jobApplications.salaryExpectation,
+          notes: jobApplications.notes,
+          stage: jobApplications.stage,
+          rating: jobApplications.rating,
+          appliedAt: jobApplications.appliedAt,
+          lastUpdated: jobApplications.lastUpdated,
+          customFieldData: jobApplications.customFieldData
+        })
+        .from(jobApplications)
+        .leftJoin(jobOpenings, eq(jobApplications.positionId, jobOpenings.id))
+        .where(eq(jobApplications.id, id));
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(application);
+    } catch (error) {
+      console.error("Error fetching job application:", error);
+      res.status(500).json({ message: "Failed to fetch application" });
+    }
+  });
+
+  // Update job application status and rating
+  app.patch('/api/hr/job-applications/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { stage, rating } = req.body;
+      
+      const updateData: any = {};
+      if (stage !== undefined) updateData.stage = stage;
+      if (rating !== undefined) updateData.rating = rating;
+      updateData.lastUpdated = new Date();
+      
+      const [updatedApplication] = await db
+        .update(jobApplications)
+        .set(updateData)
+        .where(eq(jobApplications.id, id))
+        .returning();
+      
+      if (!updatedApplication) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error("Error updating job application:", error);
+      res.status(500).json({ message: "Failed to update application" });
+    }
+  });
+
+  // Get comments for a job application
+  app.get('/api/hr/job-applications/:id/comments', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const applicationComments = await db
+        .select({
+          id: jobApplicationComments.id,
+          content: jobApplicationComments.content,
+          authorId: jobApplicationComments.authorId,
+          authorName: staff.firstName,
+          createdAt: jobApplicationComments.createdAt
+        })
+        .from(jobApplicationComments)
+        .leftJoin(staff, eq(jobApplicationComments.authorId, staff.id))
+        .where(eq(jobApplicationComments.applicationId, id))
+        .orderBy(desc(jobApplicationComments.createdAt));
+      
+      // Format author names properly
+      const formattedComments = applicationComments.map(comment => ({
+        ...comment,
+        authorName: comment.authorName || 'Unknown User'
+      }));
+      
+      res.json(formattedComments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  // Add comment to job application
+  app.post('/api/hr/job-applications/:id/comments', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+      
+      // For now, use a default author ID - in a real app, this would come from the authenticated user
+      const defaultAuthorId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [newComment] = await db
+        .insert(jobApplicationComments)
+        .values({
+          applicationId: id,
+          content: content.trim(),
+          authorId: defaultAuthorId
+        })
+        .returning();
+      
+      if (!newComment) {
+        return res.status(500).json({ message: "Failed to create comment" });
+      }
+      
+      // Fetch the comment with author details
+      const [commentWithAuthor] = await db
+        .select({
+          id: jobApplicationComments.id,
+          content: jobApplicationComments.content,
+          authorId: jobApplicationComments.authorId,
+          authorName: sql`${staff.firstName} || ' ' || ${staff.lastName}`,
+          createdAt: jobApplicationComments.createdAt
+        })
+        .from(jobApplicationComments)
+        .leftJoin(staff, eq(jobApplicationComments.authorId, staff.id))
+        .where(eq(jobApplicationComments.id, newComment.id));
+      
+      res.status(201).json(commentWithAuthor);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
   // Public endpoint for submitting job applications (no authentication required)
   app.post('/api/job-applications', async (req, res) => {
     try {
@@ -10424,7 +10568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         salaryExpectation: validatedData.salaryExpectation,
         experience: validatedData.experience,
         customFieldData: validatedData.customFieldData,
-        stage: 'applied',
+        stage: 'new',
         appliedAt: new Date(),
         lastUpdated: new Date()
       };

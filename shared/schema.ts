@@ -622,7 +622,8 @@ export const jobApplications = pgTable("job_applications", {
   resumeUrl: text("resume_url"),
   coverLetterUrl: text("cover_letter_url"),
   portfolioUrl: text("portfolio_url"),
-  stage: text("stage").notNull().default("applied"), // applied, screening, interview, offer, hired, rejected
+  stage: text("stage").notNull().default("new"), // new, review, interview, not_selected, test_sent, send_offer, offer_sent, offer_accepted, offer_rejected
+  rating: integer("rating").default(0), // 1-5 star rating
   notes: text("notes"),
   assignedRecruiter: uuid("assigned_recruiter").references(() => staff.id),
   appliedAt: timestamp("applied_at").defaultNow(),
@@ -643,6 +644,18 @@ export const applicationStageHistory = pgTable("application_stage_history", {
   changedBy: uuid("changed_by").notNull().references(() => staff.id),
   notes: text("notes"),
   changedAt: timestamp("changed_at").defaultNow(),
+});
+
+// HR System - Job Application Comments
+export const jobApplicationComments = pgTable("job_application_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => jobApplications.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  authorName: text("author_name").notNull(), // cached for display
+  isInternal: boolean("is_internal").default(true), // internal team comments
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // HR System - Time Off Balances (for tracking remaining days)
@@ -1084,6 +1097,8 @@ export type InsertTimeOffRequest = z.infer<typeof insertTimeOffRequestSchema>;
 export type TimeOffRequestDay = typeof timeOffRequestDays.$inferSelect;
 export type InsertTimeOffRequestDay = z.infer<typeof insertTimeOffRequestDaySchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
+export type JobApplicationComment = typeof jobApplicationComments.$inferSelect;
+export type InsertJobApplicationComment = typeof jobApplicationComments.$inferInsert;
 export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type ApplicationStageHistory = typeof applicationStageHistory.$inferSelect;
 export type InsertApplicationStageHistory = z.infer<typeof insertApplicationStageHistorySchema>;

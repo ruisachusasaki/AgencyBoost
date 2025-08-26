@@ -45,6 +45,7 @@ import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
 import HRPage from "@/pages/hr";
+import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
 import CareersPage from "@/pages/careers";
 
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/social-media" component={SocialMedia} />
       <Route path="/workflows" component={Workflows} />
       <Route path="/hr" component={HRPage} />
+      <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
       <Route path="/calendar" component={CalendarMain} />
       <Route path="/calendar/settings" component={CalendarSettings} />
       <Route path="/calendar-settings" component={CalendarSettings} />

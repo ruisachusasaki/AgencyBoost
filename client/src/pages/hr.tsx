@@ -27,14 +27,18 @@ import {
   Search,
   Filter,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Star,
+  Eye
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const queryClient = useQueryClient();
   
   // Filter states for staff directory
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -126,8 +130,6 @@ export default function HRPage() {
   
   // Track position descriptions
   const [positionDescription, setPositionDescription] = useState("");
-
-  const queryClient = useQueryClient();
 
   // Create Job Opening Mutation
   const createJobOpeningMutation = useMutation({
@@ -759,29 +761,118 @@ export default function HRPage() {
               {jobApplications.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">No job applications</p>
               ) : (
-                <div className="space-y-4">
-                  {jobApplications.map((application) => (
-                    <div key={application.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{application.applicantName}</h4>
-                        <p className="text-sm text-slate-600">{application.applicantEmail}</p>
-                        {application.applicantPhone && (
-                          <p className="text-sm text-slate-600">{application.applicantPhone}</p>
-                        )}
-                        <p className="text-sm text-slate-600">
-                          Applied {application.appliedAt && new Date(application.appliedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {getApplicationStageBadge(application.stage)}
-                        {application.experience && (
-                          <p className="text-xs text-slate-600 mt-1">
-                            {application.experience} level
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Candidate Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Rating</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Application Date</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobApplications.map((application) => (
+                        <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="space-y-1">
+                              <button
+                                onClick={() => window.location.href = `/hr/applicant/${application.id}`}
+                                className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                                data-testid={`link-applicant-${application.id}`}
+                              >
+                                {application.applicantName}
+                              </button>
+                              <div className="text-sm text-gray-600">{application.applicantEmail}</div>
+                              <div className="text-sm text-gray-600">{application.positionTitle}</div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Select
+                              value={application.stage}
+                              onValueChange={async (newStage) => {
+                                try {
+                                  await apiRequest(`/api/hr/job-applications/${application.id}`, {
+                                    method: 'PATCH',
+                                    body: { stage: newStage }
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                                } catch (error) {
+                                  console.error('Failed to update status:', error);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-40" data-testid={`select-status-${application.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="new">New</SelectItem>
+                                <SelectItem value="review">Review</SelectItem>
+                                <SelectItem value="interview">Interview</SelectItem>
+                                <SelectItem value="not_selected">Not Selected</SelectItem>
+                                <SelectItem value="test_sent">Test Sent</SelectItem>
+                                <SelectItem value="send_offer">Send Offer</SelectItem>
+                                <SelectItem value="offer_sent">Offer Sent</SelectItem>
+                                <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
+                                <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  onClick={async () => {
+                                    try {
+                                      await apiRequest(`/api/hr/job-applications/${application.id}`, {
+                                        method: 'PATCH',
+                                        body: { rating: star }
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                                    } catch (error) {
+                                      console.error('Failed to update rating:', error);
+                                    }
+                                  }}
+                                  className="text-yellow-400 hover:text-yellow-500 transition-colors"
+                                  data-testid={`star-${application.id}-${star}`}
+                                >
+                                  <Star
+                                    className={`h-4 w-4 ${
+                                      star <= (application.rating || 0) ? 'fill-current' : 'stroke-current fill-transparent'
+                                    }`}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {application.appliedAt && new Date(application.appliedAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.location.href = `/hr/applicant/${application.id}`}
+                                data-testid={`button-view-${application.id}`}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>
