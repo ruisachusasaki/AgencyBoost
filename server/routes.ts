@@ -11168,7 +11168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses", async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      // Use session userId or fallback to the first user in the system
+      const userId = req.session?.userId || "9788c16a-ba2a-40cb-af7b-26d2816d6390";
       const validatedData = insertCourseSchema.parse({
         ...req.body,
         createdBy: userId
