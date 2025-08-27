@@ -3,6 +3,12 @@
 ## Overview
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system designed for marketing agencies. Its primary purpose is to provide a complete solution for managing clients, projects, campaigns, leads, tasks, and invoices. It includes integrated reporting capabilities and offers a responsive interface for tracking business operations and campaign performance. The project aims to provide a complete, modern CRM solution for marketing agencies, enhancing efficiency and operational oversight with a focus on business vision and market potential.
 
+## Recent Changes (January 27, 2025)
+- **Client Team Assignment Feature**: Successfully implemented comprehensive team assignment functionality with 10 specific positions (Setter, BDR, Account Manager, Media Buyer, CRO Specialist, Automation Specialist, Show Rate Specialist, Data Specialist, SEO Specialist, Social Media Specialist)
+- **Profile Image Enhancement**: Fixed profile image display to show actual profile images for all staff members by checking both profileImage and profileImagePath fields
+- **UX Improvements**: Removed redundant "Current Team Members" section and increased dropdown viewport size (max-h-80) for better user experience
+- **Database Integration**: Created client_team_assignments table with proper foreign key relationships and constraints
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Bundle architecture preference: Collection-based bundles.

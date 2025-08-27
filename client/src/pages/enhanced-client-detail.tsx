@@ -181,9 +181,9 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                     <SelectValue placeholder="Not Assigned">
                       {assignedStaff ? (
                         <div className="flex items-center gap-2">
-                          {assignedStaff.profileImagePath ? (
+                          {assignedStaff.profileImage || assignedStaff.profileImagePath ? (
                             <img 
-                              src={assignedStaff.profileImagePath} 
+                              src={assignedStaff.profileImage || assignedStaff.profileImagePath} 
                               alt="" 
                               className="w-4 h-4 rounded-full object-cover"
                             />
@@ -199,7 +199,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                       )}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-80">
                     <div className="p-2">
                       <Input 
                         placeholder="Search staff..." 
@@ -228,9 +228,9 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                     {(staffList as any[]).map((staff: any) => (
                       <SelectItem key={staff.id} value={staff.id} className="select-item" data-position={position.key}>
                         <div className="flex items-center gap-2">
-                          {staff.profileImagePath ? (
+                          {staff.profileImage || staff.profileImagePath ? (
                             <img 
-                              src={staff.profileImagePath} 
+                              src={staff.profileImage || staff.profileImagePath} 
                               alt="" 
                               className="w-4 h-4 rounded-full object-cover"
                             />
@@ -254,35 +254,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
         </div>
       )}
 
-      {/* Team Overview */}
-      {(teamAssignments as any[]).length > 0 && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h4 className="font-medium text-blue-900 mb-2">Current Team Members</h4>
-          <div className="flex flex-wrap gap-2">
-            {(teamAssignments as any[]).map((assignment: any) => {
-              const staff = (staffList as any[]).find((s: any) => s.id === assignment.staffId);
-              const position = positions.find(p => p.key === assignment.position);
-              return staff ? (
-                <div key={assignment.id} className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-blue-200">
-                  {staff.profileImagePath ? (
-                    <img 
-                      src={staff.profileImagePath} 
-                      alt="" 
-                      className="w-5 h-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="w-3 h-3 text-gray-500" />
-                    </div>
-                  )}
-                  <span className="text-sm font-medium">{staff.firstName} {staff.lastName}</span>
-                  <span className="text-xs text-blue-600">• {position?.label}</span>
-                </div>
-              ) : null;
-            })}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
