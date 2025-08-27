@@ -529,12 +529,13 @@ export default function Resources() {
       </div>
 
       {/* Tab Content */}
-      {/* Training Tab */}
-      {activeTab === "training" && (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Training Resources</h2>
-              <div className="flex gap-2">
+      <>
+        {/* Training Tab */}
+        {activeTab === "training" && (
+          <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Training Resources</h2>
+            <div className="flex gap-2">
               <Dialog open={showCreateResource} onOpenChange={setShowCreateResource}>
                 <DialogTrigger asChild>
                   <Button variant="outline" data-testid="button-create-resource">
@@ -759,8 +760,9 @@ export default function Resources() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-              </div>
-            </div>
+          </div>
+          </div>
+          </div>
 
           {/* Resources and Courses Grid */}
           {(resourcesLoading || coursesLoading) ? (
@@ -923,12 +925,13 @@ export default function Resources() {
             </div>
         )}
 
+        {/* Resource Links Tab */}
         {activeTab === "links" && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Resource Links</h2>
-              <Dialog open={showCreateLink} onOpenChange={setShowCreateLink}>
-                <DialogTrigger asChild>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Resource Links</h2>
+            <Dialog open={showCreateLink} onOpenChange={setShowCreateLink}>
+              <DialogTrigger asChild>
                 <Button data-testid="button-create-link">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Link
@@ -1001,11 +1004,12 @@ export default function Resources() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            </div>
+          </div>
 
-            {linksLoading ? (
-              <div className="text-center py-8">Loading resource links...</div>
-            ) : (
+          {/* Links Table */}
+          {linksLoading ? (
+            <div className="text-center py-8">Loading resource links...</div>
+          ) : (
             <Card>
               <Table>
                 <TableHeader>
@@ -1053,9 +1057,9 @@ export default function Resources() {
               </Table>
             </Card>
           )}
-        </div>
-      )}
-      </div>
+          </div>
+        )}
+      </>
     </div>
   );
 }
