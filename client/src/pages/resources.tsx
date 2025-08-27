@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -424,14 +424,36 @@ export default function Resources() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList data-testid="tabs-resources">
-          <TabsTrigger value="training" data-testid="tab-training">Training</TabsTrigger>
-          <TabsTrigger value="links" data-testid="tab-links">Resource Links</TabsTrigger>
-        </TabsList>
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8" data-testid="tabs-resources">
+          <button
+            onClick={() => setActiveTab("training")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === "training"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+            data-testid="tab-training"
+          >
+            Training
+          </button>
+          <button
+            onClick={() => setActiveTab("links")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === "links"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+            data-testid="tab-links"
+          >
+            Resource Links
+          </button>
+        </nav>
+      </div>
 
         {/* Training Tab */}
-        <TabsContent value="training" className="space-y-4">
+        {activeTab === "training" && (
+          <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Training Resources</h2>
             <Dialog open={showCreateResource} onOpenChange={setShowCreateResource}>
@@ -646,10 +668,12 @@ export default function Resources() {
               ))}
             </div>
           )}
-        </TabsContent>
+          </div>
+        )}
 
         {/* Resource Links Tab */}
-        <TabsContent value="links" className="space-y-4">
+        {activeTab === "links" && (
+          <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Resource Links</h2>
             <Dialog open={showCreateLink} onOpenChange={setShowCreateLink}>
@@ -779,8 +803,8 @@ export default function Resources() {
               </Table>
             </Card>
           )}
-        </TabsContent>
-      </Tabs>
+          </div>
+        )}
     </div>
   );
 }
