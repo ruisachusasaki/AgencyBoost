@@ -183,7 +183,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                         <div className="flex items-center gap-2">
                           {assignedStaff.profileImage || assignedStaff.profileImagePath ? (
                             <img 
-                              src={assignedStaff.profileImage || assignedStaff.profileImagePath} 
+                              src={assignedStaff.profileImage || (assignedStaff.profileImagePath ? `/objects${assignedStaff.profileImagePath}` : undefined)} 
                               alt="" 
                               className="w-4 h-4 rounded-full object-cover"
                             />
@@ -230,7 +230,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                         <div className="flex items-center gap-2">
                           {staff.profileImage || staff.profileImagePath ? (
                             <img 
-                              src={staff.profileImage || staff.profileImagePath} 
+                              src={staff.profileImage || (staff.profileImagePath ? `/objects${staff.profileImagePath}` : undefined)} 
                               alt="" 
                               className="w-4 h-4 rounded-full object-cover"
                             />
