@@ -761,8 +761,6 @@ export default function Resources() {
               </DialogContent>
             </Dialog>
           </div>
-          </div>
-          </div>
 
           {/* Resources and Courses Grid */}
           {(resourcesLoading || coursesLoading) ? (
@@ -1059,7 +1057,6 @@ export default function Resources() {
           )}
           </div>
         )}
-      </>
     </div>
   );
 }
