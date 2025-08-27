@@ -281,10 +281,10 @@ export default function Resources() {
     resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const filteredLinks = (resourceLinks || []).filter((link: ResourceLink) =>
+  const filteredLinks = Array.isArray(resourceLinks) ? resourceLinks.filter((link: ResourceLink) =>
     link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     link.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) : [];
 
   const completedResources = userProgress.filter((p: ResourceProgress) => p.status === 'completed').length;
   const totalResources = resources.length;
