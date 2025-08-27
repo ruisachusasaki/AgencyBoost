@@ -2401,4 +2401,171 @@ export const insertClientTeamAssignmentSchema = createInsertSchema(clientTeamAss
 export type ClientTeamAssignment = typeof clientTeamAssignments.$inferSelect;
 export type InsertClientTeamAssignment = z.infer<typeof insertClientTeamAssignmentSchema>;
 
+// Knowledge Base Categories - for organizing articles
+export const knowledgeBaseCategories: ReturnType<typeof pgTable> = pgTable("knowledge_base_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentId: varchar("parent_id").references(() => knowledgeBaseCategories.id), // for nested categories
+  order: integer("order").default(0),
+  icon: text("icon"), // lucide icon name
+  color: text("color"), // hex color for category
+  isVisible: boolean("is_visible").default(true),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Knowledge Base Articles - the actual content
+export const knowledgeBaseArticles: ReturnType<typeof pgTable> = pgTable("knowledge_base_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: jsonb("content").notNull(), // rich editor content in blocks format
+  excerpt: text("excerpt"), // brief description for search/listing
+  categoryId: varchar("category_id").references(() => knowledgeBaseCategories.id),
+  parentId: varchar("parent_id").references(() => knowledgeBaseArticles.id), // for nested articles
+  slug: text("slug").notNull().unique(), // URL-friendly identifier
+  order: integer("order").default(0),
+  status: text("status").notNull().default("published"), // draft, published, archived
+  featuredImage: text("featured_image"), // optional cover image
+  tags: text("tags").array(), // searchable tags
+  viewCount: integer("view_count").default(0),
+  likeCount: integer("like_count").default(0),
+  isPublic: boolean("is_public").default(true), // public or restricted access
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastViewedAt: timestamp("last_viewed_at"),
+});
+
+// Knowledge Base Article Permissions - for access control
+export const knowledgeBasePermissions = pgTable("knowledge_base_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resourceType: text("resource_type").notNull(), // "category" or "article"
+  resourceId: varchar("resource_id").notNull(), // category or article id
+  accessType: text("access_type").notNull(), // "role" or "user"
+  accessId: text("access_id").notNull(), // role name or user id
+  permission: text("permission").notNull().default("read"), // read, write, admin
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Knowledge Base Bookmarks - user favorites
+export const knowledgeBaseBookmarks = pgTable("knowledge_base_bookmarks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull().references(() => knowledgeBaseArticles.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Knowledge Base Likes - for article popularity
+export const knowledgeBaseLikes = pgTable("knowledge_base_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull().references(() => knowledgeBaseArticles.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Knowledge Base Comments - with @mention support
+export const knowledgeBaseComments: ReturnType<typeof pgTable> = pgTable("knowledge_base_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull().references(() => knowledgeBaseArticles.id, { onDelete: "cascade" }),
+  parentId: varchar("parent_id").references(() => knowledgeBaseComments.id), // for threaded comments
+  content: text("content").notNull(),
+  mentions: text("mentions").array(), // user IDs mentioned in comment
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Knowledge Base Views - for tracking recent/popular content
+export const knowledgeBaseViews = pgTable("knowledge_base_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull().references(() => knowledgeBaseArticles.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => staff.id), // null for anonymous views
+  viewedAt: timestamp("viewed_at").defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+});
+
+// Knowledge Base Settings - for system configuration
+export const knowledgeBaseSettings = pgTable("knowledge_base_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: jsonb("value").notNull(),
+  description: text("description"),
+  updatedBy: uuid("updated_by").notNull().references(() => staff.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Knowledge Base schema exports
+export const insertKnowledgeBaseCategorySchema = createInsertSchema(knowledgeBaseCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKnowledgeBaseArticleSchema = createInsertSchema(knowledgeBaseArticles).omit({
+  id: true,
+  viewCount: true,
+  likeCount: true,
+  createdAt: true,
+  updatedAt: true,
+  lastViewedAt: true,
+});
+
+export const insertKnowledgeBasePermissionSchema = createInsertSchema(knowledgeBasePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertKnowledgeBaseBookmarkSchema = createInsertSchema(knowledgeBaseBookmarks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertKnowledgeBaseLikeSchema = createInsertSchema(knowledgeBaseLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertKnowledgeBaseCommentSchema = createInsertSchema(knowledgeBaseComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKnowledgeBaseViewSchema = createInsertSchema(knowledgeBaseViews).omit({
+  id: true,
+  viewedAt: true,
+});
+
+export const insertKnowledgeBaseSettingSchema = createInsertSchema(knowledgeBaseSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type KnowledgeBaseCategory = typeof knowledgeBaseCategories.$inferSelect;
+export type InsertKnowledgeBaseCategory = z.infer<typeof insertKnowledgeBaseCategorySchema>;
+
+export type KnowledgeBaseArticle = typeof knowledgeBaseArticles.$inferSelect;
+export type InsertKnowledgeBaseArticle = z.infer<typeof insertKnowledgeBaseArticleSchema>;
+
+export type KnowledgeBasePermission = typeof knowledgeBasePermissions.$inferSelect;
+export type InsertKnowledgeBasePermission = z.infer<typeof insertKnowledgeBasePermissionSchema>;
+
+export type KnowledgeBaseBookmark = typeof knowledgeBaseBookmarks.$inferSelect;
+export type InsertKnowledgeBaseBookmark = z.infer<typeof insertKnowledgeBaseBookmarkSchema>;
+
+export type KnowledgeBaseLike = typeof knowledgeBaseLikes.$inferSelect;
+export type InsertKnowledgeBaseLike = z.infer<typeof insertKnowledgeBaseLikeSchema>;
+
+export type KnowledgeBaseComment = typeof knowledgeBaseComments.$inferSelect;
+export type InsertKnowledgeBaseComment = z.infer<typeof insertKnowledgeBaseCommentSchema>;
+
+export type KnowledgeBaseView = typeof knowledgeBaseViews.$inferSelect;
+export type InsertKnowledgeBaseView = z.infer<typeof insertKnowledgeBaseViewSchema>;
+
+export type KnowledgeBaseSetting = typeof knowledgeBaseSettings.$inferSelect;
+export type InsertKnowledgeBaseSetting = z.infer<typeof insertKnowledgeBaseSettingSchema>;
+
 // Smart Lists schema exports - remove duplicate and use existing one

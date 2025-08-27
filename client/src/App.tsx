@@ -48,6 +48,8 @@ import HRPage from "@/pages/hr";
 import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
 import CareersPage from "@/pages/careers";
+import KnowledgeBase from "@/pages/knowledge-base";
+import ArticleView from "@/pages/article-view";
 
 function Router() {
   return (
@@ -68,6 +70,8 @@ function Router() {
       <Route path="/workflows" component={Workflows} />
       <Route path="/hr" component={HRPage} />
       <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
+      <Route path="/resources" component={KnowledgeBase} />
+      <Route path="/resources/articles/:id" component={ArticleView} />
       <Route path="/calendar" component={CalendarMain} />
       <Route path="/calendar/settings" component={CalendarSettings} />
       <Route path="/calendar-settings" component={CalendarSettings} />

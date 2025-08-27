@@ -33,7 +33,9 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, clientTeamAssignments
+  jobOpenings, jobApplicationFormConfig, clientTeamAssignments,
+  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks,
+  knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -10747,6 +10749,468 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to create job application" });
       }
+    }
+  });
+
+  // KNOWLEDGE BASE API ROUTES
+  
+  // Categories API
+  app.get("/api/knowledge-base/categories", async (req, res) => {
+    try {
+      const categories = await db.select()
+        .from(knowledgeBaseCategories)
+        .where(eq(knowledgeBaseCategories.isVisible, true))
+        .orderBy(asc(knowledgeBaseCategories.order));
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/knowledge-base/categories", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const { name, description, parentId, icon, color } = req.body;
+      
+      if (!name || name.trim() === '') {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+      
+      // Get the next order value
+      const maxOrderResult = await db.select({ 
+        maxOrder: sql<number>`COALESCE(MAX("order"), 0)` 
+      }).from(knowledgeBaseCategories);
+      const nextOrder = (maxOrderResult[0]?.maxOrder || 0) + 1;
+      
+      const [newCategory] = await db.insert(knowledgeBaseCategories).values({
+        name: name.trim(),
+        description: description || null,
+        parentId: parentId || null,
+        icon: icon || null,
+        color: color || null,
+        order: nextOrder,
+        createdBy: userId,
+      }).returning();
+      
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  app.put("/api/knowledge-base/categories/:id", async (req, res) => {
+    try {
+      const { name, description, icon, color, isVisible } = req.body;
+      
+      const [updatedCategory] = await db.update(knowledgeBaseCategories)
+        .set({
+          name: name?.trim(),
+          description,
+          icon,
+          color,
+          isVisible,
+          updatedAt: new Date()
+        })
+        .where(eq(knowledgeBaseCategories.id, req.params.id))
+        .returning();
+      
+      if (!updatedCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/knowledge-base/categories/:id", async (req, res) => {
+    try {
+      // Check if category has articles or subcategories
+      const articlesCount = await db.select({ count: sql<number>`count(*)` })
+        .from(knowledgeBaseArticles)
+        .where(eq(knowledgeBaseArticles.categoryId, req.params.id));
+      
+      const subcategoriesCount = await db.select({ count: sql<number>`count(*)` })
+        .from(knowledgeBaseCategories)
+        .where(eq(knowledgeBaseCategories.parentId, req.params.id));
+      
+      if (articlesCount[0].count > 0 || subcategoriesCount[0].count > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete category with articles or subcategories" 
+        });
+      }
+      
+      await db.delete(knowledgeBaseCategories)
+        .where(eq(knowledgeBaseCategories.id, req.params.id));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
+  // Articles API
+  app.get("/api/knowledge-base/articles", async (req, res) => {
+    try {
+      const { categoryId, search, status = 'published' } = req.query;
+      
+      let whereConditions = [eq(knowledgeBaseArticles.status, status as string)];
+      
+      if (categoryId && typeof categoryId === 'string') {
+        whereConditions.push(eq(knowledgeBaseArticles.categoryId, categoryId));
+      }
+      
+      if (search && typeof search === 'string') {
+        whereConditions.push(
+          or(
+            like(knowledgeBaseArticles.title, `%${search}%`),
+            like(knowledgeBaseArticles.excerpt, `%${search}%`)
+          )
+        );
+      }
+      
+      const articles = await db.select({
+        id: knowledgeBaseArticles.id,
+        title: knowledgeBaseArticles.title,
+        excerpt: knowledgeBaseArticles.excerpt,
+        slug: knowledgeBaseArticles.slug,
+        categoryId: knowledgeBaseArticles.categoryId,
+        parentId: knowledgeBaseArticles.parentId,
+        featuredImage: knowledgeBaseArticles.featuredImage,
+        tags: knowledgeBaseArticles.tags,
+        viewCount: knowledgeBaseArticles.viewCount,
+        likeCount: knowledgeBaseArticles.likeCount,
+        isPublic: knowledgeBaseArticles.isPublic,
+        createdAt: knowledgeBaseArticles.createdAt,
+        updatedAt: knowledgeBaseArticles.updatedAt,
+        authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+      })
+      .from(knowledgeBaseArticles)
+      .leftJoin(staff, eq(knowledgeBaseArticles.createdBy, staff.id))
+      .where(and(...whereConditions))
+      .orderBy(desc(knowledgeBaseArticles.createdAt));
+      
+      res.json(articles);
+    } catch (error) {
+      console.error('Error fetching articles:', error);
+      res.status(500).json({ message: "Failed to fetch articles" });
+    }
+  });
+
+  app.get("/api/knowledge-base/articles/:id", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      
+      const [article] = await db.select({
+        id: knowledgeBaseArticles.id,
+        title: knowledgeBaseArticles.title,
+        content: knowledgeBaseArticles.content,
+        excerpt: knowledgeBaseArticles.excerpt,
+        categoryId: knowledgeBaseArticles.categoryId,
+        parentId: knowledgeBaseArticles.parentId,
+        slug: knowledgeBaseArticles.slug,
+        status: knowledgeBaseArticles.status,
+        featuredImage: knowledgeBaseArticles.featuredImage,
+        tags: knowledgeBaseArticles.tags,
+        viewCount: knowledgeBaseArticles.viewCount,
+        likeCount: knowledgeBaseArticles.likeCount,
+        isPublic: knowledgeBaseArticles.isPublic,
+        createdAt: knowledgeBaseArticles.createdAt,
+        updatedAt: knowledgeBaseArticles.updatedAt,
+        authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+        authorId: knowledgeBaseArticles.createdBy,
+      })
+      .from(knowledgeBaseArticles)
+      .leftJoin(staff, eq(knowledgeBaseArticles.createdBy, staff.id))
+      .where(eq(knowledgeBaseArticles.id, req.params.id));
+      
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
+      // Track view if user is logged in
+      if (userId) {
+        await db.insert(knowledgeBaseViews).values({
+          articleId: req.params.id,
+          userId,
+        });
+        
+        // Increment view count
+        await db.update(knowledgeBaseArticles)
+          .set({ viewCount: sql`${knowledgeBaseArticles.viewCount} + 1` })
+          .where(eq(knowledgeBaseArticles.id, req.params.id));
+      }
+      
+      res.json(article);
+    } catch (error) {
+      console.error('Error fetching article:', error);
+      res.status(500).json({ message: "Failed to fetch article" });
+    }
+  });
+
+  app.post("/api/knowledge-base/articles", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const { title, content, excerpt, categoryId, parentId, slug, featuredImage, tags, isPublic } = req.body;
+      
+      if (!title || title.trim() === '') {
+        return res.status(400).json({ message: "Article title is required" });
+      }
+      
+      if (!content) {
+        return res.status(400).json({ message: "Article content is required" });
+      }
+      
+      // Generate slug if not provided
+      const articleSlug = slug || title.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      
+      // Check if slug already exists
+      const existingSlug = await db.select({ id: knowledgeBaseArticles.id })
+        .from(knowledgeBaseArticles)
+        .where(eq(knowledgeBaseArticles.slug, articleSlug))
+        .limit(1);
+      
+      if (existingSlug.length > 0) {
+        return res.status(400).json({ message: "Slug already exists" });
+      }
+      
+      const [newArticle] = await db.insert(knowledgeBaseArticles).values({
+        title: title.trim(),
+        content,
+        excerpt: excerpt || null,
+        categoryId: categoryId || null,
+        parentId: parentId || null,
+        slug: articleSlug,
+        featuredImage: featuredImage || null,
+        tags: tags || [],
+        isPublic: isPublic !== false,
+        createdBy: userId,
+      }).returning();
+      
+      res.status(201).json(newArticle);
+    } catch (error) {
+      console.error('Error creating article:', error);
+      res.status(500).json({ message: "Failed to create article" });
+    }
+  });
+
+  app.put("/api/knowledge-base/articles/:id", async (req, res) => {
+    try {
+      const { title, content, excerpt, categoryId, slug, featuredImage, tags, isPublic, status } = req.body;
+      
+      const updateData: any = {
+        updatedAt: new Date()
+      };
+      
+      if (title !== undefined) updateData.title = title.trim();
+      if (content !== undefined) updateData.content = content;
+      if (excerpt !== undefined) updateData.excerpt = excerpt;
+      if (categoryId !== undefined) updateData.categoryId = categoryId;
+      if (slug !== undefined) updateData.slug = slug;
+      if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
+      if (tags !== undefined) updateData.tags = tags;
+      if (isPublic !== undefined) updateData.isPublic = isPublic;
+      if (status !== undefined) updateData.status = status;
+      
+      const [updatedArticle] = await db.update(knowledgeBaseArticles)
+        .set(updateData)
+        .where(eq(knowledgeBaseArticles.id, req.params.id))
+        .returning();
+      
+      if (!updatedArticle) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
+      res.json(updatedArticle);
+    } catch (error) {
+      console.error('Error updating article:', error);
+      res.status(500).json({ message: "Failed to update article" });
+    }
+  });
+
+  app.delete("/api/knowledge-base/articles/:id", async (req, res) => {
+    try {
+      // Delete related data first
+      await db.delete(knowledgeBaseViews).where(eq(knowledgeBaseViews.articleId, req.params.id));
+      await db.delete(knowledgeBaseLikes).where(eq(knowledgeBaseLikes.articleId, req.params.id));
+      await db.delete(knowledgeBaseBookmarks).where(eq(knowledgeBaseBookmarks.articleId, req.params.id));
+      await db.delete(knowledgeBaseComments).where(eq(knowledgeBaseComments.articleId, req.params.id));
+      
+      await db.delete(knowledgeBaseArticles)
+        .where(eq(knowledgeBaseArticles.id, req.params.id));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      res.status(500).json({ message: "Failed to delete article" });
+    }
+  });
+
+  // Bookmarks API
+  app.get("/api/knowledge-base/bookmarks", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const bookmarks = await db.select({
+        id: knowledgeBaseBookmarks.id,
+        articleId: knowledgeBaseBookmarks.articleId,
+        articleTitle: knowledgeBaseArticles.title,
+        articleSlug: knowledgeBaseArticles.slug,
+        createdAt: knowledgeBaseBookmarks.createdAt,
+      })
+      .from(knowledgeBaseBookmarks)
+      .leftJoin(knowledgeBaseArticles, eq(knowledgeBaseBookmarks.articleId, knowledgeBaseArticles.id))
+      .where(eq(knowledgeBaseBookmarks.userId, userId))
+      .orderBy(desc(knowledgeBaseBookmarks.createdAt));
+      
+      res.json(bookmarks);
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+      res.status(500).json({ message: "Failed to fetch bookmarks" });
+    }
+  });
+
+  app.post("/api/knowledge-base/articles/:articleId/bookmark", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if bookmark already exists
+      const existing = await db.select({ id: knowledgeBaseBookmarks.id })
+        .from(knowledgeBaseBookmarks)
+        .where(and(
+          eq(knowledgeBaseBookmarks.articleId, req.params.articleId),
+          eq(knowledgeBaseBookmarks.userId, userId)
+        ));
+      
+      if (existing.length > 0) {
+        // Remove bookmark
+        await db.delete(knowledgeBaseBookmarks)
+          .where(eq(knowledgeBaseBookmarks.id, existing[0].id));
+        res.json({ bookmarked: false });
+      } else {
+        // Add bookmark
+        await db.insert(knowledgeBaseBookmarks).values({
+          articleId: req.params.articleId,
+          userId,
+        });
+        res.json({ bookmarked: true });
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      res.status(500).json({ message: "Failed to toggle bookmark" });
+    }
+  });
+
+  // Likes API
+  app.post("/api/knowledge-base/articles/:articleId/like", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if like already exists
+      const existing = await db.select({ id: knowledgeBaseLikes.id })
+        .from(knowledgeBaseLikes)
+        .where(and(
+          eq(knowledgeBaseLikes.articleId, req.params.articleId),
+          eq(knowledgeBaseLikes.userId, userId)
+        ));
+      
+      if (existing.length > 0) {
+        // Remove like
+        await db.delete(knowledgeBaseLikes)
+          .where(eq(knowledgeBaseLikes.id, existing[0].id));
+        
+        // Decrement like count
+        await db.update(knowledgeBaseArticles)
+          .set({ likeCount: sql`${knowledgeBaseArticles.likeCount} - 1` })
+          .where(eq(knowledgeBaseArticles.id, req.params.articleId));
+        
+        res.json({ liked: false });
+      } else {
+        // Add like
+        await db.insert(knowledgeBaseLikes).values({
+          articleId: req.params.articleId,
+          userId,
+        });
+        
+        // Increment like count
+        await db.update(knowledgeBaseArticles)
+          .set({ likeCount: sql`${knowledgeBaseArticles.likeCount} + 1` })
+          .where(eq(knowledgeBaseArticles.id, req.params.articleId));
+        
+        res.json({ liked: true });
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      res.status(500).json({ message: "Failed to toggle like" });
+    }
+  });
+
+  // Comments API
+  app.get("/api/knowledge-base/articles/:articleId/comments", async (req, res) => {
+    try {
+      const comments = await db.select({
+        id: knowledgeBaseComments.id,
+        content: knowledgeBaseComments.content,
+        parentId: knowledgeBaseComments.parentId,
+        mentions: knowledgeBaseComments.mentions,
+        createdAt: knowledgeBaseComments.createdAt,
+        updatedAt: knowledgeBaseComments.updatedAt,
+        authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+        authorId: knowledgeBaseComments.authorId,
+      })
+      .from(knowledgeBaseComments)
+      .leftJoin(staff, eq(knowledgeBaseComments.authorId, staff.id))
+      .where(eq(knowledgeBaseComments.articleId, req.params.articleId))
+      .orderBy(asc(knowledgeBaseComments.createdAt));
+      
+      res.json(comments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/knowledge-base/articles/:articleId/comments", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const { content, parentId, mentions } = req.body;
+      
+      if (!content || content.trim() === '') {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+      
+      const [newComment] = await db.insert(knowledgeBaseComments).values({
+        articleId: req.params.articleId,
+        content: content.trim(),
+        parentId: parentId || null,
+        mentions: mentions || [],
+        authorId: userId,
+      }).returning();
+      
+      res.status(201).json(newComment);
+    } catch (error) {
+      console.error('Error creating comment:', error);
+      res.status(500).json({ message: "Failed to create comment" });
     }
   });
 
