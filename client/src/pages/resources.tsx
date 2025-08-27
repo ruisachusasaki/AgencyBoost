@@ -172,8 +172,14 @@ export default function Resources() {
   // Fetch resource links
   const { data: resourceLinks = [], isLoading: linksLoading } = useQuery<ResourceLink[]>({
     queryKey: ["/api/resources/links", selectedCategory],
-    queryFn: () =>
-      fetch(`/api/resources/links${selectedCategory !== 'all' ? `?category=${selectedCategory}` : ''}`).then(res => res.json()),
+    queryFn: async () => {
+      const response = await fetch(`/api/resources/links${selectedCategory !== 'all' ? `?category=${selectedCategory}` : ''}`);
+      if (!response.ok) {
+        console.error('Failed to fetch resource links:', response.status);
+        return []; // Return empty array on error
+      }
+      return response.json();
+    },
   });
 
   // Create category mutation
@@ -275,7 +281,7 @@ export default function Resources() {
     resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const filteredLinks = resourceLinks.filter((link: ResourceLink) =>
+  const filteredLinks = (resourceLinks || []).filter((link: ResourceLink) =>
     link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     link.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
