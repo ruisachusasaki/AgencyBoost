@@ -20,8 +20,7 @@ import {
   Share2,
   Settings,
   Layout,
-  UserCheck,
-  BookOpen
+  UserCheck
 } from "lucide-react";
 
 interface SidebarProps {
@@ -40,7 +39,6 @@ const navigation = [
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendars", href: "/calendar", icon: Calendar },
   { name: "Workflows", href: "/workflows", icon: GitBranch },
-  { name: "Resources", href: "/resources", icon: BookOpen },
   { name: "HR", href: "/hr", icon: UserCheck },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
