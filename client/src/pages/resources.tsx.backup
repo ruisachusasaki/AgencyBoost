@@ -529,7 +529,7 @@ export default function Resources() {
       </div>
 
       {/* Tab Content */}
-      <>
+      <div>
         {/* Training Tab */}
         {activeTab === "training" && (
           <div className="space-y-4">
@@ -922,8 +922,10 @@ export default function Resources() {
                 </div>
               )}
             </div>
+          </div>
         )}
 
+        {/* Resource Links Tab */}
         {activeTab === "links" && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -1004,9 +1006,10 @@ export default function Resources() {
             </Dialog>
             </div>
 
-            {linksLoading ? (
-              <div className="text-center py-8">Loading resource links...</div>
-            ) : (
+            {/* Links Table */}
+          {linksLoading ? (
+            <div className="text-center py-8">Loading resource links...</div>
+          ) : (
             <Card>
               <Table>
                 <TableHeader>
@@ -1054,9 +1057,10 @@ export default function Resources() {
               </Table>
             </Card>
           )}
+            </div>
           </div>
         )}
-      </>
+      </div>
     </div>
   );
 }
