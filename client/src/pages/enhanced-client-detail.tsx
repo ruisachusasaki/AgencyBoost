@@ -155,7 +155,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
           ))}
         </div>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-3 max-h-[600px] overflow-y-auto">
           {positions.map((position) => {
             const assignment = getAssignmentForPosition(position.key);
             const assignedStaff = assignment ? (staffList as any[]).find((staff: any) => staff.id === assignment.staffId) : null;
