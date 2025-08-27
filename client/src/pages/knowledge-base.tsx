@@ -28,6 +28,15 @@ export default function KnowledgeBase() {
     color: ""
   });
   
+  const [showArticleDialog, setShowArticleDialog] = useState(false);
+  const [newArticle, setNewArticle] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    categoryId: "",
+    tags: "",
+  });
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -63,6 +72,30 @@ export default function KnowledgeBase() {
     },
   });
 
+  const createArticleMutation = useMutation({
+    mutationFn: async (articleData: any) => {
+      const response = await apiRequest("POST", "/api/knowledge-base/articles", articleData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/articles"] });
+      setShowArticleDialog(false);
+      setNewArticle({ title: "", content: "", excerpt: "", categoryId: "", tags: "" });
+      toast({
+        title: "Success",
+        description: "Article created successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Article creation error:", error);
+      toast({
+        title: "Error", 
+        description: `Failed to create article: ${error.message || 'Unknown error'}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredArticles = (articles || []).filter((article: any) => {
     if (!searchTerm) return true;
     return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +122,37 @@ export default function KnowledgeBase() {
     
     console.log("Creating category with data:", categoryData);
     createCategoryMutation.mutate(categoryData);
+  };
+
+  const handleCreateArticle = () => {
+    if (!newArticle.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Article title is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!newArticle.content.trim()) {
+      toast({
+        title: "Error",
+        description: "Article content is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const articleData = {
+      title: newArticle.title,
+      content: newArticle.content,
+      excerpt: newArticle.excerpt || null,
+      categoryId: newArticle.categoryId || null,
+      tags: newArticle.tags ? newArticle.tags.split(',').map(tag => tag.trim()) : [],
+    };
+    
+    console.log("Creating article with data:", articleData);
+    createArticleMutation.mutate(articleData);
   };
 
   return (
@@ -183,10 +247,93 @@ export default function KnowledgeBase() {
             </DialogContent>
           </Dialog>
           
-          <Button data-testid="button-create-article">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Article
-          </Button>
+          <Dialog open={showArticleDialog} onOpenChange={setShowArticleDialog}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-article">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Article
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Article</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="article-title">Title *</Label>
+                  <Input
+                    id="article-title"
+                    data-testid="input-article-title"
+                    placeholder="Enter article title"
+                    value={newArticle.title}
+                    onChange={(e) => setNewArticle({ ...newArticle, title: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="article-excerpt">Excerpt</Label>
+                  <Input
+                    id="article-excerpt"
+                    data-testid="input-article-excerpt"
+                    placeholder="Brief description of the article"
+                    value={newArticle.excerpt}
+                    onChange={(e) => setNewArticle({ ...newArticle, excerpt: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="article-category">Category</Label>
+                  <Select 
+                    value={newArticle.categoryId} 
+                    onValueChange={(value) => setNewArticle({ ...newArticle, categoryId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger data-testid="select-article-category">
+                      <SelectValue placeholder="Choose a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {(categories || []).map((category: any) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="article-content">Content *</Label>
+                  <Textarea
+                    id="article-content"
+                    data-testid="textarea-article-content"
+                    placeholder="Write your article content here..."
+                    value={newArticle.content}
+                    onChange={(e) => setNewArticle({ ...newArticle, content: e.target.value })}
+                    rows={8}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="article-tags">Tags</Label>
+                  <Input
+                    id="article-tags"
+                    data-testid="input-article-tags"
+                    placeholder="Enter tags separated by commas"
+                    value={newArticle.tags}
+                    onChange={(e) => setNewArticle({ ...newArticle, tags: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowArticleDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  data-testid="button-save-article"
+                  onClick={handleCreateArticle}
+                  disabled={createArticleMutation.isPending}
+                >
+                  {createArticleMutation.isPending ? "Creating..." : "Create Article"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
