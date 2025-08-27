@@ -10,11 +10,30 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown } from "lucide-react";
+import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { IconPicker } from "@/components/ui/icon-picker";
+
+// Icon mapping for rendering
+const iconMap: Record<string, any> = {
+  Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, 
+  CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, 
+  Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, 
+  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, 
+  X, Check, Minus, CirclePlus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder,
+  Search, Plus
+};
+
+// Helper function to render icons
+const renderIcon = (iconName: string, className = "w-4 h-4") => {
+  const IconComponent = iconMap[iconName];
+  if (IconComponent) {
+    return <IconComponent className={className} />;
+  }
+  return <Folder className={className} />; // fallback icon
+};
 
 // Category Overview Component
 function CategoryOverview({ 
@@ -42,7 +61,7 @@ function CategoryOverview({
           <div className="flex items-start gap-4">
             {selectedCategory.icon && (
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl">{selectedCategory.icon}</span>
+                {renderIcon(selectedCategory.icon, "w-6 h-6")}
               </div>
             )}
             <div className="flex-1">
@@ -76,7 +95,7 @@ function CategoryOverview({
                     <div className="flex items-start gap-3">
                       {subCat.icon && (
                         <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-lg">{subCat.icon}</span>
+                          {renderIcon(subCat.icon, "w-4 h-4")}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
