@@ -22,7 +22,7 @@ export default function KnowledgeBase() {
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
-    parentId: "",
+    parentId: "none",
     icon: "",
     color: ""
   });
@@ -45,7 +45,7 @@ export default function KnowledgeBase() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/categories"] });
       setShowCategoryDialog(false);
-      setNewCategory({ name: "", description: "", parentId: "", icon: "", color: "" });
+      setNewCategory({ name: "", description: "", parentId: "none", icon: "", color: "" });
       toast({
         title: "Success",
         description: "Category created successfully",
@@ -60,7 +60,7 @@ export default function KnowledgeBase() {
     },
   });
 
-  const filteredArticles = articles?.filter((article: any) => {
+  const filteredArticles = (articles || []).filter((article: any) => {
     if (!searchTerm) return true;
     return article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
            article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -78,7 +78,7 @@ export default function KnowledgeBase() {
     
     const categoryData = {
       ...newCategory,
-      parentId: newCategory.parentId || null,
+      parentId: newCategory.parentId === "none" || !newCategory.parentId ? null : newCategory.parentId,
     };
     
     createCategoryMutation.mutate(categoryData);
@@ -134,8 +134,8 @@ export default function KnowledgeBase() {
                       <SelectValue placeholder="Select parent category (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None (Top Level)</SelectItem>
-                      {categories?.map((category: any) => (
+                      <SelectItem value="none">None (Top Level)</SelectItem>
+                      {(categories || []).map((category: any) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
                         </SelectItem>
@@ -220,7 +220,7 @@ export default function KnowledgeBase() {
                 >
                   All Articles
                 </button>
-                {categories?.map((category: any) => (
+                {(categories || []).map((category: any) => (
                   <button
                     key={category.id}
                     data-testid={`button-category-${category.id}`}
