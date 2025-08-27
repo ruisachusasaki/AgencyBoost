@@ -529,11 +529,11 @@ export default function Resources() {
       </div>
 
       {/* Tab Content */}
-      <>
+      <div>
         {/* Training Tab */}
         {activeTab === "training" && (
           <div className="space-y-4">
-          <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Training Resources</h2>
             <div className="flex gap-2">
               <Dialog open={showCreateResource} onOpenChange={setShowCreateResource}>
@@ -761,8 +761,6 @@ export default function Resources() {
               </DialogContent>
             </Dialog>
           </div>
-          </div>
-          </div>
 
           {/* Resources and Courses Grid */}
           {(resourcesLoading || coursesLoading) ? (
@@ -928,7 +926,7 @@ export default function Resources() {
         {/* Resource Links Tab */}
         {activeTab === "links" && (
           <div className="space-y-4">
-          <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Resource Links</h2>
             <Dialog open={showCreateLink} onOpenChange={setShowCreateLink}>
               <DialogTrigger asChild>
@@ -1004,9 +1002,9 @@ export default function Resources() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
+            </div>
 
-          {/* Links Table */}
+            {/* Links Table */}
           {linksLoading ? (
             <div className="text-center py-8">Loading resource links...</div>
           ) : (
@@ -1059,7 +1057,8 @@ export default function Resources() {
           )}
           </div>
         )}
-      </>
+        )}
+      </div>
     </div>
   );
 }
