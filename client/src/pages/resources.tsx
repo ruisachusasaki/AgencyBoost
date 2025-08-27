@@ -529,10 +529,9 @@ export default function Resources() {
       </div>
 
       {/* Tab Content */}
-      <>
-        {/* Training Tab */}
-        {activeTab === "training" && (
-          <div className="space-y-4">
+      {/* Training Tab */}
+      {activeTab === "training" && (
+        <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Training Resources</h2>
               <div className="flex gap-2">
@@ -1054,9 +1053,9 @@ export default function Resources() {
               </Table>
             </Card>
           )}
-          </div>
-        )}
-      </>
+        </div>
+      )}
+      </div>
     </div>
   );
 }
