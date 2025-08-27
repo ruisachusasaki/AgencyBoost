@@ -8,6 +8,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 - **Profile Image Enhancement**: ✅ COMPLETED - Fixed profile image display to show actual profile images for all staff members by checking both profileImage and profileImagePath fields  
 - **UX Improvements**: ✅ COMPLETED - Removed redundant "Current Team Members" section and increased main tab window height to 600px for optimal viewing of all positions
 - **Database Integration**: ✅ COMPLETED - Created client_team_assignments table with proper foreign key relationships and constraints
+- **Search Field Bug Fix**: ✅ COMPLETED - Fixed Settings > Staff > Staff Directory search field that only allowed typing one letter at a time by implementing debounced search (300ms delay) to prevent rapid API calls on every keystroke
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
