@@ -1,175 +1,193 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import * as LucideIcons from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Search, X } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+
+// Get all available Lucide icons
+const iconList = Object.keys(LucideIcons).filter(
+  name => name !== 'default' && 
+          name !== 'createLucideIcon' && 
+          typeof (LucideIcons as any)[name] === 'function'
+);
+
+// Common categories for better organization
+const iconCategories = {
+  "Most Used": ["Home", "User", "Settings", "Search", "Plus", "Edit", "Trash2", "Eye", "Heart", "Star", "Bell", "Mail"],
+  "Navigation": ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "ChevronLeft", "ChevronRight", "Menu", "X"],
+  "Actions": ["Plus", "Minus", "Edit", "Trash2", "Save", "Download", "Upload", "Copy", "Share", "Send"],
+  "Communication": ["Mail", "Phone", "MessageCircle", "MessageSquare", "Video", "Mic", "MicOff", "Volume2"],
+  "Files & Folders": ["File", "FileText", "Folder", "FolderOpen", "Image", "Video", "Music", "Download"],
+  "Business": ["Briefcase", "Calendar", "Clock", "DollarSign", "TrendingUp", "BarChart3", "PieChart", "Target"],
+  "Technology": ["Smartphone", "Laptop", "Monitor", "Wifi", "Database", "Server", "Code", "Terminal"],
+  "Social": ["Users", "UserPlus", "UserMinus", "UserCheck", "Globe", "Share2", "ThumbsUp", "Heart"],
+  "Interface": ["Layout", "Grid", "List", "Filter", "Sort", "Maximize", "Minimize", "MoreHorizontal"],
+};
 
 interface IconPickerProps {
   value?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  className?: string;
+  onChange: (iconName: string) => void;
+  label?: string;
 }
 
-// Comprehensive list of available Lucide React icons
-const allIconNames = [
-  // Popular/common icons
-  'folder', 'file', 'bookmark', 'tag', 'star', 'flag', 'bell', 
-  'calendar', 'clock', 'users', 'user', 'settings', 'cog',
-  'briefcase', 'home', 'heart', 'mail', 'phone', 'camera',
-  'image', 'video', 'music', 'book', 'pen', 'edit',
-  'search', 'filter', 'sort', 'grid', 'list', 'map',
-  'target', 'award', 'shield', 'key', 'lock', 'unlock',
-  'check', 'x', 'plus', 'minus', 'arrow-right', 'arrow-left',
-  'chevron-down', 'chevron-up', 'circle', 'square', 'triangle',
-  'box', 'package', 'shopping-cart', 'credit-card', 'dollar-sign',
-  
-  // Extended icon set
-  'activity', 'airplay', 'alert-circle', 'alert-triangle', 'align-center',
-  'anchor', 'aperture', 'archive', 'at-sign', 'bar-chart', 'battery',
-  'bluetooth', 'bold', 'bookmark-check', 'brain', 'building', 'bulb',
-  'calculator', 'calendar-check', 'car', 'chart-line', 'check-circle',
-  'check-square', 'chrome', 'clipboard', 'cloud', 'code', 'coffee',
-  'command', 'compass', 'cpu', 'crop', 'database', 'delete', 'diamond',
-  'disc', 'download', 'droplets', 'eye', 'eye-off', 'facebook',
-  'feather', 'file-text', 'film', 'fingerprint', 'fire', 'folder-open',
-  'gamepad2', 'gift', 'github', 'globe', 'graduation-cap', 'hard-drive',
-  'hash', 'headphones', 'hexagon', 'info', 'instagram', 'italic',
-  'laptop', 'layers', 'layout', 'life-buoy', 'link', 'linkedin',
-  'loader', 'map-pin', 'maximize', 'message-circle', 'mic', 'minimize',
-  'monitor', 'moon', 'mouse-pointer', 'move', 'navigation', 'octagon',
-  'palette', 'paperclip', 'pause', 'percent', 'pie-chart', 'play',
-  'power', 'printer', 'refresh-cw', 'repeat', 'rotate-3d', 'save',
-  'scissors', 'share', 'shopping-bag', 'shuffle', 'sidebar', 'skip-back',
-  'skip-forward', 'slack', 'smartphone', 'smile', 'speaker', 'stop-circle',
-  'sun', 'tablet', 'thermometer', 'thumbs-down', 'thumbs-up', 'toggle-left',
-  'toggle-right', 'tool', 'trash', 'trending-down', 'trending-up', 'triangle',
-  'truck', 'tv', 'twitter', 'umbrella', 'underline', 'upload', 'volume-2',
-  'watch', 'wifi', 'wind', 'zap', 'zoom-in', 'zoom-out'
-];
+export function IconPicker({ value = "", onChange, label = "Icon" }: IconPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Most Used");
 
-// Popular icons shown first
-const popularIcons = [
-  'folder', 'file', 'bookmark', 'tag', 'star', 'flag', 'bell', 
-  'calendar', 'clock', 'users', 'user', 'settings', 'cog',
-  'briefcase', 'home', 'heart', 'mail', 'phone', 'camera',
-  'image', 'video', 'music', 'book', 'pen', 'edit'
-];
-
-export function IconPicker({ value, onChange, placeholder = "Type icon name...", className }: IconPickerProps) {
-  const [inputValue, setInputValue] = useState(value || '');
-  const [isOpen, setIsOpen] = useState(false);
-  const [filteredIcons, setFilteredIcons] = useState<string[]>(popularIcons);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setInputValue(value || '');
-  }, [value]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
+  const filteredIcons = useMemo(() => {
+    let icons = selectedCategory === "All" 
+      ? iconList 
+      : iconCategories[selectedCategory as keyof typeof iconCategories] || [];
     
-    if (!newValue.trim()) {
-      setFilteredIcons(popularIcons);
-    } else {
-      // More comprehensive search - check multiple patterns
-      const searchTerm = newValue.toLowerCase();
-      const filtered = allIconNames.filter(iconName => {
-        const lowerIconName = iconName.toLowerCase();
-        return (
-          // Direct match
-          lowerIconName.includes(searchTerm) ||
-          // Remove "Icon" suffix and check
-          lowerIconName.replace('icon', '').includes(searchTerm) ||
-          // Remove "Lucide" prefix and check
-          lowerIconName.replace('lucide', '').includes(searchTerm) ||
-          // Convert camelCase to kebab-case and check
-          iconName.replace(/([A-Z])/g, '-$1').toLowerCase().slice(1).includes(searchTerm)
-        );
-      }).slice(0, 20); // Limit to 20 results
-      
-      
-      setFilteredIcons(filtered);
+    if (searchTerm) {
+      icons = iconList.filter(icon => 
+        icon.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
     
-    setIsOpen(true);
-  };
-
-  const handleIconSelect = (iconName: string) => {
-    setInputValue(iconName);
-    onChange?.(iconName);
-    setIsOpen(false);
-  };
+    return icons;
+  }, [searchTerm, selectedCategory]);
 
   const renderIcon = (iconName: string) => {
     const IconComponent = (LucideIcons as any)[iconName];
     if (!IconComponent) return null;
-    
-    return <IconComponent className="h-4 w-4" />;
+    return <IconComponent className="w-5 h-5" />;
   };
 
-  const currentIcon = renderIcon(inputValue);
+  const selectedIcon = value ? renderIcon(value) : <Search className="w-5 h-5" />;
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 relative">
-          <Input
-            ref={inputRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onFocus={() => setIsOpen(true)}
-            placeholder={placeholder}
-            className="pr-10"
-          />
-          {currentIcon && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-              {currentIcon}
+    <div className="grid gap-2">
+      <Label>{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="w-full justify-between"
+            data-testid="button-icon-picker"
+          >
+            <div className="flex items-center gap-2">
+              {selectedIcon}
+              <span>{value || "Choose icon"}</span>
             </div>
-          )}
-        </div>
-      </div>
-      
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-          {filteredIcons.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-500">
-              No icons found
+            <Search className="w-4 h-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-96 p-0" align="start">
+          <div className="flex flex-col h-96">
+            {/* Search */}
+            <div className="p-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search icons..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-icon-search"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="py-1">
-              {filteredIcons.map((iconName) => (
-                <Button
-                  key={iconName}
-                  variant="ghost"
-                  className="w-full justify-start px-3 py-2 h-auto text-left hover:bg-gray-50"
-                  onClick={() => handleIconSelect(iconName)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      {renderIcon(iconName)}
-                    </div>
-                    <span className="text-sm font-mono">{iconName}</span>
+
+            {/* Categories */}
+            {!searchTerm && (
+              <div className="p-3 border-b">
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    variant={selectedCategory === "All" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory("All")}
+                    className="text-xs"
+                  >
+                    All
+                  </Button>
+                  {Object.keys(iconCategories).map((category) => (
+                    <Button
+                      key={category}
+                      variant={selectedCategory === category ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(category)}
+                      className="text-xs"
+                    >
+                      {category}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Icons Grid */}
+            <ScrollArea className="flex-1">
+              <div className="p-3">
+                {filteredIcons.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No icons found</p>
                   </div>
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ) : (
+                  <div className="grid grid-cols-6 gap-2">
+                    {filteredIcons.map((iconName) => (
+                      <Button
+                        key={iconName}
+                        variant={value === iconName ? "default" : "ghost"}
+                        size="sm"
+                        className="h-12 flex flex-col items-center justify-center p-2"
+                        onClick={() => {
+                          onChange(iconName);
+                          setOpen(false);
+                        }}
+                        data-testid={`button-select-icon-${iconName.toLowerCase()}`}
+                      >
+                        {renderIcon(iconName)}
+                        <span className="text-[10px] mt-1 truncate w-full">
+                          {iconName}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            {/* Selected Icon Info */}
+            {value && (
+              <div className="p-3 border-t bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {selectedIcon}
+                    <span className="font-medium">{value}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onChange("");
+                      setOpen(false);
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

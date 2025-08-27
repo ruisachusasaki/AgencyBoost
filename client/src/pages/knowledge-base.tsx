@@ -14,6 +14,7 @@ import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder } from 
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { IconPicker } from "@/components/ui/icon-picker";
 
 export default function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,12 +36,13 @@ export default function KnowledgeBase() {
   });
 
   const { data: articles } = useQuery({
-    queryKey: ["/api/knowledge-base/articles", { search: searchTerm, categoryId: selectedCategory }],
+    queryKey: ["/api/knowledge-base/articles", searchTerm, selectedCategory],
   });
 
   const createCategoryMutation = useMutation({
     mutationFn: async (categoryData: any) => {
-      return await apiRequest("/api/knowledge-base/categories", "POST", categoryData);
+      const response = await apiRequest("POST", "/api/knowledge-base/categories", categoryData);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/categories"] });
@@ -51,10 +53,11 @@ export default function KnowledgeBase() {
         description: "Category created successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Category creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create category",
+        description: `Failed to create category: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
@@ -62,7 +65,7 @@ export default function KnowledgeBase() {
 
   const filteredArticles = (articles || []).filter((article: any) => {
     if (!searchTerm) return true;
-    return article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -77,10 +80,14 @@ export default function KnowledgeBase() {
     }
     
     const categoryData = {
-      ...newCategory,
+      name: newCategory.name,
+      description: newCategory.description || null,
       parentId: newCategory.parentId === "none" || !newCategory.parentId ? null : newCategory.parentId,
+      icon: newCategory.icon || null,
+      color: newCategory.color || null,
     };
     
+    console.log("Creating category with data:", categoryData);
     createCategoryMutation.mutate(categoryData);
   };
 
@@ -144,16 +151,11 @@ export default function KnowledgeBase() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="category-icon">Icon</Label>
-                    <Input
-                      id="category-icon"
-                      data-testid="input-category-icon"
-                      placeholder="e.g., BookOpen"
-                      value={newCategory.icon}
-                      onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
-                    />
-                  </div>
+                  <IconPicker
+                    label="Icon"
+                    value={newCategory.icon}
+                    onChange={(iconName) => setNewCategory({ ...newCategory, icon: iconName })}
+                  />
                   <div className="grid gap-2">
                     <Label htmlFor="category-color">Color</Label>
                     <Input
@@ -249,7 +251,7 @@ export default function KnowledgeBase() {
         {/* Articles List */}
         <div className="lg:col-span-3">
           <div className="space-y-4">
-            {filteredArticles?.length === 0 ? (
+            {filteredArticles.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -260,7 +262,7 @@ export default function KnowledgeBase() {
                 </CardContent>
               </Card>
             ) : (
-              filteredArticles?.map((article: any) => (
+              filteredArticles.map((article: any) => (
                 <Card key={article.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
