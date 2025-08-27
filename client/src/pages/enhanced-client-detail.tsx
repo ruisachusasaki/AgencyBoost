@@ -32,7 +32,7 @@ function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (conten
     queryKey: ["/api/email-templates"],
   });
 
-  const filteredTemplates = emailTemplates.filter((template: EmailTemplate) =>
+  const filteredTemplates = (emailTemplates as EmailTemplate[]).filter((template: EmailTemplate) =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -101,10 +101,17 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
   // Update team assignment mutation
   const updateAssignmentMutation = useMutation({
     mutationFn: async ({ position, staffId }: { position: string; staffId?: string }) => {
-      return apiRequest(`/api/clients/${clientId}/team/${position}`, {
+      const response = await fetch(`/api/clients/${clientId}/team/${position}`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ staffId }),
       });
+      if (!response.ok) {
+        throw new Error('Failed to update team assignment');
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/team`] });
@@ -124,7 +131,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
 
   // Get assignment for a specific position
   const getAssignmentForPosition = (position: string) => {
-    return teamAssignments.find((assignment: any) => assignment.position === position);
+    return (teamAssignments as any[]).find((assignment: any) => assignment.position === position);
   };
 
   return (
@@ -132,7 +139,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-900">Team Assignments</h3>
         <div className="text-sm text-gray-500">
-          {teamAssignments.length} of {positions.length} positions filled
+          {(teamAssignments as any[]).length} of {positions.length} positions filled
         </div>
       </div>
 
@@ -151,7 +158,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {positions.map((position) => {
             const assignment = getAssignmentForPosition(position.key);
-            const assignedStaff = assignment ? staffList.find((staff: any) => staff.id === assignment.staffId) : null;
+            const assignedStaff = assignment ? (staffList as any[]).find((staff: any) => staff.id === assignment.staffId) : null;
 
             return (
               <div key={position.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -161,11 +168,11 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                 </div>
                 
                 <Select
-                  value={assignment?.staffId || ""}
+                  value={assignment?.staffId || "not_assigned"}
                   onValueChange={(value) => {
                     updateAssignmentMutation.mutate({
                       position: position.key,
-                      staffId: value === "" ? undefined : value,
+                      staffId: value === "not_assigned" ? undefined : value,
                     });
                   }}
                   disabled={updateAssignmentMutation.isPending}
@@ -212,13 +219,13 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                         }}
                       />
                     </div>
-                    <SelectItem value="" data-position={position.key}>
+                    <SelectItem value="not_assigned" data-position={position.key}>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 bg-gray-200 rounded-full"></div>
                         <span>Not Assigned</span>
                       </div>
                     </SelectItem>
-                    {staffList.map((staff: any) => (
+                    {(staffList as any[]).map((staff: any) => (
                       <SelectItem key={staff.id} value={staff.id} className="select-item" data-position={position.key}>
                         <div className="flex items-center gap-2">
                           {staff.profileImagePath ? (
@@ -248,12 +255,12 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       )}
 
       {/* Team Overview */}
-      {teamAssignments.length > 0 && (
+      {(teamAssignments as any[]).length > 0 && (
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <h4 className="font-medium text-blue-900 mb-2">Current Team Members</h4>
           <div className="flex flex-wrap gap-2">
-            {teamAssignments.map((assignment: any) => {
-              const staff = staffList.find((s: any) => s.id === assignment.staffId);
+            {(teamAssignments as any[]).map((assignment: any) => {
+              const staff = (staffList as any[]).find((s: any) => s.id === assignment.staffId);
               const position = positions.find(p => p.key === assignment.position);
               return staff ? (
                 <div key={assignment.id} className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-blue-200">
@@ -288,7 +295,7 @@ function SmsTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content:
     queryKey: ["/api/sms-templates"],
   });
 
-  const filteredTemplates = smsTemplates.filter((template: SmsTemplate) =>
+  const filteredTemplates = (smsTemplates as SmsTemplate[]).filter((template: SmsTemplate) =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
