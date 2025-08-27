@@ -2378,4 +2378,27 @@ export const insertTaskDependencySchema = createInsertSchema(taskDependencies).o
 export type TaskDependency = typeof taskDependencies.$inferSelect;
 export type InsertTaskDependency = z.infer<typeof insertTaskDependencySchema>;
 
+// Client Team Assignments - for assigning staff to specific client positions
+export const clientTeamAssignments = pgTable("client_team_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  position: text("position").notNull(), // setter, bdr, account_manager, media_buyer, cro_specialist, automation_specialist, show_rate_specialist, data_specialist, seo_specialist, social_media_specialist
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: uuid("assigned_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Client Team Assignments schema exports
+export const insertClientTeamAssignmentSchema = createInsertSchema(clientTeamAssignments).omit({
+  id: true,
+  assignedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ClientTeamAssignment = typeof clientTeamAssignments.$inferSelect;
+export type InsertClientTeamAssignment = z.infer<typeof insertClientTeamAssignmentSchema>;
+
 // Smart Lists schema exports - remove duplicate and use existing one

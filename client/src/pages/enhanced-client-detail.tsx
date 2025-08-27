@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -65,6 +65,217 @@ function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (conten
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+// TeamAssignmentSection Component
+function TeamAssignmentSection({ clientId }: { clientId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const positions = [
+    { key: "setter", label: "Setter" },
+    { key: "bdr", label: "BDR" },
+    { key: "account_manager", label: "Account Manager" },
+    { key: "media_buyer", label: "Media Buyer" },
+    { key: "cro_specialist", label: "CRO Specialist" },
+    { key: "automation_specialist", label: "Automation Specialist" },
+    { key: "show_rate_specialist", label: "Show Rate Specialist" },
+    { key: "data_specialist", label: "Data Specialist" },
+    { key: "seo_specialist", label: "SEO Specialist" },
+    { key: "social_media_specialist", label: "Social Media Specialist" }
+  ];
+
+  // Get all staff members
+  const { data: staffList = [] } = useQuery({
+    queryKey: ["/api/staff"],
+  });
+
+  // Get current team assignments
+  const { data: teamAssignments = [], isLoading } = useQuery({
+    queryKey: [`/api/clients/${clientId}/team`],
+    enabled: !!clientId,
+  });
+
+  // Update team assignment mutation
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({ position, staffId }: { position: string; staffId?: string }) => {
+      return apiRequest(`/api/clients/${clientId}/team/${position}`, {
+        method: 'PUT',
+        body: JSON.stringify({ staffId }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/team`] });
+      toast({
+        title: "Success",
+        description: "Team assignment updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update team assignment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Get assignment for a specific position
+  const getAssignmentForPosition = (position: string) => {
+    return teamAssignments.find((assignment: any) => assignment.position === position);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900">Team Assignments</h3>
+        <div className="text-sm text-gray-500">
+          {teamAssignments.length} of {positions.length} positions filled
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {positions.map((position) => (
+            <div key={position.key} className="animate-pulse">
+              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+                <div className="h-8 bg-gray-200 rounded w-40"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {positions.map((position) => {
+            const assignment = getAssignmentForPosition(position.key);
+            const assignedStaff = assignment ? staffList.find((staff: any) => staff.id === assignment.staffId) : null;
+
+            return (
+              <div key={position.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="font-medium text-gray-900">{position.label}:</span>
+                </div>
+                
+                <Select
+                  value={assignment?.staffId || ""}
+                  onValueChange={(value) => {
+                    updateAssignmentMutation.mutate({
+                      position: position.key,
+                      staffId: value === "" ? undefined : value,
+                    });
+                  }}
+                  disabled={updateAssignmentMutation.isPending}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Not Assigned">
+                      {assignedStaff ? (
+                        <div className="flex items-center gap-2">
+                          {assignedStaff.profileImagePath ? (
+                            <img 
+                              src={assignedStaff.profileImagePath} 
+                              alt="" 
+                              className="w-4 h-4 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                              <User className="w-2 h-2 text-gray-500" />
+                            </div>
+                          )}
+                          <span>{assignedStaff.firstName} {assignedStaff.lastName}</span>
+                        </div>
+                      ) : (
+                        "Not Assigned"
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <Input 
+                        placeholder="Search staff..." 
+                        className="mb-2"
+                        onChange={(e) => {
+                          // Implement search functionality
+                          const searchTerm = e.target.value.toLowerCase();
+                          const items = document.querySelectorAll(`[data-position="${position.key}"] .select-item`);
+                          items.forEach((item) => {
+                            const text = item.textContent?.toLowerCase() || "";
+                            if (text.includes(searchTerm)) {
+                              (item as HTMLElement).style.display = "block";
+                            } else {
+                              (item as HTMLElement).style.display = "none";
+                            }
+                          });
+                        }}
+                      />
+                    </div>
+                    <SelectItem value="" data-position={position.key}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-200 rounded-full"></div>
+                        <span>Not Assigned</span>
+                      </div>
+                    </SelectItem>
+                    {staffList.map((staff: any) => (
+                      <SelectItem key={staff.id} value={staff.id} className="select-item" data-position={position.key}>
+                        <div className="flex items-center gap-2">
+                          {staff.profileImagePath ? (
+                            <img 
+                              src={staff.profileImagePath} 
+                              alt="" 
+                              className="w-4 h-4 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                              <User className="w-2 h-2 text-gray-500" />
+                            </div>
+                          )}
+                          <span>{staff.firstName} {staff.lastName}</span>
+                          {staff.department && (
+                            <span className="text-xs text-gray-500">• {staff.department}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Team Overview */}
+      {teamAssignments.length > 0 && (
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h4 className="font-medium text-blue-900 mb-2">Current Team Members</h4>
+          <div className="flex flex-wrap gap-2">
+            {teamAssignments.map((assignment: any) => {
+              const staff = staffList.find((s: any) => s.id === assignment.staffId);
+              const position = positions.find(p => p.key === assignment.position);
+              return staff ? (
+                <div key={assignment.id} className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-blue-200">
+                  {staff.profileImagePath ? (
+                    <img 
+                      src={staff.profileImagePath} 
+                      alt="" 
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center">
+                      <User className="w-3 h-3 text-gray-500" />
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">{staff.firstName} {staff.lastName}</span>
+                  <span className="text-xs text-blue-600">• {position?.label}</span>
+                </div>
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -530,7 +741,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -3627,6 +3838,24 @@ export default function EnhancedClientDetail() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
+                          onClick={() => setActiveRightSection("team")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "team"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Team</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
                           onClick={() => setActiveRightSection("payments")}
                           className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
                             activeRightSection === "payments"
@@ -4793,6 +5022,11 @@ export default function EnhancedClientDetail() {
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* Team Section */}
+                {activeRightSection === "team" && (
+                  <TeamAssignmentSection clientId={clientId} />
                 )}
 
                 {/* Payments Section */}

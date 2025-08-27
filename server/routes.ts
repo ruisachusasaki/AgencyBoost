@@ -33,7 +33,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig
+  jobOpenings, jobApplicationFormConfig, clientTeamAssignments
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -10404,6 +10404,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating job application:", error);
       res.status(500).json({ error: "Failed to create job application" });
+    }
+  });
+
+  // Client Team Assignment Routes
+  
+  // Get team assignments for a client
+  app.get("/api/clients/:clientId/team", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      const teamAssignments = await db
+        .select({
+          id: clientTeamAssignments.id,
+          position: clientTeamAssignments.position,
+          staffId: clientTeamAssignments.staffId,
+          assignedAt: clientTeamAssignments.assignedAt,
+          staff: {
+            id: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+            email: staff.email,
+            department: staff.department,
+            position: staff.position,
+            profileImagePath: staff.profileImagePath,
+          }
+        })
+        .from(clientTeamAssignments)
+        .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
+        .where(eq(clientTeamAssignments.clientId, clientId))
+        .orderBy(clientTeamAssignments.position);
+      
+      res.json(teamAssignments);
+    } catch (error) {
+      console.error("Error fetching client team assignments:", error);
+      res.status(500).json({ error: "Failed to fetch team assignments" });
+    }
+  });
+
+  // Update team assignment for a client
+  app.put("/api/clients/:clientId/team/:position", async (req, res) => {
+    try {
+      const { clientId, position } = req.params;
+      const { staffId } = req.body;
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Mock user ID
+      
+      if (staffId) {
+        // Assign or reassign staff member to position
+        const existingAssignment = await db
+          .select()
+          .from(clientTeamAssignments)
+          .where(
+            and(
+              eq(clientTeamAssignments.clientId, clientId),
+              eq(clientTeamAssignments.position, position)
+            )
+          )
+          .limit(1);
+        
+        if (existingAssignment.length > 0) {
+          // Update existing assignment
+          const [updatedAssignment] = await db
+            .update(clientTeamAssignments)
+            .set({
+              staffId,
+              assignedBy: currentUserId,
+              updatedAt: new Date(),
+            })
+            .where(eq(clientTeamAssignments.id, existingAssignment[0].id))
+            .returning();
+          
+          res.json(updatedAssignment);
+        } else {
+          // Create new assignment
+          const [newAssignment] = await db
+            .insert(clientTeamAssignments)
+            .values({
+              clientId,
+              staffId,
+              position,
+              assignedBy: currentUserId,
+            })
+            .returning();
+          
+          res.json(newAssignment);
+        }
+      } else {
+        // Remove assignment (staffId is null or empty)
+        await db
+          .delete(clientTeamAssignments)
+          .where(
+            and(
+              eq(clientTeamAssignments.clientId, clientId),
+              eq(clientTeamAssignments.position, position)
+            )
+          );
+        
+        res.json({ message: "Assignment removed successfully" });
+      }
+    } catch (error) {
+      console.error("Error updating team assignment:", error);
+      res.status(500).json({ error: "Failed to update team assignment" });
     }
   });
 
