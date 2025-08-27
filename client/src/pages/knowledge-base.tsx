@@ -16,6 +16,159 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { IconPicker } from "@/components/ui/icon-picker";
 
+// Category Overview Component
+function CategoryOverview({ 
+  categoryId, 
+  categories, 
+  articles, 
+  onCategorySelect 
+}: { 
+  categoryId: string;
+  categories: any[];
+  articles: any[];
+  onCategorySelect: (id: string) => void;
+}) {
+  const selectedCategory = categories.find(cat => cat.id === categoryId);
+  const subCategories = categories.filter(cat => cat.parentId === categoryId);
+  const categoryArticles = articles.filter(article => article.categoryId === categoryId);
+
+  if (!selectedCategory) return null;
+
+  return (
+    <div className="space-y-6">
+      {/* Category Header */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            {selectedCategory.icon && (
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span className="text-2xl">{selectedCategory.icon}</span>
+              </div>
+            )}
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold mb-2">{selectedCategory.name}</h1>
+              {selectedCategory.description && (
+                <p className="text-muted-foreground mb-4">{selectedCategory.description}</p>
+              )}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>{subCategories.length} sub-categories</span>
+                <span>{categoryArticles.length} articles</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sub-categories */}
+      {subCategories.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Sub-categories</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subCategories.map((subCat: any) => {
+              const subCatArticles = articles.filter(article => article.categoryId === subCat.id);
+              return (
+                <Card 
+                  key={subCat.id} 
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => onCategorySelect(subCat.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {subCat.icon && (
+                        <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-lg">{subCat.icon}</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base mb-1 truncate">{subCat.name}</h3>
+                        {subCat.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {subCat.description}
+                          </p>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {subCatArticles.length} article{subCatArticles.length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Direct Articles in this Category */}
+      {categoryArticles.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">
+            Articles in {selectedCategory.name}
+          </h2>
+          <div className="space-y-4">
+            {categoryArticles.map((article: any) => (
+              <Card key={article.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <Link href={`/resources/articles/${article.id}`}>
+                        <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                          {article.title}
+                        </h3>
+                      </Link>
+                      {article.excerpt && (
+                        <p className="text-muted-foreground mb-3 line-clamp-2">
+                          {article.excerpt}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          <span>{article.authorName || "Unknown"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Eye className="w-4 h-4" />
+                          <span>{article.viewCount || 0} views</span>
+                        </div>
+                      </div>
+                    </div>
+                    {article.tags && article.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 ml-4">
+                        {article.tags.slice(0, 3).map((tag: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {subCategories.length === 0 && categoryArticles.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Folder className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No content yet</h3>
+            <p className="text-muted-foreground">
+              This category doesn't have any sub-categories or articles yet.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export default function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -479,83 +632,88 @@ export default function KnowledgeBase() {
           </Card>
         </div>
 
-        {/* Articles List */}
+        {/* Content Area */}
         <div className="lg:col-span-3">
-          <div className="space-y-4">
-            {filteredArticles.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No articles found</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm ? "Try adjusting your search terms" : "No articles have been created yet"}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredArticles.map((article: any) => (
-                <Card key={article.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <Link href={`/resources/articles/${article.id}`}>
-                          <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
-                            {article.title}
-                          </h3>
-                        </Link>
-                        {article.excerpt && (
-                          <p className="text-muted-foreground mb-3 line-clamp-2">
-                            {article.excerpt}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            {article.authorName}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {format(new Date(article.createdAt), 'MMM d, yyyy')}
-                          </div>
-                          {article.viewCount > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Eye className="w-4 h-4" />
-                              {article.viewCount}
-                            </div>
-                          )}
-                          {article.likeCount > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Heart className="w-4 h-4" />
-                              {article.likeCount}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {article.featuredImage && (
-                        <img 
-                          src={article.featuredImage}
-                          alt={article.title}
-                          className="w-16 h-16 object-cover rounded-md ml-4"
-                        />
-                      )}
-                    </div>
-                    {article.tags && article.tags.length > 0 && (
-                      <>
-                        <Separator className="my-3" />
-                        <div className="flex gap-2 flex-wrap">
-                          {article.tags.map((tag: string) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </>
-                    )}
+          {selectedCategory ? (
+            <CategoryOverview 
+              categoryId={selectedCategory} 
+              categories={categories || []} 
+              articles={articles || []}
+              onCategorySelect={setSelectedCategory}
+            />
+          ) : (
+            <div className="space-y-4">
+              {filteredArticles.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No articles found</h3>
+                    <p className="text-muted-foreground">
+                      {searchTerm ? "Try adjusting your search terms" : "No articles have been created yet"}
+                    </p>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
+              ) : (
+                filteredArticles.map((article: any) => (
+                  <Card key={article.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <Link href={`/resources/articles/${article.id}`}>
+                            <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                              {article.title}
+                            </h3>
+                          </Link>
+                          {article.excerpt && (
+                            <p className="text-muted-foreground mb-3 line-clamp-2">
+                              {article.excerpt}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <User className="w-4 h-4" />
+                              <span>{article.authorName || "Unknown"}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-4 h-4" />
+                              <span>{article.viewCount || 0} views</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-4 h-4" />
+                              <span>{article.likeCount || 0} likes</span>
+                            </div>
+                          </div>
+                        </div>
+                        {article.featuredImage && (
+                          <img 
+                            src={article.featuredImage}
+                            alt={article.title}
+                            className="w-16 h-16 object-cover rounded-md ml-4"
+                          />
+                        )}
+                      </div>
+                      {article.tags && article.tags.length > 0 && (
+                        <>
+                          <Separator className="my-3" />
+                          <div className="flex gap-2 flex-wrap">
+                            {article.tags.map((tag: string) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
