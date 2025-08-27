@@ -49,8 +49,18 @@ export default function Staff() {
   const [isAddTeamDialogOpen, setIsAddTeamDialogOpen] = useState(false);
   const [isTeamSettingsDialogOpen, setIsTeamSettingsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
+  // Debounce search term to prevent rapid API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
@@ -83,11 +93,11 @@ export default function Staff() {
     }
   });
   
-  // Fetch staff with real-time search
+  // Fetch staff with debounced search
   const { data: staffMembers = [], isLoading } = useQuery<Staff[]>({
-    queryKey: ["/api/staff", searchTerm],
+    queryKey: ["/api/staff", debouncedSearchTerm],
     queryFn: async () => {
-      const url = `/api/staff${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ""}`;
+      const url = `/api/staff${debouncedSearchTerm ? `?search=${encodeURIComponent(debouncedSearchTerm)}` : ""}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch staff');
       return response.json();
@@ -593,9 +603,9 @@ export default function Staff() {
                       <div className="flex flex-col items-center space-y-2">
                         <User className="h-8 w-8 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
-                          {searchTerm ? "No staff members found" : "No staff members yet"}
+                          {debouncedSearchTerm ? "No staff members found" : "No staff members yet"}
                         </p>
-                        {!searchTerm && (
+                        {!debouncedSearchTerm && (
                           <Button
                             variant="outline"
                             size="sm"
