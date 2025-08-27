@@ -2556,7 +2556,6 @@ export const courseProgress = pgTable("course_progress", {
 // Insert schemas for Courses system
 export const insertCourseSchema = createInsertSchema(courses).omit({
   id: true,
-  createdBy: true,
   createdAt: true,
   updatedAt: true,
 });

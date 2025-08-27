@@ -11170,10 +11170,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use session userId or fallback to the first user in the system
       const userId = req.session?.userId || "9788c16a-ba2a-40cb-af7b-26d2816d6390";
-      const validatedData = insertCourseSchema.parse({
+      console.log('Creating course with userId:', userId);
+      console.log('Request body:', req.body);
+      
+      const dataToInsert = {
         ...req.body,
         createdBy: userId
-      });
+      };
+      console.log('Data to insert:', dataToInsert);
+      
+      const validatedData = insertCourseSchema.parse(dataToInsert);
       
       const [course] = await db.insert(courses).values(validatedData).returning();
       
