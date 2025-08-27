@@ -26,6 +26,7 @@ import {
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
   insertResourceCategorySchema, insertResourceSchema, insertResourceProgressSchema, insertResourcePrerequisiteSchema, insertResourceLinkSchema,
+  insertCourseSchema, insertCourseResourceSchema, insertCourseProgressSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
@@ -34,7 +35,8 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, resourceCategories, resources, resourceProgress, resourcePrerequisites, resourceLinks
+  jobOpenings, jobApplicationFormConfig, resourceCategories, resources, resourceProgress, resourcePrerequisites, resourceLinks,
+  courses, courseResources, courseProgress
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -11124,6 +11126,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting resource link:", error);
       res.status(500).json({ error: "Failed to delete resource link" });
+    }
+  });
+
+  // Course API endpoints
+  app.get("/api/courses", async (req, res) => {
+    try {
+      const coursesData = await db.select({
+        id: courses.id,
+        title: courses.title,
+        description: courses.description,
+        summary: courses.summary,
+        thumbnail: courses.thumbnail,
+        categoryId: courses.categoryId,
+        difficulty: courses.difficulty,
+        estimatedDuration: courses.estimatedDuration,
+        isRequired: courses.isRequired,
+        isActive: courses.isActive,
+        isPublished: courses.isPublished,
+        order: courses.order,
+        visibleToRoles: courses.visibleToRoles,
+        tags: courses.tags,
+        prerequisites: courses.prerequisites,
+        learningObjectives: courses.learningObjectives,
+        metadata: courses.metadata,
+        createdBy: courses.createdBy,
+        createdAt: courses.createdAt,
+        updatedAt: courses.updatedAt,
+        categoryName: resourceCategories.name
+      })
+      .from(courses)
+      .leftJoin(resourceCategories, eq(courses.categoryId, resourceCategories.id))
+      .orderBy(asc(courses.order), asc(courses.title));
+
+      res.json(coursesData);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  });
+
+  app.post("/api/courses", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const validatedData = insertCourseSchema.parse({
+        ...req.body,
+        createdBy: userId
+      });
+      
+      const [course] = await db.insert(courses).values(validatedData).returning();
+      
+      await createAuditLog(
+        "created",
+        "course",
+        course.id,
+        course.title,
+        userId,
+        `Created course: ${course.title}`,
+        null,
+        course,
+        req
+      );
+      
+      res.status(201).json(course);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating course:', error);
+      res.status(500).json({ message: "Failed to create course" });
     }
   });
 

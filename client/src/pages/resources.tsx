@@ -38,7 +38,8 @@ import {
   Edit,
   Trash2,
   Archive,
-  Eye
+  Eye,
+  GraduationCap
 } from "lucide-react";
 
 interface ResourceCategory {
@@ -135,6 +136,7 @@ export default function Resources() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showCreateResource, setShowCreateResource] = useState(false);
+  const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [showCreateLink, setShowCreateLink] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: "", description: "", icon: "BookOpen", color: "#3b82f6" });
   const [newResource, setNewResource] = useState({
@@ -145,6 +147,17 @@ export default function Resources() {
     categoryId: "",
     duration: 0,
     isRequired: false,
+    tags: [] as string[]
+  });
+  const [newCourse, setNewCourse] = useState({
+    title: "",
+    description: "",
+    summary: "",
+    categoryId: "",
+    difficulty: "beginner",
+    estimatedDuration: 0,
+    isRequired: false,
+    learningObjectives: [] as string[],
     tags: [] as string[]
   });
   const [newLink, setNewLink] = useState({ title: "", url: "", description: "", categoryId: "" });
@@ -232,6 +245,38 @@ export default function Resources() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create resource", variant: "destructive" });
+    },
+  });
+
+  // Create course mutation
+  const createCourseMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create course");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      setShowCreateCourse(false);
+      setNewCourse({
+        title: "",
+        description: "",
+        summary: "",
+        categoryId: "",
+        difficulty: "beginner",
+        estimatedDuration: 0,
+        isRequired: false,
+        learningObjectives: [],
+        tags: []
+      });
+      toast({ title: "Success", description: "Course created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create course", variant: "destructive" });
     },
   });
 
@@ -458,14 +503,15 @@ export default function Resources() {
           <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Training Resources</h2>
-            <Dialog open={showCreateResource} onOpenChange={setShowCreateResource}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-create-resource">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Resource
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+            <div className="flex gap-2">
+              <Dialog open={showCreateResource} onOpenChange={setShowCreateResource}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="button-create-resource">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Resource
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Create New Resource</DialogTitle>
                   <DialogDescription>Add a new training resource or material</DialogDescription>
@@ -571,6 +617,118 @@ export default function Resources() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            
+            <Dialog open={showCreateCourse} onOpenChange={setShowCreateCourse}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-course">
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  Add Course
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Create New Course</DialogTitle>
+                  <DialogDescription>Add a new structured learning course with multiple resources</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-title" className="text-right">Title</Label>
+                    <Input
+                      id="course-title"
+                      value={newCourse.title}
+                      onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+                      className="col-span-3"
+                      data-testid="input-course-title"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-summary" className="text-right">Summary</Label>
+                    <Input
+                      id="course-summary"
+                      value={newCourse.summary}
+                      onChange={(e) => setNewCourse({ ...newCourse, summary: e.target.value })}
+                      className="col-span-3"
+                      placeholder="Brief overview for course listing"
+                      data-testid="input-course-summary"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-difficulty" className="text-right">Difficulty</Label>
+                    <Select
+                      value={newCourse.difficulty}
+                      onValueChange={(value) => setNewCourse({ ...newCourse, difficulty: value })}
+                    >
+                      <SelectTrigger className="col-span-3" data-testid="select-course-difficulty">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-category" className="text-right">Category</Label>
+                    <Select
+                      value={newCourse.categoryId}
+                      onValueChange={(value) => setNewCourse({ ...newCourse, categoryId: value })}
+                    >
+                      <SelectTrigger className="col-span-3" data-testid="select-course-category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category: ResourceCategory) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-duration" className="text-right">Est. Duration (min)</Label>
+                    <Input
+                      id="course-duration"
+                      type="number"
+                      value={newCourse.estimatedDuration}
+                      onChange={(e) => setNewCourse({ ...newCourse, estimatedDuration: parseInt(e.target.value) || 0 })}
+                      className="col-span-3"
+                      data-testid="input-course-duration"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-description" className="text-right">Description</Label>
+                    <Textarea
+                      id="course-description"
+                      value={newCourse.description}
+                      onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
+                      className="col-span-3"
+                      data-testid="textarea-course-description"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="course-required" className="text-right">Required</Label>
+                    <Switch
+                      id="course-required"
+                      checked={newCourse.isRequired}
+                      onCheckedChange={(checked) => setNewCourse({ ...newCourse, isRequired: checked })}
+                      data-testid="switch-course-required"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={() => createCourseMutation.mutate(newCourse)}
+                    disabled={!newCourse.title || !newCourse.summary || createCourseMutation.isPending}
+                    data-testid="button-save-course"
+                  >
+                    {createCourseMutation.isPending ? "Creating..." : "Create Course"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
           </div>
 
           {/* Resources Grid */}

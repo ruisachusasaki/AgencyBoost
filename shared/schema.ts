@@ -2502,3 +2502,82 @@ export type InsertResourcePrerequisite = z.infer<typeof insertResourcePrerequisi
 
 export type ResourceLink = typeof resourceLinks.$inferSelect;
 export type InsertResourceLink = z.infer<typeof insertResourceLinkSchema>;
+
+// Courses - structured learning paths with multiple resources
+export const courses = pgTable("courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  summary: text("summary"), // Brief overview for course listing
+  thumbnail: text("thumbnail"), // Course cover image
+  categoryId: varchar("category_id").references(() => resourceCategories.id),
+  difficulty: text("difficulty").default("beginner"), // beginner, intermediate, advanced
+  estimatedDuration: integer("estimated_duration"), // Total estimated duration in minutes
+  isRequired: boolean("is_required").default(false),
+  isActive: boolean("is_active").default(true),
+  isPublished: boolean("is_published").default(false),
+  order: integer("order").default(0),
+  visibleToRoles: text("visible_to_roles").array().default([]),
+  tags: text("tags").array().default([]),
+  prerequisites: text("prerequisites").array().default([]), // Course IDs that must be completed first
+  learningObjectives: text("learning_objectives").array().default([]),
+  metadata: jsonb("metadata").default({}),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Course Resources - link resources to courses with ordering
+export const courseResources = pgTable("course_resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  resourceId: varchar("resource_id").notNull().references(() => resources.id, { onDelete: "cascade" }),
+  order: integer("order").default(0),
+  isRequired: boolean("is_required").default(true),
+  unlockAfter: varchar("unlock_after"), // Resource ID that must be completed to unlock this one
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Course Progress - track user progress through entire courses
+export const courseProgress = pgTable("course_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  courseId: varchar("course_id").notNull().references(() => courses.id),
+  status: text("status").notNull().default("not_started"), // not_started, in_progress, completed
+  progressPercent: integer("progress_percent").default(0), // 0-100
+  timeSpent: integer("time_spent").default(0), // Time spent in minutes
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for Courses system
+export const insertCourseSchema = createInsertSchema(courses).omit({
+  id: true,
+  createdBy: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCourseResourceSchema = createInsertSchema(courseResources).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCourseProgressSchema = createInsertSchema(courseProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for Courses system
+export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+
+export type CourseResource = typeof courseResources.$inferSelect;
+export type InsertCourseResource = z.infer<typeof insertCourseResourceSchema>;
+
+export type CourseProgress = typeof courseProgress.$inferSelect;
+export type InsertCourseProgress = z.infer<typeof insertCourseProgressSchema>;
