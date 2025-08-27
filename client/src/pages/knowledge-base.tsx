@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder } from "lucide-react";
+import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,6 +36,8 @@ export default function KnowledgeBase() {
     categoryId: "",
     tags: "",
   });
+  
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -130,39 +132,78 @@ export default function KnowledgeBase() {
 
   const hierarchicalCategories = organizeCategories(categories || []);
 
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
   // Render category tree recursively
   const renderCategoryTree = (cats: any[], level = 0) => {
-    return cats.map((category: any) => (
-      <div key={category.id}>
-        <button
-          data-testid={`button-category-${category.id}`}
-          onClick={() => setSelectedCategory(category.id)}
-          className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-            selectedCategory === category.id 
-              ? 'bg-primary text-primary-foreground' 
-              : 'hover:bg-muted'
-          }`}
-          style={{ paddingLeft: `${12 + (level * 16)}px` }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="flex items-center">
-              {level > 0 && <span className="mr-2 text-muted-foreground">└</span>}
-              {category.name}
-            </span>
-            {category.articleCount && (
-              <Badge variant="secondary" className="text-xs">
-                {category.articleCount}
-              </Badge>
+    return cats.map((category: any) => {
+      const hasChildren = category.children.length > 0;
+      const isExpanded = expandedCategories.has(category.id);
+      
+      return (
+        <div key={category.id}>
+          <div className="flex items-center">
+            {hasChildren && (
+              <button
+                data-testid={`button-toggle-${category.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleCategory(category.id);
+                }}
+                className="p-1 hover:bg-muted rounded-sm transition-colors"
+                style={{ marginLeft: `${4 + (level * 16)}px` }}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
             )}
+            <button
+              data-testid={`button-category-${category.id}`}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
+                selectedCategory === category.id 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-muted'
+              }`}
+              style={{ 
+                marginLeft: hasChildren ? '0px' : `${20 + (level * 16)}px`,
+                paddingLeft: hasChildren ? '8px' : '12px'
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex items-center">
+                  {level > 0 && !hasChildren && <span className="mr-2 text-muted-foreground">└</span>}
+                  {category.name}
+                </span>
+                {category.articleCount && (
+                  <Badge variant="secondary" className="text-xs">
+                    {category.articleCount}
+                  </Badge>
+                )}
+              </div>
+            </button>
           </div>
-        </button>
-        {category.children.length > 0 && (
-          <div className="mt-1">
-            {renderCategoryTree(category.children, level + 1)}
-          </div>
-        )}
-      </div>
-    ));
+          {hasChildren && isExpanded && (
+            <div className="mt-1">
+              {renderCategoryTree(category.children, level + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   const handleCreateCategory = () => {
