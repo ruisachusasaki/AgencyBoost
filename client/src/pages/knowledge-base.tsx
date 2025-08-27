@@ -97,10 +97,73 @@ export default function KnowledgeBase() {
   });
 
   const filteredArticles = (articles || []).filter((article: any) => {
+    if (selectedCategory && article.categoryId !== selectedCategory) return false;
     if (!searchTerm) return true;
     return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  // Organize categories into hierarchical structure
+  const organizeCategories = (cats: any[]) => {
+    const categoryMap = new Map();
+    const topLevel: any[] = [];
+    
+    // First pass: create map of all categories
+    cats.forEach(cat => {
+      categoryMap.set(cat.id, { ...cat, children: [] });
+    });
+    
+    // Second pass: organize into hierarchy
+    cats.forEach(cat => {
+      const categoryWithChildren = categoryMap.get(cat.id);
+      if (cat.parentId && categoryMap.has(cat.parentId)) {
+        // This is a child category
+        categoryMap.get(cat.parentId).children.push(categoryWithChildren);
+      } else {
+        // This is a top-level category
+        topLevel.push(categoryWithChildren);
+      }
+    });
+    
+    return topLevel;
+  };
+
+  const hierarchicalCategories = organizeCategories(categories || []);
+
+  // Render category tree recursively
+  const renderCategoryTree = (cats: any[], level = 0) => {
+    return cats.map((category: any) => (
+      <div key={category.id}>
+        <button
+          data-testid={`button-category-${category.id}`}
+          onClick={() => setSelectedCategory(category.id)}
+          className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+            selectedCategory === category.id 
+              ? 'bg-primary text-primary-foreground' 
+              : 'hover:bg-muted'
+          }`}
+          style={{ paddingLeft: `${12 + (level * 16)}px` }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="flex items-center">
+              {level > 0 && <span className="mr-2 text-muted-foreground">└</span>}
+              {category.name}
+            </span>
+            {category.articleCount && (
+              <Badge variant="secondary" className="text-xs">
+                {category.articleCount}
+              </Badge>
+            )}
+          </div>
+        </button>
+        {category.children.length > 0 && (
+          <div className="mt-1">
+            {renderCategoryTree(category.children, level + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
 
   const handleCreateCategory = () => {
     if (!newCategory.name.trim()) {
@@ -369,27 +432,7 @@ export default function KnowledgeBase() {
                 >
                   All Articles
                 </button>
-                {(categories || []).map((category: any) => (
-                  <button
-                    key={category.id}
-                    data-testid={`button-category-${category.id}`}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                      selectedCategory === category.id 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'hover:bg-muted'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{category.name}</span>
-                      {category.articleCount && (
-                        <Badge variant="secondary" className="text-xs">
-                          {category.articleCount}
-                        </Badge>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                {renderCategoryTree(hierarchicalCategories)}
               </div>
             </CardContent>
           </Card>
