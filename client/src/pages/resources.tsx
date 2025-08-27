@@ -435,6 +435,7 @@ export default function Resources() {
             }`}
             data-testid="tab-training"
           >
+            <BookOpen className="h-4 w-4" />
             Training
           </button>
           <button
@@ -446,6 +447,7 @@ export default function Resources() {
             }`}
             data-testid="tab-links"
           >
+            <LinkIcon className="h-4 w-4" />
             Resource Links
           </button>
         </nav>
