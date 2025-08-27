@@ -533,10 +533,7 @@ export default function Staff() {
                         <SelectContent>
                           {roles.map((role) => (
                             <SelectItem key={role.id} value={role.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{role.name}</span>
-                                <span className="text-xs text-muted-foreground">{role.description}</span>
-                              </div>
+                              {role.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
