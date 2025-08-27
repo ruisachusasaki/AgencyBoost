@@ -108,6 +108,29 @@ interface ResourceProgress {
   resourceType: string;
 }
 
+interface Course {
+  id: string;
+  title: string;
+  description?: string;
+  summary?: string;
+  categoryId?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  estimatedDuration: number;
+  isRequired: boolean;
+  isActive: boolean;
+  isPublished: boolean;
+  order: number;
+  visibleToRoles: string[];
+  tags: string[];
+  prerequisites: string[];
+  learningObjectives: string[];
+  metadata: any;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  categoryName?: string;
+}
+
 const getResourceIcon = (type: string) => {
   switch (type) {
     case 'video': return <Video className="h-4 w-4" />;
@@ -175,6 +198,13 @@ export default function Resources() {
     queryKey: ["/api/resources", selectedCategory],
     queryFn: () =>
       fetch(`/api/resources${selectedCategory !== 'all' ? `?category=${selectedCategory}` : ''}`).then(res => res.json()),
+  });
+
+  // Fetch courses
+  const { data: courses = [], isLoading: coursesLoading } = useQuery<Course[]>({
+    queryKey: ["/api/courses", selectedCategory],
+    queryFn: () =>
+      fetch(`/api/courses${selectedCategory !== 'all' ? `?category=${selectedCategory}` : ''}`).then(res => res.json()),
   });
 
   // Fetch user progress
@@ -498,6 +528,8 @@ export default function Resources() {
         </nav>
       </div>
 
+      {/* Tab Content */}
+      <>
         {/* Training Tab */}
         {activeTab === "training" && (
           <div className="space-y-4">
@@ -720,7 +752,7 @@ export default function Resources() {
                 <DialogFooter>
                   <Button
                     onClick={() => createCourseMutation.mutate(newCourse)}
-                    disabled={!newCourse.title || !newCourse.summary || createCourseMutation.isPending}
+                    disabled={!newCourse.title || createCourseMutation.isPending}
                     data-testid="button-save-course"
                   >
                     {createCourseMutation.isPending ? "Creating..." : "Create Course"}
@@ -730,13 +762,74 @@ export default function Resources() {
             </Dialog>
           </div>
           </div>
+          </div>
 
-          {/* Resources Grid */}
-          {resourcesLoading ? (
-            <div className="text-center py-8">Loading resources...</div>
+          {/* Resources and Courses Grid */}
+          {(resourcesLoading || coursesLoading) ? (
+            <div className="text-center py-8">Loading training materials...</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredResources.map((resource: Resource) => (
+            <div className="space-y-6">
+              {/* Courses Section */}
+              {courses.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5" />
+                    Courses ({courses.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {courses.map((course: Course) => (
+                      <Card key={course.id} className="hover:shadow-md transition-shadow border-blue-200" data-testid={`card-course-${course.id}`}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              <GraduationCap className="h-4 w-4 text-blue-600" />
+                              <CardTitle className="text-sm">{course.title}</CardTitle>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {course.isRequired && (
+                                <Badge variant="outline" className="text-xs">Required</Badge>
+                              )}
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-200">Course</Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {course.summary && (
+                            <p className="text-sm text-muted-foreground mb-3">{course.summary}</p>
+                          )}
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {course.estimatedDuration} min
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {course.difficulty}
+                            </Badge>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button size="sm" className="flex-1" data-testid={`button-start-course-${course.id}`}>
+                              <Play className="h-3 w-3 mr-1" />
+                              Start Course
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resources Section */}
+              {filteredResources.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Individual Resources ({filteredResources.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredResources.map((resource: Resource) => (
                 <Card key={resource.id} className="hover:shadow-md transition-shadow" data-testid={`card-resource-${resource.id}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -824,11 +917,12 @@ export default function Resources() {
                       )}
                     </div>
                   </CardContent>
-                </Card>
-              ))}
+                    </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          </div>
         )}
 
         {/* Resource Links Tab */}
@@ -965,6 +1059,7 @@ export default function Resources() {
           )}
           </div>
         )}
+      </>
     </div>
   );
 }
