@@ -323,53 +323,87 @@ export default function ArticleView() {
         console.log('Article content element:', articleContent);
         console.log('Article content HTML:', articleContent?.innerHTML);
         
-        const toggles = document.querySelectorAll('.article-content .toggle-container');
-        console.log('Found toggles:', toggles.length);
-        
-        // Also try finding blockquotes
+        // Look for blockquotes that contain toggle arrows (pattern-based detection)
         const allBlockquotes = document.querySelectorAll('.article-content blockquote');
         console.log('All blockquotes in content:', allBlockquotes.length);
+        
+        const toggles: HTMLElement[] = [];
         allBlockquotes.forEach((bq, i) => {
           console.log(`Blockquote ${i}:`, bq.className, bq.outerHTML.substring(0, 150) + '...');
+          
+          // Check if this blockquote contains toggle content (arrow + "Click to toggle")
+          if (bq.textContent?.includes('▶') && bq.textContent?.includes('Click to toggle')) {
+            console.log(`Blockquote ${i} identified as toggle`);
+            toggles.push(bq as HTMLElement);
+          }
         });
+        
+        console.log('Found toggles:', toggles.length);
         
         toggles.forEach((toggle, index) => {
           console.log(`Processing toggle ${index}:`, toggle);
-          const header = toggle.querySelector('.toggle-header');
-          console.log(`Found header for toggle ${index}:`, header);
           
-          if (header && !header.hasAttribute('data-view-click-added')) {
-            header.setAttribute('data-view-click-added', 'true');
+          if (!toggle.hasAttribute('data-view-click-added')) {
+            toggle.setAttribute('data-view-click-added', 'true');
             console.log(`Adding click handler to toggle ${index}`);
             
-            header.addEventListener('click', (e) => {
-              console.log('Toggle clicked!', toggle);
-              e.preventDefault();
-              e.stopPropagation();
-              
-              const content = toggle.querySelector('.toggle-content');
-              const arrow = toggle.querySelector('.toggle-arrow');
-              
-              console.log('Content element:', content);
-              console.log('Arrow element:', arrow);
-              
-              if (content) {
-                const isHidden = content.style.display === 'none' || 
-                                window.getComputedStyle(content).display === 'none';
-                
-                if (isHidden) {
-                  content.style.display = 'block';
-                  if (arrow) arrow.textContent = '▼';
-                  toggle.classList.add('open');
-                  console.log('Toggle opened');
-                } else {
-                  content.style.display = 'none';
-                  if (arrow) arrow.textContent = '▶';
-                  toggle.classList.remove('open');
-                  console.log('Toggle closed');
-                }
+            // Find the paragraph with the arrow (header)
+            const allPs = toggle.querySelectorAll('p');
+            let headerP: HTMLElement | null = null;
+            let contentPs: HTMLElement[] = [];
+            let foundHeader = false;
+            
+            allPs.forEach((p) => {
+              if (!foundHeader && p.textContent?.includes('▶')) {
+                headerP = p as HTMLElement;
+                foundHeader = true;
+                console.log('Found header paragraph:', p);
+              } else if (foundHeader && p.textContent?.trim()) {
+                contentPs.push(p as HTMLElement);
+                console.log('Found content paragraph:', p);
               }
             });
+            
+            if (headerP) {
+              headerP.style.cursor = 'pointer';
+              headerP.style.userSelect = 'none';
+              
+              headerP.addEventListener('click', (e) => {
+                console.log('Toggle clicked!', toggle);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Toggle content paragraphs
+                const isOpen = toggle.hasAttribute('data-open');
+                console.log('Current state - isOpen:', isOpen);
+                
+                contentPs.forEach((p) => {
+                  if (isOpen) {
+                    p.style.display = 'none';
+                  } else {
+                    p.style.display = 'block';
+                  }
+                });
+                
+                // Toggle arrow
+                const arrowSpan = headerP.querySelector('span');
+                if (arrowSpan) {
+                  arrowSpan.textContent = isOpen ? '▶' : '▼';
+                } else {
+                  // Update text content directly if no span
+                  headerP.innerHTML = headerP.innerHTML.replace('▶', '▼').replace('▼', isOpen ? '▶' : '▼');
+                }
+                
+                // Update state
+                if (isOpen) {
+                  toggle.removeAttribute('data-open');
+                  console.log('Toggle closed');
+                } else {
+                  toggle.setAttribute('data-open', 'true');
+                  console.log('Toggle opened');
+                }
+              });
+            }
           }
         });
       };

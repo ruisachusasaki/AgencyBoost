@@ -1,0 +1,239 @@
+[tiptap warn]: Duplicate extension names found: ['link']. This can lead to issues.
+resolveExtensions @ chunk-XBURNI6W.js?v=ba6fe61e:12760Understand this warning
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+article-view.tsx:324 Article content HTML: <p>Test</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+content_script.js:1 Uncaught TypeError: Cannot read properties of null (reading 'ControlLooksLikePasswordCredentialField')
+    at shouldOfferCompletionListForField (content_script.js:1:418255)
+    at HTMLDocument.keyDownEventHandler (content_script.js:1:420976)Understand this error
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: null
+article-view.tsx:324 Article content HTML: undefined
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+article-view.tsx:324 Article content HTML: <p>Test</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+article-view.tsx:324 Article content HTML: <p>Test</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 0
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+article-view.tsx:324 Article content HTML: <h1>Test</h1><p></p><p>
+        </p><blockquote><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p></blockquote><p>
+      </p><p></p>
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 1
+article-view.tsx:333 Blockquote 0:  <blockquote><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong>...
+article-view.tsx:381 Content mutated, re-adding handlers
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+article-view.tsx:324 Article content HTML: <h1>Test</h1><p></p><p>
+        </p><blockquote><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p></blockquote><p>
+      </p><p></p>
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 1
+article-view.tsx:333 Blockquote 0:  <blockquote><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong>...
+article-view.tsx:321 Adding toggle click handlers...
+article-view.tsx:323 Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+article-view.tsx:324 Article content HTML: <h1>Test</h1><p></p><p>
+        </p><blockquote><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p></blockquote><p>
+      </p><p></p>
+article-view.tsx:327 Found toggles: 0
+article-view.tsx:331 All blockquotes in content: 1
+article-view.tsx:333 Blockquote 0:  <blockquote><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong>...
