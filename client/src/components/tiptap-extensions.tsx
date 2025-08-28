@@ -1,4 +1,4 @@
-import { Node, mergeAttributes, Command, ChainedCommands } from '@tiptap/core';
+import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import React from 'react';
 
@@ -53,14 +53,6 @@ export const CalloutExtension = Node.create({
       ]
     ];
   },
-
-  addCommands() {
-    return {
-      setCallout: (attributes = {}) => ({ commands }: { commands: ChainedCommands }) => {
-        return commands.setNode(this.name, attributes);
-      },
-    };
-  },
 });
 
 // Toggle Extension
@@ -88,14 +80,6 @@ export const ToggleExtension = Node.create({
       }),
       0,
     ];
-  },
-
-  addCommands() {
-    return {
-      setToggle: () => ({ commands }: { commands: ChainedCommands }) => {
-        return commands.setNode(this.name);
-      },
-    };
   },
 });
 
@@ -173,14 +157,6 @@ export const ColumnsExtension = Node.create({
       }),
       0,
     ];
-  },
-
-  addCommands() {
-    return {
-      setColumns: () => ({ commands }: { commands: ChainedCommands }) => {
-        return commands.setNode(this.name);
-      },
-    };
   },
 });
 

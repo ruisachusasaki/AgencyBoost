@@ -214,13 +214,15 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
+      // Use simple HTML insertion with contenteditable regions
       editor.chain().focus().clearNodes().insertContent(`
         <details class="toggle-block" data-toggle open>
-          <summary class="toggle-summary">Click to toggle</summary>
+          <summary class="toggle-summary" contenteditable="true">Click to toggle</summary>
           <div class="toggle-content" data-toggle-content>
-            <p>This content can be toggled open and closed. You can edit this text.</p>
+            <p contenteditable="true">This content can be toggled open and closed. You can edit this text.</p>
           </div>
         </details>
+        <p></p>
       `).run();
     },
   },

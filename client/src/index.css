@@ -72,73 +72,94 @@
   margin: 1rem 0;
 }
 
-/* Task List Styling - Complete override */
-.tiptap ul[data-type="taskList"] {
+/* Task List Styling - Ultra-specific override */
+.tiptap ul[data-type="taskList"],
+.ProseMirror ul[data-type="taskList"] {
   list-style: none !important;
   padding-left: 0 !important;
   margin: 1rem 0 !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"],
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] {
   display: flex !important;
-  align-items: flex-start !important;
+  align-items: center !important;
   list-style: none !important;
   margin: 0.25rem 0 !important;
   padding-left: 0 !important;
   position: relative !important;
+  flex-direction: row !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"]:before {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"]:before,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"]:before {
   content: none !important;
   display: none !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] label {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"] label,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] label {
   flex-shrink: 0 !important;
   margin-right: 8px !important;
-  margin-top: 2px !important;
-  display: flex !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: inline-flex !important;
   align-items: center !important;
   user-select: none !important;
   cursor: pointer !important;
   order: 1 !important;
+  width: auto !important;
+  height: auto !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] label input[type="checkbox"] {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"] label input[type="checkbox"],
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] label input[type="checkbox"] {
   margin: 0 !important;
   width: 16px !important;
   height: 16px !important;
   flex-shrink: 0 !important;
+  vertical-align: top !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > div {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > div,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] > div {
   flex: 1 !important;
   min-width: 0 !important;
   order: 2 !important;
   line-height: 1.5 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-block !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > div > * {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > div > *,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] > div > * {
   margin: 0 !important;
   display: inline !important;
+  vertical-align: top !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > div p {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > div p,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] > div p {
   margin: 0 !important;
   display: inline !important;
   line-height: inherit !important;
+  vertical-align: top !important;
 }
 
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"][data-checked="true"] > div {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"][data-checked="true"] > div,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"][data-checked="true"] > div {
   text-decoration: line-through !important;
   opacity: 0.6 !important;
 }
 
 /* Force horizontal layout for all children */
-.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > * {
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"] > *,
+.ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] > * {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
-  vertical-align: top !important;
+  vertical-align: center !important;
+  float: none !important;
 }
 
 /* Highlight Styling */
@@ -209,7 +230,8 @@
 
 /* Toggle/Collapsible Styling */
 .tiptap .toggle-block,
-.toggle-block {
+.toggle-block,
+.ProseMirror .toggle-block {
   margin: 1.5rem 0 !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 0.5rem !important;
@@ -218,7 +240,8 @@
 }
 
 .tiptap .toggle-summary,
-.toggle-summary {
+.toggle-summary,
+.ProseMirror .toggle-summary {
   padding: 0.75rem 1rem !important;
   background: #f9fafb !important;
   cursor: pointer !important;
@@ -227,20 +250,24 @@
   user-select: none !important;
   margin: 0 !important;
   display: block !important;
+  outline: none !important;
 }
 
 .tiptap .toggle-summary:hover,
-.toggle-summary:hover {
+.toggle-summary:hover,
+.ProseMirror .toggle-summary:hover {
   background: #f3f4f6 !important;
 }
 
 .tiptap .toggle-summary::marker,
-.toggle-summary::marker {
+.toggle-summary::marker,
+.ProseMirror .toggle-summary::marker {
   content: none !important;
 }
 
 .tiptap .toggle-summary::before,
-.toggle-summary::before {
+.toggle-summary::before,
+.ProseMirror .toggle-summary::before {
   content: "▶" !important;
   margin-right: 0.5rem !important;
   transition: transform 0.2s !important;
@@ -248,29 +275,49 @@
 }
 
 .tiptap .toggle-block[open] .toggle-summary::before,
-.toggle-block[open] .toggle-summary::before {
+.toggle-block[open] .toggle-summary::before,
+.ProseMirror .toggle-block[open] .toggle-summary::before {
   transform: rotate(90deg) !important;
 }
 
 .tiptap .toggle-content,
-.toggle-content {
+.toggle-content,
+.ProseMirror .toggle-content {
   padding: 1rem !important;
   margin: 0 !important;
+  outline: none !important;
 }
 
 .tiptap .toggle-content p,
-.toggle-content p {
+.toggle-content p,
+.ProseMirror .toggle-content p {
   margin: 0.5rem 0 !important;
+  outline: none !important;
 }
 
 /* Ensure details/summary elements work in tiptap */
-.tiptap details {
+.tiptap details,
+.ProseMirror details {
   margin: 1.5rem 0 !important;
 }
 
-.tiptap summary {
+.tiptap summary,
+.ProseMirror summary {
   cursor: pointer !important;
   user-select: none !important;
+  outline: none !important;
+}
+
+/* Enable editing within toggle content */
+.tiptap .toggle-content[contenteditable="true"],
+.ProseMirror .toggle-content[contenteditable="true"] {
+  user-select: text !important;
+}
+
+.tiptap .toggle-summary[contenteditable="true"],
+.ProseMirror .toggle-summary[contenteditable="true"] {
+  user-select: text !important;
+  cursor: text !important;
 }
 
 /* Slash Command Menu */
