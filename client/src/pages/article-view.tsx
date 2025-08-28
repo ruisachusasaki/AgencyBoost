@@ -7,13 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
-  MessageCircle, Send, Edit, Trash2 
+  MessageCircle, Send, Edit, Trash2, Save, X 
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 export default function ArticleView() {
   const { id } = useParams();
@@ -22,24 +25,29 @@ export default function ArticleView() {
   const [comment, setComment] = useState("");
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
 
   const { data: article, isLoading } = useQuery({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
 
-  const { data: comments } = useQuery({
+  const { data: comments = [] } = useQuery({
     queryKey: [`/api/knowledge-base/articles/${id}/comments`],
   });
 
   const likeMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/knowledge-base/articles/${id}/like`, "POST");
+      const response = await apiRequest("POST", `/api/knowledge-base/articles/${id}/like`);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       setIsLiked(data.liked);
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Like error:", error);
       toast({
         title: "Error",
         description: "Failed to update like status",
@@ -50,7 +58,8 @@ export default function ArticleView() {
 
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/knowledge-base/articles/${id}/bookmark`, "POST");
+      const response = await apiRequest("POST", `/api/knowledge-base/articles/${id}/bookmark`);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       setIsBookmarked(data.bookmarked);
@@ -59,7 +68,8 @@ export default function ArticleView() {
         description: data.bookmarked ? "Article bookmarked" : "Bookmark removed",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Bookmark error:", error);
       toast({
         title: "Error",
         description: "Failed to update bookmark status",
@@ -68,11 +78,38 @@ export default function ArticleView() {
     },
   });
 
-  const commentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest(`/api/knowledge-base/articles/${id}/comments`, "POST", {
+  const updateArticleMutation = useMutation({
+    mutationFn: async ({ title, content }: { title: string; content: string }) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
+        title,
         content,
       });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Article updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Update error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update article",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const response = await apiRequest("POST", `/api/knowledge-base/articles/${id}/comments`, {
+        content,
+      });
+      return await response.json();
     },
     onSuccess: () => {
       setComment("");
@@ -90,6 +127,29 @@ export default function ArticleView() {
       });
     },
   });
+
+  const startEdit = () => {
+    if (article) {
+      setEditTitle(article.title || "");
+      setEditContent(article.content || "");
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  const saveEdit = () => {
+    if (editTitle.trim() && editContent.trim()) {
+      updateArticleMutation.mutate({
+        title: editTitle.trim(),
+        content: editContent.trim(),
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -129,7 +189,7 @@ export default function ArticleView() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <Link href="/resources">
@@ -141,7 +201,16 @@ export default function ArticleView() {
 
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-4">{article?.title}</h1>
+            {isEditing ? (
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="text-3xl font-bold mb-4 text-3xl border-none px-0 shadow-none focus-visible:ring-0"
+                placeholder="Article title..."
+              />
+            ) : (
+              <h1 className="text-3xl font-bold mb-4">{article?.title}</h1>
+            )}
             <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
@@ -161,31 +230,61 @@ export default function ArticleView() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              data-testid="button-like"
-              variant={isLiked ? "default" : "outline"}
-              size="sm"
-              onClick={() => likeMutation.mutate()}
-              disabled={likeMutation.isPending}
-            >
-              <Heart className={`w-4 h-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
-              {article?.likeCount || 0}
-            </Button>
+            {isEditing ? (
+              <>
+                <Button
+                  onClick={saveEdit}
+                  disabled={updateArticleMutation.isPending || !editTitle.trim() || !editContent.trim()}
+                  size="sm"
+                  data-testid="button-save"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {updateArticleMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelEdit}
+                  size="sm"
+                  data-testid="button-cancel"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  data-testid="button-like"
+                  variant={isLiked ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => likeMutation.mutate()}
+                  disabled={likeMutation.isPending}
+                >
+                  <Heart className={`w-4 h-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
+                  {article?.likeCount || 0}
+                </Button>
 
-            <Button
-              data-testid="button-bookmark"
-              variant={isBookmarked ? "default" : "outline"}
-              size="sm"
-              onClick={() => bookmarkMutation.mutate()}
-              disabled={bookmarkMutation.isPending}
-            >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-            </Button>
+                <Button
+                  data-testid="button-bookmark"
+                  variant={isBookmarked ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => bookmarkMutation.mutate()}
+                  disabled={bookmarkMutation.isPending}
+                >
+                  <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                </Button>
 
-            <Button variant="outline" size="sm">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={startEdit}
+                  data-testid="button-edit"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -216,11 +315,29 @@ export default function ArticleView() {
           )}
           
           <div className="prose prose-lg max-w-none">
-            {/* This would typically render rich content from a rich text editor */}
-            {typeof article?.content === 'string' ? (
-              <p className="whitespace-pre-wrap">{article.content}</p>
+            {isEditing ? (
+              <ReactQuill
+                value={editContent}
+                onChange={setEditContent}
+                theme="snow"
+                placeholder="Write your article content..."
+                style={{ 
+                  minHeight: '400px',
+                  border: 'none'
+                }}
+                modules={{
+                  toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                  ],
+                }}
+              />
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: JSON.stringify(article?.content || {}, null, 2) }} />
+              <div dangerouslySetInnerHTML={{ __html: article?.content || '' }} />
             )}
           </div>
         </CardContent>
