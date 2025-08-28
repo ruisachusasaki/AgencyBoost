@@ -10,29 +10,34 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus } from "lucide-react";
+import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { IconPicker } from "@/components/ui/icon-picker";
 
-// Import all Lucide icons dynamically
-import * as LucideIcons from "lucide-react";
+// Direct icon mapping with specific imports
+const iconMap: Record<string, any> = {
+  Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown,
+  Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, 
+  CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, 
+  Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, 
+  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, 
+  X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass
+};
 
 // Helper function to render icons
 const renderIcon = (iconName: string, className = "w-4 h-4") => {
-  // Debug: log the icon name being requested
   console.log("Rendering icon:", iconName);
   
-  // Try to get the icon component from Lucide icons
-  const IconComponent = (LucideIcons as any)[iconName];
+  const IconComponent = iconMap[iconName];
   
-  if (IconComponent && typeof IconComponent === 'function') {
+  if (IconComponent) {
+    console.log("Successfully rendering icon:", iconName);
     return <IconComponent className={className} />;
   }
   
-  // Log when falling back to default
-  console.log("Icon not found, using fallback for:", iconName);
+  console.log("Icon not found in mapping, using fallback for:", iconName);
   return <Folder className={className} />; // fallback icon
 };
 
