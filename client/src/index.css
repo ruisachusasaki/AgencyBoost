@@ -209,6 +209,22 @@
   margin: 0.5rem 0;
 }
 
+/* Slash Command Menu */
+.slash-command-menu {
+  width: 300px;
+  max-width: 90vw;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.slash-command-menu button {
+  transition: all 0.1s ease;
+}
+
+.slash-command-menu button:hover {
+  background-color: #f8fafc;
+}
+
 /* Dark mode support */
 .dark .tiptap {
   color: #f3f4f6;
@@ -241,6 +257,15 @@
 
 .dark .toggle-summary:hover {
   background: #4b5563;
+}
+
+.dark .slash-command-menu {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark .slash-command-menu button:hover {
+  background-color: #4b5563;
 }
 
 :root {
