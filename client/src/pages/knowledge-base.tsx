@@ -41,6 +41,18 @@ const renderIcon = (iconName: string, className = "w-4 h-4") => {
   return <Folder className={className} />; // fallback icon
 };
 
+// Helper function to get all descendant category IDs
+const getAllDescendantIds = (categoryId: string, categories: any[]): string[] => {
+  const descendants = [categoryId]; // Include the category itself
+  const children = categories.filter(cat => cat.parentId === categoryId);
+  
+  for (const child of children) {
+    descendants.push(...getAllDescendantIds(child.id, categories));
+  }
+  
+  return descendants;
+};
+
 // Category Overview Component
 function CategoryOverview({ 
   categoryId, 
@@ -55,7 +67,15 @@ function CategoryOverview({
 }) {
   const selectedCategory = categories.find(cat => cat.id === categoryId);
   const subCategories = categories.filter(cat => cat.parentId === categoryId);
-  const categoryArticles = articles.filter(article => article.categoryId === categoryId);
+  
+  // Get articles from this category AND all its descendant categories
+  const allDescendantIds = getAllDescendantIds(categoryId, categories);
+  const categoryArticles = articles.filter(article => 
+    allDescendantIds.includes(article.categoryId)
+  );
+  
+  // Get articles directly in this category (not in sub-categories)
+  const directCategoryArticles = articles.filter(article => article.categoryId === categoryId);
 
   if (!selectedCategory) return null;
 
@@ -77,7 +97,10 @@ function CategoryOverview({
               )}
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{subCategories.length} sub-categories</span>
-                <span>{categoryArticles.length} articles</span>
+                <span>{categoryArticles.length} total articles</span>
+                {directCategoryArticles.length !== categoryArticles.length && (
+                  <span className="text-xs">({directCategoryArticles.length} direct, {categoryArticles.length - directCategoryArticles.length} in sub-categories)</span>
+                )}
               </div>
             </div>
           </div>
@@ -124,11 +147,16 @@ function CategoryOverview({
         </div>
       )}
 
-      {/* Direct Articles in this Category */}
+      {/* All Articles in this Category and Sub-categories */}
       {categoryArticles.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold mb-4">
             Articles in {selectedCategory.name}
+            {categoryArticles.length !== directCategoryArticles.length && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                (including sub-categories)
+              </span>
+            )}
           </h2>
           <div className="space-y-4">
             {categoryArticles.map((article: any) => (
@@ -220,12 +248,12 @@ export default function KnowledgeBase() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/knowledge-base/categories"],
   });
 
-  const { data: articles } = useQuery({
-    queryKey: ["/api/knowledge-base/articles", searchTerm, selectedCategory],
+  const { data: articles = [] } = useQuery({
+    queryKey: ["/api/knowledge-base/articles/"],
   });
 
   const createCategoryMutation = useMutation({
@@ -277,7 +305,14 @@ export default function KnowledgeBase() {
   });
 
   const filteredArticles = (articles || []).filter((article: any) => {
-    if (selectedCategory && article.categoryId !== selectedCategory) return false;
+    // When no category is selected, show all articles
+    if (!selectedCategory) {
+      if (!searchTerm) return true;
+      return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    
+    // When category is selected, don't filter here - let CategoryOverview handle it
     if (!searchTerm) return true;
     return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -662,8 +697,8 @@ export default function KnowledgeBase() {
           {selectedCategory ? (
             <CategoryOverview 
               categoryId={selectedCategory} 
-              categories={categories || []} 
-              articles={articles || []}
+              categories={categories} 
+              articles={articles}
               onCategorySelect={setSelectedCategory}
             />
           ) : (
