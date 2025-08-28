@@ -18,8 +18,8 @@
 }
 
 .ql-picker-options .ql-picker-item:hover {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
 }
 
 .ql-picker-options .ql-picker-item.ql-selected {
@@ -39,8 +39,8 @@
 }
 
 .dark .ql-picker-options .ql-picker-item:hover {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
+  background-color: #374151 !important;
+  color: #f9fafb !important;
 }
 
 .dark .ql-picker-options .ql-picker-item.ql-selected {
