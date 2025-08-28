@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link as RouterLink } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -190,6 +190,23 @@ export default function ArticleView() {
     queryKey: [`/api/knowledge-base/articles/${id}/comments`],
     enabled: !!id,
   });
+
+  // Add toggle functionality for saved articles
+  useEffect(() => {
+    const handleToggleClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const summary = target.closest('.toggle-summary');
+      if (summary && !summary.classList.contains('editable-summary')) {
+        const toggleBlock = summary.closest('.toggle-block') as HTMLElement;
+        if (toggleBlock) {
+          toggleBlock.classList.toggle('open');
+        }
+      }
+    };
+
+    document.addEventListener('click', handleToggleClick);
+    return () => document.removeEventListener('click', handleToggleClick);
+  }, []);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
