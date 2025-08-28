@@ -318,34 +318,20 @@ export default function ArticleView() {
     // Add a small delay to ensure DOM is fully rendered
     const timeout = setTimeout(() => {
       const addClickHandlers = () => {
-        console.log('Adding toggle click handlers...');
-        const articleContent = document.querySelector('.article-content');
-        console.log('Article content element:', articleContent);
-        console.log('Article content HTML:', articleContent?.innerHTML);
-        
         // Look for blockquotes that contain toggle arrows (pattern-based detection)
         const allBlockquotes = document.querySelectorAll('.article-content blockquote');
-        console.log('All blockquotes in content:', allBlockquotes.length);
         
         const toggles: HTMLElement[] = [];
-        allBlockquotes.forEach((bq, i) => {
-          console.log(`Blockquote ${i}:`, bq.className, bq.outerHTML.substring(0, 150) + '...');
-          
+        allBlockquotes.forEach((bq) => {
           // Check if this blockquote contains toggle content (arrow + "Click to toggle")
           if (bq.textContent?.includes('▶') && bq.textContent?.includes('Click to toggle')) {
-            console.log(`Blockquote ${i} identified as toggle`);
             toggles.push(bq as HTMLElement);
           }
         });
         
-        console.log('Found toggles:', toggles.length);
-        
-        toggles.forEach((toggle, index) => {
-          console.log(`Processing toggle ${index}:`, toggle);
-          
+        toggles.forEach((toggle) => {
           if (!toggle.hasAttribute('data-view-click-added')) {
             toggle.setAttribute('data-view-click-added', 'true');
-            console.log(`Adding click handler to toggle ${index}`);
             
             // Find the paragraph with the arrow (header)
             const allPs = toggle.querySelectorAll('p');
@@ -357,25 +343,29 @@ export default function ArticleView() {
               if (!foundHeader && p.textContent?.includes('▶')) {
                 headerP = p as HTMLElement;
                 foundHeader = true;
-                console.log('Found header paragraph:', p);
               } else if (foundHeader && p.textContent?.trim()) {
                 contentPs.push(p as HTMLElement);
-                console.log('Found content paragraph:', p);
               }
             });
             
             if (headerP) {
-              headerP.style.cursor = 'pointer';
-              headerP.style.userSelect = 'none';
+              // Add hover effects
+              headerP.addEventListener('mouseenter', () => {
+                headerP.style.background = '#e2e8f0';
+                headerP.style.transform = 'translateX(2px)';
+              });
+              
+              headerP.addEventListener('mouseleave', () => {
+                headerP.style.background = '#f8fafc';
+                headerP.style.transform = 'translateX(0)';
+              });
               
               headerP.addEventListener('click', (e) => {
-                console.log('Toggle clicked!', toggle);
                 e.preventDefault();
                 e.stopPropagation();
                 
                 // Toggle content paragraphs
                 const isOpen = toggle.hasAttribute('data-open');
-                console.log('Current state - isOpen:', isOpen);
                 
                 contentPs.forEach((p) => {
                   if (isOpen) {
@@ -385,22 +375,23 @@ export default function ArticleView() {
                   }
                 });
                 
-                // Toggle arrow
+                // Toggle arrow with smooth rotation
                 const arrowSpan = headerP.querySelector('span');
                 if (arrowSpan) {
-                  arrowSpan.textContent = isOpen ? '▶' : '▼';
-                } else {
-                  // Update text content directly if no span
-                  headerP.innerHTML = headerP.innerHTML.replace('▶', '▼').replace('▼', isOpen ? '▶' : '▼');
+                  if (isOpen) {
+                    arrowSpan.textContent = '▶';
+                    arrowSpan.style.transform = 'rotate(0deg)';
+                  } else {
+                    arrowSpan.textContent = '▼';
+                    arrowSpan.style.transform = 'rotate(90deg)';
+                  }
                 }
                 
                 // Update state
                 if (isOpen) {
                   toggle.removeAttribute('data-open');
-                  console.log('Toggle closed');
                 } else {
                   toggle.setAttribute('data-open', 'true');
-                  console.log('Toggle opened');
                 }
               });
             }
@@ -412,7 +403,6 @@ export default function ArticleView() {
       
       // Re-run when content changes
       const observer = new MutationObserver(() => {
-        console.log('Content mutated, re-adding handlers');
         addClickHandlers();
       });
       

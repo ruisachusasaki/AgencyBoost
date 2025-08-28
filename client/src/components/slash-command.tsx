@@ -214,15 +214,15 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
-      // Insert a simple toggle using valid HTML that TipTap won't mangle
+      // Insert a clean toggle using valid HTML that TipTap won't mangle
       editor.chain().focus().insertContent(`
-        <blockquote class="toggle-container" style="border-left: 4px solid #e5e7eb; background: #f9fafb; margin: 1rem 0; padding: 0; border-radius: 0.5rem;">
-          <p class="toggle-header" style="cursor: pointer; padding: 0.75rem 1rem; margin: 0; font-weight: 500; background: #f3f4f6; border-radius: 0.5rem 0.5rem 0 0; user-select: none;">
-            <span class="toggle-arrow" style="margin-right: 0.5rem; display: inline-block; transition: transform 0.2s;">▶</span>
-            Click to toggle
+        <blockquote style="border: none; background: none; margin: 0.5rem 0; padding: 0;">
+          <p style="cursor: pointer; padding: 0.5rem 0.75rem; margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.375rem; font-size: 0.875rem; color: #475569; user-select: none; display: flex; align-items: center; transition: all 0.2s ease;">
+            <span style="margin-right: 0.5rem; display: inline-block; font-size: 0.75rem; color: #64748b; transition: transform 0.2s ease;">▶</span>
+            <span style="font-weight: 500;">Click to toggle</span>
           </p>
-          <div class="toggle-content" style="display: none; padding: 1rem;">
-            <p style="margin: 0;">This content can be toggled open and closed. You can edit this text.</p>
+          <div style="display: none; padding: 0.75rem 1.5rem; margin: 0.25rem 0; border-left: 2px solid #e2e8f0; background: #fafbfc;">
+            <p style="margin: 0; color: #475569; font-size: 0.875rem;">This content can be toggled open and closed. You can edit this text.</p>
           </div>
         </blockquote>
       `).run();
