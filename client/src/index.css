@@ -315,6 +315,12 @@ li[data-type="taskItem"][data-checked="true"] > div,
   display: none !important;
 }
 
+/* Override details behavior in editor to always show content */
+.tiptap details.toggle-block .toggle-content,
+.ProseMirror details.toggle-block .toggle-content {
+  display: block !important;
+}
+
 /* Fix for legacy toggle content - make it deletable */
 .tiptap .toggle-block,
 .ProseMirror .toggle-block {
@@ -343,6 +349,25 @@ li[data-type="taskItem"][data-checked="true"] > div,
 .tiptap .toggle-block:hover::before,
 .ProseMirror .toggle-block:hover::before {
   background: #dc2626 !important;
+}
+
+/* FORCE all toggle content to be visible during editing */
+.tiptap .toggle-content,
+.ProseMirror .toggle-content,
+.tiptap details .toggle-content,
+.ProseMirror details .toggle-content,
+.tiptap .toggle-block .toggle-content,
+.ProseMirror .toggle-block .toggle-content,
+div[data-toggle-content],
+.tiptap div[data-toggle-content],
+.ProseMirror div[data-toggle-content] {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  max-height: none !important;
+  overflow: visible !important;
+  position: static !important;
+  height: auto !important;
 }
 
 /* Slash Command Menu */
