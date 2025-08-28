@@ -277,23 +277,54 @@ export default function ArticleView() {
         }
       });
 
-      // Add click handlers to new simple toggles
-      const simpleToggles = editorElement.querySelectorAll('.simple-toggle-block');
-      simpleToggles.forEach((toggle: Element) => {
-        const htmlToggle = toggle as HTMLElement;
-        const summary = htmlToggle.querySelector('.simple-toggle-summary');
-        if (summary && !summary.hasAttribute('data-click-added')) {
-          summary.setAttribute('data-click-added', 'true');
-          summary.addEventListener('click', (e) => {
-            e.preventDefault();
-            htmlToggle.classList.toggle('collapsed');
-          });
-        }
-      });
+      // Add click handlers to new simple toggles - NOT IN EDIT MODE
+      if (!isEditing) {
+        const simpleToggles = editorElement.querySelectorAll('.simple-toggle-block');
+        simpleToggles.forEach((toggle: Element) => {
+          const htmlToggle = toggle as HTMLElement;
+          const summary = htmlToggle.querySelector('.simple-toggle-summary');
+          if (summary && !summary.hasAttribute('data-click-added')) {
+            summary.setAttribute('data-click-added', 'true');
+            summary.addEventListener('click', (e) => {
+              e.preventDefault();
+              htmlToggle.classList.toggle('collapsed');
+            });
+          }
+        });
+      }
     }, 500);
 
     return () => clearInterval(interval);
   }, [isEditing, editor]);
+
+  // Add click handlers for toggles in view mode
+  useEffect(() => {
+    if (isEditing) return;
+
+    const addClickHandlers = () => {
+      const toggles = document.querySelectorAll('.article-content .simple-toggle-block');
+      toggles.forEach((toggle) => {
+        const summary = toggle.querySelector('.simple-toggle-summary');
+        if (summary && !summary.hasAttribute('data-view-click-added')) {
+          summary.setAttribute('data-view-click-added', 'true');
+          summary.addEventListener('click', () => {
+            toggle.classList.toggle('collapsed');
+          });
+        }
+      });
+    };
+
+    addClickHandlers();
+    
+    // Re-run when content changes
+    const observer = new MutationObserver(addClickHandlers);
+    const articleContent = document.querySelector('.article-content');
+    if (articleContent) {
+      observer.observe(articleContent, { childList: true, subtree: true });
+    }
+
+    return () => observer.disconnect();
+  }, [isEditing, article?.content]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
