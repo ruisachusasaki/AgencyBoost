@@ -2,6 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ReactQuill Editor Dropdown Fix */
+.ql-picker-options {
+  background-color: white !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  z-index: 50 !important;
+}
+
+.ql-picker-options .ql-picker-item {
+  background-color: white !important;
+  color: hsl(var(--foreground)) !important;
+  padding: 8px 12px !important;
+}
+
+.ql-picker-options .ql-picker-item:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.ql-picker-options .ql-picker-item.ql-selected {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Dark mode support for ReactQuill dropdowns */
+.dark .ql-picker-options {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .ql-picker-options .ql-picker-item {
+  background-color: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.dark .ql-picker-options .ql-picker-item:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .ql-picker-options .ql-picker-item.ql-selected {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(215, 25%, 27%);
