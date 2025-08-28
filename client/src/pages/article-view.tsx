@@ -278,17 +278,17 @@ export default function ArticleView() {
         }
       });
 
-      // Add click handlers to new simple toggles in editor (for view mode)
-      const simpleToggles = editorElement.querySelectorAll('.simple-toggle-wrapper, .simple-toggle, .simple-toggle-block');
-      simpleToggles.forEach((toggle: Element) => {
+      // Add click handlers to new toggles in editor 
+      const toggleContainers = editorElement.querySelectorAll('.toggle-container');
+      toggleContainers.forEach((toggle: Element) => {
         const htmlToggle = toggle as HTMLElement;
-        const header = htmlToggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
+        const header = htmlToggle.querySelector('.toggle-header');
         if (header && !header.hasAttribute('data-click-added')) {
           header.setAttribute('data-click-added', 'true');
           if (!isEditing) {
             header.addEventListener('click', (e) => {
               e.preventDefault();
-              const content = htmlToggle.querySelector('.simple-toggle-content');
+              const content = htmlToggle.querySelector('.toggle-content');
               const arrow = htmlToggle.querySelector('.toggle-arrow');
               
               if (content) {
@@ -323,19 +323,19 @@ export default function ArticleView() {
         console.log('Article content element:', articleContent);
         console.log('Article content HTML:', articleContent?.innerHTML);
         
-        const toggles = document.querySelectorAll('.article-content .simple-toggle-wrapper, .article-content .simple-toggle, .article-content .simple-toggle-block');
+        const toggles = document.querySelectorAll('.article-content .toggle-container');
         console.log('Found toggles:', toggles.length);
         
-        // Also try finding any div that might be a toggle
-        const allDivs = document.querySelectorAll('.article-content div');
-        console.log('All divs in content:', allDivs.length);
-        allDivs.forEach((div, i) => {
-          console.log(`Div ${i}:`, div.className, div.outerHTML.substring(0, 100) + '...');
+        // Also try finding blockquotes
+        const allBlockquotes = document.querySelectorAll('.article-content blockquote');
+        console.log('All blockquotes in content:', allBlockquotes.length);
+        allBlockquotes.forEach((bq, i) => {
+          console.log(`Blockquote ${i}:`, bq.className, bq.outerHTML.substring(0, 150) + '...');
         });
         
         toggles.forEach((toggle, index) => {
           console.log(`Processing toggle ${index}:`, toggle);
-          const header = toggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
+          const header = toggle.querySelector('.toggle-header');
           console.log(`Found header for toggle ${index}:`, header);
           
           if (header && !header.hasAttribute('data-view-click-added')) {
@@ -347,7 +347,7 @@ export default function ArticleView() {
               e.preventDefault();
               e.stopPropagation();
               
-              const content = toggle.querySelector('.simple-toggle-content');
+              const content = toggle.querySelector('.toggle-content');
               const arrow = toggle.querySelector('.toggle-arrow');
               
               console.log('Content element:', content);

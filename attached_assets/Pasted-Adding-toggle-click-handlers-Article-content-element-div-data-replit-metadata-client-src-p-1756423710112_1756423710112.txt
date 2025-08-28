@@ -1,0 +1,159 @@
+Adding toggle click handlers...
+ Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+ Article content HTML: <p>Test Headline</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: null
+ Article content HTML: undefined
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+ Article content HTML: <p>Test Headline</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+ Found toggles: 0
+ All divs in content: 0
+ Adding toggle click handlers...
+ Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+ Article content HTML: <p>Test Headline</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+ Article content HTML: <p>Test</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+ Found toggles: 0
+ All divs in content: 0
+ Content mutated, re-adding handlers
+ Adding toggle click handlers...
+ Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+ Article content HTML: <p>Test</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+ Found toggles: 0
+ All divs in content: 0
+ Adding toggle click handlers...
+ Article content element: <div data-replit-metadata=​"client/​src/​pages/​article-view.tsx:​746:​12" data-component-name=​"div" class=​"article-content">​…​</div>​
+ Article content HTML: <p>Test</p><p></p><p>
+        </p><p>
+          </p><p><strong>
+            </strong><span><strong>▶</strong></span><strong>
+            Click to toggle
+          </strong></p><p>
+          </p><p>
+            </p><p>This content can be toggled open and closed. You can edit this text.</p><p>
+          </p><p>
+        </p><p>
+      </p>
+ Found toggles: 0
+ All divs in content: 0
