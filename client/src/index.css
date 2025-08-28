@@ -321,7 +321,57 @@ li[data-type="taskItem"][data-checked="true"] > div,
   display: block !important;
 }
 
-/* Make sure toggle blocks are positioned for delete buttons */
+/* Simple Toggle System - Always visible in editor */
+.simple-toggle-block {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 8px 0;
+  background: #f9fafb;
+  position: relative;
+}
+
+.simple-toggle-summary {
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 7px 7px 0 0;
+}
+
+.simple-toggle-content {
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 0 0 7px 7px;
+}
+
+/* In view mode, allow collapsing */
+.article-content .simple-toggle-block.collapsed .simple-toggle-content {
+  display: none;
+}
+
+.article-content .simple-toggle-block.collapsed .toggle-arrow {
+  transform: rotate(0deg);
+}
+
+.article-content .simple-toggle-block:not(.collapsed) .toggle-arrow {
+  transform: rotate(90deg);
+}
+
+/* In editor mode, always show content */
+.tiptap .simple-toggle-content,
+.ProseMirror .simple-toggle-content {
+  display: block !important;
+}
+
+.tiptap .simple-toggle-block,
+.ProseMirror .simple-toggle-block {
+  position: relative !important;
+}
+
+/* Legacy toggle positioning for delete buttons */
 .tiptap .toggle-block,
 .ProseMirror .toggle-block,
 .tiptap details[data-toggle],

@@ -66,17 +66,21 @@ export const ToggleExtension = Node.create({
   parseHTML() {
     return [
       {
-        tag: 'details[data-toggle]',
+        tag: 'div[data-toggle]',
+      },
+      {
+        tag: 'details[data-toggle]', // Legacy support
       },
     ];
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
-      'details',
+      'div',
       mergeAttributes(HTMLAttributes, {
         'data-toggle': '',
-        class: 'toggle-block',
+        class: 'simple-toggle-block',
+        'onclick': 'this.classList.toggle("collapsed")',
       }),
       0,
     ];
@@ -93,15 +97,24 @@ export const ToggleSummary = Node.create({
       {
         tag: 'summary',
       },
+      {
+        tag: 'div[data-toggle-summary]',
+      },
     ];
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
-      'summary',
+      'div',
       mergeAttributes(HTMLAttributes, {
-        class: 'toggle-summary',
+        'data-toggle-summary': '',
+        class: 'simple-toggle-summary',
       }),
+      [
+        'span',
+        { class: 'toggle-arrow', style: 'margin-right: 8px; transition: transform 0.2s;' },
+        '▶',
+      ],
       0,
     ];
   },
@@ -125,7 +138,7 @@ export const ToggleContent = Node.create({
       'div',
       mergeAttributes(HTMLAttributes, {
         'data-toggle-content': '',
-        class: 'toggle-content',
+        class: 'simple-toggle-content',
       }),
       0,
     ];
