@@ -110,11 +110,16 @@ export default function ArticleView() {
                     });
 
                     // Create a temporary element to get positioning
-                    const rect = props.clientRect();
+                    const rect = props.clientRect?.();
                     popup = document.createElement('div');
                     popup.style.position = 'absolute';
-                    popup.style.top = `${rect.bottom + 10}px`;
-                    popup.style.left = `${rect.left}px`;
+                    if (rect) {
+                      popup.style.top = `${rect.bottom + 10}px`;
+                      popup.style.left = `${rect.left}px`;
+                    } else {
+                      popup.style.top = '0px';
+                      popup.style.left = '0px';
+                    }
                     popup.style.zIndex = '1000';
                     popup.appendChild(component.element);
                     document.body.appendChild(popup);
@@ -124,8 +129,8 @@ export default function ArticleView() {
                     component.updateProps(props);
                     
                     // Update position
-                    const rect = props.clientRect();
-                    if (popup) {
+                    const rect = props.clientRect?.();
+                    if (popup && rect) {
                       popup.style.top = `${rect.bottom + 10}px`;
                       popup.style.left = `${rect.left}px`;
                     }

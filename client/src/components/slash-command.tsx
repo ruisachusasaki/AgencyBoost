@@ -214,7 +214,7 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
-      editor.chain().focus().clearNodes().insertContent(`
+      editor.chain().focus().insertContent(`
         <details class="toggle-block">
           <summary class="toggle-summary">Click to toggle</summary>
           <div class="toggle-content">

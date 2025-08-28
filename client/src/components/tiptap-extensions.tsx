@@ -56,7 +56,7 @@ export const CalloutExtension = Node.create({
 
   addCommands() {
     return {
-      setCallout: (attributes) => ({ commands }) => {
+      setCallout: (attributes: any) => ({ commands }: any) => {
         return commands.setNode(this.name, attributes);
       },
     };
@@ -92,7 +92,7 @@ export const ToggleExtension = Node.create({
 
   addCommands() {
     return {
-      setToggle: () => ({ commands }) => {
+      setToggle: () => ({ commands }: any) => {
         return commands.setNode(this.name);
       },
     };
@@ -177,7 +177,7 @@ export const ColumnsExtension = Node.create({
 
   addCommands() {
     return {
-      setColumns: () => ({ commands }) => {
+      setColumns: () => ({ commands }: any) => {
         return commands.setNode(this.name);
       },
     };
