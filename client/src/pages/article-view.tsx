@@ -279,16 +279,25 @@ export default function ArticleView() {
       });
 
       // Add click handlers to new simple toggles in editor (for view mode)
-      const simpleToggles = editorElement.querySelectorAll('.simple-toggle');
+      const simpleToggles = editorElement.querySelectorAll('.simple-toggle, .simple-toggle-block');
       simpleToggles.forEach((toggle: Element) => {
         const htmlToggle = toggle as HTMLElement;
-        const header = htmlToggle.querySelector('.simple-toggle-header');
+        const header = htmlToggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
         if (header && !header.hasAttribute('data-click-added')) {
           header.setAttribute('data-click-added', 'true');
           if (!isEditing) {
             header.addEventListener('click', (e) => {
               e.preventDefault();
               htmlToggle.classList.toggle('open');
+              // Also update the arrow rotation
+              const arrow = htmlToggle.querySelector('.toggle-arrow');
+              if (arrow) {
+                if (htmlToggle.classList.contains('open')) {
+                  arrow.textContent = '▼';
+                } else {
+                  arrow.textContent = '▶';
+                }
+              }
             });
           }
         }
@@ -303,13 +312,22 @@ export default function ArticleView() {
     if (isEditing) return;
 
     const addClickHandlers = () => {
-      const toggles = document.querySelectorAll('.article-content .simple-toggle');
+      const toggles = document.querySelectorAll('.article-content .simple-toggle, .article-content .simple-toggle-block');
       toggles.forEach((toggle) => {
-        const header = toggle.querySelector('.simple-toggle-header');
+        const header = toggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
         if (header && !header.hasAttribute('data-view-click-added')) {
           header.setAttribute('data-view-click-added', 'true');
           header.addEventListener('click', () => {
             toggle.classList.toggle('open');
+            // Also update the arrow rotation
+            const arrow = toggle.querySelector('.toggle-arrow');
+            if (arrow) {
+              if (toggle.classList.contains('open')) {
+                arrow.textContent = '▼';
+              } else {
+                arrow.textContent = '▶';
+              }
+            }
           });
         }
       });

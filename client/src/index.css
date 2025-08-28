@@ -220,6 +220,74 @@ li[data-type="taskItem"][data-checked="true"] > div,
   margin: 0.5rem 0;
 }
 
+/* TipTap Toggle System */
+.simple-toggle-block {
+  margin: 1.5rem 0 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+  background: white !important;
+  position: relative !important;
+}
+
+.simple-toggle-summary {
+  padding: 0.75rem 1rem !important;
+  background: #f9fafb !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  outline: none !important;
+  user-select: none !important;
+}
+
+.simple-toggle-summary:hover {
+  background: #f3f4f6 !important;
+}
+
+.simple-toggle-content {
+  padding: 1rem !important;
+  margin: 0 !important;
+  outline: none !important;
+  user-select: text !important;
+  display: none !important;
+}
+
+.simple-toggle-content p {
+  margin: 0.5rem 0 !important;
+  outline: none !important;
+}
+
+/* When toggle is open */
+.simple-toggle-block.open .simple-toggle-content {
+  display: block !important;
+}
+
+.simple-toggle-block.open .toggle-arrow {
+  transform: rotate(90deg) !important;
+}
+
+.toggle-arrow {
+  transition: transform 0.2s !important;
+  display: inline-block !important;
+  user-select: none !important;
+}
+
+/* In editor mode, always show content */
+.tiptap .simple-toggle-content,
+.ProseMirror .simple-toggle-content {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.tiptap .simple-toggle-summary,
+.ProseMirror .simple-toggle-summary {
+  cursor: text !important;
+}
+
 /* Simple Toggle System */
 .simple-toggle {
   margin: 1.5rem 0 !important;
