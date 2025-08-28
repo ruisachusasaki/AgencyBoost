@@ -16,22 +16,23 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { IconPicker } from "@/components/ui/icon-picker";
 
-// Icon mapping for rendering
-const iconMap: Record<string, any> = {
-  Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, 
-  CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, 
-  Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, 
-  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, 
-  X, Check, Minus, CirclePlus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder,
-  Search, Plus
-};
+// Import all Lucide icons dynamically
+import * as LucideIcons from "lucide-react";
 
 // Helper function to render icons
 const renderIcon = (iconName: string, className = "w-4 h-4") => {
-  const IconComponent = iconMap[iconName];
-  if (IconComponent) {
+  // Debug: log the icon name being requested
+  console.log("Rendering icon:", iconName);
+  
+  // Try to get the icon component from Lucide icons
+  const IconComponent = (LucideIcons as any)[iconName];
+  
+  if (IconComponent && typeof IconComponent === 'function') {
     return <IconComponent className={className} />;
   }
+  
+  // Log when falling back to default
+  console.log("Icon not found, using fallback for:", iconName);
   return <Folder className={className} />; // fallback icon
 };
 
