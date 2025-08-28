@@ -214,14 +214,28 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
-      // Insert a simple, working toggle
+      // Insert bulletproof toggle with inline JavaScript
       editor.chain().focus().insertContent(`
-        <div class="simple-toggle" data-toggle-simple="true">
-          <div class="simple-toggle-header" onclick="this.parentElement.classList.toggle('open')">
-            <span class="simple-toggle-arrow">▶</span>
-            <span class="simple-toggle-title" contenteditable="true">Click to toggle</span>
+        <div class="bulletproof-toggle" data-toggle-id="${Math.random().toString(36).substr(2, 9)}">
+          <div class="toggle-trigger" 
+               onclick="
+                 const content = this.nextElementSibling;
+                 const arrow = this.querySelector('.toggle-arrow');
+                 if (content.style.display === 'none') {
+                   content.style.display = 'block';
+                   arrow.innerHTML = '▼';
+                   this.parentElement.setAttribute('data-open', 'true');
+                 } else {
+                   content.style.display = 'none';
+                   arrow.innerHTML = '▶';
+                   this.parentElement.removeAttribute('data-open');
+                 }
+               "
+               style="cursor: pointer; padding: 8px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; display: flex; align-items: center; margin: 4px 0;">
+            <span class="toggle-arrow" style="margin-right: 8px; font-size: 12px;">▶</span>
+            <span contenteditable="true" style="font-weight: 500;">Click to toggle</span>
           </div>
-          <div class="simple-toggle-content">
+          <div class="toggle-body" style="display: none; padding: 8px; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 4px 4px; background: white;">
             <p contenteditable="true">This content can be toggled open and closed. You can edit this text.</p>
           </div>
         </div>

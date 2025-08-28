@@ -440,6 +440,41 @@ li[data-type="taskItem"][data-checked="true"] > div,
   min-height: 8px !important;
 }
 
+/* Bulletproof Toggle System */
+.bulletproof-toggle {
+  margin: 4px 0 !important;
+  font-family: inherit !important;
+}
+
+.toggle-trigger {
+  user-select: none !important;
+}
+
+.toggle-trigger:hover {
+  background: #e5e7eb !important;
+}
+
+/* In editor mode, always show content for editing */
+.tiptap .toggle-body,
+.ProseMirror .toggle-body {
+  display: block !important;
+  border-color: #fbbf24 !important;
+  background: #fffbeb !important;
+}
+
+.tiptap .toggle-body::before,
+.ProseMirror .toggle-body::before {
+  content: "⚠️ Toggle content (always visible in edit mode)" !important;
+  display: block !important;
+  font-size: 11px !important;
+  color: #92400e !important;
+  font-weight: bold !important;
+  margin-bottom: 4px !important;
+  padding: 2px 4px !important;
+  background: #fef3c7 !important;
+  border-radius: 2px !important;
+}
+
 /* In view mode, allow collapsing */
 .article-content .simple-toggle-block.collapsed .simple-toggle-content {
   display: none;
