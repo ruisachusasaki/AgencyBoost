@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
+import type { KnowledgeBaseArticle } from "@shared/schema";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -154,7 +155,7 @@ export default function ArticleView() {
                       return true;
                     }
 
-                    return component.ref?.onKeyDown(props);
+                    return component.ref?.onKeyDown?.(props) || false;
                   },
 
                   onExit() {
@@ -181,7 +182,7 @@ export default function ArticleView() {
     },
   });
 
-  const { data: article, isLoading } = useQuery({
+  const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
 
@@ -194,17 +195,17 @@ export default function ArticleView() {
   // Initialize editor content when article loads
   useEffect(() => {
     if (article && editor && !isEditing) {
-      editor.commands.setContent(article.content);
+      editor.commands.setContent(article.content || '');
     }
   }, [article, editor, isEditing]);
 
   // Set initial edit content when starting to edit
   useEffect(() => {
     if (isEditing && article) {
-      setEditTitle(article.title);
-      setEditContent(article.content);
+      setEditTitle(article.title || '');
+      setEditContent(article.content || '');
       if (editor) {
-        editor.commands.setContent(article.content);
+        editor.commands.setContent(article.content || '');
       }
     }
   }, [isEditing, article, editor]);
