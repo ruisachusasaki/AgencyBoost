@@ -191,22 +191,23 @@ export default function ArticleView() {
     enabled: !!id,
   });
 
-  // Add toggle functionality for saved articles
+  // Initialize editor content when article loads
   useEffect(() => {
-    const handleToggleClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const summary = target.closest('.toggle-summary');
-      if (summary && !summary.classList.contains('editable-summary')) {
-        const toggleBlock = summary.closest('.toggle-block') as HTMLElement;
-        if (toggleBlock) {
-          toggleBlock.classList.toggle('open');
-        }
-      }
-    };
+    if (article && editor && !isEditing) {
+      editor.commands.setContent(article.content);
+    }
+  }, [article, editor, isEditing]);
 
-    document.addEventListener('click', handleToggleClick);
-    return () => document.removeEventListener('click', handleToggleClick);
-  }, []);
+  // Set initial edit content when starting to edit
+  useEffect(() => {
+    if (isEditing && article) {
+      setEditTitle(article.title);
+      setEditContent(article.content);
+      if (editor) {
+        editor.commands.setContent(article.content);
+      }
+    }
+  }, [isEditing, article, editor]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -555,7 +556,7 @@ export default function ArticleView() {
                 <EditorContent editor={editor} className="min-h-[400px]" />
               </div>
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: article?.content || '' }} />
+              <div className="article-content" dangerouslySetInnerHTML={{ __html: article?.content || '' }} />
             )}
           </div>
         </CardContent>

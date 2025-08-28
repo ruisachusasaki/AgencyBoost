@@ -220,16 +220,21 @@ li[data-type="taskItem"][data-checked="true"] > div,
   margin: 0.5rem 0;
 }
 
-/* New Toggle System - Always Editable */
-.toggle-block.editable-toggle {
+/* Enhanced Toggle System */
+.toggle-block,
+.ProseMirror .toggle-block,
+.tiptap .toggle-block {
   margin: 1.5rem 0 !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 0.5rem !important;
   overflow: hidden !important;
   background: white !important;
+  position: relative !important;
 }
 
-.toggle-summary.editable-summary {
+.toggle-summary,
+.ProseMirror .toggle-summary,
+.tiptap .toggle-summary {
   padding: 0.75rem 1rem !important;
   background: #f9fafb !important;
   cursor: pointer !important;
@@ -239,80 +244,70 @@ li[data-type="taskItem"][data-checked="true"] > div,
   display: flex !important;
   align-items: center !important;
   outline: none !important;
-  user-select: text !important;
+  list-style: none !important;
+  position: relative !important;
 }
 
-.toggle-summary.editable-summary:hover {
+.toggle-summary:hover,
+.ProseMirror .toggle-summary:hover,
+.tiptap .toggle-summary:hover {
   background: #f3f4f6 !important;
 }
 
-.toggle-arrow {
+.toggle-summary::marker,
+.ProseMirror .toggle-summary::marker,
+.tiptap .toggle-summary::marker {
+  content: none !important;
+  display: none !important;
+}
+
+.toggle-icon {
   margin-right: 0.5rem !important;
   transition: transform 0.2s !important;
   display: inline-block !important;
   user-select: none !important;
-  cursor: pointer !important;
+  font-size: 12px !important;
+  transform: rotate(0deg) !important;
 }
 
-.toggle-title {
+.toggle-text {
   flex: 1 !important;
   outline: none !important;
-}
-
-.toggle-content.visible-in-edit {
-  padding: 1rem !important;
-  margin: 0 !important;
-  outline: none !important;
-  display: block !important;
   user-select: text !important;
 }
 
-.toggle-content.visible-in-edit p {
+.toggle-content,
+.ProseMirror .toggle-content,
+.tiptap .toggle-content {
+  padding: 1rem !important;
+  margin: 0 !important;
+  outline: none !important;
+  user-select: text !important;
+}
+
+.toggle-content p,
+.ProseMirror .toggle-content p,
+.tiptap .toggle-content p {
   margin: 0.5rem 0 !important;
   outline: none !important;
 }
 
-/* Toggle functionality - only in view mode */
-.toggle-block:not(.editable-toggle) .toggle-content {
-  display: none;
+/* When details is open, rotate arrow */
+details.toggle-block[open] .toggle-icon {
+  transform: rotate(90deg) !important;
 }
 
-.toggle-block:not(.editable-toggle).open .toggle-content {
-  display: block;
-}
-
-.toggle-block:not(.editable-toggle).open .toggle-arrow {
-  transform: rotate(90deg);
-}
-
-/* Legacy toggle support */
-.toggle-block,
-.ProseMirror .toggle-block {
-  margin: 1.5rem 0 !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 0.5rem !important;
-  overflow: hidden !important;
-  background: white !important;
-}
-
-.toggle-summary,
-.ProseMirror .toggle-summary {
-  padding: 0.75rem 1rem !important;
-  background: #f9fafb !important;
-  cursor: pointer !important;
-  font-weight: 500 !important;
-  border-bottom: 1px solid #e5e7eb !important;
-  user-select: none !important;
-  margin: 0 !important;
-  display: block !important;
-  outline: none !important;
-}
-
-.toggle-content,
+/* Ensure content is always editable in Tiptap editor */
+.tiptap .toggle-content,
 .ProseMirror .toggle-content {
-  padding: 1rem !important;
-  margin: 0 !important;
-  outline: none !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* In view mode only, respect the details/summary behavior */
+.article-content .toggle-block:not([open]) .toggle-content {
+  display: none !important;
 }
 
 /* Slash Command Menu */
