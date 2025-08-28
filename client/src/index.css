@@ -2,96 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ReactQuill Editor Dropdown Fix */
-.ql-picker-options {
-  background-color: white !important;
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: 6px !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
-  z-index: 50 !important;
+/* Modern Tiptap Editor Styling */
+.tiptap {
+  outline: none;
+  padding: 1rem;
+  font-family: inherit;
+  line-height: 1.7;
+  color: #374151;
 }
 
-.ql-picker-options .ql-picker-item {
-  background-color: white !important;
-  color: hsl(var(--foreground)) !important;
-  padding: 8px 12px !important;
+.tiptap p {
+  margin: 1rem 0;
 }
 
-/* Higher specificity hover fix */
-.ql-toolbar .ql-picker .ql-picker-options .ql-picker-item:hover,
-.ql-picker-options .ql-picker-item:hover {
-  background-color: #f3f4f6 !important;
-  background: #f3f4f6 !important;
-  color: #1f2937 !important;
-  opacity: 1 !important;
+.tiptap h1, .tiptap h2, .tiptap h3 {
+  margin: 1.5rem 0 1rem 0;
+  font-weight: 600;
 }
 
-.ql-picker-options .ql-picker-item.ql-selected {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
+.tiptap h1 { font-size: 2rem; }
+.tiptap h2 { font-size: 1.5rem; }
+.tiptap h3 { font-size: 1.25rem; }
+
+.tiptap ul, .tiptap ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
 }
 
-/* Dark mode support for ReactQuill dropdowns */
-.dark .ql-picker-options {
-  background-color: hsl(var(--popover)) !important;
-  border-color: hsl(var(--border)) !important;
+.tiptap blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #6b7280;
 }
 
-.dark .ql-picker-options .ql-picker-item {
-  background-color: hsl(var(--popover)) !important;
-  color: hsl(var(--popover-foreground)) !important;
+.tiptap code {
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
 }
 
-/* Higher specificity dark mode hover fix */
-.dark .ql-toolbar .ql-picker .ql-picker-options .ql-picker-item:hover,
-.dark .ql-picker-options .ql-picker-item:hover {
-  background-color: #374151 !important;
-  background: #374151 !important;
-  color: #f9fafb !important;
-  opacity: 1 !important;
+.tiptap pre {
+  background: #1f2937;
+  color: #f9fafb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
 }
 
-.dark .ql-picker-options .ql-picker-item.ql-selected {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
+.tiptap pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
 }
 
-/* Additional overrides to ensure solid hover backgrounds */
-.ql-picker-options .ql-picker-item,
-.ql-picker.ql-size .ql-picker-options .ql-picker-item,
-.ql-picker.ql-header .ql-picker-options .ql-picker-item,
-.ql-picker.ql-font .ql-picker-options .ql-picker-item {
-  background: white !important;
-  opacity: 1 !important;
+.tiptap a {
+  color: #3b82f6;
+  text-decoration: underline;
 }
 
-.ql-picker-options .ql-picker-item:hover,
-.ql-picker.ql-size .ql-picker-options .ql-picker-item:hover,
-.ql-picker.ql-header .ql-picker-options .ql-picker-item:hover,
-.ql-picker.ql-font .ql-picker-options .ql-picker-item:hover {
-  background: #f3f4f6 !important;
-  background-color: #f3f4f6 !important;
-  opacity: 1 !important;
-  color: #1f2937 !important;
-}
-
-/* Dark mode additional overrides */
-.dark .ql-picker-options .ql-picker-item,
-.dark .ql-picker.ql-size .ql-picker-options .ql-picker-item,
-.dark .ql-picker.ql-header .ql-picker-options .ql-picker-item,
-.dark .ql-picker.ql-font .ql-picker-options .ql-picker-item {
-  background: hsl(var(--popover)) !important;
-  opacity: 1 !important;
-}
-
-.dark .ql-picker-options .ql-picker-item:hover,
-.dark .ql-picker.ql-size .ql-picker-options .ql-picker-item:hover,
-.dark .ql-picker.ql-header .ql-picker-options .ql-picker-item:hover,
-.dark .ql-picker.ql-font .ql-picker-options .ql-picker-item:hover {
-  background: #374151 !important;
-  background-color: #374151 !important;
-  opacity: 1 !important;
-  color: #f9fafb !important;
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
 }
 
 :root {

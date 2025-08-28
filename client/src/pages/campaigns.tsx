@@ -11,8 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+
 import type { TemplateFolder, EmailTemplate, SmsTemplate } from "@shared/schema";
 
 export default function Campaigns() {
@@ -1011,28 +1010,12 @@ export default function Campaigns() {
                         <label className="block text-sm font-medium">Email Content</label>
                         <MergeTagsDropdown onInsert={insertMergeTagIntoEmail} />
                       </div>
-                      <div className="border rounded-md overflow-hidden">
-                        <ReactQuill
-                          theme="snow"
-                          value={emailContent}
-                          onChange={setEmailContent}
-                          modules={{
-                            toolbar: [
-                              [{ 'header': '1' }, { 'header': '2' }, 'bold', 'italic', 'underline'],
-                              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                              ['link', 'clean']
-                            ],
-                          }}
-                          formats={[
-                            'header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'
-                          ]}
-                          placeholder="Enter your email content with rich formatting..."
-                          style={{ 
-                            minHeight: '250px',
-                            border: 'none'
-                          }}
-                        />
-                      </div>
+                      <Textarea
+                        value={emailContent}
+                        onChange={(e) => setEmailContent(e.target.value)}
+                        placeholder="Enter your email content..."
+                        className="min-h-[250px] resize-none"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Tags</label>

@@ -17,8 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+
 import type { Department, Staff, Position, InsertPosition, Role } from "@shared/schema";
 
 type TeamWorkflow = {
@@ -677,23 +676,11 @@ export default function TeamDetail() {
                             <FormItem>
                               <FormLabel>Position Job Description</FormLabel>
                               <FormControl>
-                                <div className="min-h-[300px]">
-                                  <ReactQuill
-                                    theme="snow"
-                                    value={field.value || ""}
-                                    onChange={field.onChange}
-                                    placeholder="Detailed description of this position, responsibilities, requirements, etc."
-                                    style={{ height: "250px" }}
-                                    modules={{
-                                      toolbar: [
-                                        [{ 'header': [1, 2, false] }],
-                                        ['bold', 'italic', 'underline'],
-                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                        ['clean']
-                                      ],
-                                    }}
-                                  />
-                                </div>
+                                <Textarea
+                                  placeholder="Detailed description of this position, responsibilities, requirements, etc."
+                                  className="min-h-[250px] resize-none"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

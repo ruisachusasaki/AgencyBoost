@@ -13,8 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UploadResult } from "@uppy/core";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { apiRequest } from "@/lib/queryClient";
 import type { Staff, TimeOffRequest } from "@shared/schema";
@@ -538,28 +537,11 @@ export default function MyProfile() {
                     
                     <div className="space-y-2">
                       <Label>Signature Content</Label>
-                      <ReactQuill
+                      <Textarea
                         value={formData.signature}
-                        onChange={(value) => handleInputChange('signature', value)}
-                        modules={{
-                          toolbar: [
-                            [{ 'header': [1, 2, false] }],
-                            ['bold', 'italic', 'underline'],
-                            [{ 'color': [] }, { 'background': [] }],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            ['link'],
-                            ['clean']
-                          ],
-                        }}
-                        formats={[
-                          'header', 'bold', 'italic', 'underline',
-                          'color', 'background', 'list', 'bullet', 'link'
-                        ]}
-                        style={{ 
-                          height: '200px',
-                          marginBottom: '50px'
-                        }}
-                        className={!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}
+                        onChange={(e) => handleInputChange('signature', e.target.value)}
+                        placeholder="Enter your email signature..."
+                        className={`min-h-[200px] resize-none ${!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}`}
                       />
                     </div>
                     

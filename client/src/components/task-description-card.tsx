@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Task } from "@shared/schema";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Textarea } from "@/components/ui/textarea";
 
 interface TaskDescriptionCardProps {
   task: Task;
@@ -16,32 +15,9 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [editValue, setEditValue] = useState(task.description || "");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const quillRef = useRef<ReactQuill>(null);
-
   // Configure display limits
   const COLLAPSED_HEIGHT = 150; // pixels - increased for better text visibility
   const COLLAPSED_LINES = 6; // maximum lines to show when collapsed
-
-  // Quill toolbar configuration
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['blockquote', 'code-block'],
-      ['link'],
-      [{ 'align': [] }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['clean']
-    ],
-  };
-
-  const quillFormats = [
-    'header', 'font', 'size',
-    'bold', 'italic', 'underline', 'strike', 'blockquote',
-    'list', 'bullet', 'indent',
-    'link', 'align', 'color', 'background', 'code-block'
-  ];
 
   const handleSave = async () => {
     if (editValue === task.description) {
@@ -109,22 +85,14 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
       <CardContent className="group">
         {isEditing ? (
           <div className="space-y-3">
-            <div 
-              className="quill-editor-container"
+            <Textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              placeholder="Add a description for this task..."
+              className="min-h-[150px] resize-none"
               onKeyDown={handleKeyDown}
-            >
-              <ReactQuill
-                ref={quillRef}
-                theme="snow"
-                value={editValue}
-                onChange={setEditValue}
-                modules={quillModules}
-                formats={quillFormats}
-                placeholder="Add a description for this task..."
-                style={{ minHeight: '150px' }}
-                data-testid="quill-description"
-              />
-            </div>
+              data-testid="textarea-description"
+            />
             <div className="flex items-center gap-2">
               <Button
                 size="sm"

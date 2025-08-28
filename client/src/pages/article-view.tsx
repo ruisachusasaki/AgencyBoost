@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link as RouterLink } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +15,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import TiptapLink from '@tiptap/extension-link';
+import TiptapImage from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableHeader from '@tiptap/extension-table-header';
+import TableCell from '@tiptap/extension-table-cell';
 
 export default function ArticleView() {
   const { id } = useParams();
@@ -29,12 +36,47 @@ export default function ArticleView() {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
 
+  // Tiptap Editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: 'Write your article content...',
+      }),
+      TiptapLink.configure({
+        openOnClick: false,
+      }),
+      TiptapImage.configure({
+        HTMLAttributes: {
+          class: 'rounded-lg max-w-full h-auto',
+        },
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+    ],
+    content: editContent,
+    onUpdate: ({ editor }) => {
+      setEditContent(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-lg max-w-none focus:outline-none min-h-[400px] p-4',
+      },
+    },
+  });
+
   const { data: article, isLoading } = useQuery({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
 
+  // Comments query  
   const { data: comments = [] } = useQuery({
     queryKey: [`/api/knowledge-base/articles/${id}/comments`],
+    enabled: !!id,
   });
 
   const likeMutation = useMutation({
@@ -132,6 +174,7 @@ export default function ArticleView() {
     if (article) {
       setEditTitle(article.title || "");
       setEditContent(article.content || "");
+      editor?.commands.setContent(article.content || "");
       setIsEditing(true);
     }
   };
@@ -140,6 +183,7 @@ export default function ArticleView() {
     setIsEditing(false);
     setEditTitle("");
     setEditContent("");
+    editor?.commands.setContent("");
   };
 
   const saveEdit = () => {
@@ -176,12 +220,12 @@ export default function ArticleView() {
             <p className="text-muted-foreground mb-4">
               The article you're looking for doesn't exist or has been removed.
             </p>
-            <Link href="/resources">
+            <RouterLink href="/resources">
               <Button>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Knowledge Base
               </Button>
-            </Link>
+            </RouterLink>
           </CardContent>
         </Card>
       </div>
@@ -192,12 +236,12 @@ export default function ArticleView() {
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/resources">
+        <RouterLink href="/resources">
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Knowledge Base
           </Button>
-        </Link>
+        </RouterLink>
 
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -316,26 +360,106 @@ export default function ArticleView() {
           
           <div className="prose prose-lg max-w-none">
             {isEditing ? (
-              <ReactQuill
-                value={editContent}
-                onChange={setEditContent}
-                theme="snow"
-                placeholder="Write your article content..."
-                style={{ 
-                  minHeight: '400px',
-                  border: 'none'
-                }}
-                modules={{
-                  toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['blockquote', 'code-block'],
-                    ['link', 'image'],
-                    ['clean']
-                  ],
-                }}
-              />
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                {/* Modern Tiptap Toolbar */}
+                <div className="flex items-center gap-1 px-4 py-3 border-b border-gray-200 bg-gray-50">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleBold().run()}
+                    className={`h-8 px-2 ${editor?.isActive('bold') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    <strong>B</strong>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleItalic().run()}
+                    className={`h-8 px-2 ${editor?.isActive('italic') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    <em>I</em>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleStrike().run()}
+                    className={`h-8 px-2 ${editor?.isActive('strike') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    <s>S</s>
+                  </Button>
+                  <div className="w-px h-6 bg-gray-300 mx-1" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+                    className={`h-8 px-2 ${editor?.isActive('heading', { level: 1 }) ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    H1
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                    className={`h-8 px-2 ${editor?.isActive('heading', { level: 2 }) ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    H2
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                    className={`h-8 px-2 ${editor?.isActive('heading', { level: 3 }) ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    H3
+                  </Button>
+                  <div className="w-px h-6 bg-gray-300 mx-1" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                    className={`h-8 px-2 ${editor?.isActive('bulletList') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    •
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                    className={`h-8 px-2 ${editor?.isActive('orderedList') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    1.
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+                    className={`h-8 px-2 ${editor?.isActive('blockquote') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    "
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+                    className={`h-8 px-2 ${editor?.isActive('codeBlock') ? 'bg-blue-100 text-blue-700' : ''}`}
+                  >
+                    &lt;/&gt;
+                  </Button>
+                </div>
+                
+                {/* Tiptap Editor Content */}
+                <EditorContent editor={editor} className="min-h-[400px]" />
+              </div>
             ) : (
               <div dangerouslySetInnerHTML={{ __html: article?.content || '' }} />
             )}

@@ -13,8 +13,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+
+
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -3204,29 +3204,13 @@ export default function EnhancedClientDetail() {
                         {/* Message Field - WYSIWYG Editor */}
                         <div>
                           <Label className="text-sm font-medium text-gray-700">Message</Label>
-                          <div className="mt-1 border rounded-md overflow-hidden">
-                            <ReactQuill
-                              theme="snow"
-                              value={emailData.message}
-                              onChange={handleQuillChange}
-                              modules={{
-                                toolbar: [
-                                  [{ 'header': '1' }, { 'header': '2' }, 'bold', 'italic', 'underline'],
-                                  [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                                  ['link', 'clean']
-                                ],
-                              }}
-                              formats={[
-                                'header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'
-                              ]}
-                              placeholder="Type your message here..."
-                              style={{ 
-                                minHeight: '120px',
-                                border: 'none'
-                              }}
-                              readOnly={!!client?.dndAll || !!client?.dndEmail}
-                            />
-                          </div>
+                          <Textarea
+                            placeholder="Type your message here..."
+                            value={emailData.message}
+                            onChange={(e) => handleEmailFieldChange('message', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1 min-h-[120px] resize-none"
+                          />
                         </div>
 
                         {/* Action Bar */}
