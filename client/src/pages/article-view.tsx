@@ -319,8 +319,19 @@ export default function ArticleView() {
     const timeout = setTimeout(() => {
       const addClickHandlers = () => {
         console.log('Adding toggle click handlers...');
+        const articleContent = document.querySelector('.article-content');
+        console.log('Article content element:', articleContent);
+        console.log('Article content HTML:', articleContent?.innerHTML);
+        
         const toggles = document.querySelectorAll('.article-content .simple-toggle-wrapper, .article-content .simple-toggle, .article-content .simple-toggle-block');
         console.log('Found toggles:', toggles.length);
+        
+        // Also try finding any div that might be a toggle
+        const allDivs = document.querySelectorAll('.article-content div');
+        console.log('All divs in content:', allDivs.length);
+        allDivs.forEach((div, i) => {
+          console.log(`Div ${i}:`, div.className, div.outerHTML.substring(0, 100) + '...');
+        });
         
         toggles.forEach((toggle, index) => {
           console.log(`Processing toggle ${index}:`, toggle);
