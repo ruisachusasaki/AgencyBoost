@@ -33,6 +33,8 @@ import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import { SlashCommand, getSlashCommands } from '@/components/slash-command';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { CalloutExtension, ToggleExtension, ToggleSummary, ToggleContent, ColumnsExtension, ColumnExtension } from '@/components/tiptap-extensions';
 
 export default function ArticleView() {
   const { id } = useParams();
@@ -49,6 +51,7 @@ export default function ArticleView() {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      TextStyle,
       Placeholder.configure({
         placeholder: 'Write your article content...',
       }),
@@ -80,6 +83,12 @@ export default function ArticleView() {
       Highlight.configure({
         multicolor: true,
       }),
+      CalloutExtension,
+      ToggleExtension,
+      ToggleSummary,
+      ToggleContent,
+      ColumnsExtension,
+      ColumnExtension,
 
       Extension.create({
         name: 'slashCommand',
