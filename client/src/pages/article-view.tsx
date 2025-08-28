@@ -230,7 +230,7 @@ export default function ArticleView() {
         htmlContent.style.height = 'auto';
       });
 
-      // Add delete buttons to old toggles
+      // Add delete buttons to old toggles AND click handlers to new toggles
       const toggleBlocks = editorElement.querySelectorAll('.toggle-block, details[data-toggle]');
       toggleBlocks.forEach((block: Element) => {
         const htmlBlock = block as HTMLElement;
@@ -261,7 +261,6 @@ export default function ArticleView() {
             e.preventDefault();
             e.stopPropagation();
             htmlBlock.remove();
-            // Update editor content
             setEditContent(editor.getHTML());
           });
 
@@ -275,6 +274,20 @@ export default function ArticleView() {
 
           htmlBlock.style.position = 'relative';
           htmlBlock.appendChild(deleteBtn);
+        }
+      });
+
+      // Add click handlers to new simple toggles
+      const simpleToggles = editorElement.querySelectorAll('.simple-toggle-block');
+      simpleToggles.forEach((toggle: Element) => {
+        const htmlToggle = toggle as HTMLElement;
+        const summary = htmlToggle.querySelector('.simple-toggle-summary');
+        if (summary && !summary.hasAttribute('data-click-added')) {
+          summary.setAttribute('data-click-added', 'true');
+          summary.addEventListener('click', (e) => {
+            e.preventDefault();
+            htmlToggle.classList.toggle('collapsed');
+          });
         }
       });
     }, 500);

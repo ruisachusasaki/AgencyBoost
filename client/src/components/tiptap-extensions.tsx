@@ -80,7 +80,6 @@ export const ToggleExtension = Node.create({
       mergeAttributes(HTMLAttributes, {
         'data-toggle': '',
         class: 'simple-toggle-block',
-        'onclick': 'this.classList.toggle("collapsed")',
       }),
       0,
     ];
