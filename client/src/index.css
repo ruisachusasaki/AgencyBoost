@@ -220,7 +220,85 @@ li[data-type="taskItem"][data-checked="true"] > div,
   margin: 0.5rem 0;
 }
 
-/* Enhanced Toggle System */
+/* Simple Toggle System */
+.simple-toggle {
+  margin: 1.5rem 0 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+  background: white !important;
+  position: relative !important;
+}
+
+.simple-toggle-header {
+  padding: 0.75rem 1rem !important;
+  background: #f9fafb !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  outline: none !important;
+  user-select: none !important;
+}
+
+.simple-toggle-header:hover {
+  background: #f3f4f6 !important;
+}
+
+.simple-toggle-arrow {
+  margin-right: 0.5rem !important;
+  transition: transform 0.2s !important;
+  display: inline-block !important;
+  user-select: none !important;
+  font-size: 12px !important;
+  transform: rotate(0deg) !important;
+}
+
+.simple-toggle-title {
+  flex: 1 !important;
+  outline: none !important;
+  user-select: text !important;
+  cursor: text !important;
+}
+
+.simple-toggle-content {
+  padding: 1rem !important;
+  margin: 0 !important;
+  outline: none !important;
+  user-select: text !important;
+  display: none !important;
+}
+
+.simple-toggle-content p {
+  margin: 0.5rem 0 !important;
+  outline: none !important;
+}
+
+/* When toggle is open */
+.simple-toggle.open .simple-toggle-content {
+  display: block !important;
+}
+
+.simple-toggle.open .simple-toggle-arrow {
+  transform: rotate(90deg) !important;
+}
+
+/* In editor mode, always show content */
+.tiptap .simple-toggle-content,
+.ProseMirror .simple-toggle-content {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.tiptap .simple-toggle-header,
+.ProseMirror .simple-toggle-header {
+  cursor: text !important;
+}
+
+/* Legacy toggle cleanup */
 .toggle-block,
 .ProseMirror .toggle-block,
 .tiptap .toggle-block {
@@ -232,82 +310,39 @@ li[data-type="taskItem"][data-checked="true"] > div,
   position: relative !important;
 }
 
-.toggle-summary,
-.ProseMirror .toggle-summary,
-.tiptap .toggle-summary {
-  padding: 0.75rem 1rem !important;
-  background: #f9fafb !important;
-  cursor: pointer !important;
-  font-weight: 500 !important;
-  border-bottom: 1px solid #e5e7eb !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  outline: none !important;
-  list-style: none !important;
+/* In view mode only, respect the details/summary behavior */
+.article-content details.toggle-block:not([open]) .toggle-content {
+  display: none !important;
+}
+
+/* Fix for legacy toggle content - make it deletable */
+.tiptap .toggle-block,
+.ProseMirror .toggle-block {
   position: relative !important;
 }
 
-.toggle-summary:hover,
-.ProseMirror .toggle-summary:hover,
-.tiptap .toggle-summary:hover {
-  background: #f3f4f6 !important;
-}
-
-.toggle-summary::marker,
-.ProseMirror .toggle-summary::marker,
-.tiptap .toggle-summary::marker {
-  content: none !important;
-  display: none !important;
-}
-
-.toggle-icon {
-  margin-right: 0.5rem !important;
-  transition: transform 0.2s !important;
-  display: inline-block !important;
-  user-select: none !important;
+.tiptap .toggle-block::before,
+.ProseMirror .toggle-block::before {
+  content: "×" !important;
+  position: absolute !important;
+  top: 4px !important;
+  right: 4px !important;
+  background: #ef4444 !important;
+  color: white !important;
+  border-radius: 50% !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   font-size: 12px !important;
-  transform: rotate(0deg) !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
 }
 
-.toggle-text {
-  flex: 1 !important;
-  outline: none !important;
-  user-select: text !important;
-}
-
-.toggle-content,
-.ProseMirror .toggle-content,
-.tiptap .toggle-content {
-  padding: 1rem !important;
-  margin: 0 !important;
-  outline: none !important;
-  user-select: text !important;
-}
-
-.toggle-content p,
-.ProseMirror .toggle-content p,
-.tiptap .toggle-content p {
-  margin: 0.5rem 0 !important;
-  outline: none !important;
-}
-
-/* When details is open, rotate arrow */
-details.toggle-block[open] .toggle-icon {
-  transform: rotate(90deg) !important;
-}
-
-/* Ensure content is always editable in Tiptap editor */
-.tiptap .toggle-content,
-.ProseMirror .toggle-content {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* In view mode only, respect the details/summary behavior */
-.article-content .toggle-block:not([open]) .toggle-content {
-  display: none !important;
+.tiptap .toggle-block:hover::before,
+.ProseMirror .toggle-block:hover::before {
+  background: #dc2626 !important;
 }
 
 /* Slash Command Menu */

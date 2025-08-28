@@ -214,18 +214,18 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
-      // Use details/summary but make content always editable during editing
-      editor.chain().focus().clearNodes().insertContent(`
-        <details class="toggle-block" open>
-          <summary class="toggle-summary">
-            <span class="toggle-icon">▶</span>
-            <span class="toggle-text">Click to toggle</span>
-          </summary>
-          <div class="toggle-content">
-            <p>This content can be toggled open and closed. You can edit this text.</p>
+      // Insert a simple, working toggle
+      editor.chain().focus().insertContent(`
+        <div class="simple-toggle" data-toggle-simple="true">
+          <div class="simple-toggle-header" onclick="this.parentElement.classList.toggle('open')">
+            <span class="simple-toggle-arrow">▶</span>
+            <span class="simple-toggle-title" contenteditable="true">Click to toggle</span>
           </div>
-        </details>
-        <p></p>
+          <div class="simple-toggle-content">
+            <p contenteditable="true">This content can be toggled open and closed. You can edit this text.</p>
+          </div>
+        </div>
+        <p><br></p>
       `).run();
     },
   },

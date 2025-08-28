@@ -4,6 +4,10 @@
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system designed for marketing agencies. Its primary purpose is to provide a complete solution for managing clients, projects, campaigns, leads, tasks, and invoices. It includes integrated reporting capabilities and offers a responsive interface for tracking business operations and campaign performance. The project aims to provide a complete, modern CRM solution for marketing agencies, enhancing efficiency and operational oversight with a focus on business vision and market potential.
 
 ## Recent Changes (August 28, 2025)
+- **Rich Text Editor Enhancement**: ✅ COMPLETED - Comprehensive Tiptap editor fixes for checklist and toggle functionality
+- **Checklist Alignment Fix**: ✅ COMPLETED - Implemented CSS Grid layout ensuring perfect horizontal alignment (checkbox LEFT, text RIGHT) using `grid-template-columns: auto 1fr`
+- **Toggle System Rebuild**: ✅ COMPLETED - Complete toggle system overhaul with div-based structure, inline JavaScript handlers, and contenteditable content for seamless editing
+- **Legacy Content Cleanup**: ✅ COMPLETED - Added red X delete buttons for removing old toggle blocks that couldn't be deleted
 - **Knowledge Base System**: ✅ COMPLETED - Full-featured Knowledge Base with categorized articles, social interactions, and advanced content management
 - **Category Management**: ✅ COMPLETED - Complete category creation system with hierarchical structure, custom icons, and color coding
 - **Hierarchical Navigation**: ✅ COMPLETED - Collapsible category tree with expand/collapse functionality using chevron icons, starting collapsed by default for clean navigation
