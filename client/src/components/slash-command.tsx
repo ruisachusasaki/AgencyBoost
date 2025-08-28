@@ -214,17 +214,13 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
-      // Insert a clean toggle using valid HTML that TipTap won't mangle
+      // Insert a clean toggle using simple paragraphs that TipTap won't style
       editor.chain().focus().insertContent(`
-        <blockquote style="border: none; background: none; margin: 0.5rem 0; padding: 0;">
-          <p style="cursor: pointer; padding: 0.5rem 0.75rem; margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.375rem; font-size: 0.875rem; color: #475569; user-select: none; display: flex; align-items: center; transition: all 0.2s ease;">
-            <span style="margin-right: 0.5rem; display: inline-block; font-size: 0.75rem; color: #64748b; transition: transform 0.2s ease;">▶</span>
-            <span style="font-weight: 500;">Click to toggle</span>
-          </p>
-          <div style="display: none; padding: 0.75rem 1.5rem; margin: 0.25rem 0; border-left: 2px solid #e2e8f0; background: #fafbfc;">
-            <p style="margin: 0; color: #475569; font-size: 0.875rem;">This content can be toggled open and closed. You can edit this text.</p>
-          </div>
-        </blockquote>
+        <p style="cursor: pointer; padding: 8px 12px; margin: 8px 0 4px 0; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #475569; user-select: none; display: flex; align-items: center; transition: all 0.15s ease;">
+          <span style="margin-right: 8px; display: inline-block; font-size: 12px; color: #64748b; transition: transform 0.15s ease;">▶</span>
+          <span style="font-weight: 500;">Click to toggle</span>
+        </p>
+        <p style="display: none; padding: 12px 20px; margin: 0 0 8px 0; border-left: 3px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 14px;">This content can be toggled open and closed. You can edit this text.</p>
       `).run();
     },
   },

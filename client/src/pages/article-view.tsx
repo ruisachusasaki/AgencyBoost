@@ -318,82 +318,63 @@ export default function ArticleView() {
     // Add a small delay to ensure DOM is fully rendered
     const timeout = setTimeout(() => {
       const addClickHandlers = () => {
-        // Look for blockquotes that contain toggle arrows (pattern-based detection)
-        const allBlockquotes = document.querySelectorAll('.article-content blockquote');
+        // Look for paragraphs that contain toggle arrows (pattern-based detection)
+        const allParagraphs = document.querySelectorAll('.article-content p');
         
-        const toggles: HTMLElement[] = [];
-        allBlockquotes.forEach((bq) => {
-          // Check if this blockquote contains toggle content (arrow + "Click to toggle")
-          if (bq.textContent?.includes('▶') && bq.textContent?.includes('Click to toggle')) {
-            toggles.push(bq as HTMLElement);
-          }
-        });
-        
-        toggles.forEach((toggle) => {
-          if (!toggle.hasAttribute('data-view-click-added')) {
-            toggle.setAttribute('data-view-click-added', 'true');
-            
-            // Find the paragraph with the arrow (header)
-            const allPs = toggle.querySelectorAll('p');
-            let headerP: HTMLElement | null = null;
-            let contentPs: HTMLElement[] = [];
-            let foundHeader = false;
-            
-            allPs.forEach((p) => {
-              if (!foundHeader && p.textContent?.includes('▶')) {
-                headerP = p as HTMLElement;
-                foundHeader = true;
-              } else if (foundHeader && p.textContent?.trim()) {
-                contentPs.push(p as HTMLElement);
-              }
-            });
-            
-            if (headerP) {
-              // Add hover effects
-              headerP.addEventListener('mouseenter', () => {
-                headerP.style.background = '#e2e8f0';
-                headerP.style.transform = 'translateX(2px)';
-              });
+        allParagraphs.forEach((p) => {
+          const headerP = p as HTMLElement;
+          
+          // Check if this paragraph is a toggle header (has arrow + "Click to toggle")
+          if (headerP.textContent?.includes('▶') && headerP.textContent?.includes('Click to toggle')) {
+            if (!headerP.hasAttribute('data-view-click-added')) {
+              headerP.setAttribute('data-view-click-added', 'true');
               
-              headerP.addEventListener('mouseleave', () => {
-                headerP.style.background = '#f8fafc';
-                headerP.style.transform = 'translateX(0)';
-              });
+              // Find the next paragraph which should be the content
+              const contentP = headerP.nextElementSibling as HTMLElement;
               
-              headerP.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Toggle content paragraphs
-                const isOpen = toggle.hasAttribute('data-open');
-                
-                contentPs.forEach((p) => {
-                  if (isOpen) {
-                    p.style.display = 'none';
-                  } else {
-                    p.style.display = 'block';
-                  }
+              if (contentP && contentP.tagName.toLowerCase() === 'p') {
+                // Add hover effects
+                headerP.addEventListener('mouseenter', () => {
+                  headerP.style.background = '#e2e8f0';
+                  headerP.style.transform = 'translateX(2px)';
                 });
                 
-                // Toggle arrow with smooth rotation
-                const arrowSpan = headerP.querySelector('span');
-                if (arrowSpan) {
-                  if (isOpen) {
-                    arrowSpan.textContent = '▶';
-                    arrowSpan.style.transform = 'rotate(0deg)';
-                  } else {
-                    arrowSpan.textContent = '▼';
-                    arrowSpan.style.transform = 'rotate(90deg)';
-                  }
-                }
+                headerP.addEventListener('mouseleave', () => {
+                  headerP.style.background = '#f1f5f9';
+                  headerP.style.transform = 'translateX(0)';
+                });
                 
-                // Update state
-                if (isOpen) {
-                  toggle.removeAttribute('data-open');
-                } else {
-                  toggle.setAttribute('data-open', 'true');
-                }
-              });
+                headerP.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  // Toggle content paragraph
+                  const isOpen = headerP.hasAttribute('data-open');
+                  
+                  if (isOpen) {
+                    contentP.style.display = 'none';
+                  } else {
+                    contentP.style.display = 'block';
+                  }
+                  
+                  // Toggle arrow
+                  const arrowSpan = headerP.querySelector('span');
+                  if (arrowSpan) {
+                    if (isOpen) {
+                      arrowSpan.textContent = '▶';
+                    } else {
+                      arrowSpan.textContent = '▼';
+                    }
+                  }
+                  
+                  // Update state
+                  if (isOpen) {
+                    headerP.removeAttribute('data-open');
+                  } else {
+                    headerP.setAttribute('data-open', 'true');
+                  }
+                });
+              }
             }
           }
         });
