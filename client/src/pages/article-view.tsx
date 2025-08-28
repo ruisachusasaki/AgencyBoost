@@ -277,21 +277,21 @@ export default function ArticleView() {
         }
       });
 
-      // Add click handlers to new simple toggles - NOT IN EDIT MODE
-      if (!isEditing) {
-        const simpleToggles = editorElement.querySelectorAll('.simple-toggle-block');
-        simpleToggles.forEach((toggle: Element) => {
-          const htmlToggle = toggle as HTMLElement;
-          const summary = htmlToggle.querySelector('.simple-toggle-summary');
-          if (summary && !summary.hasAttribute('data-click-added')) {
-            summary.setAttribute('data-click-added', 'true');
-            summary.addEventListener('click', (e) => {
+      // Add click handlers to new simple toggles in editor (for view mode)
+      const simpleToggles = editorElement.querySelectorAll('.simple-toggle');
+      simpleToggles.forEach((toggle: Element) => {
+        const htmlToggle = toggle as HTMLElement;
+        const header = htmlToggle.querySelector('.simple-toggle-header');
+        if (header && !header.hasAttribute('data-click-added')) {
+          header.setAttribute('data-click-added', 'true');
+          if (!isEditing) {
+            header.addEventListener('click', (e) => {
               e.preventDefault();
-              htmlToggle.classList.toggle('collapsed');
+              htmlToggle.classList.toggle('open');
             });
           }
-        });
-      }
+        }
+      });
     }, 500);
 
     return () => clearInterval(interval);
@@ -302,13 +302,13 @@ export default function ArticleView() {
     if (isEditing) return;
 
     const addClickHandlers = () => {
-      const toggles = document.querySelectorAll('.article-content .simple-toggle-block');
+      const toggles = document.querySelectorAll('.article-content .simple-toggle');
       toggles.forEach((toggle) => {
-        const summary = toggle.querySelector('.simple-toggle-summary');
-        if (summary && !summary.hasAttribute('data-view-click-added')) {
-          summary.setAttribute('data-view-click-added', 'true');
-          summary.addEventListener('click', () => {
-            toggle.classList.toggle('collapsed');
+        const header = toggle.querySelector('.simple-toggle-header');
+        if (header && !header.hasAttribute('data-view-click-added')) {
+          header.setAttribute('data-view-click-added', 'true');
+          header.addEventListener('click', () => {
+            toggle.classList.toggle('open');
           });
         }
       });

@@ -321,51 +321,78 @@ li[data-type="taskItem"][data-checked="true"] > div,
   display: block !important;
 }
 
-/* Simple Toggle System - Always visible in editor */
-.simple-toggle-block {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  margin: 4px 0;
-  background: #ffffff;
-  position: relative;
+/* CORRECT Toggle System - targeting actual classes used */
+.simple-toggle {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 4px !important;
+  margin: 2px 0 !important;
+  background: #ffffff !important;
+  position: relative !important;
+  line-height: 1.2 !important;
 }
 
-.simple-toggle-summary {
-  padding: 8px 12px;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f8fafc;
-  border-radius: 5px 5px 0 0;
-  min-height: 40px;
+.simple-toggle-header {
+  padding: 2px 6px !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background: #f8fafc !important;
+  border-radius: 3px 3px 0 0 !important;
+  min-height: 24px !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
 }
 
 .simple-toggle-content {
-  padding: 8px 12px;
-  background: #ffffff;
-  border-radius: 0 0 5px 5px;
+  padding: 2px 6px !important;
+  background: #ffffff !important;
+  border-radius: 0 0 3px 3px !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
 }
 
-/* Compact spacing in editor - CRITICAL FIX */
-.tiptap .simple-toggle-block,
-.ProseMirror .simple-toggle-block {
-  margin: 4px 0 !important;
+.simple-toggle-arrow {
+  margin-right: 6px !important;
+  transition: transform 0.2s !important;
 }
 
-.tiptap .simple-toggle-summary,
-.ProseMirror .simple-toggle-summary {
-  padding: 4px 8px !important;
-  min-height: 28px !important;
-  margin-bottom: 0 !important;
-  border-bottom: 1px solid #e5e7eb !important;
+.simple-toggle.open .simple-toggle-arrow {
+  transform: rotate(90deg) !important;
+}
+
+.simple-toggle:not(.open) .simple-toggle-content {
+  display: none !important;
+}
+
+/* FORCE ULTRA COMPACT IN EDITOR - targeting correct classes */
+.tiptap .simple-toggle,
+.ProseMirror .simple-toggle {
+  margin: 1px 0 !important;
+  padding: 0 !important;
+}
+
+.tiptap .simple-toggle-header,
+.ProseMirror .simple-toggle-header {
+  padding: 1px 4px !important;
+  min-height: 20px !important;
+  margin: 0 !important;
+  line-height: 1.1 !important;
 }
 
 .tiptap .simple-toggle-content,
 .ProseMirror .simple-toggle-content {
-  padding: 4px 8px !important;
-  margin-top: 0 !important;
+  padding: 1px 4px !important;
+  margin: 0 !important;
+  line-height: 1.1 !important;
+  display: block !important; /* Always visible in editor */
+}
+
+/* Hide collapse functionality in editor */
+.tiptap .simple-toggle:not(.open) .simple-toggle-content,
+.ProseMirror .simple-toggle:not(.open) .simple-toggle-content {
+  display: block !important;
 }
 
 /* Remove any default paragraph margins inside toggles */
@@ -395,6 +422,22 @@ li[data-type="taskItem"][data-checked="true"] > div,
 .ProseMirror .simple-toggle-content > * {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+}
+
+/* EMERGENCY FIX - Reduce excessive paragraph spacing in editor */
+.tiptap p,
+.ProseMirror p {
+  margin-top: 0.25em !important;
+  margin-bottom: 0.25em !important;
+  line-height: 1.4 !important;
+}
+
+/* Target empty paragraphs specifically */
+.tiptap p:empty,
+.ProseMirror p:empty {
+  margin: 0 !important;
+  line-height: 0.5 !important;
+  min-height: 8px !important;
 }
 
 /* In view mode, allow collapsing */
