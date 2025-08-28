@@ -313,45 +313,77 @@ export default function ArticleView() {
 
   // Add click handlers for toggles in view mode
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditing || !article?.content) return;
 
-    const addClickHandlers = () => {
-      const toggles = document.querySelectorAll('.article-content .simple-toggle-wrapper, .article-content .simple-toggle, .article-content .simple-toggle-block');
-      toggles.forEach((toggle) => {
-        const header = toggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
-        if (header && !header.hasAttribute('data-view-click-added')) {
-          header.setAttribute('data-view-click-added', 'true');
-          header.addEventListener('click', () => {
-            const content = toggle.querySelector('.simple-toggle-content');
-            const arrow = toggle.querySelector('.toggle-arrow');
+    // Add a small delay to ensure DOM is fully rendered
+    const timeout = setTimeout(() => {
+      const addClickHandlers = () => {
+        console.log('Adding toggle click handlers...');
+        const toggles = document.querySelectorAll('.article-content .simple-toggle-wrapper, .article-content .simple-toggle, .article-content .simple-toggle-block');
+        console.log('Found toggles:', toggles.length);
+        
+        toggles.forEach((toggle, index) => {
+          console.log(`Processing toggle ${index}:`, toggle);
+          const header = toggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
+          console.log(`Found header for toggle ${index}:`, header);
+          
+          if (header && !header.hasAttribute('data-view-click-added')) {
+            header.setAttribute('data-view-click-added', 'true');
+            console.log(`Adding click handler to toggle ${index}`);
             
-            if (content) {
-              if (content.style.display === 'none' || !content.style.display) {
-                content.style.display = 'block';
-                if (arrow) arrow.textContent = '▼';
-                toggle.classList.add('open');
-              } else {
-                content.style.display = 'none';
-                if (arrow) arrow.textContent = '▶';
-                toggle.classList.remove('open');
+            header.addEventListener('click', (e) => {
+              console.log('Toggle clicked!', toggle);
+              e.preventDefault();
+              e.stopPropagation();
+              
+              const content = toggle.querySelector('.simple-toggle-content');
+              const arrow = toggle.querySelector('.toggle-arrow');
+              
+              console.log('Content element:', content);
+              console.log('Arrow element:', arrow);
+              
+              if (content) {
+                const isHidden = content.style.display === 'none' || 
+                                window.getComputedStyle(content).display === 'none';
+                
+                if (isHidden) {
+                  content.style.display = 'block';
+                  if (arrow) arrow.textContent = '▼';
+                  toggle.classList.add('open');
+                  console.log('Toggle opened');
+                } else {
+                  content.style.display = 'none';
+                  if (arrow) arrow.textContent = '▶';
+                  toggle.classList.remove('open');
+                  console.log('Toggle closed');
+                }
               }
-            }
-          });
-        }
+            });
+          }
+        });
+      };
+
+      addClickHandlers();
+      
+      // Re-run when content changes
+      const observer = new MutationObserver(() => {
+        console.log('Content mutated, re-adding handlers');
+        addClickHandlers();
       });
-    };
+      
+      const articleContent = document.querySelector('.article-content');
+      if (articleContent) {
+        observer.observe(articleContent, { childList: true, subtree: true });
+      }
 
-    addClickHandlers();
-    
-    // Re-run when content changes
-    const observer = new MutationObserver(addClickHandlers);
-    const articleContent = document.querySelector('.article-content');
-    if (articleContent) {
-      observer.observe(articleContent, { childList: true, subtree: true });
-    }
+      return () => {
+        observer.disconnect();
+        clearTimeout(timeout);
+      };
+    }, 100);
 
-    return () => observer.disconnect();
-  }, [isEditing, article?.content]);
+    return () => clearTimeout(timeout);
+  }, [isEditing, article?.content, article?.id]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
