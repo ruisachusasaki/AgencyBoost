@@ -73,6 +73,7 @@ export default function ArticleView() {
         HTMLAttributes: {
           class: 'task-list',
         },
+        itemTypeName: 'taskItem',
       }),
       TaskItem.configure({
         HTMLAttributes: {

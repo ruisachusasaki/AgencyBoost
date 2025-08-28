@@ -76,28 +76,85 @@
 .tiptap ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
+  margin: 1rem 0;
 }
 
 .tiptap li[data-type="taskItem"] {
   display: flex;
   align-items: flex-start;
-  margin: 0.5rem 0;
+  margin: 0.25rem 0;
+  position: relative;
 }
 
 .tiptap li[data-type="taskItem"] > label {
+  display: flex;
+  align-items: center;
   margin-right: 0.5rem;
-  margin-top: 0.125rem;
+  margin-top: 0.1rem;
   user-select: none;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tiptap li[data-type="taskItem"] > label > input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .tiptap li[data-type="taskItem"] > div {
   flex: 1;
+  min-width: 0;
 }
 
 .tiptap li[data-type="taskItem"][data-checked="true"] > div {
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+.tiptap li[data-type="taskItem"] p {
+  margin: 0;
+  display: inline;
+}
+
+/* Additional task item overrides for better layout */
+.tiptap ul[data-type="taskList"] li {
+  display: flex !important;
+  align-items: flex-start !important;
+  list-style: none !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 0 !important;
+}
+
+.tiptap ul[data-type="taskList"] li > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.tiptap ul[data-type="taskList"] li:before {
+  content: none !important;
+}
+
+.tiptap ul[data-type="taskList"] li label {
+  flex-shrink: 0 !important;
+  margin-right: 0.5rem !important;
+  margin-top: 0.1rem !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.tiptap ul[data-type="taskList"] li label input {
+  margin: 0 !important;
+}
+
+.tiptap ul[data-type="taskList"] li > div {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.tiptap ul[data-type="taskList"] li > div > * {
+  display: inline !important;
+  margin: 0 !important;
 }
 
 /* Highlight Styling */
