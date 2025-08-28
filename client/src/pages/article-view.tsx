@@ -209,6 +209,79 @@ export default function ArticleView() {
     }
   }, [isEditing, article, editor]);
 
+  // Fix toggle visibility and add delete functionality
+  useEffect(() => {
+    if (!isEditing || !editor) return;
+
+    const interval = setInterval(() => {
+      const editorElement = editor.view.dom;
+      if (!editorElement) return;
+
+      // Force show all toggle content
+      const toggleContents = editorElement.querySelectorAll('.toggle-content, [data-toggle-content]');
+      toggleContents.forEach((content: Element) => {
+        const htmlContent = content as HTMLElement;
+        htmlContent.style.display = 'block';
+        htmlContent.style.visibility = 'visible';
+        htmlContent.style.opacity = '1';
+        htmlContent.style.maxHeight = 'none';
+        htmlContent.style.overflow = 'visible';
+        htmlContent.style.position = 'static';
+        htmlContent.style.height = 'auto';
+      });
+
+      // Add delete buttons to old toggles
+      const toggleBlocks = editorElement.querySelectorAll('.toggle-block, details[data-toggle]');
+      toggleBlocks.forEach((block: Element) => {
+        const htmlBlock = block as HTMLElement;
+        if (!htmlBlock.querySelector('.delete-toggle-btn')) {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'delete-toggle-btn';
+          deleteBtn.innerHTML = '×';
+          deleteBtn.style.cssText = `
+            position: absolute !important;
+            top: 4px !important;
+            right: 4px !important;
+            background: #ef4444 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50% !important;
+            width: 20px !important;
+            height: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            cursor: pointer !important;
+            z-index: 1000 !important;
+            font-family: monospace !important;
+          `;
+          
+          deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            htmlBlock.remove();
+            // Update editor content
+            setEditContent(editor.getHTML());
+          });
+
+          deleteBtn.addEventListener('mouseenter', () => {
+            deleteBtn.style.background = '#dc2626';
+          });
+
+          deleteBtn.addEventListener('mouseleave', () => {
+            deleteBtn.style.background = '#ef4444';
+          });
+
+          htmlBlock.style.position = 'relative';
+          htmlBlock.appendChild(deleteBtn);
+        }
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isEditing, editor]);
+
   const likeMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/knowledge-base/articles/${id}/like`);
