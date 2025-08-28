@@ -345,17 +345,29 @@ export default function ArticleView() {
                 });
                 
                 headerP.addEventListener('click', (e) => {
+                  console.log('Toggle clicked!');
+                  console.log('Header element:', headerP);
+                  console.log('Content element:', contentP);
+                  console.log('Content display before:', contentP.style.display);
+                  console.log('Content computed display before:', window.getComputedStyle(contentP).display);
+                  
                   e.preventDefault();
                   e.stopPropagation();
                   
                   // Toggle content paragraph
                   const isOpen = headerP.hasAttribute('data-open');
+                  console.log('Is currently open:', isOpen);
                   
                   if (isOpen) {
                     contentP.style.display = 'none';
+                    console.log('Setting to none');
                   } else {
                     contentP.style.display = 'block';
+                    console.log('Setting to block');
                   }
+                  
+                  console.log('Content display after:', contentP.style.display);
+                  console.log('Content computed display after:', window.getComputedStyle(contentP).display);
                   
                   // Toggle arrow
                   const arrowSpan = headerP.querySelector('span');
