@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Modern Tiptap Editor Styling */
+/* Enhanced Tiptap Editor Styling */
 .tiptap {
   outline: none;
   padding: 1rem;
@@ -70,6 +70,177 @@
   height: auto;
   border-radius: 0.5rem;
   margin: 1rem 0;
+}
+
+/* Task List Styling */
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap li[data-type="taskItem"] {
+  display: flex;
+  align-items: flex-start;
+  margin: 0.5rem 0;
+}
+
+.tiptap li[data-type="taskItem"] > label {
+  margin-right: 0.5rem;
+  margin-top: 0.125rem;
+  user-select: none;
+  cursor: pointer;
+}
+
+.tiptap li[data-type="taskItem"] > div {
+  flex: 1;
+}
+
+.tiptap li[data-type="taskItem"][data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Highlight Styling */
+.tiptap mark {
+  background: #fef08a;
+  border-radius: 0.125rem;
+  padding: 0.125rem 0.25rem;
+}
+
+/* Callout Styling */
+.callout {
+  display: flex;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid;
+}
+
+.callout-info {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.callout-warning {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.callout-danger {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+}
+
+.callout-icon {
+  margin-right: 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.callout-content {
+  flex: 1;
+}
+
+.callout-content p {
+  margin: 0;
+}
+
+/* Column Layout Styling */
+.columns-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #f9fafb;
+}
+
+.column {
+  min-height: 3rem;
+}
+
+.column p {
+  margin: 0.5rem 0;
+}
+
+/* Toggle/Collapsible Styling */
+.toggle-block {
+  margin: 1.5rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.toggle-summary {
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  cursor: pointer;
+  font-weight: 500;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+}
+
+.toggle-summary:hover {
+  background: #f3f4f6;
+}
+
+.toggle-summary::marker {
+  content: none;
+}
+
+.toggle-summary::before {
+  content: "▶";
+  margin-right: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.toggle-block[open] .toggle-summary::before {
+  transform: rotate(90deg);
+}
+
+.toggle-content {
+  padding: 1rem;
+}
+
+.toggle-content p {
+  margin: 0.5rem 0;
+}
+
+/* Dark mode support */
+.dark .tiptap {
+  color: #f3f4f6;
+}
+
+.dark .callout-info {
+  background: #1e3a8a;
+  color: #dbeafe;
+}
+
+.dark .callout-warning {
+  background: #92400e;
+  color: #fef3c7;
+}
+
+.dark .callout-danger {
+  background: #991b1b;
+  color: #fecaca;
+}
+
+.dark .columns-container {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark .toggle-summary {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark .toggle-summary:hover {
+  background: #4b5563;
 }
 
 :root {
