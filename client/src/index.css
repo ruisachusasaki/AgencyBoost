@@ -727,13 +727,120 @@ button[role="switch"],
   border-radius: var(--border-radius-pill) !important;
 }
 
-/* Ultimate debugging - if these work, our CSS is loading */
-.input-style-line {
-  background-color: red !important;
-  color: white !important;
+/* Banner Styling */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  font-weight: 500;
 }
 
-.input-style-box {
-  background-color: green !important;
-  color: white !important;
+.banner-success {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  color: #15803d;
+}
+
+.banner-info {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.banner-warning {
+  background: #fefce8;
+  border-color: #eab308;
+  color: #a16207;
+}
+
+.banner-icon {
+  margin-right: 0.75rem;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.banner-content {
+  flex: 1;
+}
+
+.banner-content p {
+  margin: 0;
+}
+
+/* Embed Container Styling */
+.embed-container {
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.embed-container iframe {
+  width: 100%;
+  height: auto;
+  min-height: 315px;
+  border: none;
+  display: block;
+}
+
+.youtube-embed,
+.loom-embed {
+  aspect-ratio: 16/9;
+  min-height: 315px;
+}
+
+.drive-embed {
+  min-height: 480px;
+}
+
+.slides-embed {
+  min-height: 569px;
+}
+
+.docs-embed,
+.sheets-embed {
+  min-height: 600px;
+}
+
+/* Table of Contents Styling */
+.table-of-contents {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.table-of-contents h3 {
+  margin: 0 0 1rem 0;
+  color: #1e293b;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.toc-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toc-item {
+  padding: 0.375rem 0;
+}
+
+.toc-item a {
+  color: #475569;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.toc-item a:hover {
+  color: #3b82f6;
+  text-decoration: underline;
 }

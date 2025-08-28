@@ -2,7 +2,8 @@ import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'rea
 import { 
   CheckSquare, Code, AlertCircle, Info, AlertTriangle, 
   Columns, ChevronRight, Type, List, ListOrdered, Quote,
-  Heading1, Heading2, Heading3
+  Heading1, Heading2, Heading3, Table, Link, Image, 
+  Menu, Video, FileText, Youtube, ExternalLink
 } from 'lucide-react';
 
 export interface SlashCommandProps {
@@ -235,6 +236,258 @@ export const getSlashCommands = (editor: any) => [
           </div>
           <div class="column">
             <p>Right column content</p>
+          </div>
+        </div>
+      `).run();
+    },
+  },
+  {
+    title: 'Table',
+    description: 'Insert a table with rows and columns',
+    icon: <Table className="h-4 w-4" />,
+    command: () => {
+      editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    },
+  },
+  {
+    title: 'Link',
+    description: 'Add a hyperlink',
+    icon: <Link className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter URL:');
+      if (url) {
+        editor.chain().focus().setLink({ href: url }).run();
+      }
+    },
+  },
+  {
+    title: 'Image',
+    description: 'Insert an image',
+    icon: <Image className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter image URL:');
+      if (url) {
+        editor.chain().focus().setImage({ src: url }).run();
+      }
+    },
+  },
+  {
+    title: 'Success Banner',
+    description: 'Add a success banner',
+    icon: <CheckSquare className="h-4 w-4" />,
+    command: () => {
+      editor.chain().focus().clearNodes().insertContent(`
+        <div class="banner banner-success">
+          <div class="banner-icon">✅</div>
+          <div class="banner-content">
+            <p>Success! This is a success banner message.</p>
+          </div>
+        </div>
+      `).run();
+    },
+  },
+  {
+    title: 'Info Banner',
+    description: 'Add an info banner',
+    icon: <Info className="h-4 w-4" />,
+    command: () => {
+      editor.chain().focus().clearNodes().insertContent(`
+        <div class="banner banner-info">
+          <div class="banner-icon">ℹ️</div>
+          <div class="banner-content">
+            <p>Information: This is an info banner message.</p>
+          </div>
+        </div>
+      `).run();
+    },
+  },
+  {
+    title: 'Warning Banner',
+    description: 'Add a warning banner',
+    icon: <AlertTriangle className="h-4 w-4" />,
+    command: () => {
+      editor.chain().focus().clearNodes().insertContent(`
+        <div class="banner banner-warning">
+          <div class="banner-icon">⚠️</div>
+          <div class="banner-content">
+            <p>Warning: This is a warning banner message.</p>
+          </div>
+        </div>
+      `).run();
+    },
+  },
+  {
+    title: 'YouTube Embed',
+    description: 'Embed a YouTube video',
+    icon: <Youtube className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter YouTube URL:');
+      if (url) {
+        let videoId = '';
+        const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+        if (match) {
+          videoId = match[1];
+          editor.chain().focus().insertContent(`
+            <div class="embed-container">
+              <iframe 
+                width="560" 
+                height="315" 
+                src="https://www.youtube.com/embed/${videoId}" 
+                frameborder="0" 
+                allowfullscreen
+                class="youtube-embed">
+              </iframe>
+            </div>
+          `).run();
+        }
+      }
+    },
+  },
+  {
+    title: 'Loom Embed',
+    description: 'Embed a Loom video',
+    icon: <Video className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter Loom URL:');
+      if (url) {
+        const match = url.match(/loom\.com\/share\/([a-zA-Z0-9]+)/);
+        if (match) {
+          const videoId = match[1];
+          editor.chain().focus().insertContent(`
+            <div class="embed-container">
+              <iframe 
+                src="https://www.loom.com/embed/${videoId}" 
+                frameborder="0" 
+                webkitallowfullscreen 
+                mozallowfullscreen 
+                allowfullscreen
+                class="loom-embed">
+              </iframe>
+            </div>
+          `).run();
+        }
+      }
+    },
+  },
+  {
+    title: 'Google Drive Embed',
+    description: 'Embed a Google Drive file',
+    icon: <FileText className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter Google Drive share URL:');
+      if (url) {
+        const match = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) {
+          const fileId = match[1];
+          editor.chain().focus().insertContent(`
+            <div class="embed-container">
+              <iframe 
+                src="https://drive.google.com/file/d/${fileId}/preview" 
+                width="640" 
+                height="480" 
+                allow="autoplay"
+                class="drive-embed">
+              </iframe>
+            </div>
+          `).run();
+        }
+      }
+    },
+  },
+  {
+    title: 'Google Slides Embed',
+    description: 'Embed Google Slides presentation',
+    icon: <ExternalLink className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter Google Slides URL:');
+      if (url) {
+        const match = url.match(/\/presentation\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) {
+          const presentationId = match[1];
+          editor.chain().focus().insertContent(`
+            <div class="embed-container">
+              <iframe 
+                src="https://docs.google.com/presentation/d/${presentationId}/embed?start=false&loop=false&delayms=3000" 
+                frameborder="0" 
+                width="960" 
+                height="569" 
+                allowfullscreen="true" 
+                mozallowfullscreen="true" 
+                webkitallowfullscreen="true"
+                class="slides-embed">
+              </iframe>
+            </div>
+          `).run();
+        }
+      }
+    },
+  },
+  {
+    title: 'Google Docs Embed',
+    description: 'Embed a Google Docs document',
+    icon: <FileText className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter Google Docs URL:');
+      if (url) {
+        const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) {
+          const docId = match[1];
+          editor.chain().focus().insertContent(`
+            <div class="embed-container">
+              <iframe 
+                src="https://docs.google.com/document/d/${docId}/edit?usp=sharing" 
+                width="100%" 
+                height="600"
+                class="docs-embed">
+              </iframe>
+            </div>
+          `).run();
+        }
+      }
+    },
+  },
+  {
+    title: 'Google Sheets Embed',
+    description: 'Embed a Google Sheets spreadsheet',
+    icon: <Table className="h-4 w-4" />,
+    command: () => {
+      const url = prompt('Enter Google Sheets URL:');
+      if (url) {
+        const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) {
+          const sheetId = match[1];
+          editor.chain().focus().insertContent(`
+            <div class="embed-container">
+              <iframe 
+                src="https://docs.google.com/spreadsheets/d/${sheetId}/edit?usp=sharing" 
+                width="100%" 
+                height="600"
+                class="sheets-embed">
+              </iframe>
+            </div>
+          `).run();
+        }
+      }
+    },
+  },
+  {
+    title: 'Table of Contents',
+    description: 'Generate a table of contents',
+    icon: <Menu className="h-4 w-4" />,
+    command: () => {
+      editor.chain().focus().clearNodes().insertContent(`
+        <div class="table-of-contents">
+          <h3>Table of Contents</h3>
+          <div class="toc-content">
+            <div class="toc-item">
+              <a href="#section1">1. Introduction</a>
+            </div>
+            <div class="toc-item">
+              <a href="#section2">2. Main Content</a>
+            </div>
+            <div class="toc-item">
+              <a href="#section3">3. Conclusion</a>
+            </div>
           </div>
         </div>
       `).run();
