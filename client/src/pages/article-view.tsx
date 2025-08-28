@@ -279,7 +279,7 @@ export default function ArticleView() {
       });
 
       // Add click handlers to new simple toggles in editor (for view mode)
-      const simpleToggles = editorElement.querySelectorAll('.simple-toggle, .simple-toggle-block');
+      const simpleToggles = editorElement.querySelectorAll('.simple-toggle-wrapper, .simple-toggle, .simple-toggle-block');
       simpleToggles.forEach((toggle: Element) => {
         const htmlToggle = toggle as HTMLElement;
         const header = htmlToggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
@@ -288,14 +288,18 @@ export default function ArticleView() {
           if (!isEditing) {
             header.addEventListener('click', (e) => {
               e.preventDefault();
-              htmlToggle.classList.toggle('open');
-              // Also update the arrow rotation
+              const content = htmlToggle.querySelector('.simple-toggle-content');
               const arrow = htmlToggle.querySelector('.toggle-arrow');
-              if (arrow) {
-                if (htmlToggle.classList.contains('open')) {
-                  arrow.textContent = '▼';
+              
+              if (content) {
+                if (content.style.display === 'none') {
+                  content.style.display = 'block';
+                  if (arrow) arrow.textContent = '▼';
+                  htmlToggle.classList.add('open');
                 } else {
-                  arrow.textContent = '▶';
+                  content.style.display = 'none';
+                  if (arrow) arrow.textContent = '▶';
+                  htmlToggle.classList.remove('open');
                 }
               }
             });
@@ -312,20 +316,24 @@ export default function ArticleView() {
     if (isEditing) return;
 
     const addClickHandlers = () => {
-      const toggles = document.querySelectorAll('.article-content .simple-toggle, .article-content .simple-toggle-block');
+      const toggles = document.querySelectorAll('.article-content .simple-toggle-wrapper, .article-content .simple-toggle, .article-content .simple-toggle-block');
       toggles.forEach((toggle) => {
         const header = toggle.querySelector('.simple-toggle-header, .simple-toggle-summary');
         if (header && !header.hasAttribute('data-view-click-added')) {
           header.setAttribute('data-view-click-added', 'true');
           header.addEventListener('click', () => {
-            toggle.classList.toggle('open');
-            // Also update the arrow rotation
+            const content = toggle.querySelector('.simple-toggle-content');
             const arrow = toggle.querySelector('.toggle-arrow');
-            if (arrow) {
-              if (toggle.classList.contains('open')) {
-                arrow.textContent = '▼';
+            
+            if (content) {
+              if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                if (arrow) arrow.textContent = '▼';
+                toggle.classList.add('open');
               } else {
-                arrow.textContent = '▶';
+                content.style.display = 'none';
+                if (arrow) arrow.textContent = '▶';
+                toggle.classList.remove('open');
               }
             }
           });

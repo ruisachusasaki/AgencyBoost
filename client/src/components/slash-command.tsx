@@ -214,14 +214,14 @@ export const getSlashCommands = (editor: any) => [
     description: 'Create a collapsible section',
     icon: <ChevronRight className="h-4 w-4" />,
     command: () => {
-      // Insert toggle using proper TipTap structure
+      // Insert a simple toggle structure that works with TipTap
       editor.chain().focus().insertContent(`
-        <div data-toggle class="simple-toggle-block">
-          <div data-toggle-summary class="simple-toggle-summary">
-            <span class="toggle-arrow" style="margin-right: 8px; transition: transform 0.2s;">▶</span>
-            Click to toggle
+        <div class="simple-toggle-wrapper">
+          <div class="simple-toggle-header" style="cursor: pointer; padding: 8px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; display: flex; align-items: center; margin: 4px 0; font-weight: 500;">
+            <span class="toggle-arrow" style="margin-right: 8px; font-size: 12px; transition: transform 0.2s;">▶</span>
+            <span contenteditable="true">Click to toggle</span>
           </div>
-          <div data-toggle-content class="simple-toggle-content">
+          <div class="simple-toggle-content" style="display: none; padding: 8px; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 4px 4px; background: white;">
             <p>This content can be toggled open and closed. You can edit this text.</p>
           </div>
         </div>
