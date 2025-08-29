@@ -23,22 +23,16 @@
   line-height: 0 !important;
 }
 
-/* Ensure empty paragraphs are visible during editing for cursor placement */
-.slate-editor p:empty {
+/* Force ALL empty paragraphs to be visible during editing */
+.slate-editor p:empty,
+.slate-editor [data-slate-node="element"]:empty {
   min-height: 1em !important;
   display: block !important;
+  visibility: visible !important;
 }
 
-/* Force all truly empty elements to be visible in editor (but not zero-width phantom elements) */
-.slate-editor [data-slate-node="element"]:empty:not([data-slate-zero-width]):not(:has([data-slate-zero-width])),
-.slate-editor div:empty:not([data-slate-zero-width]):not(:has([data-slate-zero-width])),
-.slate-editor span:empty:not([data-slate-zero-width]):not(:has([data-slate-zero-width])) {
-  min-height: 1em !important;
-  display: block !important;
-}
-
-/* Hide elements with only zero-width spaces but allow legitimate empty paragraphs */
-.slate-editor [data-slate-zero-width="n"][data-slate-length="0"] {
+/* Only hide very specific phantom elements - be extremely targeted */
+.slate-editor span[data-slate-zero-width="n"][data-slate-length="0"] {
   display: none !important;
 }
 
