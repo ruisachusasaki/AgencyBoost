@@ -6,6 +6,22 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -244,9 +260,30 @@ export default function KnowledgeBase() {
   });
   
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [deletingCategory, setDeletingCategory] = useState<any>(null);
+  const [editCategory, setEditCategory] = useState({
+    name: "",
+    description: "",
+    parentId: "none",
+    icon: "",
+    color: ""
+  });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch current user data for role checking
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/current-user');
+      return response.json();
+    }
+  });
+
+  const canManageCategories = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
 
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/knowledge-base/categories"],
@@ -299,6 +336,60 @@ export default function KnowledgeBase() {
       toast({
         title: "Error", 
         description: `Failed to create article: ${error.message || 'Unknown error'}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/categories/${id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/categories"] });
+      setIsEditCategoryDialogOpen(false);
+      setEditingCategory(null);
+      setEditCategory({
+        name: "",
+        description: "",
+        parentId: "none",
+        icon: "",
+        color: ""
+      });
+      toast({
+        title: "Success",
+        description: "Category updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Category update error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const response = await apiRequest("DELETE", `/api/knowledge-base/categories/${categoryId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/categories"] });
+      setDeletingCategory(null);
+      toast({
+        title: "Success",
+        description: "Category deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Category deletion error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete category. Make sure it has no articles or subcategories.",
         variant: "destructive",
       });
     },
@@ -384,26 +475,67 @@ export default function KnowledgeBase() {
             ) : (
               <div className="w-6 h-6" />
             )}
-            <button
-              data-testid={`button-category-${category.id}`}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
-                selectedCategory === category.id 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'hover:bg-muted'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex items-center">
-                  {category.name}
-                </span>
-                {category.articleCount && (
-                  <Badge variant="secondary" className="text-xs">
-                    {category.articleCount}
-                  </Badge>
-                )}
-              </div>
-            </button>
+            <div className="flex items-center flex-1">
+              <button
+                data-testid={`button-category-${category.id}`}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
+                  selectedCategory === category.id 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center">
+                    {category.name}
+                  </span>
+                  {category.articleCount && (
+                    <Badge variant="secondary" className="text-xs">
+                      {category.articleCount}
+                    </Badge>
+                  )}
+                </div>
+              </button>
+              
+              {/* Edit/Delete dropdown - only for Admins and Managers */}
+              {canManageCategories && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 ml-1"
+                      data-testid={`button-category-menu-${category.id}`}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditCategory(category);
+                      }}
+                      data-testid={`button-edit-category-${category.id}`}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCategory(category);
+                      }}
+                      className="text-red-600"
+                      data-testid={`button-delete-category-${category.id}`}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
           {hasChildren && isExpanded && (
             <div className="mt-1">
@@ -466,6 +598,46 @@ export default function KnowledgeBase() {
     
     console.log("Creating article with data:", articleData);
     createArticleMutation.mutate(articleData);
+  };
+
+  const handleEditCategory = (category: any) => {
+    setEditingCategory(category);
+    setEditCategory({
+      name: category.name,
+      description: category.description || "",
+      parentId: category.parentId || "none",
+      icon: category.icon || "",
+      color: category.color || ""
+    });
+    setIsEditCategoryDialogOpen(true);
+  };
+
+  const handleUpdateCategory = () => {
+    if (!editCategory.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Category name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const categoryData = {
+      name: editCategory.name.trim(),
+      description: editCategory.description.trim() || null,
+      parentId: editCategory.parentId === "none" ? null : editCategory.parentId,
+      icon: editCategory.icon || null,
+      color: editCategory.color || null
+    };
+    
+    updateCategoryMutation.mutate({
+      id: editingCategory.id,
+      data: categoryData
+    });
+  };
+
+  const handleDeleteCategory = (category: any) => {
+    setDeletingCategory(category);
   };
 
   return (
@@ -772,6 +944,111 @@ export default function KnowledgeBase() {
           )}
         </div>
       </div>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-category-name">Name *</Label>
+              <Input
+                id="edit-category-name"
+                data-testid="input-edit-category-name"
+                placeholder="Enter category name"
+                value={editCategory.name}
+                onChange={(e) => setEditCategory({ ...editCategory, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-category-description">Description</Label>
+              <Textarea
+                id="edit-category-description"
+                data-testid="textarea-edit-category-description"
+                placeholder="Enter category description"
+                value={editCategory.description}
+                onChange={(e) => setEditCategory({ ...editCategory, description: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-category-parent">Parent Category</Label>
+              <Select value={editCategory.parentId} onValueChange={(value) => setEditCategory({ ...editCategory, parentId: value })}>
+                <SelectTrigger id="edit-category-parent" data-testid="select-edit-category-parent">
+                  <SelectValue placeholder="Select parent category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (Top Level)</SelectItem>
+                  {categories.filter((cat: any) => cat.id !== editingCategory?.id).map((category: any) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-category-icon">Icon</Label>
+              <IconPicker
+                value={editCategory.icon}
+                onChange={(icon) => setEditCategory({ ...editCategory, icon })}
+                data-testid="icon-picker-edit-category"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-category-color">Color</Label>
+              <Input
+                id="edit-category-color"
+                type="color"
+                value={editCategory.color}
+                onChange={(e) => setEditCategory({ ...editCategory, color: e.target.value })}
+                data-testid="input-edit-category-color"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditCategoryDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              data-testid="button-update-category"
+              onClick={handleUpdateCategory}
+              disabled={updateCategoryMutation.isPending}
+            >
+              {updateCategoryMutation.isPending ? "Updating..." : "Update Category"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <AlertDialog open={!!deletingCategory} onOpenChange={() => setDeletingCategory(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingCategory?.name}"? 
+              This action cannot be undone and will permanently remove this category.
+              Make sure the category has no articles or subcategories before deleting.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingCategory) {
+                  deleteCategoryMutation.mutate(deletingCategory.id);
+                }
+              }}
+              disabled={deleteCategoryMutation.isPending}
+              className="bg-red-600 hover:bg-red-600/90"
+            >
+              {deleteCategoryMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
