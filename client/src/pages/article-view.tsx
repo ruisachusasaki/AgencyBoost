@@ -206,9 +206,11 @@ export default function ArticleView() {
       setIsAutoSaving(true);
     },
     onSuccess: (data) => {
-      // Don't invalidate queries on auto-save to prevent editor re-rendering and focus loss
-      // Just mark as saved - the editor already has the correct content
       setIsAutoSaving(false);
+      // Invalidate queries after a delay to refresh cached data without disrupting typing
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      }, 100);
     },
     onError: (error: any) => {
       console.error("Auto-save error:", error);
