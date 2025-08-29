@@ -12,6 +12,7 @@ import {
 // Define our schema
 type ToggleElement = {
   type: 'toggle';
+  title: string;
   children: Descendant[];
 };
 
@@ -650,7 +651,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         // Insert toggle block
         const toggleElement: ToggleElement = {
           type: 'toggle',
-          children: [{ type: 'paragraph', children: [{ text: 'Click to toggle' }] }]
+          title: 'Toggle Section',
+          children: [{ type: 'paragraph', children: [{ text: 'Type your hidden content here...' }] }]
         };
         Transforms.insertNodes(editor, toggleElement);
         break;
@@ -998,7 +1000,7 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
           className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} 
         />
         <span className="font-medium">
-          {element.children[0]?.children[0]?.text || 'Click to toggle'}
+          {element.title || 'Click to toggle'}
         </span>
       </div>
       {isOpen && (
