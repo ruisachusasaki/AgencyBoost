@@ -380,7 +380,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   return (
     <div className="slate-editor-container" ref={editorRef}>
-      <Slate editor={editor} initialValue={safeValue} onValueChange={handleEditorChange}>
+      <Slate editor={editor} value={safeValue} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
           renderLeaf={renderLeaf}

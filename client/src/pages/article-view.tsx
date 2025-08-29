@@ -249,9 +249,16 @@ export default function ArticleView() {
   
   const handleContentChange = useCallback(
     (newContent: Descendant[]) => {
-      // Update both ref and state to keep them in sync
+      // Update ref immediately for auto-save
       contentRef.current = newContent;
-      setCurrentContent(newContent);
+      
+      // Only update state if content actually changed to prevent unnecessary re-renders
+      setCurrentContent(prev => {
+        const prevStr = JSON.stringify(prev);
+        const newStr = JSON.stringify(newContent);
+        return prevStr !== newStr ? newContent : prev;
+      });
+      
       debouncedAutoSave(newContent);
     },
     [debouncedAutoSave]
