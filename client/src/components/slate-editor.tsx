@@ -142,33 +142,7 @@ interface SlateEditorProps {
 }
 
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
-  const editor = useMemo(() => {
-    const baseEditor = withHistory(withReact(createEditor()));
-    
-    // Custom normalization to ensure proper Enter key behavior
-    const { normalizeNode } = baseEditor;
-    baseEditor.normalizeNode = (entry) => {
-      const [node, path] = entry;
-      
-      // Ensure the editor always ends with a paragraph for proper Enter key behavior
-      if (path.length === 0) {
-        const lastChild = node.children[node.children.length - 1] as CustomElement;
-        if (lastChild && lastChild.type !== 'paragraph') {
-          // Add a trailing paragraph if the last element is not a paragraph
-          const paragraph: ParagraphElement = {
-            type: 'paragraph',
-            children: [{ text: '' }]
-          };
-          Transforms.insertNodes(baseEditor, paragraph, { at: [node.children.length] });
-          return;
-        }
-      }
-      
-      normalizeNode(entry);
-    };
-    
-    return baseEditor;
-  }, []);
+  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
   // Ensure we always have a valid value
   const safeValue = useMemo(() => {
@@ -345,11 +319,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       toggleMark(editor, 'italic');
     }
 
-    // Allow Slate's default Enter behavior when slash menu is closed
-    if (event.key === 'Enter' && !showSlashMenu) {
-      // Don't prevent default - let Slate handle it naturally
-      return;
-    }
+    // Let Slate handle Enter key naturally when slash menu is closed
+    // No special handling needed - Slate will handle it
   };
 
   // Formatting functions for selection toolbar
