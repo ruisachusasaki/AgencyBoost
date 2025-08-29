@@ -16,7 +16,7 @@ import {
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import type { KnowledgeBaseArticle } from "@shared/schema";
-import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
+import { BulletproofSlateEditor, createSafeEmptyDocument } from '@/components/bulletproof-slate-editor';
 import type { Descendant } from 'slate';
 
 export default function ArticleView() {
@@ -28,22 +28,22 @@ export default function ArticleView() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState<Descendant[]>(createEmptyDocument());
+  const [editContent, setEditContent] = useState<Descendant[]>(createSafeEmptyDocument());
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [currentContent, setCurrentContent] = useState<Descendant[]>(() => createEmptyDocument());
+  const [currentContent, setCurrentContent] = useState<Descendant[]>(() => createSafeEmptyDocument());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
     if (!content || content === undefined || content === null) {
-      return createEmptyDocument();
+      return createSafeEmptyDocument();
     }
     
     // If it's already Slate format (array), return it
     if (Array.isArray(content)) {
       // Ensure array is not empty and has valid structure
       if (content.length === 0) {
-        return createEmptyDocument();
+        return createSafeEmptyDocument();
       }
       // Only filter if content exists - don't filter out content with actual text
       return content;
@@ -52,7 +52,7 @@ export default function ArticleView() {
     // If it's a string (HTML), convert to basic Slate format
     if (typeof content === 'string') {
       if (content.trim() === '') {
-        return createEmptyDocument();
+        return createSafeEmptyDocument();
       }
       return [
         {
@@ -62,7 +62,7 @@ export default function ArticleView() {
       ];
     }
     
-    return createEmptyDocument();
+    return createSafeEmptyDocument();
   };
 
   // Helper function to check if Slate content has meaningful text
@@ -513,18 +513,18 @@ export default function ArticleView() {
             {isLoading ? (
               <div className="p-8 text-center">Loading article...</div>
             ) : isEditing ? (
-              <SlateEditor
+              <BulletproofSlateEditor
                 key={`edit-${id}`}
-                value={editContent && Array.isArray(editContent) && editContent.length > 0 ? editContent : createEmptyDocument()}
+                value={editContent && Array.isArray(editContent) && editContent.length > 0 ? editContent : createSafeEmptyDocument()}
                 onChange={setEditContent}
-                placeholder="Write your article content... Type '/' for commands"
+                placeholder="Write your article content..."
               />
             ) : (
-              <SlateEditor
+              <BulletproofSlateEditor
                 key={`view-${id}-${Date.now()}`}
-                value={currentContent && Array.isArray(currentContent) && currentContent.length > 0 ? currentContent : createEmptyDocument()}
+                value={currentContent && Array.isArray(currentContent) && currentContent.length > 0 ? currentContent : createSafeEmptyDocument()}
                 onChange={handleContentChange}
-                placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
+                placeholder="Start typing to edit this article..."
               />
             )}
           </div>
