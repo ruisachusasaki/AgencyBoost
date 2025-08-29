@@ -194,7 +194,10 @@ export default function ArticleView() {
       setIsAutoSaving(true);
     },
     onSuccess: (data) => {
-      console.log('✅ Auto-save successful:', data);
+      // Update local state with saved content to ensure UI reflects the saved state
+      if (data && data.content) {
+        setCurrentContent(data.content);
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
       setIsAutoSaving(false);
     },
@@ -218,19 +221,11 @@ export default function ArticleView() {
 
       autoSaveTimeoutRef.current = setTimeout(() => {
         const articleTitle = title || (article?.title as string) || "";
-        console.log('🚀 Auto-save debug:', {
-          title: articleTitle,
-          content: JSON.stringify(content),
-          hasContent: hasContent(content),
-          titleValid: typeof articleTitle === 'string' && articleTitle.trim()
-        });
         if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(content)) {
           autoSaveMutation.mutate({
             title: articleTitle,
             content,
           });
-        } else {
-          console.log('❌ Auto-save skipped - validation failed');
         }
       }, 1000); // 1 second delay
     },
@@ -240,7 +235,6 @@ export default function ArticleView() {
   // Handle content changes with auto-save
   const handleContentChange = useCallback(
     (newContent: Descendant[]) => {
-      console.log('📝 Content changed:', JSON.stringify(newContent));
       setCurrentContent(newContent);
       debouncedAutoSave(newContent);
     },
