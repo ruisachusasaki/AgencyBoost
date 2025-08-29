@@ -231,16 +231,12 @@ export default function ArticleView() {
 
       autoSaveTimeoutRef.current = setTimeout(() => {
         const articleTitle = title || (article?.title as string) || "";
-        console.log('Auto-save check:', { articleTitle, hasContentResult: hasContent(content), content });
         // Allow auto-save if there's meaningful content, even without a title
         if (hasContent(content)) {
-          console.log('Triggering auto-save');
           autoSaveMutation.mutate({
             title: articleTitle || "Untitled Article",
             content,
           });
-        } else {
-          console.log('Auto-save skipped - no content');
         }
       }, 1000); // 1 second delay
     },
@@ -268,9 +264,7 @@ export default function ArticleView() {
   // Initialize content when article loads
   useEffect(() => {
     if (article) {
-      console.log('Loading article content:', article.content);
       const parsedContent = parseContent(article.content);
-      console.log('Parsed content for display:', parsedContent);
       setCurrentContent(parsedContent);
       setEditContent(parsedContent);
       setEditTitle((article.title as string) || "");
