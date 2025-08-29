@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Element as SlateElement, Transforms, Editor, Point, Range, Path } from 'slate';
-import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
+import { Slate, Editable, withReact, ReactEditor, useSlateStatic } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { 
   Type, Heading1, Heading2, Heading3, List, ListOrdered, 
@@ -987,6 +987,8 @@ const Element = (props: any) => {
 
 // Toggle block component
 const ToggleBlock = ({ attributes, children, element }: any) => {
+  const editor = useSlateStatic();
+  const path = ReactEditor.findPath(editor, element);
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(element.title || 'Click to toggle');
@@ -1000,15 +1002,20 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
     setTitle(e.target.value);
   };
 
+  const saveTitle = () => {
+    setIsEditingTitle(false);
+    // Update the actual element in the editor
+    Transforms.setNodes(editor, { title } as Partial<ToggleElement>, { at: path });
+  };
+
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === 'Escape') {
-      setIsEditingTitle(false);
-      // In a real implementation, you'd update the editor state here
+      saveTitle();
     }
   };
 
   const handleTitleBlur = () => {
-    setIsEditingTitle(false);
+    saveTitle();
   };
 
   return (
