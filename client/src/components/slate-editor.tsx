@@ -648,11 +648,11 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
       case 'toggle':
         // Insert toggle block
-        const toggleBlock: ToggleElement = {
+        const toggleElement: ToggleElement = {
           type: 'toggle',
           children: [{ type: 'paragraph', children: [{ text: 'Click to toggle' }] }]
         };
-        Transforms.insertNodes(editor, toggleBlock);
+        Transforms.insertNodes(editor, toggleElement);
         break;
 
       case 'callout':
