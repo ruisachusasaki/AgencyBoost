@@ -301,25 +301,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    // FORCE Enter key to always work - check if handler is triggered
-    if (event.key === 'Enter') {
-      console.log('🔥 ENTER KEY DETECTED - modifier keys:', {
-        shift: event.shiftKey,
-        ctrl: event.ctrlKey, 
-        meta: event.metaKey,
-        alt: event.altKey
-      });
-      
-      if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
-        console.log('✅ ENTER without modifiers - preventing default and splitting');
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Try the simplest possible approach - just split nodes
-        Transforms.splitNodes(editor);
-        return;
-      }
-    }
+    // Let Slate handle Enter key naturally - no custom interference
 
     // Handle slash commands
     if (event.key === '/') {
