@@ -301,43 +301,57 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    // FORCE Enter key to always work - handle beginning/end cases specifically
+    // FORCE Enter key to always work - with debugging
     if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      console.log('🔥 Enter key pressed!');
       event.preventDefault();
       
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
+        console.log('✅ Selection is collapsed');
         const { anchor } = selection;
-        const currentNode = Editor.node(editor, anchor);
-        const [node, path] = currentNode;
+        console.log('📍 Anchor:', anchor);
         
-        // Check if we're in a text node and get position info
-        if (SlateElement.isElement(node) && node.type === 'paragraph') {
-          const text = Editor.string(editor, path);
-          const isAtStart = anchor.offset === 0;
-          const isAtEnd = anchor.offset === text.length;
+        try {
+          const currentNode = Editor.node(editor, anchor);
+          const [node, path] = currentNode;
+          console.log('📄 Current node:', node);
+          console.log('🛤️ Path:', path);
           
-          if (isAtStart) {
-            // At beginning: insert paragraph before current one
-            const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
-            Transforms.insertNodes(editor, newParagraph, { at: path });
-            // Move cursor to the new paragraph
-            Transforms.select(editor, { path, offset: 0 });
-          } else if (isAtEnd) {
-            // At end: insert paragraph after current one
-            const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
-            const nextPath = Path.next(path);
-            Transforms.insertNodes(editor, newParagraph, { at: nextPath });
-            // Move cursor to the new paragraph
-            Transforms.select(editor, { path: nextPath, offset: 0 });
+          // Check if we're in a paragraph
+          if (SlateElement.isElement(node) && node.type === 'paragraph') {
+            const text = Editor.string(editor, path);
+            const isAtStart = anchor.offset === 0;
+            const isAtEnd = anchor.offset === text.length;
+            
+            console.log(`📝 Text: "${text}", length: ${text.length}`);
+            console.log(`📍 Offset: ${anchor.offset}, isAtStart: ${isAtStart}, isAtEnd: ${isAtEnd}`);
+            
+            if (isAtStart) {
+              console.log('🔝 At start - inserting paragraph before');
+              const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
+              Transforms.insertNodes(editor, newParagraph, { at: path });
+              Transforms.select(editor, { path, offset: 0 });
+            } else if (isAtEnd) {
+              console.log('🔚 At end - inserting paragraph after');
+              const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
+              const nextPath = Path.next(path);
+              Transforms.insertNodes(editor, newParagraph, { at: nextPath });
+              Transforms.select(editor, { path: nextPath, offset: 0 });
+            } else {
+              console.log('🔄 In middle - splitting');
+              Transforms.splitNodes(editor);
+            }
           } else {
-            // In middle: use split (default Slate behavior)
+            console.log('⚡ Not a paragraph - splitting');
             Transforms.splitNodes(editor);
           }
-        } else {
-          // Fallback: just split
+        } catch (error) {
+          console.error('💥 Error:', error);
           Transforms.splitNodes(editor);
         }
+      } else {
+        console.log('❌ Selection not collapsed');
       }
       return;
     }
