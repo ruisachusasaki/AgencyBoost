@@ -1014,7 +1014,7 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
   return (
     <div {...attributes} className="toggle-block my-4">
       <div
-        className="toggle-header bg-gray-50 border border-gray-200 rounded-md p-3 flex items-center gap-2 hover:bg-gray-100 transition-colors"
+        className="toggle-header bg-white rounded-md p-3 flex items-center gap-2"
         contentEditable={false}
       >
         <ChevronRight 
