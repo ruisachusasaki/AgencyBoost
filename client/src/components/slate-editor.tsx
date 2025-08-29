@@ -162,8 +162,15 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           // Clear all content
           Transforms.select(editor, Editor.range(editor, []));
           Transforms.delete(editor);
-          // Insert new content
-          Transforms.insertNodes(editor, safeValue);
+          // Insert new content but skip empty first elements
+          const filteredContent = safeValue.filter((node, index) => {
+            // Remove empty paragraphs at the beginning
+            if (index === 0 && node.type === 'paragraph' && node.children?.length === 1 && node.children[0]?.text === '') {
+              return false;
+            }
+            return true;
+          });
+          Transforms.insertNodes(editor, filteredContent.length > 0 ? filteredContent : safeValue);
         });
       }
     } catch (error) {
@@ -648,10 +655,11 @@ const Leaf = ({ attributes, children, leaf }: any) => {
   return <span {...attributes}>{children}</span>;
 };
 
-// Default initial value
+// Default initial value - starts with heading to avoid empty paragraph
 export const createEmptyDocument = (): Descendant[] => [
   {
-    type: 'paragraph',
-    children: [{ text: '' }],
+    type: 'heading',
+    level: 1,
+    children: [{ text: 'Untitled' }],
   },
 ];

@@ -11,11 +11,13 @@
   margin-block-start: 0 !important;
 }
 
-/* DEBUG: Temporary background to identify spacing source */
-.slate-editor-container > div:first-child {
-  background-color: rgba(255, 0, 0, 0.1) !important;
-  margin: 0 !important;
-  padding: 0 !important;
+/* Hide empty elements that create unwanted spacing */
+.slate-editor [data-slate-node="element"]:empty,
+.slate-editor p:empty,
+.slate-editor div:empty {
+  display: none !important;
+  height: 0 !important;
+  line-height: 0 !important;
 }
 
 /* AGGRESSIVE: Target Slate's internal structure */
