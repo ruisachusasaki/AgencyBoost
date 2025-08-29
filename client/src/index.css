@@ -29,16 +29,16 @@
   display: block !important;
 }
 
-/* Force all empty elements to be visible in editor */
-.slate-editor [data-slate-node="element"]:empty,
-.slate-editor div:empty,
-.slate-editor span:empty {
+/* Force all truly empty elements to be visible in editor (but not zero-width phantom elements) */
+.slate-editor [data-slate-node="element"]:empty:not([data-slate-zero-width]):not(:has([data-slate-zero-width])),
+.slate-editor div:empty:not([data-slate-zero-width]):not(:has([data-slate-zero-width])),
+.slate-editor span:empty:not([data-slate-zero-width]):not(:has([data-slate-zero-width])) {
   min-height: 1em !important;
   display: block !important;
 }
 
-/* Hide elements with only zero-width spaces (but not during editing) */
-.slate-editor[readonly] [data-slate-zero-width] {
+/* Hide elements with only zero-width spaces */
+.slate-editor [data-slate-zero-width] {
   display: none !important;
 }
 
