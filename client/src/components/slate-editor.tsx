@@ -397,7 +397,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   };
 
   return (
-    <div className="slate-editor-container" ref={editorRef}>
+    <div className="slate-editor-container" ref={editorRef} data-slate-editor>
       <Slate editor={editor} initialValue={safeValue} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
@@ -405,6 +405,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           placeholder={placeholder || "Type '/' for commands..."}
           onKeyDown={handleKeyDown}
           className="slate-editor first:mt-0 [&>*:first-child]:mt-0"
+          data-slate-editable
           style={{
             minHeight: '200px',
             padding: '1rem',
