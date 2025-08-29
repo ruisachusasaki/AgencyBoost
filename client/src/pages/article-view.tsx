@@ -195,13 +195,11 @@ export default function ArticleView() {
   // Auto-save mutation
   const autoSaveMutation = useMutation({
     mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
-      console.log('Auto-saving content:', content);
       const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
         title,
         content,
       });
       const result = await response.json();
-      console.log('Auto-save response:', result);
       return result;
     },
     onMutate: () => {
@@ -270,7 +268,6 @@ export default function ArticleView() {
   useEffect(() => {
     if (article) {
       const parsedContent = parseContent(article.content);
-      console.log('Setting article content:', parsedContent);
       // Ensure we never set undefined/null content
       const safeContent = parsedContent && Array.isArray(parsedContent) ? parsedContent : createEmptyDocument();
       setCurrentContent(safeContent);
