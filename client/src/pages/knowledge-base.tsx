@@ -392,7 +392,7 @@ export default function KnowledgeBase() {
                   : 'hover:bg-muted'
               }`}
               style={{ 
-                marginLeft: hasChildren ? `${4 + (level * 16)}px` : `${20 + (level * 16)}px`,
+                marginLeft: hasChildren ? '0px' : `${16 + (level * 16)}px`,
                 paddingLeft: hasChildren ? '8px' : '12px'
               }}
             >
