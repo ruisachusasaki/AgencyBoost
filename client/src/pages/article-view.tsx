@@ -8,6 +8,16 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
@@ -32,6 +42,16 @@ export default function ArticleView() {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<Descendant[]>(createEmptyDocument());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Fetch current user data for role checking
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/current-user');
+      return response.json();
+    }
+  });
 
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
@@ -276,6 +296,30 @@ export default function ArticleView() {
     },
   });
 
+  // Delete mutation
+  const deleteArticleMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", `/api/knowledge-base/articles/${id}`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Article deleted successfully",
+      });
+      // Navigate back to knowledge base
+      window.location.href = "/resources";
+    },
+    onError: (error: any) => {
+      console.error("Delete error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete article",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Debounced auto-save function
   const debouncedAutoSave = useCallback(
     (content: Descendant[], title?: string) => {
@@ -497,15 +541,19 @@ export default function ArticleView() {
                   <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
                 </Button>
 
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={startEdit}
-                  data-testid="button-edit"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Mode
-                </Button>
+                {/* Delete button - only for Admins and Managers */}
+                {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                    data-testid="button-delete"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -616,6 +664,32 @@ export default function ArticleView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Article</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{(article as any)?.title}"? 
+              This action cannot be undone and will permanently remove this article and all its comments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteArticleMutation.mutate();
+                setShowDeleteDialog(false);
+              }}
+              disabled={deleteArticleMutation.isPending}
+              className="bg-red-600 hover:bg-red-600/90"
+            >
+              {deleteArticleMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
