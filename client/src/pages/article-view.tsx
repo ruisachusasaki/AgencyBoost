@@ -80,7 +80,7 @@ export default function ArticleView() {
     });
   };
 
-  const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
+  const { data: article, isLoading, error } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
 
