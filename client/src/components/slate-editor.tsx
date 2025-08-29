@@ -301,23 +301,19 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    // FORCE Enter key to always create new paragraphs
+    // FORCE Enter key to always work - simple and direct approach
     if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
       
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
-        // Force insert a new paragraph
-        Transforms.splitNodes(editor, { always: true });
+        // Just insert a new empty paragraph after current selection
+        const newParagraph = {
+          type: 'paragraph',
+          children: [{ text: '' }],
+        };
         
-        // Ensure we have a paragraph element
-        const [match] = Editor.nodes(editor, {
-          match: n => Element.isElement(n) && n.type !== 'paragraph'
-        });
-        
-        if (match) {
-          Transforms.setNodes(editor, { type: 'paragraph' });
-        }
+        Transforms.insertNodes(editor, newParagraph);
       }
       return;
     }
