@@ -205,11 +205,9 @@ export default function ArticleView() {
       setIsAutoSaving(true);
     },
     onSuccess: (data) => {
-      // Don't update the editor content on auto-save success to avoid disrupting the user
-      // The content is already correct in the editor - just mark as saved
+      // Don't invalidate queries on auto-save to prevent editor re-rendering and focus loss
+      // Just mark as saved - the editor already has the correct content
       setIsAutoSaving(false);
-      // Invalidate queries in the background to keep other parts of the app in sync
-      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
     },
     onError: (error: any) => {
       console.error("Auto-save error:", error);
@@ -491,7 +489,6 @@ export default function ArticleView() {
               />
             ) : (
               <SlateEditor
-                key={`article-${id}`}
                 value={currentContent}
                 onChange={handleContentChange}
                 placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
