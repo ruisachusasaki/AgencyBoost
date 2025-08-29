@@ -275,7 +275,10 @@ export default function ArticleView() {
 
   // Initialize content when article loads
   useEffect(() => {
-    if (article) {
+    console.log('Article data received:', article);
+    console.log('Article loading state:', { isLoading, error });
+    
+    if (article && typeof article === 'object' && 'content' in article) {
       console.log('Loading article content:', article.content);
       const parsedContent = parseContent(article.content);
       console.log('Parsed content:', parsedContent);
@@ -286,8 +289,14 @@ export default function ArticleView() {
       contentRef.current = safeContent; // Keep ref in sync
       setEditContent(safeContent);
       setEditTitle((article.title as string) || "");
+    } else {
+      console.log('Article not ready, setting empty content');
+      const emptyContent = createEmptyDocument();
+      setCurrentContent(emptyContent);
+      contentRef.current = emptyContent;
+      setEditContent(emptyContent);
     }
-  }, [article]);
+  }, [article, isLoading, error]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
