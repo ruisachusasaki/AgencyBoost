@@ -510,16 +510,19 @@ export default function ArticleView() {
           )}
           
           <div className="prose prose-lg max-w-none">
-            {isEditing ? (
+            {isLoading ? (
+              <div className="p-8 text-center">Loading article...</div>
+            ) : isEditing ? (
               <SlateEditor
-                value={editContent || createEmptyDocument()}
+                key={`edit-${id}`}
+                value={editContent && Array.isArray(editContent) && editContent.length > 0 ? editContent : createEmptyDocument()}
                 onChange={setEditContent}
                 placeholder="Write your article content... Type '/' for commands"
               />
             ) : (
               <SlateEditor
-                key={`editor-${id}-${article?.updatedAt || Date.now()}`}
-                value={currentContent || createEmptyDocument()}
+                key={`view-${id}-${Date.now()}`}
+                value={currentContent && Array.isArray(currentContent) && currentContent.length > 0 ? currentContent : createEmptyDocument()}
                 onChange={handleContentChange}
                 placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
               />
