@@ -195,11 +195,14 @@ export default function ArticleView() {
   // Auto-save mutation
   const autoSaveMutation = useMutation({
     mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
+      console.log('Auto-saving content:', content);
       const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
         title,
         content,
       });
-      return await response.json();
+      const result = await response.json();
+      console.log('Auto-save response:', result);
+      return result;
     },
     onMutate: () => {
       setIsAutoSaving(true);
@@ -497,6 +500,7 @@ export default function ArticleView() {
               />
             ) : (
               <SlateEditor
+                key={`editor-${id}-${article?.updatedAt || 'new'}`}
                 value={currentContent}
                 onChange={handleContentChange}
                 placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
