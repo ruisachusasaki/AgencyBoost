@@ -16,7 +16,7 @@ import {
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import type { KnowledgeBaseArticle } from "@shared/schema";
-import { BulletproofSlateEditor, createSafeEmptyDocument } from '@/components/bulletproof-slate-editor';
+import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
 import type { Descendant } from 'slate';
 
 export default function ArticleView() {
@@ -28,31 +28,64 @@ export default function ArticleView() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState<Descendant[]>(createSafeEmptyDocument());
+  const [editContent, setEditContent] = useState<Descendant[]>(createEmptyDocument());
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [currentContent, setCurrentContent] = useState<Descendant[]>(() => createSafeEmptyDocument());
+  const [currentContent, setCurrentContent] = useState<Descendant[]>(createEmptyDocument());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
     if (!content || content === undefined || content === null) {
-      return createSafeEmptyDocument();
+      return createEmptyDocument();
     }
     
-    // If it's already Slate format (array), return it
+    // If it's already Slate format (array), clean it up
     if (Array.isArray(content)) {
       // Ensure array is not empty and has valid structure
       if (content.length === 0) {
-        return createSafeEmptyDocument();
+        return createEmptyDocument();
       }
-      // Only filter if content exists - don't filter out content with actual text
-      return content;
+      
+      // Clean up the content and remove invalid properties
+      const cleanedContent = content.map(node => {
+        if ('children' in node) {
+          // Remove any invalid properties like "level" that aren't part of Slate
+          const { level, ...cleanNode } = node as any;
+          
+          // Clean up children as well
+          const cleanedChildren = cleanNode.children.map((child: any) => {
+            // For text nodes, keep only valid properties
+            if ('text' in child) {
+              const { text, bold, italic, code } = child;
+              return { text, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
+            }
+            return child;
+          });
+          
+          return { ...cleanNode, children: cleanedChildren };
+        }
+        return node;
+      });
+      
+      // Filter out any empty paragraphs at the beginning
+      const filteredContent = cleanedContent.filter((node, index) => {
+        if (index === 0 && 'children' in node && node.type === 'paragraph') {
+          // Check if the first paragraph is empty
+          const hasText = node.children.some(child => 
+            'text' in child && child.text.trim().length > 0
+          );
+          return hasText; // Only keep if it has actual text
+        }
+        return true; // Keep all other nodes
+      });
+      
+      return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
     }
     
     // If it's a string (HTML), convert to basic Slate format
     if (typeof content === 'string') {
       if (content.trim() === '') {
-        return createSafeEmptyDocument();
+        return createEmptyDocument();
       }
       return [
         {
@@ -62,7 +95,7 @@ export default function ArticleView() {
       ];
     }
     
-    return createSafeEmptyDocument();
+    return createEmptyDocument();
   };
 
   // Helper function to check if Slate content has meaningful text
@@ -80,7 +113,52 @@ export default function ArticleView() {
     });
   };
 
-  const { data: article, isLoading, error } = useQuery<KnowledgeBaseArticle>({
+  // Helper function to normalize content (remove empty paragraphs with just spaces)
+  const normalizeContent = useCallback((content: Descendant[]): Descendant[] => {
+    const hasActualContent = hasContent(content);
+    if (!hasActualContent) {
+      return createEmptyDocument();
+    }
+    
+    // Clean up content and remove invalid properties
+    const cleanedContent = content.map(node => {
+      if ('children' in node) {
+        // Remove any invalid properties like "level" that aren't part of Slate
+        const { level, ...cleanNode } = node as any;
+        
+        // Clean up children as well
+        const cleanedChildren = cleanNode.children.map((child: any) => {
+          // For text nodes, keep only valid properties  
+          if ('text' in child) {
+            const { text, bold, italic, code } = child;
+            // Replace whitespace-only text with empty string
+            const cleanText = text.trim() === '' ? '' : text;
+            return { text: cleanText, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
+          }
+          return child;
+        });
+        
+        return { ...cleanNode, children: cleanedChildren };
+      }
+      return node;
+    });
+    
+    // Filter out any empty paragraphs at the beginning
+    const filteredContent = cleanedContent.filter((node, index) => {
+      if (index === 0 && 'children' in node && node.type === 'paragraph') {
+        // Check if the first paragraph is empty
+        const hasText = node.children.some(child => 
+          'text' in child && child.text.trim().length > 0
+        );
+        return hasText; // Only keep if it has actual text
+      }
+      return true; // Keep all other nodes
+    });
+    
+    return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
+  }, []);
+
+  const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
 
@@ -199,18 +277,17 @@ export default function ArticleView() {
         title,
         content,
       });
-      const result = await response.json();
-      return result;
+      return await response.json();
     },
     onMutate: () => {
       setIsAutoSaving(true);
     },
     onSuccess: (data) => {
+      // Don't update the editor content on auto-save success to avoid disrupting the user
+      // The content is already correct in the editor - just mark as saved
       setIsAutoSaving(false);
-      // Invalidate queries after a delay to refresh cached data without disrupting typing
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
-      }, 100);
+      // Invalidate queries in the background to keep other parts of the app in sync
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
     },
     onError: (error: any) => {
       console.error("Auto-save error:", error);
@@ -232,11 +309,11 @@ export default function ArticleView() {
 
       autoSaveTimeoutRef.current = setTimeout(() => {
         const articleTitle = title || (article?.title as string) || "";
-        // Allow auto-save if there's meaningful content, even without a title
-        if (hasContent(content)) {
+        const cleanedContent = normalizeContent(content);
+        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(cleanedContent)) {
           autoSaveMutation.mutate({
-            title: articleTitle || "Untitled Article",
-            content,
+            title: articleTitle,
+            content: cleanedContent,
           });
         }
       }, 1000); // 1 second delay
@@ -244,59 +321,34 @@ export default function ArticleView() {
     [article?.title, autoSaveMutation]
   );
 
-  // Handle content changes with auto-save - use ref to avoid re-renders
-  const contentRef = useRef(currentContent);
-  
+  // Handle content changes with auto-save
   const handleContentChange = useCallback(
     (newContent: Descendant[]) => {
-      // Update ref immediately for auto-save
-      contentRef.current = newContent;
-      
-      // Only update state if content actually changed to prevent unnecessary re-renders
-      setCurrentContent(prev => {
-        const prevStr = JSON.stringify(prev);
-        const newStr = JSON.stringify(newContent);
-        return prevStr !== newStr ? newContent : prev;
-      });
-      
-      debouncedAutoSave(newContent);
+      const normalizedContent = normalizeContent(newContent);
+      setCurrentContent(normalizedContent);
+      debouncedAutoSave(normalizedContent);
     },
-    [debouncedAutoSave]
+    [debouncedAutoSave, normalizeContent]
   );
 
   // Handle title changes with auto-save
   const handleTitleChange = useCallback(
     (newTitle: string) => {
       setEditTitle(newTitle);
-      debouncedAutoSave(contentRef.current, newTitle);
+      debouncedAutoSave(currentContent, newTitle);
     },
-    [debouncedAutoSave]
+    [currentContent, debouncedAutoSave]
   );
 
   // Initialize content when article loads
   useEffect(() => {
-    console.log('Article data received:', article);
-    console.log('Article loading state:', { isLoading, error });
-    
-    if (article && typeof article === 'object' && 'content' in article) {
-      console.log('Loading article content:', article.content);
+    if (article) {
       const parsedContent = parseContent(article.content);
-      console.log('Parsed content:', parsedContent);
-      // Ensure we never set undefined/null content
-      const safeContent = parsedContent && Array.isArray(parsedContent) ? parsedContent : createEmptyDocument();
-      console.log('Setting safe content:', safeContent);
-      setCurrentContent(safeContent);
-      contentRef.current = safeContent; // Keep ref in sync
-      setEditContent(safeContent);
+      setCurrentContent(parsedContent);
+      setEditContent(parsedContent);
       setEditTitle((article.title as string) || "");
-    } else {
-      console.log('Article not ready, setting empty content');
-      const emptyContent = createEmptyDocument();
-      setCurrentContent(emptyContent);
-      contentRef.current = emptyContent;
-      setEditContent(emptyContent);
     }
-  }, [article, isLoading, error]);
+  }, [article]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -510,21 +562,18 @@ export default function ArticleView() {
           )}
           
           <div className="prose prose-lg max-w-none">
-            {isLoading ? (
-              <div className="p-8 text-center">Loading article...</div>
-            ) : isEditing ? (
-              <BulletproofSlateEditor
-                key={`edit-${id}`}
-                value={editContent && Array.isArray(editContent) && editContent.length > 0 ? editContent : createSafeEmptyDocument()}
+            {isEditing ? (
+              <SlateEditor
+                value={editContent}
                 onChange={setEditContent}
-                placeholder="Write your article content..."
+                placeholder="Write your article content... Type '/' for commands"
               />
             ) : (
-              <BulletproofSlateEditor
-                key={`view-${id}-${Date.now()}`}
-                value={currentContent && Array.isArray(currentContent) && currentContent.length > 0 ? currentContent : createSafeEmptyDocument()}
+              <SlateEditor
+                key={`article-${id}`}
+                value={currentContent}
                 onChange={handleContentChange}
-                placeholder="Start typing to edit this article..."
+                placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
               />
             )}
           </div>

@@ -1,0 +1,128 @@
+Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+a541e7a8-8f9c-43e1-b7fa-15cb56715a11:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+chunk-RPCDYKBN.js?v=3dc93b22:521 Warning: The tag <hundefined> is unrecognized in this browser. If you meant to render a React component, start its name with an uppercase letter.
+    at hundefined
+    at Element (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/slate-editor.tsx:606:11)
+    at Element3 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/slate-react.js?v=3dc93b22:3717:18)
+    at Children (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/slate-react.js?v=3dc93b22:4765:99)
+    at div
+    at RestoreDOM (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/slate-react.js?v=3dc93b22:4734:5)
+    at https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/slate-react.js?v=3dc93b22:4767:63
+    at Slate (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/slate-react.js?v=3dc93b22:5903:5)
+    at div
+    at SlateEditor (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/slate-editor.tsx:129:31)
+    at div
+    at div
+    at _c9 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at ArticleView (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/pages/article-view.tsx?t=1756437439588:48:18)
+    at Route (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=3dc93b22:191:16)
+    at Switch (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=3dc93b22:247:17)
+    at Router
+    at div
+    at main
+    at div
+    at MainLayout (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/layout/main-layout.tsx:22:38)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=3dc93b22:38:15)
+    at TooltipProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=3dc93b22:64:5)
+    at TimerProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/contexts/TimerContext.tsx:31:33)
+    at QueryClientProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=3dc93b22:2805:3)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=3dc93b22:521
+error @ chunk-RPCDYKBN.js?v=3dc93b22:505
+createElement @ chunk-RPCDYKBN.js?v=3dc93b22:7523
+createInstance @ chunk-RPCDYKBN.js?v=3dc93b22:8336
+completeWork @ chunk-RPCDYKBN.js?v=3dc93b22:16290
+completeUnitOfWork @ chunk-RPCDYKBN.js?v=3dc93b22:19224
+performUnitOfWork @ chunk-RPCDYKBN.js?v=3dc93b22:19206
+workLoopSync @ chunk-RPCDYKBN.js?v=3dc93b22:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=3dc93b22:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=3dc93b22:18678
+workLoop @ chunk-RPCDYKBN.js?v=3dc93b22:197
+flushWork @ chunk-RPCDYKBN.js?v=3dc93b22:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=3dc93b22:384Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21
+createAxiosError @ contentOverview.js:188373
+settle @ contentOverview.js:188357
+(anonymous) @ contentOverview.js:194082
+Promise.then
+handleRequest @ contentOverview.js:194069
+(anonymous) @ contentOverview.js:188558
+(anonymous) @ contentOverview.js:188557
+dispatchRequest @ contentOverview.js:191091
+Promise.then
+request @ contentOverview.js:190910
+Axios.<computed> @ contentOverview.js:190951
+wrap @ contentOverview.js:187508
+(anonymous) @ contentOverview.js:80562
+fulfilled @ contentOverview.js:80548
+Promise.then
+step @ contentOverview.js:80550
+(anonymous) @ contentOverview.js:80551
+profile_api_awaiter @ contentOverview.js:80547
+getProfile @ contentOverview.js:80559
+(anonymous) @ contentOverview.js:198667
+(anonymous) @ contentOverview.js:5264
+executeAction @ contentOverview.js:11070
+<unnamed action> @ contentOverview.js:11055
+runMiddleWares @ contentOverview.js:4082
+runWithActionContext @ contentOverview.js:3925
+wrap @ contentOverview.js:5250
+onFulfilled @ contentOverview.js:5264
+asyncActionInit @ contentOverview.js:5256
+executeAction @ contentOverview.js:11070
+asyncActionInit @ contentOverview.js:11055
+runMiddleWares @ contentOverview.js:4082
+runWithActionContext @ contentOverview.js:3925
+(anonymous) @ contentOverview.js:5259
+flowSpawner @ contentOverview.js:5252
+executeAction @ contentOverview.js:11070
+bound flowSpawner @ contentOverview.js:11055
+runMiddleWares @ contentOverview.js:4082
+runWithActionContext @ contentOverview.js:3925
+res @ contentOverview.js:3952
+(anonymous) @ contentOverview.js:200695
+(anonymous) @ contentOverview.js:200628
+contentOverview_awaiter @ contentOverview.js:200624
+initialExecute @ contentOverview.js:200694
+(anonymous) @ contentOverview.js:200724
+Qj @ contentOverview.js:190441
+Hk @ contentOverview.js:190483
+(anonymous) @ contentOverview.js:190479
+J @ contentOverview.js:190552
+R @ contentOverview.js:190553
+run @ contentForAllPages.js:1930
+runIfPresent @ contentForAllPages.js:1959
+onGlobalMessage @ contentForAllPages.js:1999
+postMessage
+registerImmediate @ contentForAllPages.js:2010
+setImmediate @ contentForAllPages.js:1917
+S @ contentOverview.js:190553
+R @ contentOverview.js:190553
+run @ contentForAllPages.js:1930
+runIfPresent @ contentForAllPages.js:1959
+onGlobalMessage @ contentForAllPages.js:1999
+postMessage
+registerImmediate @ contentForAllPages.js:2010
+setImmediate @ contentForAllPages.js:1917
+S @ contentOverview.js:190553
+I @ contentOverview.js:190553
+exports.unstable_scheduleCallback @ contentOverview.js:190557
+Fk @ contentOverview.js:190494
+Dk @ contentOverview.js:190464
+gi @ contentOverview.js:190463
+fl @ contentOverview.js:190505
+ml.render.ll.render @ contentOverview.js:190507
+(anonymous) @ contentOverview.js:200754
+__webpack_require__ @ contentOverview.js:20
+(anonymous) @ contentOverview.js:198527
+__webpack_require__ @ contentOverview.js:20
+(anonymous) @ contentOverview.js:84
+(anonymous) @ contentOverview.js:87Understand this error
