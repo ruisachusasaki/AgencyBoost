@@ -242,11 +242,16 @@ export default function ArticleView() {
 
       autoSaveTimeoutRef.current = setTimeout(() => {
         const articleTitle = title || (article?.title as string) || "";
-        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(content)) {
+        console.log('Auto-save check:', { articleTitle, hasContentResult: hasContent(content), content });
+        // Allow auto-save if there's meaningful content, even without a title
+        if (hasContent(content)) {
+          console.log('Triggering auto-save');
           autoSaveMutation.mutate({
-            title: articleTitle,
+            title: articleTitle || "Untitled Article",
             content,
           });
+        } else {
+          console.log('Auto-save skipped - no content');
         }
       }, 1000); // 1 second delay
     },
