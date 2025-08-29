@@ -412,7 +412,7 @@ li[data-type="taskItem"][data-checked="true"] > div,
 .ProseMirror .toggle-block,
 .tiptap .toggle-block {
   margin: 1.5rem 0 !important;
-  border: 1px solid #e5e7eb !important;
+  border: none !important;
   border-radius: 0.5rem !important;
   overflow: hidden !important;
   background: white !important;
