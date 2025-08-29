@@ -8,6 +8,31 @@
 .slate-editor *:first-child {
   margin-top: 0 !important;
   padding-top: 0 !important;
+  margin-block-start: 0 !important;
+}
+
+/* DEBUG: Temporary background to identify spacing source */
+.slate-editor-container > div:first-child {
+  background-color: rgba(255, 0, 0, 0.1) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* AGGRESSIVE: Target Slate's internal structure */
+[data-slate-editor] [data-slate-node="element"]:first-child {
+  margin-top: 0 !important;
+  margin-block-start: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* NUCLEAR: Remove margin from absolutely everything in editor */
+.slate-editor-container,
+.slate-editor-container > *,
+.slate-editor-container > * > *,
+.slate-editor-container > * > * > * {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  margin-block-start: 0 !important;
 }
 
 /* Ultra-specific targeting for Slate first elements */
