@@ -267,9 +267,12 @@ export default function ArticleView() {
   useEffect(() => {
     if (article) {
       const parsedContent = parseContent(article.content);
-      setCurrentContent(parsedContent);
-      contentRef.current = parsedContent; // Keep ref in sync
-      setEditContent(parsedContent);
+      console.log('Setting article content:', parsedContent);
+      // Ensure we never set undefined/null content
+      const safeContent = parsedContent && Array.isArray(parsedContent) ? parsedContent : createEmptyDocument();
+      setCurrentContent(safeContent);
+      contentRef.current = safeContent; // Keep ref in sync
+      setEditContent(safeContent);
       setEditTitle((article.title as string) || "");
     }
   }, [article]);
