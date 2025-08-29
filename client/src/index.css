@@ -5,6 +5,7 @@
 /* Remove default margin from first elements in Slate editor */
 .slate-editor > *:first-child {
   margin-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 .slate-editor h1:first-child,
@@ -13,6 +14,22 @@
 .slate-editor p:first-child,
 .slate-editor ul:first-child,
 .slate-editor ol:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Remove any inherited heading margins in Slate editor */
+.slate-editor h1,
+.slate-editor h2,
+.slate-editor h3 {
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Override for first child specifically */
+.slate-editor > h1:first-child,
+.slate-editor > h2:first-child,
+.slate-editor > h3:first-child {
   margin-top: 0 !important;
 }
 

@@ -309,10 +309,11 @@ export default function ArticleView() {
 
       autoSaveTimeoutRef.current = setTimeout(() => {
         const articleTitle = title || (article?.title as string) || "";
-        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(content)) {
+        const cleanedContent = normalizeContent(content);
+        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(cleanedContent)) {
           autoSaveMutation.mutate({
             title: articleTitle,
-            content,
+            content: cleanedContent,
           });
         }
       }, 1000); // 1 second delay
