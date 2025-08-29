@@ -365,16 +365,15 @@ export default function KnowledgeBase() {
       
       return (
         <div key={category.id}>
-          <div className="flex items-center">
-            {hasChildren && (
+          <div className="flex items-center" style={{ marginLeft: `${level * 16}px` }}>
+            {hasChildren ? (
               <button
                 data-testid={`button-toggle-${category.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleCategory(category.id);
                 }}
-                className="p-1 hover:bg-muted rounded-sm transition-colors"
-                style={{ marginLeft: `${4 + (level * 16)}px` }}
+                className="p-1 hover:bg-muted rounded-sm transition-colors w-6 h-6 flex items-center justify-center"
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -382,6 +381,8 @@ export default function KnowledgeBase() {
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 )}
               </button>
+            ) : (
+              <div className="w-6 h-6" />
             )}
             <button
               data-testid={`button-category-${category.id}`}
@@ -391,10 +392,6 @@ export default function KnowledgeBase() {
                   ? 'bg-primary text-primary-foreground' 
                   : 'hover:bg-muted'
               }`}
-              style={{ 
-                marginLeft: hasChildren ? '0px' : `${16 + (level * 16)}px`,
-                paddingLeft: hasChildren ? '8px' : '12px'
-              }}
             >
               <div className="flex items-center justify-between">
                 <span className="flex items-center">
