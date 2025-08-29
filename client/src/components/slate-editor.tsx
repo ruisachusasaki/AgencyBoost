@@ -301,7 +301,6 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    // Let Slate handle Enter key naturally - no custom interference
 
     // Handle slash commands
     if (event.key === '/') {
