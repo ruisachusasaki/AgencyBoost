@@ -490,6 +490,7 @@ export default function ArticleView() {
               />
             ) : (
               <SlateEditor
+                key={`article-${id}-${article?.updatedAt || 'default'}`}
                 value={currentContent}
                 onChange={handleContentChange}
                 placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
