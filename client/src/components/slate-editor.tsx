@@ -151,6 +151,25 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     }
     return value;
   }, [value]);
+
+  // Sync editor content when value prop changes (only if editor is not focused)
+  useEffect(() => {
+    try {
+      const isEditorFocused = ReactEditor.isFocused(editor);
+      if (!isEditorFocused && safeValue && JSON.stringify(editor.children) !== JSON.stringify(safeValue)) {
+        // Only update if the editor is not focused to avoid disrupting user typing
+        Editor.withoutNormalizing(editor, () => {
+          // Clear all content
+          Transforms.select(editor, Editor.range(editor, []));
+          Transforms.delete(editor);
+          // Insert new content
+          Transforms.insertNodes(editor, safeValue);
+        });
+      }
+    } catch (error) {
+      console.log('Content sync skipped:', error);
+    }
+  }, [safeValue, editor]);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
   const [filteredCommands, setFilteredCommands] = useState(SLASH_COMMANDS);

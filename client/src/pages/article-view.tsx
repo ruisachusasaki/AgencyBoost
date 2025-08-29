@@ -204,12 +204,11 @@ export default function ArticleView() {
       setIsAutoSaving(true);
     },
     onSuccess: (data) => {
-      // Update local state with saved content to ensure UI reflects the saved state
-      if (data && data.content) {
-        setCurrentContent(data.content);
-      }
-      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      // Don't update the editor content on auto-save success to avoid disrupting the user
+      // The content is already correct in the editor - just mark as saved
       setIsAutoSaving(false);
+      // Invalidate queries in the background to keep other parts of the app in sync
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
     },
     onError: (error: any) => {
       console.error("Auto-save error:", error);
@@ -490,7 +489,7 @@ export default function ArticleView() {
               />
             ) : (
               <SlateEditor
-                key={`article-${id}-${article?.updatedAt || 'default'}`}
+                key={`article-${id}`}
                 value={currentContent}
                 onChange={handleContentChange}
                 placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
