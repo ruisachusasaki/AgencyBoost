@@ -241,10 +241,13 @@ export default function ArticleView() {
     [article?.title, autoSaveMutation]
   );
 
-  // Handle content changes with auto-save
+  // Handle content changes with auto-save - use ref to avoid re-renders
+  const contentRef = useRef(currentContent);
+  
   const handleContentChange = useCallback(
     (newContent: Descendant[]) => {
-      setCurrentContent(newContent);
+      // Update ref immediately but don't trigger re-render
+      contentRef.current = newContent;
       debouncedAutoSave(newContent);
     },
     [debouncedAutoSave]
@@ -254,9 +257,9 @@ export default function ArticleView() {
   const handleTitleChange = useCallback(
     (newTitle: string) => {
       setEditTitle(newTitle);
-      debouncedAutoSave(currentContent, newTitle);
+      debouncedAutoSave(contentRef.current, newTitle);
     },
-    [currentContent, debouncedAutoSave]
+    [debouncedAutoSave]
   );
 
   // Initialize content when article loads
@@ -264,6 +267,7 @@ export default function ArticleView() {
     if (article) {
       const parsedContent = parseContent(article.content);
       setCurrentContent(parsedContent);
+      contentRef.current = parsedContent; // Keep ref in sync
       setEditContent(parsedContent);
       setEditTitle((article.title as string) || "");
     }

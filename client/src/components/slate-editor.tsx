@@ -144,13 +144,15 @@ interface SlateEditorProps {
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
-  // Ensure we always have a valid value
-  const safeValue = useMemo(() => {
-    if (!value || !Array.isArray(value) || value.length === 0) {
-      return createEmptyDocument();
+  // Use a ref to store the current editor content to prevent re-renders
+  const editorContentRef = useRef(value || createEmptyDocument());
+  
+  // Only update the ref when the value prop actually changes (not during typing)
+  useEffect(() => {
+    if (value && !ReactEditor.isFocused(editor)) {
+      editorContentRef.current = value;
     }
-    return value;
-  }, [value]);
+  }, [value, editor]);
 
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
@@ -380,7 +382,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   return (
     <div className="slate-editor-container" ref={editorRef}>
-      <Slate editor={editor} initialValue={safeValue} onValueChange={handleEditorChange}>
+      <Slate editor={editor} initialValue={editorContentRef.current} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
           renderLeaf={renderLeaf}
