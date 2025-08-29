@@ -215,7 +215,32 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   // Handle filtering slash commands as user types
   const handleEditorChange = (newValue: Descendant[]) => {
-    onChange(newValue);
+    // Ensure document always ends with an empty paragraph for Enter key functionality
+    const ensureTrailingParagraph = (value: Descendant[]): Descendant[] => {
+      if (value.length === 0) return value;
+      
+      const lastNode = value[value.length - 1];
+      
+      // Check if last node is an empty paragraph
+      const isLastNodeEmptyParagraph = (
+        'type' in lastNode && 
+        lastNode.type === 'paragraph' && 
+        'children' in lastNode &&
+        lastNode.children.length === 1 &&
+        'text' in lastNode.children[0] &&
+        lastNode.children[0].text === ''
+      );
+      
+      // If last node is not an empty paragraph, add one
+      if (!isLastNodeEmptyParagraph) {
+        return [...value, { type: 'paragraph', children: [{ text: '' }] }];
+      }
+      
+      return value;
+    };
+    
+    const processedValue = ensureTrailingParagraph(newValue);
+    onChange(processedValue);
     
     // Handle selection toolbar
     handleSelectionChange();
