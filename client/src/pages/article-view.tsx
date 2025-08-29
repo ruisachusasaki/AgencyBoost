@@ -45,19 +45,8 @@ export default function ArticleView() {
       if (content.length === 0) {
         return createEmptyDocument();
       }
-      // Filter out empty paragraphs that might cause phantom content
-      const filteredContent = content.filter(node => {
-        if (node.type === 'paragraph' && node.children) {
-          return node.children.some((child: any) => child.text && child.text.trim() !== '');
-        }
-        return true;
-      });
-      
-      if (filteredContent.length === 0) {
-        return createEmptyDocument();
-      }
-      
-      return filteredContent;
+      // Only filter if content exists - don't filter out content with actual text
+      return content;
     }
     
     // If it's a string (HTML), convert to basic Slate format
@@ -279,7 +268,9 @@ export default function ArticleView() {
   // Initialize content when article loads
   useEffect(() => {
     if (article) {
+      console.log('Loading article content:', article.content);
       const parsedContent = parseContent(article.content);
+      console.log('Parsed content for display:', parsedContent);
       setCurrentContent(parsedContent);
       setEditContent(parsedContent);
       setEditTitle((article.title as string) || "");
