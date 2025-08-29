@@ -25,18 +25,27 @@
 
 /* Ensure empty paragraphs are visible during editing for cursor placement */
 .slate-editor p:empty {
-  min-height: 1em;
+  min-height: 1em !important;
+  display: block !important;
 }
 
-/* Hide elements with only zero-width spaces */
-.slate-editor [data-slate-zero-width] {
+/* Force all empty elements to be visible in editor */
+.slate-editor [data-slate-node="element"]:empty,
+.slate-editor div:empty,
+.slate-editor span:empty {
+  min-height: 1em !important;
+  display: block !important;
+}
+
+/* Hide elements with only zero-width spaces (but not during editing) */
+.slate-editor[readonly] [data-slate-zero-width] {
   display: none !important;
 }
 
-/* Hide headings that only contain zero-width spaces and breaks */
-.slate-editor h1:has([data-slate-zero-width]),
-.slate-editor h2:has([data-slate-zero-width]),
-.slate-editor h3:has([data-slate-zero-width]) {
+/* Hide headings that only contain zero-width spaces and breaks (but not during editing) */
+.slate-editor[readonly] h1:has([data-slate-zero-width]),
+.slate-editor[readonly] h2:has([data-slate-zero-width]),
+.slate-editor[readonly] h3:has([data-slate-zero-width]) {
   display: none !important;
 }
 
