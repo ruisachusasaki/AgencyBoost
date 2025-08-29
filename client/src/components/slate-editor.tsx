@@ -162,15 +162,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           // Clear all content
           Transforms.select(editor, Editor.range(editor, []));
           Transforms.delete(editor);
-          // Insert new content but skip empty first elements
-          const filteredContent = safeValue.filter((node, index) => {
-            // Remove empty paragraphs at the beginning
-            if (index === 0 && node.type === 'paragraph' && node.children?.length === 1 && node.children[0]?.text === '') {
-              return false;
-            }
-            return true;
-          });
-          Transforms.insertNodes(editor, filteredContent.length > 0 ? filteredContent : safeValue);
+          // Insert new content
+          Transforms.insertNodes(editor, safeValue);
         });
       }
     } catch (error) {
@@ -318,12 +311,6 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       event.preventDefault();
       toggleMark(editor, 'italic');
     }
-
-    // Allow Slate's default Enter behavior when slash menu is closed
-    if (event.key === 'Enter' && !showSlashMenu) {
-      // Don't prevent default - let Slate handle it naturally
-      return;
-    }
   };
 
   // Formatting functions for selection toolbar
@@ -410,18 +397,18 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   };
 
   return (
-    <div className="slate-editor-container" ref={editorRef} data-slate-editor>
+    <div className="slate-editor-container" ref={editorRef}>
       <Slate editor={editor} initialValue={safeValue} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
           renderLeaf={renderLeaf}
           placeholder={placeholder || "Type '/' for commands..."}
           onKeyDown={handleKeyDown}
-          className="slate-editor first:mt-0 [&>*:first-child]:mt-0"
-          data-slate-editable
+          className="slate-editor"
           style={{
             minHeight: '200px',
             padding: '1rem',
+            border: '1px solid #e5e7eb',
             borderRadius: '0.5rem',
             outline: 'none'
           }}
@@ -559,24 +546,11 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 const Element = (props: any) => {
   const { attributes, children, element } = props;
 
-  // Check if element is effectively empty (only contains empty text nodes)
-  const isElementEmpty = (elem: any): boolean => {
-    if (!elem.children || elem.children.length === 0) return true;
-    return elem.children.every((child: any) => 
-      (child.text === '' || child.text === '\uFEFF') && !child.bold && !child.italic
-    );
-  };
-
   switch (element.type) {
     case 'heading':
-      // Skip rendering empty headings
-      if (isElementEmpty(element)) {
-        return null;
-      }
-      const level = element.level || 1; // Default to h1 if level is missing
-      const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+      const HeadingTag = `h${element.level}` as keyof JSX.IntrinsicElements;
       return (
-        <HeadingTag {...attributes} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4`}>
+        <HeadingTag {...attributes} className={`text-${element.level === 1 ? '2xl' : element.level === 2 ? 'xl' : 'lg'} font-bold my-4`}>
           {children}
         </HeadingTag>
       );
@@ -672,11 +646,10 @@ const Leaf = ({ attributes, children, leaf }: any) => {
   return <span {...attributes}>{children}</span>;
 };
 
-// Default initial value - starts with heading to avoid empty paragraph
+// Default initial value
 export const createEmptyDocument = (): Descendant[] => [
   {
-    type: 'heading',
-    level: 1,
-    children: [{ text: 'Untitled' }],
+    type: 'paragraph',
+    children: [{ text: '' }],
   },
 ];

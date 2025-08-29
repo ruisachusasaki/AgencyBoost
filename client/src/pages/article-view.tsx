@@ -39,47 +39,13 @@ export default function ArticleView() {
       return createEmptyDocument();
     }
     
-    // If it's already Slate format (array), clean it up
+    // If it's already Slate format (array), return it
     if (Array.isArray(content)) {
       // Ensure array is not empty and has valid structure
       if (content.length === 0) {
         return createEmptyDocument();
       }
-      
-      // Clean up the content and remove invalid properties
-      const cleanedContent = content.map(node => {
-        if ('children' in node) {
-          // Remove any invalid properties like "level" that aren't part of Slate
-          const { level, ...cleanNode } = node as any;
-          
-          // Clean up children as well
-          const cleanedChildren = cleanNode.children.map((child: any) => {
-            // For text nodes, keep only valid properties
-            if ('text' in child) {
-              const { text, bold, italic, code } = child;
-              return { text, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
-            }
-            return child;
-          });
-          
-          return { ...cleanNode, children: cleanedChildren };
-        }
-        return node;
-      });
-      
-      // Filter out any empty paragraphs at the beginning
-      const filteredContent = cleanedContent.filter((node, index) => {
-        if (index === 0 && 'children' in node && node.type === 'paragraph') {
-          // Check if the first paragraph is empty
-          const hasText = node.children.some(child => 
-            'text' in child && child.text.trim().length > 0
-          );
-          return hasText; // Only keep if it has actual text
-        }
-        return true; // Keep all other nodes
-      });
-      
-      return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
+      return content;
     }
     
     // If it's a string (HTML), convert to basic Slate format
@@ -112,51 +78,6 @@ export default function ArticleView() {
       return false;
     });
   };
-
-  // Helper function to normalize content (remove empty paragraphs with just spaces)
-  const normalizeContent = useCallback((content: Descendant[]): Descendant[] => {
-    const hasActualContent = hasContent(content);
-    if (!hasActualContent) {
-      return createEmptyDocument();
-    }
-    
-    // Clean up content and remove invalid properties
-    const cleanedContent = content.map(node => {
-      if ('children' in node) {
-        // Remove any invalid properties like "level" that aren't part of Slate
-        const { level, ...cleanNode } = node as any;
-        
-        // Clean up children as well
-        const cleanedChildren = cleanNode.children.map((child: any) => {
-          // For text nodes, keep only valid properties  
-          if ('text' in child) {
-            const { text, bold, italic, code } = child;
-            // Replace whitespace-only text with empty string
-            const cleanText = text.trim() === '' ? '' : text;
-            return { text: cleanText, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
-          }
-          return child;
-        });
-        
-        return { ...cleanNode, children: cleanedChildren };
-      }
-      return node;
-    });
-    
-    // Filter out any empty paragraphs at the beginning
-    const filteredContent = cleanedContent.filter((node, index) => {
-      if (index === 0 && 'children' in node && node.type === 'paragraph') {
-        // Check if the first paragraph is empty
-        const hasText = node.children.some(child => 
-          'text' in child && child.text.trim().length > 0
-        );
-        return hasText; // Only keep if it has actual text
-      }
-      return true; // Keep all other nodes
-    });
-    
-    return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
-  }, []);
 
   const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
@@ -309,11 +230,10 @@ export default function ArticleView() {
 
       autoSaveTimeoutRef.current = setTimeout(() => {
         const articleTitle = title || (article?.title as string) || "";
-        const cleanedContent = normalizeContent(content);
-        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(cleanedContent)) {
+        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(content)) {
           autoSaveMutation.mutate({
             title: articleTitle,
-            content: cleanedContent,
+            content,
           });
         }
       }, 1000); // 1 second delay
@@ -324,11 +244,10 @@ export default function ArticleView() {
   // Handle content changes with auto-save
   const handleContentChange = useCallback(
     (newContent: Descendant[]) => {
-      const normalizedContent = normalizeContent(newContent);
-      setCurrentContent(normalizedContent);
-      debouncedAutoSave(normalizedContent);
+      setCurrentContent(newContent);
+      debouncedAutoSave(newContent);
     },
-    [debouncedAutoSave, normalizeContent]
+    [debouncedAutoSave]
   );
 
   // Handle title changes with auto-save
