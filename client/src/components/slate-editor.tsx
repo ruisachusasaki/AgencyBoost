@@ -1047,7 +1047,7 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
         </span>
       </div>
       {isOpen && (
-        <div className="toggle-content mt-2 pl-6 border-l-2 border-gray-200">
+        <div className="toggle-content mt-2 pl-6">
           {children}
         </div>
       )}
