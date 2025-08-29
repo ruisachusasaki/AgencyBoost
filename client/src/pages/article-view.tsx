@@ -30,7 +30,7 @@ export default function ArticleView() {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState<Descendant[]>(createEmptyDocument());
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [currentContent, setCurrentContent] = useState<Descendant[]>(createEmptyDocument());
+  const [currentContent, setCurrentContent] = useState<Descendant[]>(() => createEmptyDocument());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to convert content between formats
@@ -502,7 +502,7 @@ export default function ArticleView() {
               />
             ) : (
               <SlateEditor
-                key={`editor-${id}-${article?.updatedAt || 'new'}`}
+                key={`editor-${id}-${article?.updatedAt || Date.now()}`}
                 value={currentContent}
                 onChange={handleContentChange}
                 placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
