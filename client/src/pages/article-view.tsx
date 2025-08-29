@@ -83,7 +83,7 @@ export default function ArticleView() {
   // Set initial edit content when starting to edit
   useEffect(() => {
     if (isEditing && article) {
-      setEditTitle(article.title || '');
+      setEditTitle((article.title as string) || '');
       setEditContent(parseContent(article.content));
     }
   }, [isEditing, article]);
@@ -216,8 +216,8 @@ export default function ArticleView() {
       }
 
       autoSaveTimeoutRef.current = setTimeout(() => {
-        const articleTitle = title || article?.title || "";
-        if (articleTitle.trim() && hasContent(content)) {
+        const articleTitle = title || (article?.title as string) || "";
+        if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(content)) {
           autoSaveMutation.mutate({
             title: articleTitle,
             content,
