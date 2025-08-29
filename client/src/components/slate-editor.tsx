@@ -248,13 +248,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
-    // Handle Enter key first - if slash menu is not showing, let Slate handle it
-    if (event.key === 'Enter' && !showSlashMenu) {
-      // Let Slate handle this naturally - don't prevent default
-      return;
-    }
-
-    // Handle slash menu navigation
+    // Only handle slash menu when it's actually visible
     if (showSlashMenu) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -319,6 +313,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       toggleMark(editor, 'italic');
       return;
     }
+
+    // For all other keys (including Enter), let Slate handle them naturally
   };
 
   // Formatting functions for selection toolbar

@@ -12,12 +12,13 @@
 }
 
 /* Hide empty elements that create unwanted spacing */
-.slate-editor [data-slate-node="element"]:empty,
-.slate-editor p:empty,
-.slate-editor div:empty,
-.slate-editor h1:empty,
-.slate-editor h2:empty,
-.slate-editor h3:empty {
+/* Hide empty elements only when not in editable mode */
+.slate-editor:not([contenteditable]) [data-slate-node="element"]:empty,
+.slate-editor:not([contenteditable]) p:empty,
+.slate-editor:not([contenteditable]) div:empty,
+.slate-editor:not([contenteditable]) h1:empty,
+.slate-editor:not([contenteditable]) h2:empty,
+.slate-editor:not([contenteditable]) h3:empty {
   display: none !important;
   height: 0 !important;
   line-height: 0 !important;
