@@ -193,7 +193,7 @@ export default function ArticleView() {
   };
 
   const saveEdit = () => {
-    if (editTitle.trim() && editContent.length > 0) {
+    if (editTitle.trim() && hasContent(editContent)) {
       updateArticleMutation.mutate({
         title: editTitle.trim(),
         content: editContent,

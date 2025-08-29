@@ -1,10 +1,11 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Element as SlateElement, Transforms, Editor, Point, Range } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { 
   Type, Heading1, Heading2, Heading3, List, ListOrdered, 
-  Quote, Code, ChevronRight, AlertCircle, Info, AlertTriangle
+  Quote, Code, ChevronRight, AlertCircle, Info, AlertTriangle,
+  Bold, Italic
 } from 'lucide-react';
 
 // Define our schema
@@ -147,13 +148,50 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   const [filteredCommands, setFilteredCommands] = useState(SLASH_COMMANDS);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [slashQuery, setSlashQuery] = useState('');
+  const [showSelectionToolbar, setShowSelectionToolbar] = useState(false);
+  const [selectionToolbarPosition, setSelectionToolbarPosition] = useState({ top: 0, left: 0 });
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const renderElement = useCallback((props: any) => <Element {...props} />, []);
   const renderLeaf = useCallback((props: any) => <Leaf {...props} />, []);
 
+  // Handle text selection for toolbar
+  const handleSelectionChange = () => {
+    const { selection } = editor;
+    
+    if (
+      selection &&
+      !Range.isCollapsed(selection) &&
+      Editor.string(editor, selection).trim().length > 0
+    ) {
+      // Show selection toolbar
+      try {
+        const domRange = ReactEditor.toDOMRange(editor, selection);
+        const rect = domRange.getBoundingClientRect();
+        setSelectionToolbarPosition({
+          top: rect.top - 50 + window.scrollY,
+          left: rect.left + (rect.width / 2) + window.scrollX - 100 // Center the toolbar
+        });
+        setShowSelectionToolbar(true);
+      } catch (error) {
+        setShowSelectionToolbar(false);
+      }
+    } else {
+      setShowSelectionToolbar(false);
+    }
+  };
+
+  // Update selection toolbar when selection changes
+  useEffect(() => {
+    handleSelectionChange();
+  }, [editor.selection]);
+
   // Handle filtering slash commands as user types
   const handleEditorChange = (newValue: Descendant[]) => {
     onChange(newValue);
+    
+    // Handle selection toolbar
+    handleSelectionChange();
     
     // Check if we're typing after a slash
     if (showSlashMenu) {
@@ -248,6 +286,47 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     }
   };
 
+  // Formatting functions for selection toolbar
+  const formatBold = () => {
+    toggleMark(editor, 'bold');
+    ReactEditor.focus(editor);
+  };
+
+  const formatItalic = () => {
+    toggleMark(editor, 'italic');
+    ReactEditor.focus(editor);
+  };
+
+  const formatHeading = (level: 1 | 2 | 3) => {
+    toggleBlock(editor, 'heading');
+    Transforms.setNodes(editor, { level } as Partial<SlateElement>);
+    ReactEditor.focus(editor);
+  };
+
+  // Check if mark is active
+  const isMarkActive = (mark: string) => {
+    const marks = Editor.marks(editor);
+    return marks ? marks[mark] === true : false;
+  };
+
+  // Check if block is active
+  const isBlockActive = (blockType: string) => {
+    const { selection } = editor;
+    if (!selection) return false;
+
+    const [match] = Array.from(
+      Editor.nodes(editor, {
+        at: Editor.unhangRange(editor, selection),
+        match: n =>
+          !Editor.isEditor(n) &&
+          SlateElement.isElement(n) &&
+          n.type === blockType,
+      })
+    );
+
+    return !!match;
+  };
+
   const executeCommand = (command: any) => {
     setShowSlashMenu(false);
     setSlashQuery('');
@@ -291,7 +370,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   };
 
   return (
-    <div className="slate-editor-container">
+    <div className="slate-editor-container" ref={editorRef}>
       <Slate editor={editor} initialValue={value} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
@@ -346,6 +425,90 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
               No commands found for "{slashQuery}"
             </div>
           )}
+        </div>
+      )}
+
+      {/* Selection Toolbar */}
+      {showSelectionToolbar && (
+        <div
+          className="selection-toolbar"
+          style={{
+            position: 'absolute',
+            top: selectionToolbarPosition.top,
+            left: selectionToolbarPosition.left,
+            zIndex: 1000,
+            background: 'rgba(0, 0, 0, 0.9)',
+            border: '1px solid #374151',
+            borderRadius: '0.5rem',
+            padding: '0.5rem',
+            display: 'flex',
+            gap: '0.25rem',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              formatBold();
+            }}
+            className={`p-1.5 rounded transition-colors ${
+              isMarkActive('bold') 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Bold (Ctrl+B)"
+          >
+            <Bold className="w-4 h-4" />
+          </button>
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              formatItalic();
+            }}
+            className={`p-1.5 rounded transition-colors ${
+              isMarkActive('italic') 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Italic (Ctrl+I)"
+          >
+            <Italic className="w-4 h-4" />
+          </button>
+          <div className="w-px bg-gray-600 mx-1" />
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              formatHeading(1);
+            }}
+            className={`p-1.5 rounded transition-colors ${
+              isBlockActive('heading') 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Heading 1"
+          >
+            <Heading1 className="w-4 h-4" />
+          </button>
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              formatHeading(2);
+            }}
+            className="p-1.5 rounded text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+            title="Heading 2"
+          >
+            <Heading2 className="w-4 h-4" />
+          </button>
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              formatHeading(3);
+            }}
+            className="p-1.5 rounded text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+            title="Heading 3"
+          >
+            <Heading3 className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
