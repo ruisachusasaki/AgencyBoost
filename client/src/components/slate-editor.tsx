@@ -142,7 +142,31 @@ interface SlateEditorProps {
 }
 
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
-  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
+  const editor = useMemo(() => {
+    const e = withHistory(withReact(createEditor()));
+    
+    // Add normalization to remove empty elements
+    const { normalizeNode } = e;
+    e.normalizeNode = (entry) => {
+      const [node, path] = entry;
+      
+      // Remove empty headings and paragraphs
+      if (SlateElement.isElement(node) && 
+          (node.type === 'heading' || node.type === 'paragraph') &&
+          node.children.length === 1 &&
+          node.children[0].text === '') {
+        // Don't remove if it's the only element
+        if (e.children.length > 1) {
+          Transforms.removeNodes(e, { at: path });
+          return;
+        }
+      }
+      
+      normalizeNode(entry);
+    };
+    
+    return e;
+  }, []);
   
   // Ensure we always have a valid value
   const safeValue = useMemo(() => {
@@ -554,8 +578,20 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 const Element = (props: any) => {
   const { attributes, children, element } = props;
 
+  // Check if element is effectively empty (only contains empty text nodes)
+  const isElementEmpty = (elem: any): boolean => {
+    if (!elem.children || elem.children.length === 0) return true;
+    return elem.children.every((child: any) => 
+      (child.text === '' || child.text === '\uFEFF') && !child.bold && !child.italic
+    );
+  };
+
   switch (element.type) {
     case 'heading':
+      // Skip rendering empty headings
+      if (isElementEmpty(element)) {
+        return null;
+      }
       const level = element.level || 1; // Default to h1 if level is missing
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       return (

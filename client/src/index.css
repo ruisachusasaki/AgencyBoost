@@ -14,10 +14,25 @@
 /* Hide empty elements that create unwanted spacing */
 .slate-editor [data-slate-node="element"]:empty,
 .slate-editor p:empty,
-.slate-editor div:empty {
+.slate-editor div:empty,
+.slate-editor h1:empty,
+.slate-editor h2:empty,
+.slate-editor h3:empty {
   display: none !important;
   height: 0 !important;
   line-height: 0 !important;
+}
+
+/* Hide elements with only zero-width spaces */
+.slate-editor [data-slate-zero-width] {
+  display: none !important;
+}
+
+/* Hide headings that only contain zero-width spaces and breaks */
+.slate-editor h1:has([data-slate-zero-width]),
+.slate-editor h2:has([data-slate-zero-width]),
+.slate-editor h3:has([data-slate-zero-width]) {
+  display: none !important;
 }
 
 /* AGGRESSIVE: Target Slate's internal structure */
