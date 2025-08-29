@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Remove default margin from first elements in Slate editor */
+.slate-editor > *:first-child {
+  margin-top: 0 !important;
+}
+
+.slate-editor h1:first-child,
+.slate-editor h2:first-child,
+.slate-editor h3:first-child,
+.slate-editor p:first-child,
+.slate-editor ul:first-child,
+.slate-editor ol:first-child {
+  margin-top: 0 !important;
+}
+
 /* Enhanced Tiptap Editor Styling */
 .tiptap {
   outline: none;

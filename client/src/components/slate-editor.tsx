@@ -404,7 +404,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           renderLeaf={renderLeaf}
           placeholder={placeholder || "Type '/' for commands..."}
           onKeyDown={handleKeyDown}
-          className="slate-editor"
+          className="slate-editor first:mt-0 [&>*:first-child]:mt-0"
           style={{
             minHeight: '200px',
             padding: '1rem',
