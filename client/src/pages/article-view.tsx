@@ -68,10 +68,10 @@ export default function ArticleView() {
       });
       
       // Filter out any empty paragraphs at the beginning
-      const filteredContent = cleanedContent.filter((node, index) => {
+      const filteredContent = cleanedContent.filter((node: any, index: number) => {
         if (index === 0 && 'children' in node && node.type === 'paragraph') {
           // Check if the first paragraph is empty
-          const hasText = node.children.some(child => 
+          const hasText = node.children.some((child: any) => 
             'text' in child && child.text.trim().length > 0
           );
           return hasText; // Only keep if it has actual text
@@ -147,7 +147,7 @@ export default function ArticleView() {
     const filteredContent = cleanedContent.filter((node, index) => {
       if (index === 0 && 'children' in node && node.type === 'paragraph') {
         // Check if the first paragraph is empty
-        const hasText = node.children.some(child => 
+        const hasText = node.children.some((child: any) => 
           'text' in child && child.text.trim().length > 0
         );
         return hasText; // Only keep if it has actual text
@@ -361,7 +361,7 @@ export default function ArticleView() {
 
   const startEdit = () => {
     if (article) {
-      setEditTitle(article.title || "");
+      setEditTitle((article.title as string) || "");
       setEditContent(parseContent(article.content));
       setIsEditing(true);
     }
@@ -450,16 +450,16 @@ export default function ArticleView() {
             <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                <span>{article?.authorName}</span>
+                <span>{(article as any)?.authorName || 'Unknown'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>{article?.createdAt ? format(new Date(article.createdAt), 'MMMM d, yyyy') : ''}</span>
+                <span>{(article as any)?.createdAt ? format(new Date((article as any).createdAt), 'MMMM d, yyyy') : ''}</span>
               </div>
-              {(article?.viewCount || 0) > 0 && (
+              {((article as any)?.viewCount || 0) > 0 && (
                 <div className="flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  <span>{article.viewCount} views</span>
+                  <span>{(article as any)?.viewCount || 0} views</span>
                 </div>
               )}
             </div>
@@ -508,7 +508,7 @@ export default function ArticleView() {
                   disabled={likeMutation.isPending}
                 >
                   <Heart className={`w-4 h-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
-                  {article?.likeCount || 0}
+                  {(article as any)?.likeCount || 0}
                 </Button>
 
                 <Button
@@ -536,9 +536,9 @@ export default function ArticleView() {
         </div>
 
         {/* Tags */}
-        {article?.tags && article.tags.length > 0 && (
+        {(article as any)?.tags && (article as any).tags.length > 0 && (
           <div className="flex gap-2 flex-wrap mb-6">
-            {article.tags.map((tag: string) => (
+            {((article as any)?.tags || []).map((tag: string) => (
               <Badge key={tag} variant="outline" className="text-xs">
                 <Tag className="w-3 h-3 mr-1" />
                 {tag}
@@ -553,13 +553,13 @@ export default function ArticleView() {
       {/* Article Content */}
       <Card className="mb-8">
         <CardContent className="p-8">
-          {article?.featuredImage && (
+          {(article as any)?.featuredImage ? (
             <img 
-              src={article.featuredImage}
-              alt={article?.title || ''}
+              src={(article as any)?.featuredImage}
+              alt={(article as any)?.title || ''}
               className="w-full h-64 object-cover rounded-lg mb-6"
             />
-          )}
+          ) : null}
           
           <div className="prose prose-lg max-w-none">
             {isEditing ? (
@@ -586,7 +586,7 @@ export default function ArticleView() {
           <div className="flex items-center gap-2 mb-6">
             <MessageCircle className="w-5 h-5" />
             <h3 className="text-lg font-semibold">
-              Comments ({comments?.length || 0})
+              Comments ({(comments as any[] || []).length || 0})
             </h3>
           </div>
 
@@ -613,12 +613,12 @@ export default function ArticleView() {
 
           {/* Comments List */}
           <div className="space-y-4">
-            {(comments || []).length === 0 ? (
+            {(comments as any[] || []).length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
                 No comments yet. Be the first to share your thoughts!
               </p>
             ) : (
-              (comments || []).map((comment: any) => (
+              ((comments as any[]) || []).map((comment: any) => (
                 <div key={comment.id} className="flex gap-3">
                   <Avatar className="w-8 h-8">
                     <AvatarFallback>
