@@ -988,19 +988,62 @@ const Element = (props: any) => {
 // Toggle block component
 const ToggleBlock = ({ attributes, children, element }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [title, setTitle] = useState(element.title || 'Click to toggle');
+
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      setIsEditingTitle(false);
+      // In a real implementation, you'd update the editor state here
+    }
+  };
+
+  const handleTitleBlur = () => {
+    setIsEditingTitle(false);
+  };
 
   return (
     <div {...attributes} className="toggle-block my-4">
       <div
-        className="toggle-header cursor-pointer bg-gray-50 border border-gray-200 rounded-md p-3 flex items-center gap-2 hover:bg-gray-100 transition-colors"
-        onClick={() => setIsOpen(!isOpen)}
+        className="toggle-header bg-gray-50 border border-gray-200 rounded-md p-3 flex items-center gap-2 hover:bg-gray-100 transition-colors"
         contentEditable={false}
       >
         <ChevronRight 
-          className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} 
+          className={`h-4 w-4 transition-transform cursor-pointer ${isOpen ? 'rotate-90' : ''}`} 
+          onClick={() => setIsOpen(!isOpen)}
         />
-        <span className="font-medium">
-          {element.title || 'Click to toggle'}
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={title}
+            onChange={handleTitleChange}
+            onKeyDown={handleTitleKeyDown}
+            onBlur={handleTitleBlur}
+            className="font-medium bg-transparent border-none outline-none flex-1"
+            autoFocus
+          />
+        ) : (
+          <span 
+            className="font-medium cursor-text flex-1"
+            onClick={handleTitleClick}
+          >
+            {title}
+          </span>
+        )}
+        <span 
+          className="text-xs text-gray-400 cursor-pointer"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? 'Hide' : 'Show'}
         </span>
       </div>
       {isOpen && (
