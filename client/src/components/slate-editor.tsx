@@ -318,9 +318,24 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           console.log('📄 Current node:', node);
           console.log('🛤️ Path:', path);
           
-          // Check if we're in a paragraph
-          if (SlateElement.isElement(node) && node.type === 'paragraph') {
-            const text = Editor.string(editor, path);
+          // Find the paragraph element (might be parent if we're in a text node)
+          let paragraphElement = node;
+          let paragraphPath = path;
+          
+          // If we're in a text node, get the parent paragraph
+          if (!SlateElement.isElement(node)) {
+            console.log('📝 In text node, getting parent paragraph');
+            const parentPath = path.slice(0, -1); // Remove last element to get parent path
+            const [parentNode] = Editor.node(editor, parentPath);
+            paragraphElement = parentNode;
+            paragraphPath = parentPath;
+            console.log('📄 Parent node:', paragraphElement);
+            console.log('🛤️ Parent path:', paragraphPath);
+          }
+          
+          // Check if we have a paragraph
+          if (SlateElement.isElement(paragraphElement) && paragraphElement.type === 'paragraph') {
+            const text = Editor.string(editor, paragraphPath);
             const isAtStart = anchor.offset === 0;
             const isAtEnd = anchor.offset === text.length;
             
@@ -330,12 +345,12 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             if (isAtStart) {
               console.log('🔝 At start - inserting paragraph before');
               const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
-              Transforms.insertNodes(editor, newParagraph, { at: path });
-              Transforms.select(editor, { path, offset: 0 });
+              Transforms.insertNodes(editor, newParagraph, { at: paragraphPath });
+              Transforms.select(editor, { path: paragraphPath, offset: 0 });
             } else if (isAtEnd) {
               console.log('🔚 At end - inserting paragraph after');
               const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
-              const nextPath = Path.next(path);
+              const nextPath = Path.next(paragraphPath);
               Transforms.insertNodes(editor, newParagraph, { at: nextPath });
               Transforms.select(editor, { path: nextPath, offset: 0 });
             } else {

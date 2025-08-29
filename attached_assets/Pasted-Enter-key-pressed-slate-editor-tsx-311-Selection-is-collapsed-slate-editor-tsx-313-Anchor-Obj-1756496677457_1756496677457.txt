@@ -1,0 +1,36 @@
+Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:346 ⚡ Not a paragraph - splitting
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:346 ⚡ Not a paragraph - splitting
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: {path: Array(2), offset: 40}
+slate-editor.tsx:318 📄 Current node: {text: 'Nunc vel leo vitae massa posuere auctor.Mauris at …vitae urna id urna dignissim malesuada. Donec vel'}
+slate-editor.tsx:319 🛤️ Path: (2) [15, 0]
+slate-editor.tsx:346 ⚡ Not a paragraph - splitting
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: {path: Array(2), offset: 0}
+slate-editor.tsx:318 📄 Current node: {text: 'Mauris at libero in odio rhoncus finibus. Pellente…vitae urna id urna dignissim malesuada. Donec vel'}
+slate-editor.tsx:319 🛤️ Path: (2) [16, 0]
+slate-editor.tsx:346 ⚡ Not a paragraph - splitting
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: {path: Array(2), offset: 153}
+slate-editor.tsx:318 📄 Current node: {text: 'in purus facilisis luctus. Cras id eros a nisi viv…ctumst. Sed in urna id justo consectetur posuere.'}
+slate-editor.tsx:319 🛤️ Path: (2) [20, 0]
+slate-editor.tsx:346 ⚡ Not a paragraph - splitting
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: {path: Array(2), offset: 0}
+slate-editor.tsx:318 📄 Current node: {text: 'in purus facilisis luctus. Cras id eros a nisi viv…ctumst. Sed in urna id justo consectetur posuere.'}
+slate-editor.tsx:319 🛤️ Path: (2) [20, 0]
+slate-editor.tsx:346 ⚡ Not a paragraph - splitting
