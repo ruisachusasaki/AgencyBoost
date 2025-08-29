@@ -79,7 +79,7 @@ declare module 'slate' {
 // Helper functions
 const isMarkActive = (editor: Editor, format: string) => {
   const marks = Editor.marks(editor);
-  return marks ? marks[format] === true : false;
+  return marks ? (marks as any)[format] === true : false;
 };
 
 const toggleMark = (editor: Editor, format: string) => {
@@ -165,7 +165,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           // Insert new content but skip empty first elements
           const filteredContent = safeValue.filter((node, index) => {
             // Remove empty paragraphs at the beginning
-            if (index === 0 && node.type === 'paragraph' && node.children?.length === 1 && node.children[0]?.text === '') {
+            if (index === 0 && SlateElement.isElement(node) && node.type === 'paragraph' && node.children?.length === 1 && (node.children[0] as any)?.text === '') {
               return false;
             }
             return true;
@@ -343,7 +343,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   // Check if mark is active
   const isMarkActive = (mark: string) => {
     const marks = Editor.marks(editor);
-    return marks ? marks[mark] === true : false;
+    return marks ? (marks as any)[mark] === true : false;
   };
 
   // Check if block is active
@@ -610,7 +610,7 @@ const Element = (props: any) => {
         error: 'bg-red-50 border-red-200 text-red-800'
       };
       return (
-        <div {...attributes} className={`border-l-4 p-4 my-4 rounded-r-md ${variants[element.variant]}`}>
+        <div {...attributes} className={`border-l-4 p-4 my-4 rounded-r-md ${variants[element.variant as keyof typeof variants]}`}>
           {children}
         </div>
       );
