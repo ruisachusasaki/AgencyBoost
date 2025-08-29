@@ -17,7 +17,6 @@ import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import type { KnowledgeBaseArticle } from "@shared/schema";
 import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
-import { TestEditor } from '@/components/test-editor';
 import type { Descendant } from 'slate';
 
 export default function ArticleView() {
@@ -550,13 +549,6 @@ export default function ArticleView() {
       </div>
 
       <Separator className="mb-6" />
-
-      {/* Test Editor - Remove after testing */}
-      <Card className="mb-4 bg-yellow-50 border-yellow-200">
-        <CardContent className="p-4">
-          <TestEditor />
-        </CardContent>
-      </Card>
 
       {/* Article Content */}
       <Card className="mb-8">

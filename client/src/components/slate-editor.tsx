@@ -319,8 +319,11 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       toggleMark(editor, 'italic');
     }
 
-    // Let Slate handle Enter key naturally when slash menu is closed
-    // No special handling needed - Slate will handle it
+    // Explicitly allow Enter key when slash menu is closed
+    if (event.key === 'Enter' && !showSlashMenu) {
+      // Let Slate handle this naturally - don't prevent default
+      return;
+    }
   };
 
   // Formatting functions for selection toolbar
