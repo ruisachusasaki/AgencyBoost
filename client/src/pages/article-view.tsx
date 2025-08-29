@@ -254,9 +254,7 @@ export default function ArticleView() {
   // Initialize content when article loads
   useEffect(() => {
     if (article) {
-      console.log('🔄 Loading article content:', article.content);
       const parsedContent = parseContent(article.content);
-      console.log('✅ Parsed content:', JSON.stringify(parsedContent));
       setCurrentContent(parsedContent);
       setEditContent(parsedContent);
       setEditTitle((article.title as string) || "");
