@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link as RouterLink } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,9 @@ export default function ArticleView() {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState<Descendant[]>(createEmptyDocument());
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [currentContent, setCurrentContent] = useState<Descendant[]>(createEmptyDocument());
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
@@ -178,6 +181,90 @@ export default function ArticleView() {
     },
   });
 
+  // Auto-save mutation
+  const autoSaveMutation = useMutation({
+    mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
+        title,
+        content,
+      });
+      return await response.json();
+    },
+    onMutate: () => {
+      setIsAutoSaving(true);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      setIsAutoSaving(false);
+    },
+    onError: (error: any) => {
+      console.error("Auto-save error:", error);
+      setIsAutoSaving(false);
+      toast({
+        title: "Auto-save failed",
+        description: "Your changes were not saved automatically.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Debounced auto-save function
+  const debouncedAutoSave = useCallback(
+    (content: Descendant[], title?: string) => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        const articleTitle = title || article?.title || "";
+        if (articleTitle.trim() && hasContent(content)) {
+          autoSaveMutation.mutate({
+            title: articleTitle,
+            content,
+          });
+        }
+      }, 1000); // 1 second delay
+    },
+    [article?.title, autoSaveMutation]
+  );
+
+  // Handle content changes with auto-save
+  const handleContentChange = useCallback(
+    (newContent: Descendant[]) => {
+      setCurrentContent(newContent);
+      debouncedAutoSave(newContent);
+    },
+    [debouncedAutoSave]
+  );
+
+  // Handle title changes with auto-save
+  const handleTitleChange = useCallback(
+    (newTitle: string) => {
+      setEditTitle(newTitle);
+      debouncedAutoSave(currentContent, newTitle);
+    },
+    [currentContent, debouncedAutoSave]
+  );
+
+  // Initialize content when article loads
+  useEffect(() => {
+    if (article) {
+      const parsedContent = parseContent(article.content);
+      setCurrentContent(parsedContent);
+      setEditContent(parsedContent);
+      setEditTitle(article.title || "");
+    }
+  }, [article]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const startEdit = () => {
     if (article) {
       setEditTitle(article.title || "");
@@ -254,12 +341,17 @@ export default function ArticleView() {
             {isEditing ? (
               <Input
                 value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 className="text-3xl font-bold mb-4 text-3xl border-none px-0 shadow-none focus-visible:ring-0"
                 placeholder="Article title..."
               />
             ) : (
-              <h1 className="text-3xl font-bold mb-4">{article?.title}</h1>
+              <Input
+                value={editTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="text-3xl font-bold mb-4 text-3xl border-none px-0 shadow-none focus-visible:ring-0 bg-transparent hover:bg-muted/20 transition-colors"
+                placeholder="Click to edit title..."
+              />
             )}
             <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
               <div className="flex items-center gap-2">
@@ -280,6 +372,14 @@ export default function ArticleView() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Auto-save indicator */}
+            {isAutoSaving && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mr-4">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span>Auto-saving...</span>
+              </div>
+            )}
+            
             {isEditing ? (
               <>
                 <Button
@@ -303,6 +403,9 @@ export default function ArticleView() {
               </>
             ) : (
               <>
+                <div className="text-xs text-muted-foreground mr-3 hidden sm:block">
+                  💡 Click anywhere to edit - auto-saves as you type!
+                </div>
                 <Button
                   data-testid="button-like"
                   variant={isLiked ? "default" : "outline"}
@@ -331,7 +434,7 @@ export default function ArticleView() {
                   data-testid="button-edit"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  Edit
+                  Edit Mode
                 </Button>
               </>
             )}
@@ -373,9 +476,9 @@ export default function ArticleView() {
               />
             ) : (
               <SlateEditor
-                value={parseContent(article?.content)}
-                onChange={() => {}} // Read-only
-                placeholder=""
+                value={currentContent}
+                onChange={handleContentChange}
+                placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
               />
             )}
           </div>
