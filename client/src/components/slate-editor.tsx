@@ -346,13 +346,15 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
               console.log('🔝 At start - inserting paragraph before');
               const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
               Transforms.insertNodes(editor, newParagraph, { at: paragraphPath });
-              Transforms.select(editor, { path: paragraphPath, offset: 0 });
+              // Select the text node inside the new paragraph (add [0] for first child)
+              Transforms.select(editor, { path: [...paragraphPath, 0], offset: 0 });
             } else if (isAtEnd) {
               console.log('🔚 At end - inserting paragraph after');
               const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
               const nextPath = Path.next(paragraphPath);
               Transforms.insertNodes(editor, newParagraph, { at: nextPath });
-              Transforms.select(editor, { path: nextPath, offset: 0 });
+              // Select the text node inside the new paragraph (add [0] for first child)
+              Transforms.select(editor, { path: [...nextPath, 0], offset: 0 });
             } else {
               console.log('🔄 In middle - splitting');
               Transforms.splitNodes(editor);
