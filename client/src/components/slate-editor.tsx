@@ -142,7 +142,33 @@ interface SlateEditorProps {
 }
 
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
-  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
+  const editor = useMemo(() => {
+    const baseEditor = withHistory(withReact(createEditor()));
+    
+    // Custom normalization to ensure proper Enter key behavior
+    const { normalizeNode } = baseEditor;
+    baseEditor.normalizeNode = (entry) => {
+      const [node, path] = entry;
+      
+      // Ensure the editor always ends with a paragraph for proper Enter key behavior
+      if (path.length === 0) {
+        const lastChild = node.children[node.children.length - 1] as CustomElement;
+        if (lastChild && lastChild.type !== 'paragraph') {
+          // Add a trailing paragraph if the last element is not a paragraph
+          const paragraph: ParagraphElement = {
+            type: 'paragraph',
+            children: [{ text: '' }]
+          };
+          Transforms.insertNodes(baseEditor, paragraph, { at: [node.children.length] });
+          return;
+        }
+      }
+      
+      normalizeNode(entry);
+    };
+    
+    return baseEditor;
+  }, []);
   
   // Ensure we always have a valid value
   const safeValue = useMemo(() => {
@@ -672,11 +698,15 @@ const Leaf = ({ attributes, children, leaf }: any) => {
   return <span {...attributes}>{children}</span>;
 };
 
-// Default initial value - starts with heading to avoid empty paragraph
+// Default initial value - starts with heading and ends with paragraph for proper Enter key behavior
 export const createEmptyDocument = (): Descendant[] => [
   {
     type: 'heading',
     level: 1,
     children: [{ text: 'Untitled' }],
+  },
+  {
+    type: 'paragraph',
+    children: [{ text: '' }],
   },
 ];
