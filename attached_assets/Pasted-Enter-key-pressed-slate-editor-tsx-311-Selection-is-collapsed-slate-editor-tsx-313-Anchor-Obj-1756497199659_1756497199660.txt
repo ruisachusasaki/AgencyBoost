@@ -1,0 +1,141 @@
+Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "Mauris at libero in odio rhoncus finibus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nulla facilisi.Praesent a quam vitae ex bibendum efficitur. Integer vitae urna id urna dignissim malesuada. Donec vel", length: 253
+slate-editor.tsx:343 📍 Offset: 151, isAtStart: false, isAtEnd: false
+slate-editor.tsx:359 🔄 In middle - splitting
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "Praesent a quam vitae ex bibendum efficitur. Integer vitae urna id urna dignissim malesuada. Donec vel", length: 102
+slate-editor.tsx:343 📍 Offset: 0, isAtStart: true, isAtEnd: false
+slate-editor.tsx:346 🔝 At start - inserting paragraph before
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "magna", length: 5
+slate-editor.tsx:343 📍 Offset: 5, isAtStart: false, isAtEnd: true
+slate-editor.tsx:352 🔚 At end - inserting paragraph after
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "in purus facilisis luctus. Cras id eros a nisi viverra bibendum at ut turpis. In hac habitasse platea dictumst. Sed in urna id justo consectetur posuere.", length: 153
+slate-editor.tsx:343 📍 Offset: 153, isAtStart: false, isAtEnd: true
+slate-editor.tsx:352 🔚 At end - inserting paragraph after
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "", length: 0
+slate-editor.tsx:343 📍 Offset: 0, isAtStart: true, isAtEnd: true
+slate-editor.tsx:346 🔝 At start - inserting paragraph before
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "", length: 0
+slate-editor.tsx:343 📍 Offset: 0, isAtStart: true, isAtEnd: true
+slate-editor.tsx:346 🔝 At start - inserting paragraph before
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "", length: 0
+slate-editor.tsx:343 📍 Offset: 0, isAtStart: true, isAtEnd: true
+slate-editor.tsx:346 🔝 At start - inserting paragraph before
+content_script.js:1 Uncaught TypeError: Cannot read properties of null (reading 'ControlLooksLikePasswordCredentialField')
+    at shouldOfferCompletionListForField (content_script.js:1:418255)
+    at HTMLDocument.keyDownEventHandler (content_script.js:1:420976)Understand this error
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "magna in purus facilisis luctus. Cras id eros a nisi viverra bibendum at ut turpis. In hac habitasse platea dictumst. Sed in urna id justo consectetur posuere.", length: 159
+slate-editor.tsx:343 📍 Offset: 159, isAtStart: false, isAtEnd: true
+slate-editor.tsx:352 🔚 At end - inserting paragraph after
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "", length: 0
+slate-editor.tsx:343 📍 Offset: 0, isAtStart: true, isAtEnd: true
+slate-editor.tsx:346 🔝 At start - inserting paragraph before
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "", length: 0
+slate-editor.tsx:343 📍 Offset: 0, isAtStart: true, isAtEnd: true
+slate-editor.tsx:346 🔝 At start - inserting paragraph before
+content_script.js:1 Uncaught TypeError: Cannot read properties of null (reading 'ControlLooksLikePasswordCredentialField')
+    at shouldOfferCompletionListForField (content_script.js:1:418255)
+    at HTMLDocument.keyDownEventHandler (content_script.js:1:420976)Understand this error
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "Mauris at libero in odio rhoncus finibus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nulla facilisi.", length: 151
+slate-editor.tsx:343 📍 Offset: 151, isAtStart: false, isAtEnd: true
+slate-editor.tsx:352 🔚 At end - inserting paragraph after
+slate-editor.tsx:306 🔥 Enter key pressed!
+slate-editor.tsx:311 ✅ Selection is collapsed
+slate-editor.tsx:313 📍 Anchor: Object
+slate-editor.tsx:318 📄 Current node: Object
+slate-editor.tsx:319 🛤️ Path: Array(2)
+slate-editor.tsx:327 📝 In text node, getting parent paragraph
+slate-editor.tsx:332 📄 Parent node: Object
+slate-editor.tsx:333 🛤️ Parent path: Array(1)
+slate-editor.tsx:342 📝 Text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.", length: 231
+slate-editor.tsx:343 📍 Offset: 231, isAtStart: false, isAtEnd: true
+slate-editor.tsx:352 🔚 At end - inserting paragraph after
+6content_script.js:1 Uncaught TypeError: Cannot read properties of null (reading 'ControlLooksLikePasswordCredentialField')
+    at shouldOfferCompletionListForField (content_script.js:1:418255)
+    at HTMLDocument.keyDownEventHandler (content_script.js:1:420976)Understand this error
