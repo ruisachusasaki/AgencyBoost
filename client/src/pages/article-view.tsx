@@ -503,7 +503,7 @@ export default function ArticleView() {
           <div className="prose prose-lg max-w-none">
             {isEditing ? (
               <SlateEditor
-                value={editContent}
+                value={editContent || createEmptyDocument()}
                 onChange={setEditContent}
                 placeholder="Write your article content... Type '/' for commands"
               />
