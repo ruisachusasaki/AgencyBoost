@@ -39,13 +39,26 @@ export default function ArticleView() {
       return createEmptyDocument();
     }
     
-    // If it's already Slate format (array), return it
+    // If it's already Slate format (array), return it directly
     if (Array.isArray(content)) {
       // Ensure array is not empty and has valid structure
       if (content.length === 0) {
         return createEmptyDocument();
       }
-      return content;
+      
+      // Filter out any empty paragraphs at the beginning
+      const filteredContent = content.filter((node, index) => {
+        if (index === 0 && 'children' in node && node.type === 'paragraph') {
+          // Check if the first paragraph is empty
+          const hasText = node.children.some(child => 
+            'text' in child && child.text.trim().length > 0
+          );
+          return hasText; // Only keep if it has actual text
+        }
+        return true; // Keep all other nodes
+      });
+      
+      return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
     }
     
     // If it's a string (HTML), convert to basic Slate format
