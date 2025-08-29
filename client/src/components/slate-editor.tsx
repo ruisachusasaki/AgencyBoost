@@ -548,9 +548,10 @@ const Element = (props: any) => {
 
   switch (element.type) {
     case 'heading':
-      const HeadingTag = `h${element.level}` as keyof JSX.IntrinsicElements;
+      const level = element.level || 1; // Default to h1 if level is missing
+      const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       return (
-        <HeadingTag {...attributes} className={`text-${element.level === 1 ? '2xl' : element.level === 2 ? 'xl' : 'lg'} font-bold my-4`}>
+        <HeadingTag {...attributes} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4`}>
           {children}
         </HeadingTag>
       );
