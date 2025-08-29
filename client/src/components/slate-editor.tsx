@@ -162,15 +162,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           // Clear all content
           Transforms.select(editor, Editor.range(editor, []));
           Transforms.delete(editor);
-          // Insert new content but skip empty first elements
-          const filteredContent = safeValue.filter((node, index) => {
-            // Remove empty paragraphs at the beginning
-            if (index === 0 && SlateElement.isElement(node) && node.type === 'paragraph' && node.children?.length === 1 && (node.children[0] as any)?.text === '') {
-              return false;
-            }
-            return true;
-          });
-          Transforms.insertNodes(editor, filteredContent.length > 0 ? filteredContent : safeValue);
+          // Insert new content without aggressive filtering
+          Transforms.insertNodes(editor, safeValue);
         });
       }
     } catch (error) {

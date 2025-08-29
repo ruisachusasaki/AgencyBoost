@@ -113,14 +113,14 @@ export default function ArticleView() {
     });
   };
 
-  // Helper function to normalize content (remove empty paragraphs with just spaces)
+  // Helper function to normalize content (remove invalid properties but preserve structure)
   const normalizeContent = useCallback((content: Descendant[]): Descendant[] => {
     const hasActualContent = hasContent(content);
     if (!hasActualContent) {
       return createEmptyDocument();
     }
     
-    // Clean up content and remove invalid properties
+    // Clean up content and remove invalid properties but preserve paragraph structure
     const cleanedContent = content.map(node => {
       if ('children' in node) {
         // Remove any invalid properties like "level" that aren't part of Slate
@@ -131,9 +131,8 @@ export default function ArticleView() {
           // For text nodes, keep only valid properties  
           if ('text' in child) {
             const { text, bold, italic, code } = child;
-            // Replace whitespace-only text with empty string
-            const cleanText = text.trim() === '' ? '' : text;
-            return { text: cleanText, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
+            // Keep original text structure to preserve editor state
+            return { text, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
           }
           return child;
         });
@@ -143,19 +142,7 @@ export default function ArticleView() {
       return node;
     });
     
-    // Filter out any empty paragraphs at the beginning
-    const filteredContent = cleanedContent.filter((node, index) => {
-      if (index === 0 && 'children' in node && node.type === 'paragraph') {
-        // Check if the first paragraph is empty
-        const hasText = node.children.some((child: any) => 
-          'text' in child && child.text.trim().length > 0
-        );
-        return hasText; // Only keep if it has actual text
-      }
-      return true; // Keep all other nodes
-    });
-    
-    return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
+    return cleanedContent.length > 0 ? cleanedContent : createEmptyDocument();
   }, []);
 
   const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
