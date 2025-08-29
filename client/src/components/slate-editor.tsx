@@ -342,6 +342,31 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       event.preventDefault();
       toggleMark(editor, 'italic');
     }
+
+    // Handle Enter key for creating new paragraphs (only when slash menu is not open)
+    if (event.key === 'Enter' && !showSlashMenu) {
+      event.preventDefault();
+      
+      // Get current selection
+      const { selection } = editor;
+      if (selection) {
+        // If we're in a heading, create a new paragraph
+        const [match] = Editor.nodes(editor, {
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'heading',
+        });
+        
+        if (match) {
+          // Insert a new paragraph after the heading
+          Transforms.insertNodes(editor, {
+            type: 'paragraph',
+            children: [{ text: '' }],
+          });
+        } else {
+          // Default behavior: split the current block
+          Transforms.splitNodes(editor);
+        }
+      }
+    }
   };
 
   // Formatting functions for selection toolbar
