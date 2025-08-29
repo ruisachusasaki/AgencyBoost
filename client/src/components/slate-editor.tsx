@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { createEditor, Descendant, Element as SlateElement, Transforms, Editor, Point, Range } from 'slate';
+import { createEditor, Descendant, Element as SlateElement, Transforms, Editor, Point, Range, Path } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { 
@@ -301,19 +301,43 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    // FORCE Enter key to always work - simple and direct approach
+    // FORCE Enter key to always work - handle beginning/end cases specifically
     if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
       
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
-        // Just insert a new empty paragraph after current selection
-        const newParagraph = {
-          type: 'paragraph',
-          children: [{ text: '' }],
-        };
+        const { anchor } = selection;
+        const currentNode = Editor.node(editor, anchor);
+        const [node, path] = currentNode;
         
-        Transforms.insertNodes(editor, newParagraph);
+        // Check if we're in a text node and get position info
+        if (SlateElement.isElement(node) && node.type === 'paragraph') {
+          const text = Editor.string(editor, path);
+          const isAtStart = anchor.offset === 0;
+          const isAtEnd = anchor.offset === text.length;
+          
+          if (isAtStart) {
+            // At beginning: insert paragraph before current one
+            const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
+            Transforms.insertNodes(editor, newParagraph, { at: path });
+            // Move cursor to the new paragraph
+            Transforms.select(editor, { path, offset: 0 });
+          } else if (isAtEnd) {
+            // At end: insert paragraph after current one
+            const newParagraph: ParagraphElement = { type: 'paragraph', children: [{ text: '' }] };
+            const nextPath = Path.next(path);
+            Transforms.insertNodes(editor, newParagraph, { at: nextPath });
+            // Move cursor to the new paragraph
+            Transforms.select(editor, { path: nextPath, offset: 0 });
+          } else {
+            // In middle: use split (default Slate behavior)
+            Transforms.splitNodes(editor);
+          }
+        } else {
+          // Fallback: just split
+          Transforms.splitNodes(editor);
+        }
       }
       return;
     }
