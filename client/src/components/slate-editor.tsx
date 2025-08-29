@@ -440,7 +440,6 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           style={{
             minHeight: '200px',
             padding: '1rem',
-            border: '1px solid #e5e7eb',
             borderRadius: '0.5rem',
             outline: 'none'
           }}
