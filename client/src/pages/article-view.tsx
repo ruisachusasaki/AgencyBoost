@@ -39,15 +39,36 @@ export default function ArticleView() {
       return createEmptyDocument();
     }
     
-    // If it's already Slate format (array), return it directly
+    // If it's already Slate format (array), clean it up
     if (Array.isArray(content)) {
       // Ensure array is not empty and has valid structure
       if (content.length === 0) {
         return createEmptyDocument();
       }
       
+      // Clean up the content and remove invalid properties
+      const cleanedContent = content.map(node => {
+        if ('children' in node) {
+          // Remove any invalid properties like "level" that aren't part of Slate
+          const { level, ...cleanNode } = node as any;
+          
+          // Clean up children as well
+          const cleanedChildren = cleanNode.children.map((child: any) => {
+            // For text nodes, keep only valid properties
+            if ('text' in child) {
+              const { text, bold, italic, code } = child;
+              return { text, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
+            }
+            return child;
+          });
+          
+          return { ...cleanNode, children: cleanedChildren };
+        }
+        return node;
+      });
+      
       // Filter out any empty paragraphs at the beginning
-      const filteredContent = content.filter((node, index) => {
+      const filteredContent = cleanedContent.filter((node, index) => {
         if (index === 0 && 'children' in node && node.type === 'paragraph') {
           // Check if the first paragraph is empty
           const hasText = node.children.some(child => 
@@ -99,19 +120,42 @@ export default function ArticleView() {
       return createEmptyDocument();
     }
     
-    // Clean up any paragraphs that only contain whitespace
-    return content.map(node => {
-      if ('children' in node && node.type === 'paragraph') {
-        const cleanedChildren = node.children.map(child => {
-          if ('text' in child && child.text.trim() === '') {
-            return { ...child, text: '' }; // Replace whitespace-only text with empty string
+    // Clean up content and remove invalid properties
+    const cleanedContent = content.map(node => {
+      if ('children' in node) {
+        // Remove any invalid properties like "level" that aren't part of Slate
+        const { level, ...cleanNode } = node as any;
+        
+        // Clean up children as well
+        const cleanedChildren = cleanNode.children.map((child: any) => {
+          // For text nodes, keep only valid properties  
+          if ('text' in child) {
+            const { text, bold, italic, code } = child;
+            // Replace whitespace-only text with empty string
+            const cleanText = text.trim() === '' ? '' : text;
+            return { text: cleanText, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
           }
           return child;
         });
-        return { ...node, children: cleanedChildren };
+        
+        return { ...cleanNode, children: cleanedChildren };
       }
       return node;
     });
+    
+    // Filter out any empty paragraphs at the beginning
+    const filteredContent = cleanedContent.filter((node, index) => {
+      if (index === 0 && 'children' in node && node.type === 'paragraph') {
+        // Check if the first paragraph is empty
+        const hasText = node.children.some(child => 
+          'text' in child && child.text.trim().length > 0
+        );
+        return hasText; // Only keep if it has actual text
+      }
+      return true; // Keep all other nodes
+    });
+    
+    return filteredContent.length > 0 ? filteredContent : createEmptyDocument();
   }, []);
 
   const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
