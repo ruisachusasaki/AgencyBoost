@@ -52,6 +52,21 @@ export default function ArticleView() {
     return createEmptyDocument();
   };
 
+  // Helper function to check if Slate content has meaningful text
+  const hasContent = (slateValue: Descendant[]): boolean => {
+    return slateValue.some(node => {
+      if ('children' in node) {
+        return node.children.some(child => {
+          if ('text' in child) {
+            return child.text.trim().length > 0;
+          }
+          return false;
+        });
+      }
+      return false;
+    });
+  };
+
   const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
@@ -269,7 +284,7 @@ export default function ArticleView() {
               <>
                 <Button
                   onClick={saveEdit}
-                  disabled={updateArticleMutation.isPending || !editTitle.trim() || !editContent.trim()}
+                  disabled={updateArticleMutation.isPending || !editTitle.trim() || !hasContent(editContent)}
                   size="sm"
                   data-testid="button-save"
                 >

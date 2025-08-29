@@ -145,17 +145,80 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
   const [filteredCommands, setFilteredCommands] = useState(SLASH_COMMANDS);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [slashQuery, setSlashQuery] = useState('');
 
   const renderElement = useCallback((props: any) => <Element {...props} />, []);
   const renderLeaf = useCallback((props: any) => <Leaf {...props} />, []);
 
+  // Handle filtering slash commands as user types
+  const handleEditorChange = (newValue: Descendant[]) => {
+    onChange(newValue);
+    
+    // Check if we're typing after a slash
+    if (showSlashMenu) {
+      const { selection } = editor;
+      if (selection && Range.isCollapsed(selection)) {
+        const [start] = Range.edges(selection);
+        const line = Editor.string(editor, {
+          anchor: { path: start.path, offset: 0 },
+          focus: start
+        });
+        
+        // Find the last slash in the current line
+        const lastSlashIndex = line.lastIndexOf('/');
+        if (lastSlashIndex !== -1) {
+          const query = line.slice(lastSlashIndex + 1).toLowerCase();
+          setSlashQuery(query);
+          
+          // Filter commands based on query
+          const filtered = SLASH_COMMANDS.filter(command => 
+            command.title.toLowerCase().includes(query)
+          );
+          setFilteredCommands(filtered);
+          setSelectedIndex(0); // Reset selection to first item
+        }
+      }
+    }
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent) => {
+    // Handle slash menu navigation
+    if (showSlashMenu) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % filteredCommands.length);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedIndex(prev => prev === 0 ? filteredCommands.length - 1 : prev - 1);
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (filteredCommands[selectedIndex]) {
+          executeCommand(filteredCommands[selectedIndex]);
+        }
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowSlashMenu(false);
+        setSlashQuery('');
+        setSelectedIndex(0);
+        return;
+      }
+    }
+
     // Handle slash commands
     if (event.key === '/') {
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
         setShowSlashMenu(true);
         setFilteredCommands(SLASH_COMMANDS);
+        setSlashQuery('');
+        setSelectedIndex(0);
         
         // Calculate position for slash menu
         try {
@@ -170,11 +233,6 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           setSlashMenuPosition({ top: 100, left: 100 });
         }
       }
-    }
-
-    // Hide slash menu on Escape
-    if (event.key === 'Escape') {
-      setShowSlashMenu(false);
     }
 
     // Bold
@@ -192,14 +250,18 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   const executeCommand = (command: any) => {
     setShowSlashMenu(false);
+    setSlashQuery('');
+    setSelectedIndex(0);
     
-    // Remove the "/" character
+    // Remove the "/" character and any typed query
     const { selection } = editor;
     if (selection) {
       const [start] = Range.edges(selection);
       const before = Editor.before(editor, start);
       if (before) {
-        Transforms.delete(editor, { at: before, distance: 1, unit: 'character' });
+        // Delete the slash and any characters typed after it
+        const deleteDistance = 1 + slashQuery.length;
+        Transforms.delete(editor, { at: before, distance: deleteDistance, unit: 'character' });
       }
     }
 
@@ -230,7 +292,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   return (
     <div className="slate-editor-container">
-      <Slate editor={editor} initialValue={value} onValueChange={onChange}>
+      <Slate editor={editor} initialValue={value} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
           renderLeaf={renderLeaf}
@@ -268,13 +330,22 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           {filteredCommands.map((command, index) => (
             <button
               key={index}
-              className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
+                index === selectedIndex 
+                  ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' 
+                  : 'hover:bg-gray-50'
+              }`}
               onClick={() => executeCommand(command)}
             >
               {command.icon}
               <span>{command.title}</span>
             </button>
           ))}
+          {filteredCommands.length === 0 && (
+            <div className="px-3 py-2 text-gray-500 text-sm">
+              No commands found for "{slashQuery}"
+            </div>
+          )}
         </div>
       )}
     </div>
