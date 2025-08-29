@@ -11,17 +11,21 @@
   margin-block-start: 0 !important;
 }
 
-/* Hide empty elements that create unwanted spacing */
-/* Hide empty elements only when not in editable mode */
-.slate-editor:not([contenteditable]) [data-slate-node="element"]:empty,
-.slate-editor:not([contenteditable]) p:empty,
-.slate-editor:not([contenteditable]) div:empty,
-.slate-editor:not([contenteditable]) h1:empty,
-.slate-editor:not([contenteditable]) h2:empty,
-.slate-editor:not([contenteditable]) h3:empty {
+/* Only hide empty elements in read-only mode, never during editing */
+.slate-editor[readonly] [data-slate-node="element"]:empty,
+.slate-editor[readonly] p:empty,
+.slate-editor[readonly] div:empty,
+.slate-editor[readonly] h1:empty,
+.slate-editor[readonly] h2:empty,
+.slate-editor[readonly] h3:empty {
   display: none !important;
   height: 0 !important;
   line-height: 0 !important;
+}
+
+/* Ensure empty paragraphs are visible during editing for cursor placement */
+.slate-editor p:empty {
+  min-height: 1em;
 }
 
 /* Hide elements with only zero-width spaces */
