@@ -307,7 +307,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       event.preventDefault();
       
       // Use Slate's built-in insertBreak which handles all the edge cases
-      Transforms.insertBreak(editor);
+      Editor.insertBreak(editor);
       return;
     }
 
