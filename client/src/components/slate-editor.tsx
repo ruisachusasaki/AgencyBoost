@@ -301,6 +301,27 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
+    // FORCE Enter key to always create new paragraphs
+    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      
+      const { selection } = editor;
+      if (selection && Range.isCollapsed(selection)) {
+        // Force insert a new paragraph
+        Transforms.splitNodes(editor, { always: true });
+        
+        // Ensure we have a paragraph element
+        const [match] = Editor.nodes(editor, {
+          match: n => Element.isElement(n) && n.type !== 'paragraph'
+        });
+        
+        if (match) {
+          Transforms.setNodes(editor, { type: 'paragraph' });
+        }
+      }
+      return;
+    }
+
     // Handle slash commands
     if (event.key === '/') {
       const { selection } = editor;
@@ -339,7 +360,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       return;
     }
 
-    // For all other keys (including Enter), let Slate handle them naturally
+    // For all other keys, let Slate handle them naturally
   };
 
   // Formatting functions for selection toolbar
