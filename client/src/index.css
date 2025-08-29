@@ -2,79 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CRITICAL: Remove ALL margins from first elements in Slate editor */
-.slate-editor-container *:first-child,
-.slate-editor > *:first-child,
-.slate-editor *:first-child {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  margin-block-start: 0 !important;
+/* Simplified Slate editor styles - no interference with cursor positioning */
+.slate-editor {
+  min-height: 100px;
 }
 
-/* Only hide empty elements in read-only mode, never during editing */
-.slate-editor[readonly] [data-slate-node="element"]:empty,
-.slate-editor[readonly] p:empty,
-.slate-editor[readonly] div:empty,
-.slate-editor[readonly] h1:empty,
-.slate-editor[readonly] h2:empty,
-.slate-editor[readonly] h3:empty {
-  display: none !important;
-  height: 0 !important;
-  line-height: 0 !important;
+.slate-editor p {
+  margin: 0.5em 0;
+  line-height: 1.6;
 }
 
-/* Force ALL empty paragraphs to be visible during editing */
-.slate-editor p:empty,
-.slate-editor [data-slate-node="element"]:empty {
-  min-height: 1em !important;
-  display: block !important;
-  visibility: visible !important;
-}
-
-/* Only hide very specific phantom elements - be extremely targeted */
-.slate-editor span[data-slate-zero-width="n"][data-slate-length="0"] {
-  display: none !important;
-}
-
-/* Hide headings that only contain zero-width spaces and breaks (but not during editing) */
-.slate-editor[readonly] h1:has([data-slate-zero-width]),
-.slate-editor[readonly] h2:has([data-slate-zero-width]),
-.slate-editor[readonly] h3:has([data-slate-zero-width]) {
-  display: none !important;
-}
-
-/* AGGRESSIVE: Target Slate's internal structure */
-[data-slate-editor] [data-slate-node="element"]:first-child {
-  margin-top: 0 !important;
-  margin-block-start: 0 !important;
-  padding-top: 0 !important;
-}
-
-/* NUCLEAR: Remove margin from absolutely everything in editor */
-.slate-editor-container,
-.slate-editor-container > *,
-.slate-editor-container > * > *,
-.slate-editor-container > * > * > * {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  margin-block-start: 0 !important;
-}
-
-/* Ultra-specific targeting for Slate first elements */
-.slate-editor h1:first-child,
-.slate-editor h2:first-child,
-.slate-editor h3:first-child,
-.slate-editor p:first-child,
-.slate-editor ul:first-child,
-.slate-editor ol:first-child,
-.slate-editor div:first-child,
-.slate-editor-container h1:first-child,
-.slate-editor-container h2:first-child,
-.slate-editor-container h3:first-child,
-.slate-editor-container p:first-child {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  margin-block-start: 0 !important;
+.slate-editor p:empty {
+  min-height: 1.2em;
 }
 
 /* Remove any inherited heading margins in Slate editor */
