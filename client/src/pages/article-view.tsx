@@ -45,7 +45,19 @@ export default function ArticleView() {
       if (content.length === 0) {
         return createEmptyDocument();
       }
-      return content;
+      // Filter out empty paragraphs that might cause phantom content
+      const filteredContent = content.filter(node => {
+        if (node.type === 'paragraph' && node.children) {
+          return node.children.some((child: any) => child.text && child.text.trim() !== '');
+        }
+        return true;
+      });
+      
+      if (filteredContent.length === 0) {
+        return createEmptyDocument();
+      }
+      
+      return filteredContent;
     }
     
     // If it's a string (HTML), convert to basic Slate format
