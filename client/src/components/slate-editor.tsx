@@ -143,6 +143,14 @@ interface SlateEditorProps {
 
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
+  
+  // Ensure we always have a valid value
+  const safeValue = useMemo(() => {
+    if (!value || !Array.isArray(value) || value.length === 0) {
+      return createEmptyDocument();
+    }
+    return value;
+  }, [value]);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
   const [filteredCommands, setFilteredCommands] = useState(SLASH_COMMANDS);
@@ -371,7 +379,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   return (
     <div className="slate-editor-container" ref={editorRef}>
-      <Slate editor={editor} value={value} onValueChange={handleEditorChange}>
+      <Slate editor={editor} value={safeValue} onValueChange={handleEditorChange}>
         <Editable
           renderElement={renderElement}
           renderLeaf={renderLeaf}

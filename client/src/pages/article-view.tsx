@@ -35,15 +35,24 @@ export default function ArticleView() {
 
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
-    if (!content) return createEmptyDocument();
+    if (!content || content === undefined || content === null) {
+      return createEmptyDocument();
+    }
     
     // If it's already Slate format (array), return it
     if (Array.isArray(content)) {
+      // Ensure array is not empty and has valid structure
+      if (content.length === 0) {
+        return createEmptyDocument();
+      }
       return content;
     }
     
     // If it's a string (HTML), convert to basic Slate format
     if (typeof content === 'string') {
+      if (content.trim() === '') {
+        return createEmptyDocument();
+      }
       return [
         {
           type: 'paragraph',
