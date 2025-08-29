@@ -11,31 +11,13 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
-  MessageCircle, Send, Edit, Trash2, Save, X, CheckSquare,
-  ChevronDown, ChevronRight, Code, AlertCircle, Info, AlertTriangle,
-  Columns, Palette, HighlighterIcon
+  MessageCircle, Send, Edit, Trash2, Save, X
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import type { KnowledgeBaseArticle } from "@shared/schema";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import TiptapLink from '@tiptap/extension-link';
-import TiptapImage from '@tiptap/extension-image';
-import { Table } from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableHeader from '@tiptap/extension-table-header';
-import TableCell from '@tiptap/extension-table-cell';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
-import Highlight from '@tiptap/extension-highlight';
-import { Extension } from '@tiptap/core';
-import Suggestion from '@tiptap/suggestion';
-import { ReactRenderer } from '@tiptap/react';
-import { SlashCommand, getSlashCommands } from '@/components/slash-command';
-import { TextStyle } from '@tiptap/extension-text-style';
-import { CalloutExtension, ToggleExtension, ToggleSummary, ToggleContent, ColumnsExtension, ColumnExtension } from '@/components/tiptap-extensions';
+import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
+import type { Descendant } from 'slate';
 
 export default function ArticleView() {
   const { id } = useParams();
@@ -46,141 +28,29 @@ export default function ArticleView() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
+  const [editContent, setEditContent] = useState<Descendant[]>(createEmptyDocument());
 
-  // Tiptap Editor
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TextStyle,
-      Placeholder.configure({
-        placeholder: 'Write your article content...',
-      }),
-      TiptapLink.configure({
-        openOnClick: false,
-      }),
-      TiptapImage.configure({
-        HTMLAttributes: {
-          class: 'rounded-lg max-w-full h-auto',
+  // Helper function to convert content between formats
+  const parseContent = (content: any): Descendant[] => {
+    if (!content) return createEmptyDocument();
+    
+    // If it's already Slate format (array), return it
+    if (Array.isArray(content)) {
+      return content;
+    }
+    
+    // If it's a string (HTML), convert to basic Slate format
+    if (typeof content === 'string') {
+      return [
+        {
+          type: 'paragraph',
+          children: [{ text: content.replace(/<[^>]*>/g, '') }], // Strip HTML tags
         },
-      }),
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      TaskList.configure({
-        HTMLAttributes: {
-          class: 'task-list',
-        },
-        itemTypeName: 'taskItem',
-      }),
-      TaskItem.configure({
-        HTMLAttributes: {
-          class: 'task-item',
-        },
-        nested: true,
-      }),
-      Highlight.configure({
-        multicolor: true,
-      }),
-      CalloutExtension,
-      ToggleExtension,
-      ToggleSummary,
-      ToggleContent,
-      ColumnsExtension,
-      ColumnExtension,
-
-      Extension.create({
-        name: 'slashCommand',
-        addProseMirrorPlugins() {
-          return [
-            Suggestion({
-              editor: this.editor,
-              char: '/',
-              startOfLine: true,
-              command: ({ editor, range, props }) => {
-                props.command();
-                editor.chain().focus().deleteRange(range).run();
-              },
-              items: ({ query }) => {
-                return getSlashCommands(this.editor)
-                  .filter(item => item.title.toLowerCase().startsWith(query.toLowerCase()))
-                  .slice(0, 10);
-              },
-              render: () => {
-                let component: ReactRenderer;
-                let popup: any;
-
-                return {
-                  onStart: (props) => {
-                    component = new ReactRenderer(SlashCommand, {
-                      props,
-                      editor: props.editor,
-                    });
-
-                    // Create a temporary element to get positioning
-                    const rect = props.clientRect?.();
-                    popup = document.createElement('div');
-                    popup.style.position = 'absolute';
-                    if (rect) {
-                      popup.style.top = `${rect.bottom + 10}px`;
-                      popup.style.left = `${rect.left}px`;
-                    } else {
-                      popup.style.top = '0px';
-                      popup.style.left = '0px';
-                    }
-                    popup.style.zIndex = '1000';
-                    popup.appendChild(component.element);
-                    document.body.appendChild(popup);
-                  },
-
-                  onUpdate(props) {
-                    component.updateProps(props);
-                    
-                    // Update position
-                    const rect = props.clientRect?.();
-                    if (popup && rect) {
-                      popup.style.top = `${rect.bottom + 10}px`;
-                      popup.style.left = `${rect.left}px`;
-                    }
-                  },
-
-                  onKeyDown(props) {
-                    if (props.event.key === 'Escape') {
-                      if (popup && popup.parentNode) {
-                        popup.parentNode.removeChild(popup);
-                      }
-                      return true;
-                    }
-
-                    return component.ref?.onKeyDown?.(props) || false;
-                  },
-
-                  onExit() {
-                    if (popup && popup.parentNode) {
-                      popup.parentNode.removeChild(popup);
-                    }
-                    component.destroy();
-                  },
-                };
-              },
-            }),
-          ];
-        },
-      }),
-    ],
-    content: editContent,
-    onUpdate: ({ editor }) => {
-      setEditContent(editor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class: 'prose prose-lg max-w-none focus:outline-none min-h-[400px] p-4',
-      },
-    },
-  });
+      ];
+    }
+    
+    return createEmptyDocument();
+  };
 
   const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
@@ -192,226 +62,15 @@ export default function ArticleView() {
     enabled: !!id,
   });
 
-  // Initialize editor content when article loads
-  useEffect(() => {
-    if (article && editor && !isEditing) {
-      editor.commands.setContent(article.content || '');
-    }
-  }, [article, editor, isEditing]);
-
   // Set initial edit content when starting to edit
   useEffect(() => {
     if (isEditing && article) {
       setEditTitle(article.title || '');
-      setEditContent(article.content || '');
-      if (editor) {
-        editor.commands.setContent(article.content || '');
-      }
+      setEditContent(parseContent(article.content));
     }
-  }, [isEditing, article, editor]);
+  }, [isEditing, article]);
 
-  // Fix toggle visibility and add delete functionality
-  useEffect(() => {
-    if (!isEditing || !editor) return;
 
-    const interval = setInterval(() => {
-      const editorElement = editor.view.dom;
-      if (!editorElement) return;
-
-      // Force show all toggle content
-      const toggleContents = editorElement.querySelectorAll('.toggle-content, [data-toggle-content]');
-      toggleContents.forEach((content: Element) => {
-        const htmlContent = content as HTMLElement;
-        htmlContent.style.display = 'block';
-        htmlContent.style.visibility = 'visible';
-        htmlContent.style.opacity = '1';
-        htmlContent.style.maxHeight = 'none';
-        htmlContent.style.overflow = 'visible';
-        htmlContent.style.position = 'static';
-        htmlContent.style.height = 'auto';
-      });
-
-      // Add delete buttons to old toggles AND click handlers to new toggles
-      const toggleBlocks = editorElement.querySelectorAll('.toggle-block, details[data-toggle]');
-      toggleBlocks.forEach((block: Element) => {
-        const htmlBlock = block as HTMLElement;
-        if (!htmlBlock.querySelector('.delete-toggle-btn')) {
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'delete-toggle-btn';
-          deleteBtn.innerHTML = '×';
-          deleteBtn.style.cssText = `
-            position: absolute !important;
-            top: 4px !important;
-            right: 4px !important;
-            background: #ef4444 !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 50% !important;
-            width: 20px !important;
-            height: 20px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 12px !important;
-            cursor: pointer !important;
-            z-index: 1000 !important;
-            font-family: monospace !important;
-          `;
-          
-          deleteBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            htmlBlock.remove();
-            setEditContent(editor.getHTML());
-          });
-
-          deleteBtn.addEventListener('mouseenter', () => {
-            deleteBtn.style.background = '#dc2626';
-          });
-
-          deleteBtn.addEventListener('mouseleave', () => {
-            deleteBtn.style.background = '#ef4444';
-          });
-
-          htmlBlock.style.position = 'relative';
-          htmlBlock.appendChild(deleteBtn);
-        }
-      });
-
-      // Add click handlers to new toggles in editor 
-      const toggleContainers = editorElement.querySelectorAll('.toggle-container');
-      toggleContainers.forEach((toggle: Element) => {
-        const htmlToggle = toggle as HTMLElement;
-        const header = htmlToggle.querySelector('.toggle-header');
-        if (header && !header.hasAttribute('data-click-added')) {
-          header.setAttribute('data-click-added', 'true');
-          if (!isEditing) {
-            header.addEventListener('click', (e) => {
-              e.preventDefault();
-              const content = htmlToggle.querySelector('.toggle-content');
-              const arrow = htmlToggle.querySelector('.toggle-arrow');
-              
-              if (content) {
-                if (content.style.display === 'none') {
-                  content.style.display = 'block';
-                  if (arrow) arrow.textContent = '▼';
-                  htmlToggle.classList.add('open');
-                } else {
-                  content.style.display = 'none';
-                  if (arrow) arrow.textContent = '▶';
-                  htmlToggle.classList.remove('open');
-                }
-              }
-            });
-          }
-        }
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [isEditing, editor]);
-
-  // Add click handlers for toggles in view mode
-  useEffect(() => {
-    if (isEditing || !article?.content) return;
-
-    // Add a small delay to ensure DOM is fully rendered
-    const timeout = setTimeout(() => {
-      const addClickHandlers = () => {
-        // Look for paragraphs that contain toggle arrows (pattern-based detection)
-        const allParagraphs = document.querySelectorAll('.article-content p');
-        
-        allParagraphs.forEach((p) => {
-          const headerP = p as HTMLElement;
-          
-          // Check if this paragraph is a toggle header (has arrow + "Click to toggle")
-          if (headerP.textContent?.includes('▶') && headerP.textContent?.includes('Click to toggle')) {
-            if (!headerP.hasAttribute('data-view-click-added')) {
-              headerP.setAttribute('data-view-click-added', 'true');
-              
-              // Find the next paragraph which should be the content
-              const contentP = headerP.nextElementSibling as HTMLElement;
-              
-              if (contentP && contentP.tagName.toLowerCase() === 'p') {
-                // Add hover effects
-                headerP.addEventListener('mouseenter', () => {
-                  headerP.style.background = '#e2e8f0';
-                  headerP.style.transform = 'translateX(2px)';
-                });
-                
-                headerP.addEventListener('mouseleave', () => {
-                  headerP.style.background = '#f1f5f9';
-                  headerP.style.transform = 'translateX(0)';
-                });
-                
-                headerP.addEventListener('click', (e) => {
-                  console.log('Toggle clicked!');
-                  console.log('Header element:', headerP);
-                  console.log('Content element:', contentP);
-                  console.log('Content display before:', contentP.style.display);
-                  console.log('Content computed display before:', window.getComputedStyle(contentP).display);
-                  
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  // Toggle content paragraph
-                  const isOpen = headerP.hasAttribute('data-open');
-                  console.log('Is currently open:', isOpen);
-                  
-                  if (isOpen) {
-                    contentP.style.display = 'none';
-                    console.log('Setting to none');
-                  } else {
-                    contentP.style.display = 'block';
-                    console.log('Setting to block');
-                  }
-                  
-                  console.log('Content display after:', contentP.style.display);
-                  console.log('Content computed display after:', window.getComputedStyle(contentP).display);
-                  
-                  // Toggle arrow
-                  const arrowSpan = headerP.querySelector('span');
-                  if (arrowSpan) {
-                    if (isOpen) {
-                      arrowSpan.textContent = '▶';
-                    } else {
-                      arrowSpan.textContent = '▼';
-                    }
-                  }
-                  
-                  // Update state
-                  if (isOpen) {
-                    headerP.removeAttribute('data-open');
-                  } else {
-                    headerP.setAttribute('data-open', 'true');
-                  }
-                });
-              }
-            }
-          }
-        });
-      };
-
-      addClickHandlers();
-      
-      // Re-run when content changes
-      const observer = new MutationObserver(() => {
-        addClickHandlers();
-      });
-      
-      const articleContent = document.querySelector('.article-content');
-      if (articleContent) {
-        observer.observe(articleContent, { childList: true, subtree: true });
-      }
-
-      return () => {
-        observer.disconnect();
-        clearTimeout(timeout);
-      };
-    }, 100);
-
-    return () => clearTimeout(timeout);
-  }, [isEditing, article?.content, article?.id]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -455,7 +114,7 @@ export default function ArticleView() {
   });
 
   const updateArticleMutation = useMutation({
-    mutationFn: async ({ title, content }: { title: string; content: string }) => {
+    mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
       const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
         title,
         content,
@@ -507,8 +166,7 @@ export default function ArticleView() {
   const startEdit = () => {
     if (article) {
       setEditTitle(article.title || "");
-      setEditContent(article.content || "");
-      editor?.commands.setContent(article.content || "");
+      setEditContent(parseContent(article.content));
       setIsEditing(true);
     }
   };
@@ -516,15 +174,14 @@ export default function ArticleView() {
   const cancelEdit = () => {
     setIsEditing(false);
     setEditTitle("");
-    setEditContent("");
-    editor?.commands.setContent("");
+    setEditContent(createEmptyDocument());
   };
 
   const saveEdit = () => {
-    if (editTitle.trim() && editContent.trim()) {
+    if (editTitle.trim() && editContent.length > 0) {
       updateArticleMutation.mutate({
         title: editTitle.trim(),
-        content: editContent.trim(),
+        content: editContent,
       });
     }
   };
@@ -694,73 +351,17 @@ export default function ArticleView() {
           
           <div className="prose prose-lg max-w-none">
             {isEditing ? (
-              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                {/* Simple Working Toolbar */}
-                <div className="flex items-center gap-1 px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <div className="text-sm text-gray-600 mr-4">
-                    Type <kbd className="px-1.5 py-0.5 text-xs bg-gray-200 rounded">/</kbd> for commands
-                  </div>
-                  
-                  {/* Basic Formatting */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor?.chain().focus().toggleBold().run()}
-                    className={`h-8 px-2 ${editor?.isActive('bold') ? 'bg-blue-100 text-blue-700' : ''}`}
-                  >
-                    <strong>B</strong>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor?.chain().focus().toggleItalic().run()}
-                    className={`h-8 px-2 ${editor?.isActive('italic') ? 'bg-blue-100 text-blue-700' : ''}`}
-                  >
-                    <em>I</em>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor?.chain().focus().toggleHighlight().run()}
-                    className={`h-8 px-2 ${editor?.isActive('highlight') ? 'bg-yellow-100 text-yellow-700' : ''}`}
-                    title="Highlight text"
-                  >
-                    <HighlighterIcon className="h-4 w-4" />
-                  </Button>
-                  
-                  <div className="w-px h-6 bg-gray-300 mx-2" />
-                  
-                  {/* Quick Access */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor?.chain().focus().toggleTaskList().run()}
-                    className={`h-8 px-2 ${editor?.isActive('taskList') ? 'bg-green-100 text-green-700' : ''}`}
-                    title="To-do list"
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-                    className={`h-8 px-2 ${editor?.isActive('codeBlock') ? 'bg-gray-100 text-gray-700' : ''}`}
-                    title="Code block"
-                  >
-                    <Code className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* Tiptap Editor Content */}
-                <EditorContent editor={editor} className="min-h-[400px]" />
-              </div>
+              <SlateEditor
+                value={editContent}
+                onChange={setEditContent}
+                placeholder="Write your article content... Type '/' for commands"
+              />
             ) : (
-              <div className="article-content" dangerouslySetInnerHTML={{ __html: article?.content || '' }} />
+              <SlateEditor
+                value={parseContent(article?.content)}
+                onChange={() => {}} // Read-only
+                placeholder=""
+              />
             )}
           </div>
         </CardContent>
