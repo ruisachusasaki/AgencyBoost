@@ -79,6 +79,28 @@ export default function ArticleView() {
     });
   };
 
+  // Helper function to normalize content (remove empty paragraphs with just spaces)
+  const normalizeContent = useCallback((content: Descendant[]): Descendant[] => {
+    const hasActualContent = hasContent(content);
+    if (!hasActualContent) {
+      return createEmptyDocument();
+    }
+    
+    // Clean up any paragraphs that only contain whitespace
+    return content.map(node => {
+      if ('children' in node && node.type === 'paragraph') {
+        const cleanedChildren = node.children.map(child => {
+          if ('text' in child && child.text.trim() === '') {
+            return { ...child, text: '' }; // Replace whitespace-only text with empty string
+          }
+          return child;
+        });
+        return { ...node, children: cleanedChildren };
+      }
+      return node;
+    });
+  }, []);
+
   const { data: article, isLoading } = useQuery<KnowledgeBaseArticle>({
     queryKey: [`/api/knowledge-base/articles/${id}`],
   });
@@ -244,10 +266,11 @@ export default function ArticleView() {
   // Handle content changes with auto-save
   const handleContentChange = useCallback(
     (newContent: Descendant[]) => {
-      setCurrentContent(newContent);
-      debouncedAutoSave(newContent);
+      const normalizedContent = normalizeContent(newContent);
+      setCurrentContent(normalizedContent);
+      debouncedAutoSave(normalizedContent);
     },
-    [debouncedAutoSave]
+    [debouncedAutoSave, normalizeContent]
   );
 
   // Handle title changes with auto-save
