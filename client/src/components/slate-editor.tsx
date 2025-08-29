@@ -5,7 +5,8 @@ import { withHistory } from 'slate-history';
 import { 
   Type, Heading1, Heading2, Heading3, List, ListOrdered, 
   Quote, Code, ChevronRight, AlertCircle, Info, AlertTriangle,
-  Bold, Italic
+  Bold, Italic, CheckSquare, Columns, Palette, Flag, FileText,
+  Youtube, Image, Link, Minus, Highlighter, MoreHorizontal
 } from 'lucide-react';
 
 // Define our schema
@@ -51,6 +52,71 @@ type CalloutElement = {
   children: Descendant[];
 };
 
+type ChecklistElement = {
+  type: 'checklist';
+  children: ChecklistItemElement[];
+};
+
+type ChecklistItemElement = {
+  type: 'checklist-item';
+  checked: boolean;
+  children: Descendant[];
+};
+
+type ColumnsElement = {
+  type: 'columns';
+  columnCount: number;
+  children: ColumnElement[];
+};
+
+type ColumnElement = {
+  type: 'column';
+  children: Descendant[];
+};
+
+type ColoredTextElement = {
+  type: 'colored-text';
+  color: string;
+  children: Descendant[];
+};
+
+type BannerElement = {
+  type: 'banner';
+  backgroundColor: string;
+  children: Descendant[];
+};
+
+type EmbedElement = {
+  type: 'embed';
+  embedType: 'youtube' | 'loom' | 'google-drive' | 'google-slides' | 'google-docs' | 'google-sheets';
+  url: string;
+  children: Descendant[];
+};
+
+type ImageElement = {
+  type: 'image';
+  url: string;
+  alt?: string;
+  children: Descendant[];
+};
+
+type LinkElement = {
+  type: 'link';
+  url: string;
+  children: Descendant[];
+};
+
+type DividerElement = {
+  type: 'divider';
+  children: Descendant[];
+};
+
+type HighlightElement = {
+  type: 'highlight';
+  backgroundColor: string;
+  children: Descendant[];
+};
+
 type CustomElement = 
   | ParagraphElement 
   | HeadingElement 
@@ -59,7 +125,18 @@ type CustomElement =
   | BlockQuoteElement 
   | CodeBlockElement
   | CalloutElement
-  | ToggleElement;
+  | ToggleElement
+  | ChecklistElement
+  | ChecklistItemElement
+  | ColumnsElement
+  | ColumnElement
+  | ColoredTextElement
+  | BannerElement
+  | EmbedElement
+  | ImageElement
+  | LinkElement
+  | DividerElement
+  | HighlightElement;
 
 type CustomText = {
   text: string;
@@ -122,11 +199,54 @@ const toggleBlock = (editor: Editor, format: string) => {
 
 // Slash command functionality
 const SLASH_COMMANDS = [
+  // Basic formatting
+  { type: 'paragraph', title: 'Normal Text', icon: <FileText className="h-4 w-4" /> },
   { type: 'heading', level: 1, title: 'Heading 1', icon: <Heading1 className="h-4 w-4" /> },
   { type: 'heading', level: 2, title: 'Heading 2', icon: <Heading2 className="h-4 w-4" /> },
   { type: 'heading', level: 3, title: 'Heading 3', icon: <Heading3 className="h-4 w-4" /> },
+  
+  // Lists and organization
   { type: 'bulleted-list', title: 'Bullet List', icon: <List className="h-4 w-4" /> },
   { type: 'numbered-list', title: 'Numbered List', icon: <ListOrdered className="h-4 w-4" /> },
+  { type: 'checklist', title: 'Checklist', icon: <CheckSquare className="h-4 w-4" /> },
+  { type: 'checklist', title: 'To-Do List', icon: <CheckSquare className="h-4 w-4" /> },
+  
+  // Layout
+  { type: 'columns', columnCount: 2, title: '2 Columns', icon: <Columns className="h-4 w-4" /> },
+  { type: 'columns', columnCount: 3, title: '3 Columns', icon: <Columns className="h-4 w-4" /> },
+  { type: 'columns', columnCount: 4, title: '4 Columns', icon: <Columns className="h-4 w-4" /> },
+  { type: 'columns', columnCount: 5, title: '5 Columns', icon: <Columns className="h-4 w-4" /> },
+  
+  // Media and links
+  { type: 'image', title: 'Image', icon: <Image className="h-4 w-4" /> },
+  { type: 'link', title: 'Link', icon: <Link className="h-4 w-4" /> },
+  { type: 'embed', embedType: 'youtube', title: 'YouTube Video', icon: <Youtube className="h-4 w-4" /> },
+  { type: 'embed', embedType: 'loom', title: 'Loom Video', icon: <Youtube className="h-4 w-4" /> },
+  { type: 'embed', embedType: 'google-drive', title: 'Google Drive', icon: <MoreHorizontal className="h-4 w-4" /> },
+  { type: 'embed', embedType: 'google-slides', title: 'Google Slides', icon: <MoreHorizontal className="h-4 w-4" /> },
+  { type: 'embed', embedType: 'google-docs', title: 'Google Docs', icon: <MoreHorizontal className="h-4 w-4" /> },
+  { type: 'embed', embedType: 'google-sheets', title: 'Google Sheets', icon: <MoreHorizontal className="h-4 w-4" /> },
+  
+  // Styling
+  { type: 'colored-text', color: 'red', title: 'Red Text', icon: <Palette className="h-4 w-4" /> },
+  { type: 'colored-text', color: 'blue', title: 'Blue Text', icon: <Palette className="h-4 w-4" /> },
+  { type: 'colored-text', color: 'green', title: 'Green Text', icon: <Palette className="h-4 w-4" /> },
+  { type: 'colored-text', color: 'yellow', title: 'Yellow Text', icon: <Palette className="h-4 w-4" /> },
+  { type: 'colored-text', color: 'purple', title: 'Purple Text', icon: <Palette className="h-4 w-4" /> },
+  { type: 'highlight', backgroundColor: 'yellow', title: 'Yellow Highlight', icon: <Highlighter className="h-4 w-4" /> },
+  { type: 'highlight', backgroundColor: 'green', title: 'Green Highlight', icon: <Highlighter className="h-4 w-4" /> },
+  { type: 'highlight', backgroundColor: 'blue', title: 'Blue Highlight', icon: <Highlighter className="h-4 w-4" /> },
+  { type: 'highlight', backgroundColor: 'pink', title: 'Pink Highlight', icon: <Highlighter className="h-4 w-4" /> },
+  
+  // Banners
+  { type: 'banner', backgroundColor: 'blue', title: 'Blue Banner', icon: <Flag className="h-4 w-4" /> },
+  { type: 'banner', backgroundColor: 'green', title: 'Green Banner', icon: <Flag className="h-4 w-4" /> },
+  { type: 'banner', backgroundColor: 'yellow', title: 'Yellow Banner', icon: <Flag className="h-4 w-4" /> },
+  { type: 'banner', backgroundColor: 'red', title: 'Red Banner', icon: <Flag className="h-4 w-4" /> },
+  { type: 'banner', backgroundColor: 'purple', title: 'Purple Banner', icon: <Flag className="h-4 w-4" /> },
+  
+  // Other elements
+  { type: 'divider', title: 'Divider', icon: <Minus className="h-4 w-4" /> },
   { type: 'block-quote', title: 'Quote', icon: <Quote className="h-4 w-4" /> },
   { type: 'code-block', title: 'Code Block', icon: <Code className="h-4 w-4" /> },
   { type: 'toggle', title: 'Toggle', icon: <ChevronRight className="h-4 w-4" /> },
@@ -401,28 +521,154 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    if (command.type === 'toggle') {
-      // Insert toggle block
-      const toggleBlock: ToggleElement = {
-        type: 'toggle',
-        children: [{ type: 'paragraph', children: [{ text: 'Click to toggle' }] }]
-      };
-      Transforms.insertNodes(editor, toggleBlock);
-    } else if (command.type === 'callout') {
-      // Insert callout block
-      const calloutBlock: CalloutElement = {
-        type: 'callout',
-        variant: command.variant,
-        children: [{ type: 'paragraph', children: [{ text: 'Type your callout content here...' }] }]
-      };
-      Transforms.insertNodes(editor, calloutBlock);
-    } else if (command.type === 'heading') {
-      // Insert heading
-      toggleBlock(editor, 'heading');
-      Transforms.setNodes(editor, { level: command.level } as Partial<SlateElement>);
-    } else {
-      // Other block types
-      toggleBlock(editor, command.type);
+    // Handle different command types
+    switch (command.type) {
+      case 'paragraph':
+        // Convert to normal paragraph
+        Transforms.setNodes(editor, { type: 'paragraph' } as Partial<SlateElement>);
+        break;
+
+      case 'heading':
+        // Insert heading
+        toggleBlock(editor, 'heading');
+        Transforms.setNodes(editor, { level: command.level } as Partial<SlateElement>);
+        break;
+
+      case 'checklist':
+        // Insert checklist with one item
+        const checklistBlock: ChecklistElement = {
+          type: 'checklist',
+          children: [
+            {
+              type: 'checklist-item',
+              checked: false,
+              children: [{ text: 'New checklist item' }]
+            }
+          ]
+        };
+        Transforms.insertNodes(editor, checklistBlock);
+        break;
+
+      case 'columns':
+        // Insert columns layout
+        const columns: ColumnElement[] = Array.from({ length: command.columnCount }, (_, i) => ({
+          type: 'column',
+          children: [{ type: 'paragraph', children: [{ text: `Column ${i + 1}` }] }]
+        }));
+        
+        const columnsBlock: ColumnsElement = {
+          type: 'columns',
+          columnCount: command.columnCount,
+          children: columns
+        };
+        Transforms.insertNodes(editor, columnsBlock);
+        break;
+
+      case 'colored-text':
+        // Insert colored text
+        const coloredTextBlock: ColoredTextElement = {
+          type: 'colored-text',
+          color: command.color,
+          children: [{ text: `${command.color} text` }]
+        };
+        Transforms.insertNodes(editor, coloredTextBlock);
+        break;
+
+      case 'banner':
+        // Insert banner
+        const bannerBlock: BannerElement = {
+          type: 'banner',
+          backgroundColor: command.backgroundColor,
+          children: [{ type: 'paragraph', children: [{ text: 'Your banner content here...' }] }]
+        };
+        Transforms.insertNodes(editor, bannerBlock);
+        break;
+
+      case 'embed':
+        // Insert embed - will prompt for URL
+        const embedUrl = prompt(`Enter ${command.title} URL:`);
+        if (embedUrl) {
+          const embedBlock: EmbedElement = {
+            type: 'embed',
+            embedType: command.embedType,
+            url: embedUrl,
+            children: [{ text: '' }]
+          };
+          Transforms.insertNodes(editor, embedBlock);
+        }
+        break;
+
+      case 'image':
+        // Insert image - will prompt for URL
+        const imageUrl = prompt('Enter image URL:');
+        const imageAlt = prompt('Enter image description (optional):') || '';
+        if (imageUrl) {
+          const imageBlock: ImageElement = {
+            type: 'image',
+            url: imageUrl,
+            alt: imageAlt,
+            children: [{ text: '' }]
+          };
+          Transforms.insertNodes(editor, imageBlock);
+        }
+        break;
+
+      case 'link':
+        // Insert link - will prompt for URL and text
+        const linkUrl = prompt('Enter link URL:');
+        const linkText = prompt('Enter link text:') || 'Link';
+        if (linkUrl) {
+          const linkBlock: LinkElement = {
+            type: 'link',
+            url: linkUrl,
+            children: [{ text: linkText }]
+          };
+          Transforms.insertNodes(editor, linkBlock);
+        }
+        break;
+
+      case 'divider':
+        // Insert divider
+        const dividerBlock: DividerElement = {
+          type: 'divider',
+          children: [{ text: '' }]
+        };
+        Transforms.insertNodes(editor, dividerBlock);
+        break;
+
+      case 'highlight':
+        // Insert highlighted text
+        const highlightBlock: HighlightElement = {
+          type: 'highlight',
+          backgroundColor: command.backgroundColor,
+          children: [{ text: 'Highlighted text' }]
+        };
+        Transforms.insertNodes(editor, highlightBlock);
+        break;
+
+      case 'toggle':
+        // Insert toggle block
+        const toggleBlock: ToggleElement = {
+          type: 'toggle',
+          children: [{ type: 'paragraph', children: [{ text: 'Click to toggle' }] }]
+        };
+        Transforms.insertNodes(editor, toggleBlock);
+        break;
+
+      case 'callout':
+        // Insert callout block
+        const calloutBlock: CalloutElement = {
+          type: 'callout',
+          variant: command.variant,
+          children: [{ type: 'paragraph', children: [{ text: 'Type your callout content here...' }] }]
+        };
+        Transforms.insertNodes(editor, calloutBlock);
+        break;
+
+      default:
+        // Handle basic block types (bulleted-list, numbered-list, block-quote, code-block)
+        toggleBlock(editor, command.type);
+        break;
     }
   };
 
@@ -636,6 +882,98 @@ const Element = (props: any) => {
       );
     case 'toggle':
       return <ToggleBlock {...props} />;
+    
+    case 'checklist':
+      return (
+        <div {...attributes} className="checklist my-4">
+          {children}
+        </div>
+      );
+    
+    case 'checklist-item':
+      return <ChecklistItem {...props} />;
+    
+    case 'columns':
+      return <ColumnsBlock {...props} />;
+    
+    case 'column':
+      return (
+        <div {...attributes} className="column flex-1 px-2">
+          {children}
+        </div>
+      );
+    
+    case 'colored-text':
+      return (
+        <span {...attributes} style={{ color: element.color }} className="inline">
+          {children}
+        </span>
+      );
+    
+    case 'banner':
+      const bannerColors = {
+        blue: 'bg-blue-100 border-blue-300 text-blue-900',
+        green: 'bg-green-100 border-green-300 text-green-900',
+        yellow: 'bg-yellow-100 border-yellow-300 text-yellow-900',
+        red: 'bg-red-100 border-red-300 text-red-900',
+        purple: 'bg-purple-100 border-purple-300 text-purple-900'
+      };
+      return (
+        <div {...attributes} className={`banner border-l-4 p-4 my-4 rounded-r-md ${bannerColors[element.backgroundColor as keyof typeof bannerColors] || 'bg-gray-100 border-gray-300 text-gray-900'}`}>
+          {children}
+        </div>
+      );
+    
+    case 'embed':
+      return <EmbedBlock {...props} />;
+    
+    case 'image':
+      return (
+        <div {...attributes} className="image-block my-4">
+          <img 
+            src={element.url} 
+            alt={element.alt || ''} 
+            className="max-w-full h-auto rounded-md shadow-sm"
+            contentEditable={false}
+          />
+          <div className="mt-2 text-sm text-gray-500">{children}</div>
+        </div>
+      );
+    
+    case 'link':
+      return (
+        <a 
+          {...attributes} 
+          href={element.url} 
+          className="text-blue-600 underline hover:text-blue-800"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {children}
+        </a>
+      );
+    
+    case 'divider':
+      return (
+        <div {...attributes} className="divider my-6">
+          <hr className="border-gray-300" />
+          <span className="sr-only">{children}</span>
+        </div>
+      );
+    
+    case 'highlight':
+      const highlightColors = {
+        yellow: 'bg-yellow-200',
+        green: 'bg-green-200',
+        blue: 'bg-blue-200',
+        pink: 'bg-pink-200'
+      };
+      return (
+        <span {...attributes} className={`highlight px-1 rounded ${highlightColors[element.backgroundColor as keyof typeof highlightColors] || 'bg-yellow-200'}`}>
+          {children}
+        </span>
+      );
+    
     default:
       return (
         <p {...attributes} className="my-2">
@@ -668,6 +1006,120 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
           {children}
         </div>
       )}
+    </div>
+  );
+};
+
+// Checklist item component
+const ChecklistItem = ({ attributes, children, element }: any) => {
+  const [checked, setChecked] = useState(element.checked || false);
+
+  const handleCheckChange = () => {
+    setChecked(!checked);
+    // In a real implementation, you'd update the editor state here
+  };
+
+  return (
+    <div {...attributes} className="checklist-item flex items-start gap-2 my-1">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={handleCheckChange}
+        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        contentEditable={false}
+      />
+      <div className={`flex-1 ${checked ? 'line-through text-gray-500' : ''}`}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Columns block component
+const ColumnsBlock = ({ attributes, children, element }: any) => {
+  return (
+    <div {...attributes} className="columns-block my-4">
+      <div className="flex gap-4">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Embed block component
+const EmbedBlock = ({ attributes, children, element }: any) => {
+  const { url, embedType } = element;
+
+  const renderEmbed = () => {
+    if (embedType === 'youtube') {
+      // Extract YouTube video ID from URL
+      const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
+      if (videoId) {
+        return (
+          <iframe
+            width="100%"
+            height="315"
+            src={`https://www.youtube.com/embed/${videoId}`}
+            title="YouTube video"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="rounded-md"
+          />
+        );
+      }
+    } else if (embedType === 'loom') {
+      const loomId = url.match(/loom\.com\/share\/([^/?]+)/)?.[1];
+      if (loomId) {
+        return (
+          <iframe
+            width="100%"
+            height="315"
+            src={`https://www.loom.com/embed/${loomId}`}
+            title="Loom video"
+            frameBorder="0"
+            allowFullScreen
+            className="rounded-md"
+          />
+        );
+      }
+    } else if (embedType.startsWith('google-')) {
+      // Generic Google embed handling
+      return (
+        <iframe
+          width="100%"
+          height="400"
+          src={url}
+          title={`${embedType} embed`}
+          frameBorder="0"
+          allowFullScreen
+          className="rounded-md"
+        />
+      );
+    }
+
+    // Fallback for unsupported embeds
+    return (
+      <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
+        <p className="text-gray-600">
+          <strong>{embedType} Embed</strong>
+        </p>
+        <a 
+          href={url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-600 underline hover:text-blue-800 text-sm"
+        >
+          {url}
+        </a>
+      </div>
+    );
+  };
+
+  return (
+    <div {...attributes} className="embed-block my-4" contentEditable={false}>
+      {renderEmbed()}
+      <div className="sr-only">{children}</div>
     </div>
   );
 };
