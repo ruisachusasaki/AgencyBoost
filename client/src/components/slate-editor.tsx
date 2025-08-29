@@ -145,18 +145,18 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   const editor = useMemo(() => {
     const e = withHistory(withReact(createEditor()));
     
-    // Add normalization to remove empty elements
+    // Add normalization but don't remove empty paragraphs the user is actively creating
     const { normalizeNode } = e;
     e.normalizeNode = (entry) => {
       const [node, path] = entry;
       
-      // Remove empty headings and paragraphs
+      // Only remove empty elements at the beginning that have zero-width characters
       if (SlateElement.isElement(node) && 
           (node.type === 'heading' || node.type === 'paragraph') &&
           node.children.length === 1 &&
-          node.children[0].text === '') {
-        // Don't remove if it's the only element
-        if (e.children.length > 1) {
+          (node.children[0].text === '\uFEFF' || node.children[0].text === '​')) {
+        // Only remove if it's the first element and there are other elements
+        if (path[0] === 0 && e.children.length > 1) {
           Transforms.removeNodes(e, { at: path });
           return;
         }
@@ -343,30 +343,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       toggleMark(editor, 'italic');
     }
 
-    // Handle Enter key for creating new paragraphs (only when slash menu is not open)
-    if (event.key === 'Enter' && !showSlashMenu) {
-      event.preventDefault();
-      
-      // Get current selection
-      const { selection } = editor;
-      if (selection) {
-        // If we're in a heading, create a new paragraph
-        const [match] = Editor.nodes(editor, {
-          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'heading',
-        });
-        
-        if (match) {
-          // Insert a new paragraph after the heading
-          Transforms.insertNodes(editor, {
-            type: 'paragraph',
-            children: [{ text: '' }],
-          });
-        } else {
-          // Default behavior: split the current block
-          Transforms.splitNodes(editor);
-        }
-      }
-    }
+    // Let Slate handle Enter naturally - no custom handling needed
   };
 
   // Formatting functions for selection toolbar
