@@ -142,31 +142,7 @@ interface SlateEditorProps {
 }
 
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
-  const editor = useMemo(() => {
-    const e = withHistory(withReact(createEditor()));
-    
-    // Add normalization but don't remove empty paragraphs the user is actively creating
-    const { normalizeNode } = e;
-    e.normalizeNode = (entry) => {
-      const [node, path] = entry;
-      
-      // Only remove empty elements at the beginning that have zero-width characters
-      if (SlateElement.isElement(node) && 
-          (node.type === 'heading' || node.type === 'paragraph') &&
-          node.children.length === 1 &&
-          (node.children[0].text === '\uFEFF' || node.children[0].text === '​')) {
-        // Only remove if it's the first element and there are other elements
-        if (path[0] === 0 && e.children.length > 1) {
-          Transforms.removeNodes(e, { at: path });
-          return;
-        }
-      }
-      
-      normalizeNode(entry);
-    };
-    
-    return e;
-  }, []);
+  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
   // Ensure we always have a valid value
   const safeValue = useMemo(() => {
@@ -279,6 +255,9 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
+    // Debug: Log all key presses
+    console.log('Key pressed:', event.key, 'Slash menu open:', showSlashMenu);
+    
     // Handle slash menu navigation
     if (showSlashMenu) {
       if (event.key === 'ArrowDown') {
