@@ -392,13 +392,12 @@ export default function KnowledgeBase() {
                   : 'hover:bg-muted'
               }`}
               style={{ 
-                marginLeft: hasChildren ? '0px' : `${20 + (level * 16)}px`,
+                marginLeft: hasChildren ? `${4 + (level * 16)}px` : `${20 + (level * 16)}px`,
                 paddingLeft: hasChildren ? '8px' : '12px'
               }}
             >
               <div className="flex items-center justify-between">
                 <span className="flex items-center">
-                  {level > 0 && !hasChildren && <span className="mr-2 text-muted-foreground">└</span>}
                   {category.name}
                 </span>
                 {category.articleCount && (
