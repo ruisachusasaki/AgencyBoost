@@ -269,9 +269,12 @@ export default function ArticleView() {
   // Initialize content when article loads
   useEffect(() => {
     if (article) {
+      console.log('Loading article content:', article.content);
       const parsedContent = parseContent(article.content);
+      console.log('Parsed content:', parsedContent);
       // Ensure we never set undefined/null content
       const safeContent = parsedContent && Array.isArray(parsedContent) ? parsedContent : createEmptyDocument();
+      console.log('Setting safe content:', safeContent);
       setCurrentContent(safeContent);
       contentRef.current = safeContent; // Keep ref in sync
       setEditContent(safeContent);
