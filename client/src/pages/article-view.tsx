@@ -80,13 +80,14 @@ export default function ArticleView() {
     enabled: !!id,
   });
 
-  // Set initial edit content when starting to edit
+  // Set initial edit content when starting to edit - content should already be initialized
   useEffect(() => {
     if (isEditing && article) {
       setEditTitle((article.title as string) || '');
-      setEditContent(parseContent(article.content));
+      // Use currentContent since it's already initialized and may have unsaved changes
+      setEditContent(currentContent);
     }
-  }, [isEditing, article]);
+  }, [isEditing, article, currentContent]);
 
 
 
@@ -253,10 +254,12 @@ export default function ArticleView() {
   // Initialize content when article loads
   useEffect(() => {
     if (article) {
+      console.log('🔄 Loading article content:', article.content);
       const parsedContent = parseContent(article.content);
+      console.log('✅ Parsed content:', JSON.stringify(parsedContent));
       setCurrentContent(parsedContent);
       setEditContent(parsedContent);
-      setEditTitle(article.title || "");
+      setEditTitle((article.title as string) || "");
     }
   }, [article]);
 
