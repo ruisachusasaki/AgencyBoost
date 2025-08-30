@@ -75,7 +75,7 @@ export default function WorkflowBuilderPage() {
     
     createWorkflowMutation.mutate({
       ...workflowData,
-      createdBy: "user-1" // This would come from auth context in real app
+      createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390" // Using existing user ID (John Doe)
     });
   };
 
