@@ -1464,7 +1464,6 @@ export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  actions: true,   // Use database default []
   createdBy: true, // Will be added from session
 });
 
