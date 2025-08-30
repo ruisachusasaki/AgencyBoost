@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,8 @@ export default function WorkflowsPage() {
   const [folderToDelete, setFolderToDelete] = useState<TemplateFolder | null>(null);
   const [workflowToMove, setWorkflowToMove] = useState<Workflow | null>(null);
   const [isMoveToFolderDialogOpen, setIsMoveToFolderDialogOpen] = useState(false);
+  const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -648,9 +651,8 @@ export default function WorkflowsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    if (window.confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
-                                      deleteWorkflowMutation.mutate(item.id);
-                                    }
+                                    setWorkflowToDelete(item.originalWorkflow);
+                                    setIsDeleteDialogOpen(true);
                                   }}
                                 >
                                   <Trash2 className="h-3 w-3 text-red-600" />
@@ -1184,6 +1186,38 @@ export default function WorkflowsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Workflow Confirmation Modal */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workflow</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{workflowToDelete?.name}"? This action cannot be undone and will permanently remove this workflow and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false);
+              setWorkflowToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (workflowToDelete) {
+                  deleteWorkflowMutation.mutate(workflowToDelete.id);
+                  setIsDeleteDialogOpen(false);
+                  setWorkflowToDelete(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Workflow
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );
