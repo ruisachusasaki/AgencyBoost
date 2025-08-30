@@ -620,12 +620,15 @@ export default function WorkflowsPage() {
           </DialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
+            console.log('Form submitted!');
             const formData = new FormData(e.target as HTMLFormElement);
-            createFolderMutation.mutate({
+            const folderData = {
               name: formData.get('name'),
               description: formData.get('description'),
               type: 'workflow'
-            });
+            };
+            console.log('Folder data:', folderData);
+            createFolderMutation.mutate(folderData);
           }}>
             <div className="space-y-4">
               <div className="space-y-2">
