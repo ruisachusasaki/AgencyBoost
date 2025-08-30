@@ -181,13 +181,6 @@ export default function WorkflowsPage() {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={createSampleWorkflow}
-            className="bg-[#46a1a0] hover:bg-[#3a8a89]"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Sample Workflow
-          </Button>
-          <Button 
             onClick={() => setIsBuilderOpen(true)}
             className="bg-[#46a1a0] hover:bg-[#3a8a89]"
           >
