@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Play, Pause, Settings, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity } from "lucide-react";
 import type { Workflow, EnhancedTask, WorkflowTemplate } from "@shared/schema";
@@ -187,14 +187,37 @@ export default function WorkflowsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="workflows" className="space-y-4">
-        <TabsList className="workflows-tabslist">
-          <TabsTrigger value="workflows" className="workflows-tab">Active Workflows</TabsTrigger>
-          <TabsTrigger value="templates" className="workflows-tab">Templates</TabsTrigger>
-          <TabsTrigger value="analytics" className="workflows-tab">Analytics</TabsTrigger>
-        </TabsList>
+      <div className="space-y-4">
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { id: "workflows", name: "Active Workflows", icon: GitBranch },
+              { id: "templates", name: "Templates", icon: Settings },
+              { id: "analytics", name: "Analytics", icon: Activity }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.name}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-        <TabsContent value="workflows" className="space-y-4">
+        {/* Tab Content */}
+        <>
+        {activeTab === "workflows" && (<div className="space-y-4">
 
           {filteredWorkflows.length === 0 ? (
             <Card>
@@ -288,9 +311,9 @@ export default function WorkflowsPage() {
               ))}
             </div>
           )}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="templates" className="space-y-4">
+        {activeTab === "templates" && <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {(workflowTemplates as WorkflowTemplate[]).map((template: WorkflowTemplate) => (
               <Card key={template.id} className="hover:shadow-md transition-shadow">
@@ -329,9 +352,9 @@ export default function WorkflowsPage() {
               </Card>
             ))}
           </div>
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="analytics" className="space-y-4">
+        {activeTab === "analytics" && <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -396,9 +419,7 @@ export default function WorkflowsPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="automation" className="space-y-4">
+        </div>}
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -452,8 +473,105 @@ export default function WorkflowsPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>}
+
+        {activeTab === "templates" && <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {(workflowTemplates as WorkflowTemplate[]).map((template: WorkflowTemplate) => (
+              <Card key={template.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline">{template.category}</Badge>
+                    {template.rating && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm">⭐</span>
+                        <span className="text-sm font-medium">{template.rating}</span>
+                      </div>
+                    )}
+                  </div>
+                  <CardTitle className="text-lg">{template.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {template.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    {template.industry && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Industry:</span>
+                        <span className="font-medium">{template.industry}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Used:</span>
+                      <span className="font-medium">{template.usageCount} times</span>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full mt-4">
+                    Use Template
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>}
+
+        {activeTab === "analytics" && <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Available Triggers
+                </CardTitle>
+                <CardDescription>
+                  Events that can start your workflows
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {(triggers as any[]).length > 0 ? (
+                    (triggers as any[]).slice(0, 5).map((trigger: any) => (
+                      <div key={trigger.id} className="p-2 border rounded">
+                        <div className="font-medium">{trigger.name}</div>
+                        <div className="text-sm text-muted-foreground">{trigger.description}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No triggers configured yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Available Actions
+                </CardTitle>
+                <CardDescription>
+                  Actions your workflows can perform
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {(actions as any[]).length > 0 ? (
+                    (actions as any[]).slice(0, 5).map((action: any) => (
+                      <div key={action.id} className="p-2 border rounded">
+                        <div className="font-medium">{action.name}</div>
+                        <div className="text-sm text-muted-foreground">{action.description}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No actions configured yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>}
+      </div>
 
       {/* Workflow Builder */}
       <WorkflowBuilder 
