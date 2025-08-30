@@ -2493,7 +2493,7 @@ export class MemStorage implements IStorage {
 
   // Template Folders
   async getTemplateFolders(): Promise<TemplateFolder[]> {
-    return await this.db.select().from(templateFolders);
+    return Array.from(this.templateFolders.values());
   }
 
   async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> {
@@ -2515,10 +2515,8 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
-    // Insert into database
-    const [insertedFolder] = await this.db.insert(templateFolders).values(folder).returning();
-    return insertedFolder;
+    this.templateFolders.set(folder.id, folder);
+    return folder;
   }
 
   async updateTemplateFolder(id: string, folderData: Partial<InsertTemplateFolder>): Promise<TemplateFolder | undefined> {
