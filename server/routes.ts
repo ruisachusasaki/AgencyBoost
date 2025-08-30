@@ -3274,8 +3274,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertWorkflowSchema.parse(req.body);
       
+      // Add createdBy from session
+      const dataWithCreatedBy = {
+        ...validatedData,
+        createdBy: req.session?.userId || 'default-user-id'
+      };
+      
       const [newWorkflow] = await db.insert(workflows)
-        .values(validatedData)
+        .values(dataWithCreatedBy)
         .returning();
       
       res.status(201).json(newWorkflow);

@@ -1194,7 +1194,7 @@ export const workflows = pgTable("workflows", {
   category: text("category"), // lead_management, email_marketing, task_automation, deal_management
   status: text("status").notNull().default("draft"), // draft, active, paused, archived
   triggers: jsonb("triggers").notNull().default('[]'), // array of trigger configurations
-  actions: jsonb("actions").notNull(), // array of actions
+  actions: jsonb("actions").notNull().default('[]'), // array of actions
   conditions: jsonb("conditions"), // branching logic
   settings: jsonb("settings"), // workflow-specific settings
   isTemplate: boolean("is_template").default(false),
@@ -1464,6 +1464,8 @@ export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  actions: true,   // Use database default []
+  createdBy: true, // Will be added from session
 });
 
 export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({
