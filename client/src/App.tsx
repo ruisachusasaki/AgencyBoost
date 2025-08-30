@@ -19,6 +19,7 @@ import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import SocialMedia from "@/pages/social-media";
 import Workflows from "@/pages/workflows";
+import WorkflowBuilder from "@/pages/workflow-builder";
 import Calendar from "@/pages/calendar";
 import CalendarMain from "@/pages/calendar-main";
 import CalendarSettings from "@/pages/calendar-settings";
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/reports" component={Reports} />
       <Route path="/social-media" component={SocialMedia} />
       <Route path="/workflows" component={Workflows} />
+      <Route path="/workflows/build" component={WorkflowBuilder} />
       <Route path="/hr" component={HRPage} />
       <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
       <Route path="/resources" component={KnowledgeBase} />

@@ -14,13 +14,13 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings, FolderPlus, FolderOpen, ArrowLeft, Folder, Edit, Trash2, ChevronUp, ChevronDown, Grid, List } from "lucide-react";
 import type { Workflow, EnhancedTask, WorkflowTemplate, TemplateFolder } from "@shared/schema";
-import WorkflowBuilder from "@/components/workflow-builder";
+import { useLocation } from "wouter";
 import WorkflowDetail from "@/components/workflow-detail";
 
 export default function WorkflowsPage() {
+  const [location, navigate] = useLocation();
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [activeTab, setActiveTab] = useState<string>("workflows");
@@ -80,7 +80,6 @@ export default function WorkflowsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
       toast({ title: "Workflow created successfully" });
       setIsCreateDialogOpen(false);
-      setIsBuilderOpen(false);
     },
     onError: () => {
       toast({ title: "Failed to create workflow", variant: "destructive" });
@@ -288,9 +287,7 @@ export default function WorkflowsPage() {
   };
 
   const handleEditWorkflow = (workflow: Workflow) => {
-    setEditingWorkflow(workflow);
-    setIsBuilderOpen(true);
-    setIsDetailOpen(false);
+    navigate(`/workflows/build?edit=${workflow.id}`);
   };
 
   const createSampleWorkflow = () => {
@@ -382,7 +379,7 @@ export default function WorkflowsPage() {
               New Folder
             </Button>
             <Button 
-              onClick={() => setIsBuilderOpen(true)}
+              onClick={() => navigate("/workflows/build")}
               className="bg-[#46a1a0] hover:bg-[#3a8a89]"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -908,17 +905,6 @@ export default function WorkflowsPage() {
           </div>
         </div>}
       </div>
-
-      {/* Workflow Builder */}
-      <WorkflowBuilder 
-        isOpen={isBuilderOpen}
-        onClose={() => {
-          setIsBuilderOpen(false);
-          setEditingWorkflow(null);
-        }}
-        onSave={createWorkflowMutation.mutate}
-        editingWorkflow={editingWorkflow}
-      />
 
       {/* Workflow Detail */}
       {selectedWorkflow && (
