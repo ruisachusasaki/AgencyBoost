@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings, FolderPlus, FolderOpen, ArrowLeft } from "lucide-react";
+import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings, FolderPlus, FolderOpen, ArrowLeft, Folder, Edit, Trash2, ChevronUp, ChevronDown, Grid, List } from "lucide-react";
 import type { Workflow, EnhancedTask, WorkflowTemplate, TemplateFolder } from "@shared/schema";
 import WorkflowBuilder from "@/components/workflow-builder";
 import WorkflowDetail from "@/components/workflow-detail";
@@ -25,6 +26,9 @@ export default function WorkflowsPage() {
   const [activeTab, setActiveTab] = useState<string>("workflows");
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [sortField, setSortField] = useState<"name" | "updatedAt">("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -120,6 +124,105 @@ export default function WorkflowsPage() {
     return matchesFolder;
   });
 
+  // Sorting handlers
+  const handleSort = (field: "name" | "updatedAt") => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Prepare table data for folders view
+  const getTableData = () => {
+    const items: any[] = [];
+    
+    if (selectedFolder) {
+      // If a folder is selected, show workflows from that folder
+      filteredWorkflows.forEach((workflow: Workflow) => {
+        items.push({
+          type: 'workflow',
+          id: workflow.id,
+          name: workflow.name,
+          description: workflow.description,
+          status: workflow.status,
+          lastUpdated: workflow.updatedAt || workflow.createdAt,
+          originalWorkflow: workflow
+        });
+      });
+    } else {
+      // Show folders
+      workflowFolders.forEach((folder: TemplateFolder) => {
+        const folderWorkflows = (workflows as Workflow[]).filter(w => w.folderId === folder.id);
+        items.push({
+          type: 'folder',
+          id: folder.id,
+          name: folder.name,
+          description: folder.description,
+          itemCount: folderWorkflows.length,
+          lastUpdated: folder.updatedAt || folder.createdAt,
+          updatedBy: 'System'
+        });
+      });
+      
+      // Show workflows without folders
+      filteredWorkflows.forEach((workflow: Workflow) => {
+        if (!workflow.folderId) {
+          items.push({
+            type: 'workflow',
+            id: workflow.id,
+            name: workflow.name,
+            description: workflow.description,
+            status: workflow.status,
+            lastUpdated: workflow.updatedAt || workflow.createdAt,
+            originalWorkflow: workflow
+          });
+        }
+      });
+    }
+    
+    // Sort items
+    return items.sort((a, b) => {
+      const aValue = sortField === "name" ? a.name : a.lastUpdated;
+      const bValue = sortField === "name" ? b.name : b.lastUpdated;
+      
+      if (sortDirection === "asc") {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  };
+
+  // Sortable header component
+  const SortableHeader = ({ field, children }: { field: "name" | "updatedAt"; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortDirection === 'asc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortDirection === 'desc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "bg-green-500";
@@ -207,21 +310,43 @@ export default function WorkflowsPage() {
             Create and manage automated workflows to streamline your business processes
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => setIsCreateFolderDialogOpen(true)}
-          >
-            <FolderPlus className="h-4 w-4 mr-2" />
-            New Folder
-          </Button>
-          <Button 
-            onClick={() => setIsBuilderOpen(true)}
-            className="bg-[#46a1a0] hover:bg-[#3a8a89]"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Build Workflow
-          </Button>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setIsCreateFolderDialogOpen(true)}
+            >
+              <FolderPlus className="h-4 w-4 mr-2" />
+              New Folder
+            </Button>
+            <Button 
+              onClick={() => setIsBuilderOpen(true)}
+              className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Build Workflow
+            </Button>
+          </div>
+          
+          {/* View Mode Toggle */}
+          <div className="flex gap-1 bg-gray-100 rounded-md p-1">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className="h-8"
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="h-8"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -287,98 +412,215 @@ export default function WorkflowsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Show folders only when no folder is selected */}
-              {!selectedFolder && workflowFolders.map((folder: TemplateFolder) => (
-                <Card key={folder.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedFolder(folder.id)}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 text-blue-500" />
-                      <Badge variant="outline" className="text-xs">
-                        Folder
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg">{folder.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {folder.description || "No description"}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-              
-              {/* Show workflows */}
-              {filteredWorkflows.map((workflow: Workflow) => (
-                <Card key={workflow.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
+            /* Conditional View: Table or Grid */
+            viewMode === "table" ? (
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <Table className="bg-white">
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHeader field="name">Name</SortableHeader>
+                      <TableHead className="w-[25%]">Description</TableHead>
+                      <SortableHeader field="updatedAt">Last Updated</SortableHeader>
+                      <TableHead className="w-[15%]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getTableData().map((item) => (
+                      <TableRow key={`${item.type}-${item.id}`} className="group hover:bg-gray-50">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {item.type === 'folder' ? (
+                              <div 
+                                className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]"
+                                onClick={() => setSelectedFolder(item.id)}
+                                data-testid={`folder-${item.id}`}
+                              >
+                                <Folder className="h-4 w-4 text-[#46a1a0]" />
+                                <div>
+                                  <div className="font-medium">{item.name}</div>
+                                  <div className="text-sm text-gray-500">
+                                    {item.itemCount} {item.itemCount === 1 ? 'workflow' : 'workflows'}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <GitBranch className="h-4 w-4 text-[#46a1a0]" />
+                                <div>
+                                  <div className="font-medium">{item.name}</div>
+                                  {item.status && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <div className={`w-2 h-2 rounded-full ${getStatusColor(item.status)}`}></div>
+                                      <Badge variant={item.status === "active" ? "default" : "secondary"} className="text-xs">
+                                        {item.status}
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {item.description || <span className="text-gray-400">No description</span>}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {new Date(item.lastUpdated).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {item.type === 'folder' ? (
+                              <>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewDetails(item.originalWorkflow)}
+                                >
+                                  <Activity className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditWorkflow(item.originalWorkflow)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {item.status === "active" ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => updateWorkflowMutation.mutate({
+                                      id: item.id,
+                                      status: "paused"
+                                    })}
+                                  >
+                                    <Pause className="h-3 w-3" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => updateWorkflowMutation.mutate({
+                                      id: item.id,
+                                      status: "active"
+                                    })}
+                                  >
+                                    <Play className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              /* Grid View */
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* Show folders only when no folder is selected */}
+                {!selectedFolder && workflowFolders.map((folder: TemplateFolder) => (
+                  <Card key={folder.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedFolder(folder.id)}>
+                    <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="outline" 
-                          className={`${getStatusColor(workflow.status)} text-white border-none`}
-                        >
-                          {getStatusIcon(workflow.status)}
-                          <span className="ml-1 capitalize">{workflow.status}</span>
+                        <FolderOpen className="h-4 w-4 text-blue-500" />
+                        <Badge variant="outline" className="text-xs">
+                          Folder
                         </Badge>
-                        {workflow.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {workflow.category.replace('_', ' ')}
+                      </div>
+                      <CardTitle className="text-lg">{folder.name}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {folder.description || "No description"}
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))}
+                
+                {/* Show workflows */}
+                {filteredWorkflows.map((workflow: Workflow) => (
+                  <Card key={workflow.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`${getStatusColor(workflow.status)} text-white border-none`}
+                          >
+                            {getStatusIcon(workflow.status)}
+                            <span className="ml-1 capitalize">{workflow.status}</span>
                           </Badge>
-                        )}
+                          {workflow.category && (
+                            <Badge variant="secondary" className="text-xs">
+                              {workflow.category.replace('_', ' ')}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            const newStatus = workflow.status === "active" ? "paused" : "active";
+                            updateWorkflowMutation.mutate({ id: workflow.id, status: newStatus });
+                          }}
+                        >
+                          {workflow.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <CardTitle className="text-lg">{workflow.name}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {workflow.description || "No description provided"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Total Runs:</span>
+                          <span className="font-medium">{workflow.totalRuns ?? 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Success Rate:</span>
+                          <span className="font-medium">
+                            {(workflow.totalRuns ?? 0) > 0 
+                              ? `${Math.round(((workflow.successfulRuns ?? 0) / (workflow.totalRuns ?? 1)) * 100)}%`
+                              : "N/A"
+                            }
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Last Run:</span>
+                          <span className="font-medium">
+                            {workflow.lastRun 
+                              ? new Date(workflow.lastRun).toLocaleDateString()
+                              : "Never"
+                            }
+                          </span>
+                        </div>
                       </div>
                       <Button 
+                        variant="outline" 
                         size="sm" 
-                        variant="ghost"
-                        onClick={() => {
-                          const newStatus = workflow.status === "active" ? "paused" : "active";
-                          updateWorkflowMutation.mutate({ id: workflow.id, status: newStatus });
-                        }}
+                        className="w-full mt-4"
+                        onClick={() => handleViewDetails(workflow)}
                       >
-                        {workflow.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        View Details
+                        <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
-                    </div>
-                    <CardTitle className="text-lg">{workflow.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {workflow.description || "No description provided"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total Runs:</span>
-                        <span className="font-medium">{workflow.totalRuns ?? 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Success Rate:</span>
-                        <span className="font-medium">
-                          {(workflow.totalRuns ?? 0) > 0 
-                            ? `${Math.round(((workflow.successfulRuns ?? 0) / (workflow.totalRuns ?? 1)) * 100)}%`
-                            : "N/A"
-                          }
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Last Run:</span>
-                        <span className="font-medium">
-                          {workflow.lastRun 
-                            ? new Date(workflow.lastRun).toLocaleDateString()
-                            : "Never"
-                          }
-                        </span>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-4"
-                      onClick={() => handleViewDetails(workflow)}
-                    >
-                      View Details
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )
           )}
         </div>)}
 
