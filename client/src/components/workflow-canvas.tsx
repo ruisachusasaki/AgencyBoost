@@ -55,13 +55,19 @@ const TriggerNode = ({ data }: { data: any }) => {
             Click to edit conditions
           </div>
         )}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 flex gap-1">
           <Button size="sm" variant="outline" className="text-xs h-6" onClick={(e) => {
             e.stopPropagation(); // Prevent double click handling
             data.onConfigure?.();
           }}>
             <Settings className="h-3 w-3 mr-1" />
             Configure
+          </Button>
+          <Button size="sm" variant="outline" className="text-xs h-6 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={(e) => {
+            e.stopPropagation(); // Prevent double click handling
+            data.onDelete?.();
+          }}>
+            <X className="h-3 w-3" />
           </Button>
         </div>
       </CardContent>
@@ -70,7 +76,7 @@ const TriggerNode = ({ data }: { data: any }) => {
 };
 
 const ActionNode = ({ data }: { data: any }) => (
-  <Card className="w-64 border-2 border-green-500 bg-green-50 shadow-lg hover:shadow-xl transition-shadow cursor-move relative">
+  <Card className="w-64 border-2 border-green-500 bg-green-50 shadow-lg hover:shadow-xl transition-shadow cursor-move relative group">
     <Handle
       type="target"
       position={Position.Top}
@@ -91,6 +97,21 @@ const ActionNode = ({ data }: { data: any }) => (
     </CardHeader>
     <CardContent className="pt-0">
       <div className="font-medium text-green-900">{data.label}</div>
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 flex gap-1">
+        <Button size="sm" variant="outline" className="text-xs h-6" onClick={(e) => {
+          e.stopPropagation();
+          data.onConfigure?.();
+        }}>
+          <Settings className="h-3 w-3 mr-1" />
+          Configure
+        </Button>
+        <Button size="sm" variant="outline" className="text-xs h-6 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={(e) => {
+          e.stopPropagation();
+          data.onDelete?.();
+        }}>
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
     </CardContent>
   </Card>
 );
@@ -182,6 +203,8 @@ interface WorkflowCanvasProps {
   onAddAction: () => void;
   onAddCondition: () => void;
   onConfigureTrigger?: (triggerIndex: number) => void;
+  onDeleteTrigger?: (triggerIndex: number) => void;
+  onDeleteAction?: (actionIndex: number) => void;
 }
 
 export default function WorkflowCanvas({ 
@@ -189,7 +212,9 @@ export default function WorkflowCanvas({
   onAddTrigger, 
   onAddAction, 
   onAddCondition,
-  onConfigureTrigger
+  onConfigureTrigger,
+  onDeleteTrigger,
+  onDeleteAction
 }: WorkflowCanvasProps) {
   // Define custom node types
   const nodeTypes: NodeTypes = useMemo(() => ({
@@ -241,6 +266,7 @@ export default function WorkflowCanvas({
             label: trigger.name,
             trigger: trigger,
             onConfigure: () => onConfigureTrigger?.(index),
+            onDelete: () => onDeleteTrigger?.(index),
           },
         });
       }
@@ -281,6 +307,8 @@ export default function WorkflowCanvas({
         position: { x: xPosition, y: yPosition },
         data: {
           label: action.name,
+          onConfigure: () => console.log('Configure action', index),
+          onDelete: () => onDeleteAction?.(index),
         },
       });
       yPosition += 150;

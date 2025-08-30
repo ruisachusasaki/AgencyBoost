@@ -217,7 +217,7 @@ export default function WorkflowBuilderPage() {
     const triggerDefinition = (availableTriggers as any[])?.find((t: any) => t.type === trigger.type);
     if (!triggerDefinition) {
       console.error('No trigger definition found for type:', trigger.type);
-      console.log('Available trigger types:', availableTriggers?.map((t: any) => t.type) || []);
+      console.log('Available trigger types:', Array.isArray(availableTriggers) ? availableTriggers.map((t: any) => t.type) : []);
       toast({
         title: "Configuration Error",
         description: `Trigger type "${trigger.type}" is not supported for configuration.`,
@@ -252,6 +252,44 @@ export default function WorkflowBuilderPage() {
       title: "Configuration Saved",
       description: "Trigger conditions have been updated"
     });
+  };
+
+  // Handler for deleting triggers
+  const handleDeleteTrigger = (triggerIndex: number) => {
+    const trigger = workflowData.triggers[triggerIndex];
+    if (!trigger) return;
+
+    if (confirm(`Are you sure you want to delete the "${trigger.name}" trigger? This action cannot be undone.`)) {
+      const updatedTriggers = workflowData.triggers.filter((_, index) => index !== triggerIndex);
+      setWorkflowData(prev => ({
+        ...prev,
+        triggers: updatedTriggers
+      }));
+      
+      toast({
+        title: "Trigger Deleted",
+        description: `"${trigger.name}" has been removed from the workflow`
+      });
+    }
+  };
+
+  // Handler for deleting actions
+  const handleDeleteAction = (actionIndex: number) => {
+    const action = workflowData.actions[actionIndex];
+    if (!action) return;
+
+    if (confirm(`Are you sure you want to delete the "${action.name}" action? This action cannot be undone.`)) {
+      const updatedActions = workflowData.actions.filter((_, index) => index !== actionIndex);
+      setWorkflowData(prev => ({
+        ...prev,
+        actions: updatedActions
+      }));
+      
+      toast({
+        title: "Action Deleted",
+        description: `"${action.name}" has been removed from the workflow`
+      });
+    }
   };
 
   // Filter triggers and actions based on search
@@ -338,6 +376,8 @@ export default function WorkflowBuilderPage() {
                 onAddTrigger={handleAddTrigger}
                 onAddAction={handleAddAction}
                 onConfigureTrigger={handleConfigureTrigger}
+                onDeleteTrigger={handleDeleteTrigger}
+                onDeleteAction={handleDeleteAction}
                 onAddCondition={() => {
                   // TODO: Implement condition adding
                   console.log('Add condition');
