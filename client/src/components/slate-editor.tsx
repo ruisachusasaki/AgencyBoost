@@ -426,18 +426,67 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     if (event.key === 'Enter' && !showSlashMenu) {
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
-        const [node, path] = Editor.node(editor, selection);
-        
-        // Check if we're at the edge of an embed or other void element
-        if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
-          event.preventDefault();
+        try {
+          const [node, path] = Editor.node(editor, selection);
           
-          // Insert a new paragraph after the void element
-          const nextPath = Path.next(path);
-          const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
-          Transforms.insertNodes(editor, newParagraph, { at: nextPath });
-          Transforms.select(editor, Editor.start(editor, nextPath));
-          return;
+          // Check if we're at the edge of an embed or other void element
+          if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
+            event.preventDefault();
+            
+            // Insert a new paragraph after the void element
+            const nextPath = Path.next(path);
+            const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+            Transforms.insertNodes(editor, newParagraph, { at: nextPath });
+            Transforms.select(editor, Editor.start(editor, nextPath));
+            return;
+          }
+
+          // Check if cursor is at the end of a text node that's followed by an embed
+          if (selection.anchor.offset === node.text?.length) {
+            const parentPath = Path.parent(path);
+            const parentNode = Editor.node(editor, parentPath)[0];
+            const nextSiblingPath = Path.next(parentPath);
+            
+            try {
+              const nextSibling = Editor.node(editor, nextSiblingPath)[0];
+              if (SlateElement.isElement(nextSibling) && ['embed', 'image', 'divider'].includes(nextSibling.type)) {
+                event.preventDefault();
+                
+                // Insert a paragraph before the embed
+                const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+                Transforms.insertNodes(editor, newParagraph, { at: nextSiblingPath });
+                Transforms.select(editor, Editor.start(editor, nextSiblingPath));
+                return;
+              }
+            } catch {
+              // No next sibling or error - continue with default behavior
+            }
+          }
+
+          // Check if cursor is at the beginning of a text node that's preceded by an embed
+          if (selection.anchor.offset === 0) {
+            const parentPath = Path.parent(path);
+            const prevSiblingPath = Path.previous(parentPath);
+            
+            try {
+              const prevSibling = Editor.node(editor, prevSiblingPath)[0];
+              if (SlateElement.isElement(prevSibling) && ['embed', 'image', 'divider'].includes(prevSibling.type)) {
+                event.preventDefault();
+                
+                // Insert a paragraph after the embed
+                const insertPath = Path.next(prevSiblingPath);
+                const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+                Transforms.insertNodes(editor, newParagraph, { at: insertPath });
+                Transforms.select(editor, Editor.start(editor, insertPath));
+                return;
+              }
+            } catch {
+              // No previous sibling or error - continue with default behavior
+            }
+          }
+        } catch (error) {
+          // If there's any error with node detection, just continue with default behavior
+          console.warn('Error in Enter key handling:', error);
         }
       }
     }
