@@ -348,7 +348,7 @@ export default function WorkflowBuilderPage() {
             </div>
           </SheetHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {/* Client & Lead Management */}
             {(() => {
               const triggers = [
@@ -613,7 +613,7 @@ export default function WorkflowBuilderPage() {
             </div>
           </SheetHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {/* Communication Actions */}
             <Card>
               <CardHeader>
