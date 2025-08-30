@@ -245,6 +245,7 @@ function CategoryOverview({
 export default function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'articles' | 'bookmarks'>('articles');
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: "",
@@ -295,6 +296,12 @@ export default function KnowledgeBase() {
 
   const { data: articles = [] } = useQuery({
     queryKey: ["/api/knowledge-base/articles/"],
+  });
+
+  // Fetch bookmarks
+  const { data: bookmarks, isLoading: isLoadingBookmarks } = useQuery({
+    queryKey: ['/api/knowledge-base/bookmarks'],
+    enabled: currentView === 'bookmarks',
   });
 
   const createCategoryMutation = useMutation({
@@ -826,128 +833,217 @@ export default function KnowledgeBase() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          data-testid="input-search"
-          placeholder="Search articles..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-6 mb-6">
+        <div className="flex items-center gap-2">
+          <button
+            data-testid="tab-articles"
+            onClick={() => {
+              setCurrentView('articles');
+              setSelectedCategory(null);
+            }}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              currentView === 'articles'
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 mr-2 inline" />
+            All Articles
+          </button>
+          <button
+            data-testid="tab-bookmarks"
+            onClick={() => setCurrentView('bookmarks')}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              currentView === 'bookmarks'
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+          >
+            <Bookmark className="w-4 h-4 mr-2 inline" />
+            My Bookmarks
+          </button>
+        </div>
+        
+        {/* Search - only show for articles view */}
+        {currentView === 'articles' && (
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              data-testid="input-search"
+              placeholder="Search articles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Categories Sidebar */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Categories</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <button
-                  data-testid="button-category-all"
-                  onClick={() => setSelectedCategory(null)}
-                  className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                    selectedCategory === null 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'hover:bg-muted'
-                  }`}
-                >
-                  All Articles
-                </button>
-                {renderCategoryTree(hierarchicalCategories)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {currentView === 'articles' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Categories Sidebar */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Categories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <button
+                    data-testid="button-category-all"
+                    onClick={() => setSelectedCategory(null)}
+                    className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+                      selectedCategory === null 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    All Articles
+                  </button>
+                  {renderCategoryTree(hierarchicalCategories)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Content Area */}
-        <div className="lg:col-span-3">
-          {selectedCategory ? (
-            <CategoryOverview 
-              categoryId={selectedCategory} 
-              categories={categories} 
-              articles={articles}
-              onCategorySelect={setSelectedCategory}
-            />
-          ) : (
-            <div className="space-y-4">
-              {filteredArticles.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No articles found</h3>
-                    <p className="text-muted-foreground">
-                      {searchTerm ? "Try adjusting your search terms" : "No articles have been created yet"}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                filteredArticles.map((article: any) => (
-                  <Card key={article.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <Link href={`/resources/articles/${article.id}`}>
-                            <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
-                              {article.title}
-                            </h3>
-                          </Link>
-                          {article.excerpt && (
-                            <p className="text-muted-foreground mb-3 line-clamp-2">
-                              {article.excerpt}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4" />
-                              <span>{article.authorName || "Unknown"}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="w-4 h-4" />
-                              <span>{article.viewCount || 0} views</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Heart className="w-4 h-4" />
-                              <span>{article.likeCount || 0} likes</span>
-                            </div>
-                          </div>
-                        </div>
-                        {article.featuredImage && (
-                          <img 
-                            src={article.featuredImage}
-                            alt={article.title}
-                            className="w-16 h-16 object-cover rounded-md ml-4"
-                          />
-                        )}
-                      </div>
-                      {article.tags && article.tags.length > 0 && (
-                        <>
-                          <Separator className="my-3" />
-                          <div className="flex gap-2 flex-wrap">
-                            {article.tags.map((tag: string) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </>
-                      )}
+          {/* Content Area */}
+          <div className="lg:col-span-3">
+            {selectedCategory ? (
+              <CategoryOverview 
+                categoryId={selectedCategory} 
+                categories={categories} 
+                articles={articles}
+                onCategorySelect={setSelectedCategory}
+              />
+            ) : (
+              <div className="space-y-4">
+                {filteredArticles.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No articles found</h3>
+                      <p className="text-muted-foreground">
+                        {searchTerm ? "Try adjusting your search terms" : "No articles have been created yet"}
+                      </p>
                     </CardContent>
                   </Card>
-                ))
-              )}
-            </div>
+                ) : (
+                  filteredArticles.map((article: any) => (
+                    <Card key={article.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <Link href={`/resources/articles/${article.id}`}>
+                              <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                                {article.title}
+                              </h3>
+                            </Link>
+                            {article.excerpt && (
+                              <p className="text-muted-foreground mb-3 line-clamp-2">
+                                {article.excerpt}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <User className="w-4 h-4" />
+                                <span>{article.authorName || "Unknown"}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                <span>{article.viewCount || 0} views</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Heart className="w-4 h-4" />
+                                <span>{article.likeCount || 0} likes</span>
+                              </div>
+                            </div>
+                          </div>
+                          {article.featuredImage && (
+                            <img 
+                              src={article.featuredImage}
+                              alt={article.title}
+                              className="w-16 h-16 object-cover rounded-md ml-4"
+                            />
+                          )}
+                        </div>
+                        {article.tags && article.tags.length > 0 && (
+                          <>
+                            <Separator className="my-3" />
+                            <div className="flex gap-2 flex-wrap">
+                              {article.tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Bookmarks View */
+        <div className="space-y-4">
+          {isLoadingBookmarks ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <div className="animate-spin mx-auto w-8 h-8 border-2 border-primary border-t-transparent rounded-full mb-4"></div>
+                <p className="text-muted-foreground">Loading your bookmarks...</p>
+              </CardContent>
+            </Card>
+          ) : !bookmarks || bookmarks.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Bookmark className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No bookmarks yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Bookmark articles you want to save for later by clicking the bookmark icon on any article.
+                </p>
+                <Button 
+                  onClick={() => setCurrentView('articles')}
+                  variant="outline"
+                  data-testid="button-browse-articles"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Browse Articles
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            bookmarks.map((bookmark: any) => (
+              <Card key={bookmark.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <Link href={`/resources/articles/${bookmark.articleId}`}>
+                        <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                          {bookmark.articleTitle}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Bookmark className="w-4 h-4" />
+                          <span>Bookmarked {format(new Date(bookmark.createdAt), "MMM d, yyyy")}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
-      </div>
+      )}
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
