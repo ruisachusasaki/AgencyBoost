@@ -22,6 +22,7 @@ interface TriggerConfigPanelProps {
     description: string;
     configSchema: any;
   } | null;
+  pipelineStages?: any[];
   onSave: (updatedTrigger: any) => void;
   onClose: () => void;
 }
@@ -29,6 +30,7 @@ interface TriggerConfigPanelProps {
 export default function TriggerConfigPanel({ 
   trigger, 
   triggerDefinition, 
+  pipelineStages = [],
   onSave, 
   onClose 
 }: TriggerConfigPanelProps) {
@@ -48,6 +50,31 @@ export default function TriggerConfigPanel({
   const renderConfigField = (fieldName: string, fieldSchema: any) => {
     const value = conditions[fieldName] || "";
     const label = fieldSchema.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+    if (fieldSchema.type === "pipeline_stage") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Any Stage</SelectItem>
+              {pipelineStages.map((stage: any) => (
+                <SelectItem key={stage.id} value={stage.id}>
+                  {stage.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
 
     if (fieldSchema.type === "string" && fieldSchema.options) {
       return (
@@ -143,18 +170,18 @@ export default function TriggerConfigPanel({
   const hasConditions = Object.keys(conditions).some(key => conditions[key] !== "" && conditions[key] !== null && conditions[key] !== undefined);
 
   return (
-    <Card className="w-80 border-2 border-blue-500 bg-white shadow-lg">
-      <CardHeader className="pb-3">
+    <div className="h-full flex flex-col">
+      <div className="pb-3 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4 text-blue-600" />
-            <CardTitle className="text-lg text-blue-900">Configure Trigger</CardTitle>
+            <h3 className="text-lg font-semibold text-blue-900">Configure Trigger</h3>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 mt-3">
           <Badge variant="outline" className="bg-blue-100 text-blue-800">
             {trigger.name}
           </Badge>
@@ -162,8 +189,9 @@ export default function TriggerConfigPanel({
             <p className="text-sm text-muted-foreground">{triggerDefinition.description}</p>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </div>
+      
+      <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {triggerDefinition?.configSchema ? (
           <>
             <div className="space-y-4">
@@ -178,10 +206,18 @@ export default function TriggerConfigPanel({
                 <div className="space-y-1">
                   {Object.entries(conditions).map(([key, value]) => {
                     if (value === "" || value === null || value === undefined) return null;
+                    
+                    // Format display value for pipeline stages
+                    let displayValue = value;
+                    if (key.includes('stage_id') && typeof value === 'string') {
+                      const stage = pipelineStages.find(s => s.id === value);
+                      displayValue = stage ? stage.name : value;
+                    }
+                    
                     return (
                       <div key={key} className="text-xs text-muted-foreground">
                         <span className="font-medium">{key.replace(/_/g, ' ')}:</span> {
-                          Array.isArray(value) ? value.join(', ') : String(value)
+                          Array.isArray(displayValue) ? displayValue.join(', ') : String(displayValue)
                         }
                       </div>
                     );
@@ -189,24 +225,25 @@ export default function TriggerConfigPanel({
                 </div>
               </div>
             )}
-            
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                <Check className="h-4 w-4 mr-2" />
-                Save Configuration
-              </Button>
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-            </div>
           </>
         ) : (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground">No configuration options available for this trigger.</p>
-            <Button onClick={onClose} className="mt-2">Close</Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      
+      <div className="pt-4 border-t">
+        <div className="flex gap-2">
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 flex-1">
+            <Check className="h-4 w-4 mr-2" />
+            Save Configuration
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
