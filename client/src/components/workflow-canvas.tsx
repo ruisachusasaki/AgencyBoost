@@ -18,7 +18,7 @@ import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Settings, Mail, Plus, Check, X } from "lucide-react";
+import { Play, Settings, Mail, Plus, Check, X, Trash2 } from "lucide-react";
 
 // Custom Node Components
 const TriggerNode = ({ data }: { data: any }) => {
@@ -67,7 +67,7 @@ const TriggerNode = ({ data }: { data: any }) => {
             e.stopPropagation(); // Prevent double click handling
             data.onDelete?.();
           }}>
-            <X className="h-3 w-3" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         </div>
       </CardContent>
@@ -109,7 +109,7 @@ const ActionNode = ({ data }: { data: any }) => (
           e.stopPropagation();
           data.onDelete?.();
         }}>
-          <X className="h-3 w-3" />
+          <Trash2 className="h-3 w-3" />
         </Button>
       </div>
     </CardContent>
