@@ -997,17 +997,19 @@ export class MemStorage implements IStorage {
       this.automationTriggers.set(trigger.id, trigger);
     });
 
-    // Sample automation actions
+    // Comprehensive automation actions for AgencyFlow CRM
     const actions: AutomationAction[] = [
+      // 📧 Communication Actions
       {
         id: "action-1",
         name: "Send Email",
         type: "send_email",
-        description: "Send an email using a template",
+        description: "Send an email using a template with merge tags",
         category: "communication",
         configSchema: {
           template_id: { type: "string", required: true },
           subject: { type: "string" },
+          to_email: { type: "string" },
           delay: { type: "number", default: 0 }
         },
         isActive: true,
@@ -1015,40 +1017,645 @@ export class MemStorage implements IStorage {
       },
       {
         id: "action-2",
-        name: "Create Task",
-        type: "create_task",
-        description: "Create a task for team members",
-        category: "task_management",
-        configSchema: {
-          title: { type: "string", required: true },
-          description: { type: "string" },
-          assignee: { type: "string", required: true },
-          priority: { type: "string", options: ["low", "medium", "high"], default: "medium" }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
-      {
-        id: "action-3",
         name: "Send SMS",
         type: "send_sms",
-        description: "Send an SMS message",
+        description: "Send an SMS message using templates",
         category: "communication",
         configSchema: {
+          template_id: { type: "string" },
           message: { type: "string", required: true },
+          to_phone: { type: "string" },
           delay: { type: "number", default: 0 }
         },
         isActive: true,
         createdAt: new Date()
       },
       {
-        id: "action-4",
-        name: "Add Tag",
-        type: "add_tag",
-        description: "Add a tag to the contact",
-        category: "contact_management",
+        id: "action-3",
+        name: "Create Internal Notification",
+        type: "create_internal_notification",
+        description: "Create a system notification for staff members",
+        category: "communication",
         configSchema: {
-          tag_name: { type: "string", required: true }
+          recipient: { type: "string", required: true },
+          title: { type: "string", required: true },
+          message: { type: "string", required: true },
+          type: { type: "string", options: ["info", "warning", "success", "error"], default: "info" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-4",
+        name: "Send Slack Message",
+        type: "send_slack_message",
+        description: "Send a message to Slack channel or user",
+        category: "communication",
+        configSchema: {
+          channel: { type: "string", required: true },
+          message: { type: "string", required: true },
+          mention_user: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-5",
+        name: "Log Communication",
+        type: "log_communication",
+        description: "Track outreach attempts and communication history",
+        category: "communication",
+        configSchema: {
+          type: { type: "string", options: ["email", "sms", "call", "meeting"], required: true },
+          subject: { type: "string", required: true },
+          notes: { type: "string" },
+          outcome: { type: "string", options: ["sent", "delivered", "opened", "replied"] }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+
+      // 📋 Data Management Actions
+      {
+        id: "action-6",
+        name: "Create Lead",
+        type: "create_lead",
+        description: "Generate new leads with specified data",
+        category: "data_management",
+        configSchema: {
+          name: { type: "string", required: true },
+          email: { type: "string", required: true },
+          phone: { type: "string" },
+          company: { type: "string" },
+          source: { type: "string", options: ["website", "referral", "social_media", "advertising", "cold_outreach"] },
+          value: { type: "number" },
+          assigned_to: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-7",
+        name: "Create Task",
+        type: "create_task",
+        description: "Generate tasks including sub-tasks with assignments",
+        category: "data_management",
+        configSchema: {
+          title: { type: "string", required: true },
+          description: { type: "string" },
+          assigned_to: { type: "string", required: true },
+          priority: { type: "string", options: ["urgent", "high", "normal", "low"], default: "normal" },
+          due_date: { type: "string" },
+          client_id: { type: "string" },
+          project_id: { type: "string" },
+          parent_task_id: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-8",
+        name: "Create Project",
+        type: "create_project",
+        description: "Set up new client projects with details",
+        category: "data_management",
+        configSchema: {
+          name: { type: "string", required: true },
+          description: { type: "string" },
+          client_id: { type: "string", required: true },
+          budget: { type: "number" },
+          start_date: { type: "string" },
+          end_date: { type: "string" },
+          priority: { type: "string", options: ["low", "medium", "high"], default: "medium" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-9",
+        name: "Update Client Fields",
+        type: "update_client_fields",
+        description: "Modify client information and data",
+        category: "data_management",
+        configSchema: {
+          client_id: { type: "string", required: true },
+          fields: { type: "object", required: true },
+          merge_mode: { type: "string", options: ["replace", "merge"], default: "merge" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-10",
+        name: "Update Lead Stage",
+        type: "update_lead_stage",
+        description: "Move leads through pipeline stages",
+        category: "data_management",
+        configSchema: {
+          lead_id: { type: "string", required: true },
+          stage_id: { type: "string", required: true },
+          probability: { type: "number", min: 0, max: 100 },
+          notes: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-11",
+        name: "Update Project Status",
+        type: "update_project_status",
+        description: "Change project status and progress",
+        category: "data_management",
+        configSchema: {
+          project_id: { type: "string", required: true },
+          status: { type: "string", options: ["planning", "active", "completed", "cancelled", "on_hold"], required: true },
+          progress: { type: "number", min: 0, max: 100 },
+          notes: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-12",
+        name: "Add Client Tags",
+        type: "add_client_tags",
+        description: "Organize contacts with tagging system",
+        category: "data_management",
+        configSchema: {
+          client_id: { type: "string", required: true },
+          tags: { type: "array", items: { type: "string" }, required: true },
+          replace_existing: { type: "boolean", default: false }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-13",
+        name: "Update Custom Fields",
+        type: "update_custom_fields",
+        description: "Modify custom field values for contacts",
+        category: "data_management",
+        configSchema: {
+          entity_type: { type: "string", options: ["client", "lead", "project"], required: true },
+          entity_id: { type: "string", required: true },
+          custom_fields: { type: "object", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+
+      // 👥 Assignment Actions
+      {
+        id: "action-14",
+        name: "Assign Contact Owner",
+        type: "assign_contact_owner",
+        description: "Set primary contact responsible person",
+        category: "assignment",
+        configSchema: {
+          contact_id: { type: "string", required: true },
+          staff_id: { type: "string", required: true },
+          notify_assignee: { type: "boolean", default: true },
+          transfer_notes: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-15",
+        name: "Assign Task to Staff",
+        type: "assign_task_to_staff",
+        description: "Delegate work to team members",
+        category: "assignment",
+        configSchema: {
+          task_id: { type: "string", required: true },
+          staff_id: { type: "string", required: true },
+          notify_assignee: { type: "boolean", default: true },
+          assignment_notes: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-16",
+        name: "Assign Lead to Staff",
+        type: "assign_lead_to_staff",
+        description: "Distribute leads to sales team members",
+        category: "assignment",
+        configSchema: {
+          lead_id: { type: "string", required: true },
+          staff_id: { type: "string", required: true },
+          notify_assignee: { type: "boolean", default: true },
+          assignment_type: { type: "string", options: ["primary", "secondary"], default: "primary" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-17",
+        name: "Add Team Role Assignment",
+        type: "add_team_role_assignment",
+        description: "Assign specialized positions to clients",
+        category: "assignment",
+        configSchema: {
+          client_id: { type: "string", required: true },
+          staff_id: { type: "string", required: true },
+          position: { type: "string", options: ["setter", "bdr", "account_manager", "media_buyer", "cro_specialist", "automation_specialist", "show_rate_specialist", "data_specialist", "seo_specialist", "social_media_specialist"], required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-18",
+        name: "Reassign Project Manager",
+        type: "reassign_project_manager",
+        description: "Change project ownership and management",
+        category: "assignment",
+        configSchema: {
+          project_id: { type: "string", required: true },
+          new_manager_id: { type: "string", required: true },
+          notify_old_manager: { type: "boolean", default: true },
+          notify_new_manager: { type: "boolean", default: true },
+          handover_notes: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-19",
+        name: "Remove Staff Assignment",
+        type: "remove_staff_assignment",
+        description: "Clear assignments from team members",
+        category: "assignment",
+        configSchema: {
+          entity_type: { type: "string", options: ["client", "lead", "project", "task"], required: true },
+          entity_id: { type: "string", required: true },
+          staff_id: { type: "string", required: true },
+          notify_staff: { type: "boolean", default: true },
+          removal_reason: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+
+      // 📊 Status & Progress Actions
+      {
+        id: "action-20",
+        name: "Mark Task Complete",
+        type: "mark_task_complete",
+        description: "Auto-complete tasks and sub-tasks",
+        category: "status_progress",
+        configSchema: {
+          task_id: { type: "string", required: true },
+          completion_notes: { type: "string" },
+          notify_assignee: { type: "boolean", default: true },
+          auto_complete_subtasks: { type: "boolean", default: false }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-21",
+        name: "Update Lead Score",
+        type: "update_lead_score",
+        description: "Modify lead qualification scores",
+        category: "status_progress",
+        configSchema: {
+          lead_id: { type: "string", required: true },
+          score_change: { type: "number", required: true },
+          score_type: { type: "string", options: ["add", "subtract", "set"], default: "add" },
+          reason: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-22",
+        name: "Change Client Status",
+        type: "change_client_status",
+        description: "Update client status (active/inactive/pending)",
+        category: "status_progress",
+        configSchema: {
+          client_id: { type: "string", required: true },
+          status: { type: "string", options: ["active", "inactive", "pending"], required: true },
+          reason: { type: "string" },
+          notify_team: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-23",
+        name: "Update Campaign Metrics",
+        type: "update_campaign_metrics",
+        description: "Track campaign performance data",
+        category: "status_progress",
+        configSchema: {
+          campaign_id: { type: "string", required: true },
+          metrics: { type: "object", required: true },
+          increment_mode: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-24",
+        name: "Set Project Priority",
+        type: "set_project_priority",
+        description: "Adjust project priority levels",
+        category: "status_progress",
+        configSchema: {
+          project_id: { type: "string", required: true },
+          priority: { type: "string", options: ["low", "medium", "high"], required: true },
+          reason: { type: "string" },
+          notify_team: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-25",
+        name: "Update Task Priority",
+        type: "update_task_priority",
+        description: "Change task urgency levels",
+        category: "status_progress",
+        configSchema: {
+          task_id: { type: "string", required: true },
+          priority: { type: "string", options: ["urgent", "high", "normal", "low"], required: true },
+          reason: { type: "string" },
+          notify_assignee: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+
+      // ⏰ Calendar & Time Actions
+      {
+        id: "action-26",
+        name: "Create Appointment",
+        type: "create_appointment",
+        description: "Schedule client meetings and appointments",
+        category: "calendar_time",
+        configSchema: {
+          client_id: { type: "string", required: true },
+          title: { type: "string", required: true },
+          description: { type: "string" },
+          start_time: { type: "string", required: true },
+          end_time: { type: "string", required: true },
+          location: { type: "string" },
+          staff_id: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-27",
+        name: "Start Timer",
+        type: "start_timer",
+        description: "Begin time tracking for tasks",
+        category: "calendar_time",
+        configSchema: {
+          task_id: { type: "string", required: true },
+          staff_id: { type: "string", required: true },
+          description: { type: "string" },
+          project_id: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-28",
+        name: "Stop Timer",
+        type: "stop_timer",
+        description: "End time tracking sessions",
+        category: "calendar_time",
+        configSchema: {
+          timer_id: { type: "string", required: true },
+          completion_notes: { type: "string" },
+          billable: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-29",
+        name: "Create Calendar Block",
+        type: "create_calendar_block",
+        description: "Reserve time slots for specific activities",
+        category: "calendar_time",
+        configSchema: {
+          staff_id: { type: "string", required: true },
+          title: { type: "string", required: true },
+          start_time: { type: "string", required: true },
+          end_time: { type: "string", required: true },
+          block_type: { type: "string", options: ["meeting", "focus_time", "admin", "break"], default: "meeting" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-30",
+        name: "Send Meeting Reminder",
+        type: "send_meeting_reminder",
+        description: "Send automated meeting reminders",
+        category: "calendar_time",
+        configSchema: {
+          appointment_id: { type: "string", required: true },
+          reminder_time: { type: "number", required: true },
+          reminder_type: { type: "string", options: ["email", "sms", "both"], default: "email" },
+          custom_message: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-31",
+        name: "Reschedule Appointment",
+        type: "reschedule_appointment",
+        description: "Update meeting times automatically",
+        category: "calendar_time",
+        configSchema: {
+          appointment_id: { type: "string", required: true },
+          new_start_time: { type: "string", required: true },
+          new_end_time: { type: "string", required: true },
+          reason: { type: "string" },
+          notify_attendees: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+
+      // 📁 File & Document Actions
+      {
+        id: "action-32",
+        name: "Upload Document",
+        type: "upload_document",
+        description: "Attach files to client records",
+        category: "file_document",
+        configSchema: {
+          entity_type: { type: "string", options: ["client", "project", "task"], required: true },
+          entity_id: { type: "string", required: true },
+          file_url: { type: "string", required: true },
+          file_name: { type: "string", required: true },
+          description: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-33",
+        name: "Generate Invoice",
+        type: "generate_invoice",
+        description: "Create billing documents automatically",
+        category: "file_document",
+        configSchema: {
+          client_id: { type: "string", required: true },
+          project_id: { type: "string" },
+          amount: { type: "number", required: true },
+          description: { type: "string", required: true },
+          due_date: { type: "string" },
+          payment_terms: { type: "string", options: ["due_upon_receipt", "net_7", "net_30"], default: "net_30" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-34",
+        name: "Create Document Folder",
+        type: "create_document_folder",
+        description: "Organize file storage structure",
+        category: "file_document",
+        configSchema: {
+          folder_name: { type: "string", required: true },
+          parent_folder_id: { type: "string" },
+          entity_type: { type: "string", options: ["client", "project"], required: true },
+          entity_id: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-35",
+        name: "Send Document",
+        type: "send_document",
+        description: "Email documents as attachments",
+        category: "file_document",
+        configSchema: {
+          document_id: { type: "string", required: true },
+          recipient_email: { type: "string", required: true },
+          subject: { type: "string", required: true },
+          message: { type: "string" },
+          password_protect: { type: "boolean", default: false }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-36",
+        name: "Archive Files",
+        type: "archive_files",
+        description: "Move files to archive storage",
+        category: "file_document",
+        configSchema: {
+          file_ids: { type: "array", items: { type: "string" }, required: true },
+          archive_reason: { type: "string" },
+          notify_owner: { type: "boolean", default: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+
+      // 🔔 Notification & Alert Actions
+      {
+        id: "action-37",
+        name: "Create Follow-up Reminder",
+        type: "create_followup_reminder",
+        description: "Set future reminders for follow-up",
+        category: "notification_alert",
+        configSchema: {
+          entity_type: { type: "string", options: ["client", "lead", "project"], required: true },
+          entity_id: { type: "string", required: true },
+          reminder_date: { type: "string", required: true },
+          reminder_text: { type: "string", required: true },
+          assigned_to: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-38",
+        name: "Send Manager Alert",
+        type: "send_manager_alert",
+        description: "Escalation notifications to managers",
+        category: "notification_alert",
+        configSchema: {
+          manager_id: { type: "string", required: true },
+          alert_type: { type: "string", options: ["escalation", "approval_needed", "deadline_missed", "high_value"], required: true },
+          subject: { type: "string", required: true },
+          message: { type: "string", required: true },
+          priority: { type: "string", options: ["low", "medium", "high", "urgent"], default: "medium" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-39",
+        name: "Log Activity",
+        type: "log_activity",
+        description: "Create audit trail entries",
+        category: "notification_alert",
+        configSchema: {
+          entity_type: { type: "string", required: true },
+          entity_id: { type: "string", required: true },
+          activity_type: { type: "string", required: true },
+          description: { type: "string", required: true },
+          metadata: { type: "object" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-40",
+        name: "Create System Alert",
+        type: "create_system_alert",
+        description: "Important system-wide notifications",
+        category: "notification_alert",
+        configSchema: {
+          alert_level: { type: "string", options: ["info", "warning", "error", "critical"], required: true },
+          title: { type: "string", required: true },
+          message: { type: "string", required: true },
+          target_roles: { type: "array", items: { type: "string" } },
+          expires_at: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-41",
+        name: "Send Birthday Reminder",
+        type: "send_birthday_reminder",
+        description: "Automated birthday notifications",
+        category: "notification_alert",
+        configSchema: {
+          recipient_type: { type: "string", options: ["client", "staff"], required: true },
+          recipient_id: { type: "string", required: true },
+          reminder_template: { type: "string" },
+          send_days_before: { type: "number", default: 0 },
+          notification_method: { type: "string", options: ["email", "sms", "internal"], default: "email" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-42",
+        name: "Overdue Task Alert",
+        type: "overdue_task_alert",
+        description: "Alert for missed deadlines",
+        category: "notification_alert",
+        configSchema: {
+          task_id: { type: "string", required: true },
+          alert_recipient: { type: "string", options: ["assignee", "manager", "both"], default: "assignee" },
+          escalation_hours: { type: "number", default: 24 },
+          alert_message: { type: "string" }
         },
         isActive: true,
         createdAt: new Date()
