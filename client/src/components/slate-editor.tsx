@@ -422,127 +422,68 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
-    // Handle Enter key for better navigation around void elements like embeds
+    // Handle Enter key for better navigation, especially in headings
     if (event.key === 'Enter' && !showSlashMenu) {
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
         try {
           const [node, path] = Editor.node(editor, selection);
           
-          // Debug logging
-          console.log('Enter pressed - Current node:', JSON.stringify(node, null, 2));
-          console.log('Enter pressed - Current path:', path);
-          console.log('Enter pressed - Selection anchor offset:', selection.anchor.offset);
-          console.log('Enter pressed - Node type:', node.type);
-          console.log('Enter pressed - Node text:', node.text);
-          console.log('Enter pressed - Is node an element?', SlateElement.isElement(node));
+          // Special handling for headings
+          if (node.text !== undefined) {
+            // We're in a text node, check if parent is a heading
+            const parentPath = Path.parent(path);
+            const parentNode = Editor.node(editor, parentPath)[0];
+            
+            if (SlateElement.isElement(parentNode) && parentNode.type === 'heading') {
+              event.preventDefault();
+              
+              // If cursor is at the beginning of heading text, insert paragraph before
+              if (selection.anchor.offset === 0) {
+                const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+                Transforms.insertNodes(editor, newParagraph, { at: parentPath });
+                Transforms.select(editor, Editor.start(editor, parentPath));
+                return;
+              }
+              
+              // If cursor is at the end of heading text, insert paragraph after
+              if (selection.anchor.offset === node.text.length) {
+                const nextPath = Path.next(parentPath);
+                const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+                Transforms.insertNodes(editor, newParagraph, { at: nextPath });
+                Transforms.select(editor, Editor.start(editor, nextPath));
+                return;
+              }
+              
+              // If cursor is in middle of heading text, split the heading
+              const beforeText = node.text.slice(0, selection.anchor.offset);
+              const afterText = node.text.slice(selection.anchor.offset);
+              
+              // Update current heading with text before cursor
+              Transforms.insertText(editor, beforeText, { at: Editor.start(editor, parentPath) });
+              Transforms.delete(editor, { at: Editor.end(editor, parentPath) });
+              
+              // Insert new paragraph with text after cursor
+              const nextPath = Path.next(parentPath);
+              const newParagraph = { type: 'paragraph', children: [{ text: afterText }] };
+              Transforms.insertNodes(editor, newParagraph, { at: nextPath });
+              Transforms.select(editor, Editor.start(editor, nextPath));
+              return;
+            }
+          }
           
-          // Check if we're at the edge of an embed or other void element
+          // Handle void elements (embeds, images, dividers)
           if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
-            console.log('Detected void element, inserting paragraph after');
             event.preventDefault();
             
-            // Insert a new paragraph after the void element
             const nextPath = Path.next(path);
             const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
             Transforms.insertNodes(editor, newParagraph, { at: nextPath });
             Transforms.select(editor, Editor.start(editor, nextPath));
             return;
           }
-
-          // Check if cursor is at the end of a text node that's followed by an embed
-          if (selection.anchor.offset === node.text?.length) {
-            const parentPath = Path.parent(path);
-            const parentNode = Editor.node(editor, parentPath)[0];
-            const nextSiblingPath = Path.next(parentPath);
-            
-            try {
-              const nextSibling = Editor.node(editor, nextSiblingPath)[0];
-              if (SlateElement.isElement(nextSibling) && ['embed', 'image', 'divider'].includes(nextSibling.type)) {
-                event.preventDefault();
-                
-                // Insert a paragraph before the embed
-                const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
-                Transforms.insertNodes(editor, newParagraph, { at: nextSiblingPath });
-                Transforms.select(editor, Editor.start(editor, nextSiblingPath));
-                return;
-              }
-            } catch {
-              // No next sibling or error - continue with default behavior
-            }
-          }
-
-          // Check if cursor is at the beginning of a text node that's preceded by an embed
-          if (selection.anchor.offset === 0 && node.text) {
-            // Get the parent element (paragraph, heading, etc.) of this text node
-            const parentPath = Path.parent(path);
-            const parentNode = Editor.node(editor, parentPath)[0];
-            
-            console.log('Checking text node at beginning - Parent node:', JSON.stringify(parentNode, null, 2));
-            console.log('Parent path:', parentPath);
-            
-            // Loop backwards through previous siblings to find an embed
-            let currentPath = parentPath;
-            let foundEmbed = false;
-            let embedPosition = -1;
-            
-            console.log('Searching backwards for embed...');
-            
-            for (let i = 0; i < 20; i++) { // Check up to 20 positions back
-              try {
-                const prevSiblingPath = Path.previous(currentPath);
-                const prevSibling = Editor.node(editor, prevSiblingPath)[0];
-                
-                console.log(`Position ${i + 1} back:`, JSON.stringify(prevSibling, null, 2));
-                
-                if (SlateElement.isElement(prevSibling) && ['embed', 'image', 'divider'].includes(prevSibling.type)) {
-                  console.log(`Found embed at position ${i + 1} back!`);
-                  foundEmbed = true;
-                  embedPosition = i + 1;
-                  break;
-                }
-                
-                currentPath = prevSiblingPath;
-              } catch (error) {
-                console.log(`No more siblings at position ${i + 1} back`);
-                break;
-              }
-            }
-            
-            if (foundEmbed) {
-              console.log('Inserting paragraph after embed');
-              event.preventDefault();
-              
-              // Insert a paragraph between the embed and current paragraph
-              const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
-              Transforms.insertNodes(editor, newParagraph, { at: parentPath });
-              Transforms.select(editor, Editor.start(editor, parentPath));
-              return;
-            } else {
-              console.log('No embed found in previous 20 positions');
-              
-              // Let's also check what's at the very beginning of the document
-              try {
-                const firstNodePath = [0];
-                const firstNode = Editor.node(editor, firstNodePath)[0];
-                console.log('First node in document:', JSON.stringify(firstNode, null, 2));
-                
-                if (SlateElement.isElement(firstNode) && ['embed', 'image', 'divider'].includes(firstNode.type)) {
-                  console.log('Found embed at document start! Inserting paragraph.');
-                  event.preventDefault();
-                  
-                  const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
-                  Transforms.insertNodes(editor, newParagraph, { at: parentPath });
-                  Transforms.select(editor, Editor.start(editor, parentPath));
-                  return;
-                }
-              } catch (error) {
-                console.log('Error checking first node:', error);
-              }
-            }
-          }
         } catch (error) {
-          // If there's any error with node detection, just continue with default behavior
+          // If there's any error, let default behavior handle it
           console.warn('Error in Enter key handling:', error);
         }
       }
