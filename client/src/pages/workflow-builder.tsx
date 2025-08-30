@@ -252,7 +252,6 @@ export default function WorkflowBuilderPage() {
                             <span className="font-medium text-blue-900">TRIGGER</span>
                           </div>
                           <div className="text-sm text-blue-800">{workflowData.trigger.name}</div>
-                          <div className="text-xs text-blue-600 mt-1">Type: {workflowData.trigger.type}</div>
                         </div>
                         {workflowData.actions.length > 0 && (
                           <div className="text-gray-400">→</div>
@@ -272,7 +271,6 @@ export default function WorkflowBuilderPage() {
                                 <span className="font-medium text-green-900">ACTION</span>
                               </div>
                               <div className="text-sm text-green-800">{action.name}</div>
-                              <div className="text-xs text-green-600 mt-1">Type: {action.type}</div>
                             </div>
                             {index < workflowData.actions.length - 1 && (
                               <div className="text-gray-400">→</div>
