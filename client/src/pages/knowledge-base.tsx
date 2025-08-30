@@ -669,8 +669,11 @@ export default function KnowledgeBase() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Knowledge Base</h1>
-          <p className="text-muted-foreground mt-1">
+          <div className="flex items-center gap-3 mb-2">
+            <BookOpen className="h-8 w-8 text-[#46a1a0]" />
+            <h1 className="text-3xl font-bold tracking-tight text-black">Knowledge Base</h1>
+          </div>
+          <p className="text-muted-foreground">
             Find answers, guides, and documentation
           </p>
         </div>
