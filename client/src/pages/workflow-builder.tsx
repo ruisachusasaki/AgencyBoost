@@ -188,7 +188,7 @@ export default function WorkflowBuilderPage() {
             onChange={(e) => setWorkflowData(prev => ({ ...prev, name: e.target.value }))}
             placeholder={isLoadingWorkflow ? "Loading..." : "Enter workflow name..."}
             disabled={isLoadingWorkflow}
-            className="text-3xl font-bold tracking-tight border-none p-0 h-auto bg-transparent focus:bg-white focus:border focus:p-2 focus:h-10"
+            className="text-3xl font-bold tracking-tight border border-transparent hover:border-gray-300 p-2 h-auto bg-transparent hover:bg-gray-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20"
             style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}
           />
         </div>
