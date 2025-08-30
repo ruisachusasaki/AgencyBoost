@@ -473,24 +473,34 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           }
 
           // Check if cursor is at the beginning of a text node that's preceded by an embed
-          if (selection.anchor.offset === 0) {
+          if (selection.anchor.offset === 0 && node.text) {
+            // Get the parent element (paragraph, heading, etc.) of this text node
             const parentPath = Path.parent(path);
-            const prevSiblingPath = Path.previous(parentPath);
+            const parentNode = Editor.node(editor, parentPath)[0];
             
+            console.log('Checking text node at beginning - Parent node:', JSON.stringify(parentNode, null, 2));
+            console.log('Parent path:', parentPath);
+            
+            // Check if the parent element is preceded by an embed
             try {
+              const prevSiblingPath = Path.previous(parentPath);
               const prevSibling = Editor.node(editor, prevSiblingPath)[0];
+              
+              console.log('Previous sibling:', JSON.stringify(prevSibling, null, 2));
+              console.log('Is prev sibling an embed?', SlateElement.isElement(prevSibling) && ['embed', 'image', 'divider'].includes(prevSibling.type));
+              
               if (SlateElement.isElement(prevSibling) && ['embed', 'image', 'divider'].includes(prevSibling.type)) {
+                console.log('Found embed before text! Inserting paragraph between them.');
                 event.preventDefault();
                 
-                // Insert a paragraph after the embed
-                const insertPath = Path.next(prevSiblingPath);
+                // Insert a paragraph between the embed and current paragraph
                 const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
-                Transforms.insertNodes(editor, newParagraph, { at: insertPath });
-                Transforms.select(editor, Editor.start(editor, insertPath));
+                Transforms.insertNodes(editor, newParagraph, { at: parentPath });
+                Transforms.select(editor, Editor.start(editor, parentPath));
                 return;
               }
-            } catch {
-              // No previous sibling or error - continue with default behavior
+            } catch (error) {
+              console.log('No previous sibling or error:', error);
             }
           }
         } catch (error) {
