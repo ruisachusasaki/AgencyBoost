@@ -489,6 +489,28 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
               console.log('Previous sibling:', JSON.stringify(prevSibling, null, 2));
               console.log('Is prev sibling an embed?', SlateElement.isElement(prevSibling) && ['embed', 'image', 'divider'].includes(prevSibling.type));
               
+              // Let's also check the sibling before that
+              try {
+                const prevPrevSiblingPath = Path.previous(prevSiblingPath);
+                const prevPrevSibling = Editor.node(editor, prevPrevSiblingPath)[0];
+                console.log('Previous-previous sibling:', JSON.stringify(prevPrevSibling, null, 2));
+                console.log('Is prev-prev sibling an embed?', SlateElement.isElement(prevPrevSibling) && ['embed', 'image', 'divider'].includes(prevPrevSibling.type));
+                
+                // Check if the previous-previous sibling is an embed
+                if (SlateElement.isElement(prevPrevSibling) && ['embed', 'image', 'divider'].includes(prevPrevSibling.type)) {
+                  console.log('Found embed 2 positions before! Inserting paragraph between them.');
+                  event.preventDefault();
+                  
+                  // Insert a paragraph between the embed and current paragraph
+                  const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+                  Transforms.insertNodes(editor, newParagraph, { at: parentPath });
+                  Transforms.select(editor, Editor.start(editor, parentPath));
+                  return;
+                }
+              } catch (error2) {
+                console.log('No previous-previous sibling or error:', error2);
+              }
+              
               if (SlateElement.isElement(prevSibling) && ['embed', 'image', 'divider'].includes(prevSibling.type)) {
                 console.log('Found embed before text! Inserting paragraph between them.');
                 event.preventDefault();
