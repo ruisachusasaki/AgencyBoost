@@ -3274,10 +3274,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertWorkflowSchema.parse(req.body);
       
-      // Add createdBy from session
+      // Add createdBy from session and ensure actions/triggers arrays
       const dataWithCreatedBy = {
         ...validatedData,
-        createdBy: req.session?.userId || 'default-user-id'
+        createdBy: req.session?.userId || '9788c16a-ba2a-40cb-af7b-26d2816d6390',
+        actions: validatedData.actions || [],
+        triggers: validatedData.triggers || []
       };
       
       const [newWorkflow] = await db.insert(workflows)
