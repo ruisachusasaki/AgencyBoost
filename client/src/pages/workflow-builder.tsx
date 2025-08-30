@@ -24,7 +24,6 @@ export default function WorkflowBuilderPage() {
   const [workflowData, setWorkflowData] = useState<{
     name: string;
     description: string;
-    category: string;
     status: "draft" | "active" | "paused";
     trigger: {
       type: string;
@@ -34,7 +33,6 @@ export default function WorkflowBuilderPage() {
   }>({
     name: "",
     description: "",
-    category: "",
     status: "draft",
     trigger: {
       type: "manual",
@@ -159,27 +157,6 @@ export default function WorkflowBuilderPage() {
                   placeholder="Describe what this workflow does..."
                   rows={3}
                 />
-              </div>
-              
-              <div>
-                <Label htmlFor="workflow-category">Category</Label>
-                <Select
-                  value={workflowData.category}
-                  onValueChange={(value) => setWorkflowData(prev => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="lead_management">Lead Management</SelectItem>
-                    <SelectItem value="client_onboarding">Client Onboarding</SelectItem>
-                    <SelectItem value="project_management">Project Management</SelectItem>
-                    <SelectItem value="follow_up">Follow Up</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="sales">Sales</SelectItem>
-                    <SelectItem value="support">Support</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               
               <div>
