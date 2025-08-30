@@ -99,17 +99,14 @@ export default function WorkflowsPage() {
   // Create folder mutation
   const createFolderMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log('Making API request with data:', data);
-      return await apiRequest("/api/template-folders", "POST", data);
+      return await apiRequest("POST", "/api/template-folders", data);
     },
     onSuccess: () => {
-      console.log('Folder created successfully!');
       queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
       toast({ title: "Success", description: "Folder created successfully" });
       setIsCreateFolderDialogOpen(false);
     },
-    onError: (error) => {
-      console.error('Folder creation failed:', error);
+    onError: () => {
       toast({ variant: "destructive", title: "Error", description: "Failed to create folder" });
     }
   });
@@ -623,19 +620,14 @@ export default function WorkflowsPage() {
           </DialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
-            console.log('Form submitted!');
             const formData = new FormData(e.target as HTMLFormElement);
             const folderData = {
               name: formData.get('name'),
               description: formData.get('description'),
               type: 'workflow'
             };
-            console.log('Folder data:', folderData);
-            console.log('Name value:', formData.get('name'));
-            console.log('Description value:', formData.get('description'));
             
             if (!folderData.name) {
-              console.error('No folder name provided!');
               return;
             }
             
