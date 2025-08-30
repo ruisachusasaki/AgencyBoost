@@ -208,12 +208,25 @@ export default function WorkflowBuilderPage() {
   // Handler for configuring triggers
   const handleConfigureTrigger = (triggerIndex: number) => {
     const trigger = workflowData.triggers[triggerIndex];
-    if (!trigger) return;
+    if (!trigger) {
+      console.error('No trigger found at index:', triggerIndex);
+      return;
+    }
 
     // Find the trigger definition to get the config schema
     const triggerDefinition = (availableTriggers as any[])?.find((t: any) => t.type === trigger.type);
-    if (!triggerDefinition) return;
+    if (!triggerDefinition) {
+      console.error('No trigger definition found for type:', trigger.type);
+      console.log('Available trigger types:', availableTriggers?.map((t: any) => t.type) || []);
+      toast({
+        title: "Configuration Error",
+        description: `Trigger type "${trigger.type}" is not supported for configuration.`,
+        variant: "destructive"
+      });
+      return;
+    }
     
+    console.log('Setting up trigger config for:', trigger.type);
     setConfiguringTrigger({
       trigger,
       definition: triggerDefinition,
