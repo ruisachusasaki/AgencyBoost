@@ -43,13 +43,14 @@ export default function WorkflowBuilderPage() {
 
   // Fetch existing workflow data when editing
   const { data: existingWorkflow, isLoading: isLoadingWorkflow } = useQuery({
-    queryKey: [`/api/workflows/${editingWorkflowId}`],
+    queryKey: ["/api/workflows", editingWorkflowId],
     enabled: !!editingWorkflowId,
   });
 
   // Populate form with existing data when editing
   useEffect(() => {
     if (existingWorkflow && editingWorkflowId) {
+      console.log("Loading existing workflow data:", existingWorkflow);
       setWorkflowData({
         name: (existingWorkflow as any).name || "",
         description: (existingWorkflow as any).description || "",
