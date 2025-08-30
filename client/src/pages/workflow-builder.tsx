@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Play, Settings } from "lucide-react";
+import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 
 export default function WorkflowBuilderPage() {
@@ -20,6 +21,7 @@ export default function WorkflowBuilderPage() {
   // Parse URL parameters to see if we're editing an existing workflow
   const searchParams = new URLSearchParams(window.location.search);
   const editingWorkflowId = searchParams.get('edit');
+  const [showTriggerDialog, setShowTriggerDialog] = useState(false);
   
   const [workflowData, setWorkflowData] = useState<{
     name: string;
@@ -109,11 +111,14 @@ export default function WorkflowBuilderPage() {
   };
 
   const handleAddTrigger = () => {
-    // For now, we'll add a basic trigger - in the future this could open a trigger selection dialog
+    setShowTriggerDialog(true);
+  };
+
+  const handleSelectTrigger = (trigger: { type: string; name: string; category: string }) => {
     const newTrigger = {
-      type: "manual",
+      type: trigger.type,
       conditions: {},
-      name: "Manual Trigger"
+      name: trigger.name
     };
     
     setWorkflowData(prev => ({
@@ -121,9 +126,10 @@ export default function WorkflowBuilderPage() {
       trigger: newTrigger
     }));
     
+    setShowTriggerDialog(false);
     toast({ 
       title: "Trigger Added", 
-      description: "Manual trigger has been added to your workflow" 
+      description: `${trigger.name} trigger has been added to your workflow` 
     });
   };
 
@@ -334,6 +340,243 @@ export default function WorkflowBuilderPage() {
           </Card>
         </div>
       </div>
+
+      {/* Trigger Selection Dialog */}
+      <Dialog open={showTriggerDialog} onOpenChange={setShowTriggerDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select a Trigger for Your Workflow</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Client & Lead Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Client & Lead Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "client_created", name: "New client created" },
+                  { type: "client_status_changed", name: "Client status changed" },
+                  { type: "client_team_assigned", name: "Client team member assigned" },
+                  { type: "lead_created", name: "New lead created" },
+                  { type: "lead_status_changed", name: "Lead status changed" },
+                  { type: "lead_assigned", name: "Lead assigned to staff" },
+                  { type: "lead_converted", name: "Lead converted to client" },
+                  { type: "appointment_booked", name: "Appointment booked by lead" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "Client & Lead" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Project & Task Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5 text-green-600" />
+                  Project & Task Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "project_created", name: "New project created" },
+                  { type: "project_status_changed", name: "Project status changed" },
+                  { type: "project_completion_reached", name: "Project completion % reached" },
+                  { type: "task_created", name: "Task created/assigned" },
+                  { type: "task_completed", name: "Task completed" },
+                  { type: "task_overdue", name: "Task overdue" },
+                  { type: "task_priority_changed", name: "Task priority changed" },
+                  { type: "recurring_task_generated", name: "Recurring task generated" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "Project & Task" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Financial & Invoice */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-yellow-600" />
+                  Financial & Invoice
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "invoice_created", name: "New invoice created" },
+                  { type: "payment_received", name: "Invoice payment received" },
+                  { type: "invoice_overdue", name: "Invoice overdue (X days)" },
+                  { type: "payment_threshold_reached", name: "Payment threshold reached" },
+                  { type: "campaign_budget_exceeded", name: "Campaign budget exceeded" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "Financial" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Communication & Marketing */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-purple-600" />
+                  Communication & Marketing
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "email_campaign_sent", name: "Email campaign sent" },
+                  { type: "email_opened", name: "Email opened by recipient" },
+                  { type: "email_link_clicked", name: "Email link clicked" },
+                  { type: "sms_campaign_sent", name: "SMS campaign sent" },
+                  { type: "form_submission", name: "Form submission received" },
+                  { type: "contact_form_filled", name: "Contact form filled" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "Communication" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Calendar & Time */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-red-600" />
+                  Calendar & Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "appointment_scheduled", name: "Appointment scheduled" },
+                  { type: "appointment_completed", name: "Appointment completed/missed" },
+                  { type: "daily_schedule", name: "Daily schedule trigger" },
+                  { type: "weekly_schedule", name: "Weekly schedule trigger" },
+                  { type: "monthly_schedule", name: "Monthly schedule trigger" },
+                  { type: "date_based", name: "Date-based trigger (X days before/after)" },
+                  { type: "time_off_requested", name: "Time off request submitted" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "Calendar & Time" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Document & Data */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-indigo-600" />
+                  Document & Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "file_uploaded", name: "File uploaded to client/project" },
+                  { type: "comment_added", name: "Comment added with @mention" },
+                  { type: "knowledge_base_viewed", name: "Knowledge base article viewed" },
+                  { type: "hr_application_submitted", name: "HR application submitted" },
+                  { type: "data_field_changed", name: "Data field value changes" },
+                  { type: "custom_field_condition", name: "Custom field conditions met" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "Document & Data" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* System & Manual */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-orange-600" />
+                  System & Manual
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "manual", name: "Manual trigger (start now)" },
+                  { type: "user_login", name: "User login/activity" },
+                  { type: "webhook", name: "Webhook received" },
+                  { type: "api_call", name: "API call trigger" }
+                ].map((trigger) => (
+                  <Button
+                    key={trigger.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectTrigger({ ...trigger, category: "System & Manual" })}
+                  >
+                    <div>
+                      <div className="font-medium">{trigger.name}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
