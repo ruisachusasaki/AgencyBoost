@@ -107,6 +107,44 @@ export default function WorkflowBuilderPage() {
     navigate("/workflows");
   };
 
+  const handleAddTrigger = () => {
+    // For now, we'll add a basic trigger - in the future this could open a trigger selection dialog
+    const newTrigger = {
+      type: "manual",
+      conditions: {},
+      name: "Manual Trigger"
+    };
+    
+    setWorkflowData(prev => ({
+      ...prev,
+      trigger: newTrigger
+    }));
+    
+    toast({ 
+      title: "Trigger Added", 
+      description: "Manual trigger has been added to your workflow" 
+    });
+  };
+
+  const handleAddAction = () => {
+    const newAction = {
+      id: Date.now().toString(),
+      type: "send_email",
+      name: "Send Email",
+      settings: {}
+    };
+    
+    setWorkflowData(prev => ({
+      ...prev,
+      actions: [...prev.actions, newAction]
+    }));
+    
+    toast({ 
+      title: "Action Added", 
+      description: "Email action has been added to your workflow" 
+    });
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -150,7 +188,7 @@ export default function WorkflowBuilderPage() {
       </div>
 
       {/* Workflow Builder Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Basic Information */}
         <div className="lg:col-span-1">
           <Card>
@@ -207,8 +245,8 @@ export default function WorkflowBuilderPage() {
         </div>
 
         {/* Workflow Canvas */}
-        <div className="lg:col-span-2">
-          <Card className="h-[600px] flex flex-col">
+        <div className="lg:col-span-3">
+          <Card className="h-[700px] flex flex-col">
             <CardHeader className="flex-shrink-0">
               <CardTitle>Workflow Designer</CardTitle>
             </CardHeader>
@@ -224,9 +262,14 @@ export default function WorkflowBuilderPage() {
                   <p className="text-gray-500 mb-4">
                     Drag and drop components to build your workflow
                   </p>
-                  <Button variant="outline">
-                    Add Trigger
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleAddTrigger}>
+                      Add Trigger
+                    </Button>
+                    <Button variant="outline" onClick={handleAddAction}>
+                      Add Action
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
