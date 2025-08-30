@@ -22,6 +22,7 @@ export default function WorkflowBuilderPage() {
   const searchParams = new URLSearchParams(window.location.search);
   const editingWorkflowId = searchParams.get('edit');
   const [showTriggerDialog, setShowTriggerDialog] = useState(false);
+  const [showActionDialog, setShowActionDialog] = useState(false);
   
   const [workflowData, setWorkflowData] = useState<{
     name: string;
@@ -134,10 +135,14 @@ export default function WorkflowBuilderPage() {
   };
 
   const handleAddAction = () => {
+    setShowActionDialog(true);
+  };
+
+  const handleSelectAction = (action: { type: string; name: string; category: string }) => {
     const newAction = {
       id: Date.now().toString(),
-      type: "send_email",
-      name: "Send Email",
+      type: action.type,
+      name: action.name,
       settings: {}
     };
     
@@ -146,9 +151,10 @@ export default function WorkflowBuilderPage() {
       actions: [...prev.actions, newAction]
     }));
     
+    setShowActionDialog(false);
     toast({ 
       title: "Action Added", 
-      description: "Email action has been added to your workflow" 
+      description: `${action.name} has been added to your workflow` 
     });
   };
 
@@ -531,6 +537,241 @@ export default function WorkflowBuilderPage() {
                     <div>
                       <div className="font-medium">{trigger.name}</div>
                       <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Selection Dialog */}
+      <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select an Action for Your Workflow</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Communication Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                  Communication
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "send_email", name: "Send Email" },
+                  { type: "send_sms", name: "Send SMS" },
+                  { type: "send_internal_notification", name: "Send Internal Notification" },
+                  { type: "send_slack_message", name: "Send Slack Message" },
+                  { type: "log_communication", name: "Log Communication Activity" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "Communication" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Data Management Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-green-600" />
+                  Data Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "create_lead", name: "Create Lead" },
+                  { type: "create_task", name: "Create Task" },
+                  { type: "create_project", name: "Create Project" },
+                  { type: "update_client_fields", name: "Update Client Fields" },
+                  { type: "update_lead_stage", name: "Update Lead Stage" },
+                  { type: "update_project_status", name: "Update Project Status" },
+                  { type: "add_tags", name: "Add Tags" },
+                  { type: "update_custom_fields", name: "Update Custom Fields" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "Data Management" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Assignment Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  Assignment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "assign_contact_owner", name: "Assign Contact Owner" },
+                  { type: "assign_task", name: "Assign Task" },
+                  { type: "assign_lead", name: "Assign Lead" },
+                  { type: "assign_team_role", name: "Assign Team Role" },
+                  { type: "assign_project_manager", name: "Assign Project Manager" },
+                  { type: "remove_assignment", name: "Remove Assignment" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "Assignment" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Status & Progress Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-orange-600" />
+                  Status & Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "mark_task_complete", name: "Mark Task Complete" },
+                  { type: "update_lead_score", name: "Update Lead Score" },
+                  { type: "change_client_status", name: "Change Client Status" },
+                  { type: "update_campaign_metrics", name: "Update Campaign Metrics" },
+                  { type: "set_project_priority", name: "Set Project Priority" },
+                  { type: "update_task_priority", name: "Update Task Priority" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "Status & Progress" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Calendar & Time Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-red-600" />
+                  Calendar & Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "create_appointment", name: "Create Appointment" },
+                  { type: "start_timer", name: "Start Timer" },
+                  { type: "stop_timer", name: "Stop Timer" },
+                  { type: "create_calendar_block", name: "Create Calendar Block" },
+                  { type: "send_meeting_reminder", name: "Send Meeting Reminder" },
+                  { type: "reschedule_appointment", name: "Reschedule Appointment" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "Calendar & Time" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* File & Document Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-indigo-600" />
+                  File & Document
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "upload_document", name: "Upload Document" },
+                  { type: "generate_invoice", name: "Generate Invoice" },
+                  { type: "create_folder", name: "Create Folder" },
+                  { type: "send_document", name: "Send Document" },
+                  { type: "archive_files", name: "Archive Files" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "File & Document" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Notification & Alert Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                  Notification & Alert
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  { type: "send_followup_reminder", name: "Send Follow-up Reminder" },
+                  { type: "alert_manager", name: "Alert Manager" },
+                  { type: "log_activity", name: "Log Activity" },
+                  { type: "send_system_alert", name: "Send System Alert" },
+                  { type: "send_birthday_reminder", name: "Send Birthday Reminder" },
+                  { type: "overdue_task_alert", name: "Overdue Task Alert" }
+                ].map((action) => (
+                  <Button
+                    key={action.type}
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSelectAction({ ...action, category: "Notification & Alert" })}
+                  >
+                    <div>
+                      <div className="font-medium">{action.name}</div>
+                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
