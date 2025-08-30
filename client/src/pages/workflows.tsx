@@ -235,8 +235,14 @@ export default function WorkflowsPage() {
       });
     }
     
-    // Sort items
+    // Sort items - folders first, then workflows
     return items.sort((a, b) => {
+      // First priority: type (folders before workflows)
+      if (a.type !== b.type) {
+        return a.type === 'folder' ? -1 : 1;
+      }
+      
+      // Second priority: chosen sort field within same type
       const aValue = sortField === "name" ? a.name : a.lastUpdated;
       const bValue = sortField === "name" ? b.name : b.lastUpdated;
       
