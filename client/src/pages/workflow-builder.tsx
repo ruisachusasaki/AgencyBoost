@@ -70,7 +70,7 @@ export default function WorkflowBuilderPage() {
   const createWorkflowMutation = useMutation({
     mutationFn: async (data: any) => {
       if (editingWorkflowId) {
-        const response = await apiRequest("PATCH", `/api/workflows/${editingWorkflowId}`, data);
+        const response = await apiRequest("PUT", `/api/workflows/${editingWorkflowId}`, data);
         return await response.json();
       } else {
         const response = await apiRequest("POST", "/api/workflows", data);
