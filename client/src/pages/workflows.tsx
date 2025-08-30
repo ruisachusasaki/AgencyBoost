@@ -16,7 +16,6 @@ import WorkflowBuilder from "@/components/workflow-builder";
 import WorkflowDetail from "@/components/workflow-detail";
 
 export default function WorkflowsPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -88,9 +87,7 @@ export default function WorkflowsPage() {
     },
   });
 
-  const filteredWorkflows = (workflows as Workflow[]).filter((workflow: Workflow) => 
-    selectedCategory === "all" || workflow.category === selectedCategory
-  );
+  const filteredWorkflows = workflows as Workflow[];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -191,32 +188,12 @@ export default function WorkflowsPage() {
       </div>
 
       <Tabs defaultValue="workflows" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <TabsList className="workflows-tabslist">
-            <TabsTrigger value="workflows" className="workflows-tab">Active Workflows</TabsTrigger>
-            <TabsTrigger value="templates" className="workflows-tab">Templates</TabsTrigger>
-            <TabsTrigger value="analytics" className="workflows-tab">Analytics</TabsTrigger>
-            <TabsTrigger value="automation" className="workflows-tab">Automation Builder</TabsTrigger>
-          </TabsList>
-          
-          {/* Category Filter - Only show on workflows tab */}
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">Filter:</Label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="lead_management">Lead Management</SelectItem>
-                <SelectItem value="email_marketing">Email Marketing</SelectItem>
-                <SelectItem value="task_automation">Task Automation</SelectItem>
-                <SelectItem value="customer_onboarding">Customer Onboarding</SelectItem>
-                <SelectItem value="follow_up">Follow Up</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <TabsList className="workflows-tabslist">
+          <TabsTrigger value="workflows" className="workflows-tab">Active Workflows</TabsTrigger>
+          <TabsTrigger value="templates" className="workflows-tab">Templates</TabsTrigger>
+          <TabsTrigger value="analytics" className="workflows-tab">Analytics</TabsTrigger>
+          <TabsTrigger value="automation" className="workflows-tab">Automation Builder</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="workflows" className="space-y-4">
 
