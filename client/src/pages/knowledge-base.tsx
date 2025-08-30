@@ -847,15 +847,15 @@ export default function KnowledgeBase() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-6 mb-6">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             data-testid="tab-articles"
             onClick={() => {
               setCurrentView('articles');
               setSelectedCategory(null);
             }}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
               currentView === 'articles'
                 ? 'bg-primary text-primary-foreground'
                 : 'hover:bg-muted'
@@ -867,7 +867,7 @@ export default function KnowledgeBase() {
           <button
             data-testid="tab-bookmarks"
             onClick={() => setCurrentView('bookmarks')}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
               currentView === 'bookmarks'
                 ? 'bg-primary text-primary-foreground'
                 : 'hover:bg-muted'
@@ -880,7 +880,7 @@ export default function KnowledgeBase() {
         
         {/* Search and Sort - only show for articles view */}
         {currentView === 'articles' && (
-          <div className="flex items-center gap-4 w-full">
+          <div className="flex items-center gap-4 flex-1 max-w-2xl">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
