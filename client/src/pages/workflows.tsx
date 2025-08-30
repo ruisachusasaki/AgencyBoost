@@ -26,7 +26,7 @@ export default function WorkflowsPage() {
   const [activeTab, setActiveTab] = useState<string>("workflows");
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [sortField, setSortField] = useState<"name" | "updatedAt">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
@@ -84,6 +84,20 @@ export default function WorkflowsPage() {
     onError: () => {
       toast({ title: "Failed to create workflow", variant: "destructive" });
     },
+  });
+
+  // Delete workflow mutation
+  const deleteWorkflowMutation = useMutation({
+    mutationFn: async (workflowId: string) => {
+      return await apiRequest("DELETE", `/api/workflows/${workflowId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
+      toast({ title: "Success", description: "Workflow deleted successfully" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete workflow" });
+    }
   });
 
   // Update workflow status mutation
@@ -596,6 +610,17 @@ export default function WorkflowsPage() {
                                     <Play className="h-3 w-3" />
                                   </Button>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
+                                      deleteWorkflowMutation.mutate(item.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-600" />
+                                </Button>
                               </>
                             )}
                           </div>
