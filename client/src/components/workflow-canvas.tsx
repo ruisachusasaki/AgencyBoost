@@ -214,10 +214,22 @@ export default function WorkflowCanvas({
         });
       }
     });
+    
+    // Add "Add Another Trigger" button after existing triggers
+    const triggerCount = workflowData.triggers.length;
+    nodes.push({
+      id: 'add-another-trigger',
+      type: 'addTriggerNode',
+      position: { x: xPosition + (triggerCount * 300), y: yPosition },
+      data: {
+        onAdd: onAddTrigger,
+        label: 'Add Another Trigger'
+      },
+    });
+    
     yPosition += 150;
     
     // Add plus button after triggers for actions (centered if multiple triggers)
-    const triggerCount = workflowData.triggers.length;
     const centerX = triggerCount > 1 ? xPosition + ((triggerCount - 1) * 150) : xPosition;
     
     nodes.push({
