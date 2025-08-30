@@ -11,6 +11,8 @@ import ReactFlow, {
   Connection,
   NodeTypes,
   MarkerType,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +22,12 @@ import { Play, Settings, Mail, Plus, Check, X } from "lucide-react";
 
 // Custom Node Components
 const TriggerNode = ({ data }: { data: any }) => (
-  <Card className="w-64 border-2 border-blue-500 bg-blue-50 shadow-lg hover:shadow-xl transition-shadow cursor-move">
+  <Card className="w-64 border-2 border-blue-500 bg-blue-50 shadow-lg hover:shadow-xl transition-shadow cursor-move relative">
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
+    />
     <CardHeader className="pb-2">
       <div className="flex items-center gap-2">
         <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -36,7 +43,17 @@ const TriggerNode = ({ data }: { data: any }) => (
 );
 
 const ActionNode = ({ data }: { data: any }) => (
-  <Card className="w-64 border-2 border-green-500 bg-green-50 shadow-lg hover:shadow-xl transition-shadow cursor-move">
+  <Card className="w-64 border-2 border-green-500 bg-green-50 shadow-lg hover:shadow-xl transition-shadow cursor-move relative">
+    <Handle
+      type="target"
+      position={Position.Top}
+      className="w-3 h-3 !bg-green-500 !border-2 !border-white"
+    />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-3 h-3 !bg-green-500 !border-2 !border-white"
+    />
     <CardHeader className="pb-2">
       <div className="flex items-center gap-2">
         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -79,14 +96,26 @@ const ConditionalNode = ({ data }: { data: any }) => (
 );
 
 const AddButtonNode = ({ data }: { data: any }) => (
-  <Button
-    variant="outline"
-    size="sm"
-    className="w-12 h-12 rounded-full border-2 border-dashed border-gray-400 hover:border-primary hover:bg-primary/10"
-    onClick={data.onAdd}
-  >
-    <Plus className="h-4 w-4" />
-  </Button>
+  <div className="relative">
+    <Handle
+      type="target"
+      position={Position.Top}
+      className="w-3 h-3 !bg-gray-400 !border-2 !border-white"
+    />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-3 h-3 !bg-gray-400 !border-2 !border-white"
+    />
+    <Button
+      variant="outline"
+      size="sm"
+      className="w-12 h-12 rounded-full border-2 border-dashed border-gray-400 hover:border-primary hover:bg-primary/10"
+      onClick={data.onAdd}
+    >
+      <Plus className="h-4 w-4" />
+    </Button>
+  </div>
 );
 
 const AddTriggerNode = ({ data }: { data: any }) => (
@@ -105,7 +134,12 @@ const AddTriggerNode = ({ data }: { data: any }) => (
 );
 
 const EndNode = ({ data }: { data: any }) => (
-  <Card className="w-32 border-2 border-gray-400 bg-gray-100">
+  <Card className="w-32 border-2 border-gray-400 bg-gray-100 relative">
+    <Handle
+      type="target"
+      position={Position.Top}
+      className="w-3 h-3 !bg-gray-400 !border-2 !border-white"
+    />
     <CardContent className="pt-4 pb-4 text-center">
       <div className="font-medium text-gray-700">END</div>
     </CardContent>
