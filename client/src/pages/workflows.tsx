@@ -29,6 +29,10 @@ export default function WorkflowsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [sortField, setSortField] = useState<"name" | "updatedAt">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
+  const [folderToEdit, setFolderToEdit] = useState<TemplateFolder | null>(null);
+  const [isDeleteFolderDialogOpen, setIsDeleteFolderDialogOpen] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<TemplateFolder | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -112,6 +116,42 @@ export default function WorkflowsPage() {
     },
     onError: () => {
       toast({ variant: "destructive", title: "Error", description: "Failed to create folder" });
+    }
+  });
+
+  // Edit folder mutation
+  const editFolderMutation = useMutation({
+    mutationFn: async ({ folderId, name, description }: { folderId: string; name: string; description?: string }) => {
+      return await apiRequest("PATCH", `/api/template-folders/${folderId}`, {
+        name,
+        description,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
+      toast({ title: "Success", description: "Folder updated successfully" });
+      setIsEditFolderDialogOpen(false);
+      setFolderToEdit(null);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update folder" });
+    }
+  });
+
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (folderId: string) => {
+      return await apiRequest("DELETE", `/api/template-folders/${folderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
+      toast({ title: "Success", description: "Folder deleted successfully" });
+      setIsDeleteFolderDialogOpen(false);
+      setFolderToDelete(null);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete folder" });
     }
   });
 
@@ -294,6 +334,28 @@ export default function WorkflowsPage() {
     });
   };
 
+  // Handle edit folder form submission
+  const handleEditFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!folderToEdit) return;
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    
+    editFolderMutation.mutate({
+      folderId: folderToEdit.id,
+      name,
+      description: description || undefined
+    });
+  };
+
+  // Handle delete folder confirmation
+  const handleDeleteFolder = () => {
+    if (!folderToDelete) return;
+    deleteFolderMutation.mutate(folderToDelete.id);
+  };
+
   if (workflowsLoading || templatesLoading) {
     return <div className="p-6">Loading workflows...</div>;
   }
@@ -471,11 +533,31 @@ export default function WorkflowsPage() {
                           <div className="flex items-center gap-2">
                             {item.type === 'folder' ? (
                               <>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    const folder = workflowFolders.find(f => f.id === item.id);
+                                    if (folder) {
+                                      setFolderToEdit(folder);
+                                      setIsEditFolderDialogOpen(true);
+                                    }
+                                  }}
+                                >
                                   <Edit className="h-3 w-3" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-3 w-3" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    const folder = workflowFolders.find(f => f.id === item.id);
+                                    if (folder) {
+                                      setFolderToDelete(folder);
+                                      setIsDeleteFolderDialogOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-600" />
                                 </Button>
                               </>
                             ) : (
@@ -911,6 +993,88 @@ export default function WorkflowsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Folder Dialog */}
+      <Dialog open={isEditFolderDialogOpen} onOpenChange={setIsEditFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Folder</DialogTitle>
+            <DialogDescription>
+              Update the folder name and description
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditFolder} className="space-y-4">
+            <div>
+              <Label htmlFor="edit-folder-name">Folder Name</Label>
+              <Input 
+                id="edit-folder-name"
+                name="name" 
+                defaultValue={folderToEdit?.name || ""} 
+                placeholder="Enter folder name" 
+                required 
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-folder-description">Description</Label>
+              <Textarea 
+                id="edit-folder-description"
+                name="description" 
+                defaultValue={folderToEdit?.description || ""} 
+                placeholder="Optional description" 
+              />
+            </div>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditFolderDialogOpen(false);
+                  setFolderToEdit(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={editFolderMutation.isPending}
+              >
+                {editFolderMutation.isPending ? "Updating..." : "Update Folder"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Dialog */}
+      <Dialog open={isDeleteFolderDialogOpen} onOpenChange={setIsDeleteFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Folder</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{folderToDelete?.name}"? This action cannot be undone.
+              All workflows in this folder will be moved to the root level.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteFolderDialogOpen(false);
+                setFolderToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteFolder}
+              disabled={deleteFolderMutation.isPending}
+            >
+              {deleteFolderMutation.isPending ? "Deleting..." : "Delete Folder"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
