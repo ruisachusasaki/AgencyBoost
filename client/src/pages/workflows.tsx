@@ -33,6 +33,8 @@ export default function WorkflowsPage() {
   const [folderToEdit, setFolderToEdit] = useState<TemplateFolder | null>(null);
   const [isDeleteFolderDialogOpen, setIsDeleteFolderDialogOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<TemplateFolder | null>(null);
+  const [workflowToMove, setWorkflowToMove] = useState<Workflow | null>(null);
+  const [isMoveToFolderDialogOpen, setIsMoveToFolderDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -632,36 +634,16 @@ export default function WorkflowsPage() {
                                     <Play className="h-3 w-3" />
                                   </Button>
                                 )}
-                                <Select
-                                  value={item.originalWorkflow.folderId || "no-folder"}
-                                  onValueChange={(value) => {
-                                    const folderId = value === "no-folder" ? null : value;
-                                    moveWorkflowMutation.mutate({
-                                      workflowId: item.originalWorkflow.id,
-                                      folderId: folderId
-                                    });
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setWorkflowToMove(item.originalWorkflow);
+                                    setIsMoveToFolderDialogOpen(true);
                                   }}
                                 >
-                                  <SelectTrigger className="w-8 h-8 p-0">
-                                    <FolderPlus className="h-3 w-3" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="no-folder">
-                                      <div className="flex items-center gap-2">
-                                        <Folder className="h-4 w-4" />
-                                        No Folder
-                                      </div>
-                                    </SelectItem>
-                                    {workflowFolders.map((folder) => (
-                                      <SelectItem key={folder.id} value={folder.id}>
-                                        <div className="flex items-center gap-2">
-                                          <FolderPlus className="h-4 w-4" />
-                                          {folder.name}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  <Folder className="h-3 w-3" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1136,6 +1118,68 @@ export default function WorkflowsPage() {
               disabled={deleteFolderMutation.isPending}
             >
               {deleteFolderMutation.isPending ? "Deleting..." : "Delete Folder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move to Folder Dialog */}
+      <Dialog open={isMoveToFolderDialogOpen} onOpenChange={setIsMoveToFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Workflow to Folder</DialogTitle>
+            <DialogDescription>
+              Select a folder to move "{workflowToMove?.name}" to, or choose "No Folder" to move it to the root level.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="folder-select">Choose Folder</Label>
+              <Select
+                value={workflowToMove?.folderId || "no-folder"}
+                onValueChange={(value) => {
+                  if (workflowToMove) {
+                    const folderId = value === "no-folder" ? null : value;
+                    moveWorkflowMutation.mutate({
+                      workflowId: workflowToMove.id,
+                      folderId: folderId
+                    });
+                    setIsMoveToFolderDialogOpen(false);
+                    setWorkflowToMove(null);
+                  }
+                }}
+              >
+                <SelectTrigger id="folder-select">
+                  <SelectValue placeholder="Select a folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-folder">
+                    <div className="flex items-center gap-2">
+                      <Folder className="h-4 w-4" />
+                      No Folder
+                    </div>
+                  </SelectItem>
+                  {workflowFolders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      <div className="flex items-center gap-2">
+                        <FolderPlus className="h-4 w-4" />
+                        {folder.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsMoveToFolderDialogOpen(false);
+                setWorkflowToMove(null);
+              }}
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
