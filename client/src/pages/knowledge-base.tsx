@@ -246,6 +246,7 @@ export default function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'articles' | 'bookmarks'>('articles');
+  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'views'>('recent');
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: "",
@@ -406,19 +407,31 @@ export default function KnowledgeBase() {
     },
   });
 
-  const filteredArticles = (articles || []).filter((article: any) => {
-    // When no category is selected, show all articles
-    if (!selectedCategory) {
+  const filteredArticles = (articles || [])
+    .filter((article: any) => {
+      // When no category is selected, show all articles
+      if (!selectedCategory) {
+        if (!searchTerm) return true;
+        return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      
+      // When category is selected, don't filter here - let CategoryOverview handle it
       if (!searchTerm) return true;
       return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
              article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
-    }
-    
-    // When category is selected, don't filter here - let CategoryOverview handle it
-    if (!searchTerm) return true;
-    return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+    })
+    .sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'popular':
+          return (b.likeCount || 0) - (a.likeCount || 0);
+        case 'views':
+          return (b.viewCount || 0) - (a.viewCount || 0);
+        case 'recent':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
 
   // Organize categories into hierarchical structure
   const organizeCategories = (cats: any[]) => {
@@ -865,17 +878,29 @@ export default function KnowledgeBase() {
           </button>
         </div>
         
-        {/* Search - only show for articles view */}
+        {/* Search and Sort - only show for articles view */}
         {currentView === 'articles' && (
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              data-testid="input-search"
-              placeholder="Search articles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex items-center gap-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                data-testid="input-search"
+                placeholder="Search articles..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
+              <SelectTrigger className="w-[180px]" data-testid="select-sort">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Most Recent</SelectItem>
+                <SelectItem value="popular">Most Popular</SelectItem>
+                <SelectItem value="views">Most Viewed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
