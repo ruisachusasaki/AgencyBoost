@@ -488,7 +488,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             
             console.log('Searching backwards for embed...');
             
-            for (let i = 0; i < 10; i++) { // Check up to 10 positions back
+            for (let i = 0; i < 20; i++) { // Check up to 20 positions back
               try {
                 const prevSiblingPath = Path.previous(currentPath);
                 const prevSibling = Editor.node(editor, prevSiblingPath)[0];
@@ -519,7 +519,26 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
               Transforms.select(editor, Editor.start(editor, parentPath));
               return;
             } else {
-              console.log('No embed found in previous 10 positions');
+              console.log('No embed found in previous 20 positions');
+              
+              // Let's also check what's at the very beginning of the document
+              try {
+                const firstNodePath = [0];
+                const firstNode = Editor.node(editor, firstNodePath)[0];
+                console.log('First node in document:', JSON.stringify(firstNode, null, 2));
+                
+                if (SlateElement.isElement(firstNode) && ['embed', 'image', 'divider'].includes(firstNode.type)) {
+                  console.log('Found embed at document start! Inserting paragraph.');
+                  event.preventDefault();
+                  
+                  const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+                  Transforms.insertNodes(editor, newParagraph, { at: parentPath });
+                  Transforms.select(editor, Editor.start(editor, parentPath));
+                  return;
+                }
+              } catch (error) {
+                console.log('Error checking first node:', error);
+              }
             }
           }
         } catch (error) {

@@ -1,0 +1,115 @@
+Enter pressed - Current node: {
+  "text": "New Paragraph 2"
+}
+slate-editor.tsx:434 Enter pressed - Current path: Array(2)
+slate-editor.tsx:435 Enter pressed - Selection anchor offset: 15
+slate-editor.tsx:436 Enter pressed - Node type: undefined
+slate-editor.tsx:437 Enter pressed - Node text: New Paragraph 2
+slate-editor.tsx:438 Enter pressed - Is node an element? false
+slate-editor.tsx:433 Enter pressed - Current node: {
+  "text": "2. Course"
+}
+slate-editor.tsx:434 Enter pressed - Current path: Array(2)
+slate-editor.tsx:435 Enter pressed - Selection anchor offset: 9
+slate-editor.tsx:436 Enter pressed - Node type: undefined
+slate-editor.tsx:437 Enter pressed - Node text: 2. Course
+slate-editor.tsx:438 Enter pressed - Is node an element? false
+slate-editor.tsx:433 Enter pressed - Current node: {
+  "text": "2. Course"
+}
+slate-editor.tsx:434 Enter pressed - Current path: Array(2)
+slate-editor.tsx:435 Enter pressed - Selection anchor offset: 0
+slate-editor.tsx:436 Enter pressed - Node type: undefined
+slate-editor.tsx:437 Enter pressed - Node text: 2. Course
+slate-editor.tsx:438 Enter pressed - Is node an element? false
+slate-editor.tsx:481 Checking text node at beginning - Parent node: {
+  "type": "heading",
+  "children": [
+    {
+      "text": "2. Course"
+    }
+  ]
+}
+slate-editor.tsx:482 Parent path: Array(1)
+slate-editor.tsx:489 Searching backwards for embed...
+slate-editor.tsx:496 Position 1 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 2 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 3 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 4 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 5 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 6 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 7 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 8 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 9 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:496 Position 10 back: {
+  "type": "heading",
+  "children": [
+    {
+      "text": ""
+    }
+  ]
+}
+slate-editor.tsx:522 No embed found in previous 10 positions
