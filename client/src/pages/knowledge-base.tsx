@@ -847,64 +847,63 @@ export default function KnowledgeBase() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            data-testid="tab-articles"
-            onClick={() => {
-              setCurrentView('articles');
-              setSelectedCategory(null);
-            }}
-            className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
-              currentView === 'articles'
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-muted'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 mr-2 inline" />
-            All Articles
-          </button>
-          <button
-            data-testid="tab-bookmarks"
-            onClick={() => setCurrentView('bookmarks')}
-            className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
-              currentView === 'bookmarks'
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-muted'
-            }`}
-          >
-            <Bookmark className="w-4 h-4 mr-2 inline" />
-            My Bookmarks
-          </button>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6 items-center">
+        <div className="lg:col-span-1">
+          <div className="flex items-center gap-2">
+            <button
+              data-testid="tab-articles"
+              onClick={() => {
+                setCurrentView('articles');
+                setSelectedCategory(null);
+              }}
+              className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
+                currentView === 'articles'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+            >
+              <BookOpen className="w-4 h-4 mr-2 inline" />
+              All Articles
+            </button>
+            <button
+              data-testid="tab-bookmarks"
+              onClick={() => setCurrentView('bookmarks')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
+                currentView === 'bookmarks'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+            >
+              <Bookmark className="w-4 h-4 mr-2 inline" />
+              My Bookmarks
+            </button>
+          </div>
         </div>
         
-        {/* Search and Sort - only show for articles view, aligned with content grid */}
+        {/* Search and Sort - only show for articles view, aligned with articles column */}
         {currentView === 'articles' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-1"></div>
-            <div className="lg:col-span-3">
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    data-testid="input-search"
-                    placeholder="Search articles..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full"
-                  />
-                </div>
-                <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-sort">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="recent">Most Recent</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="views">Most Viewed</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="lg:col-span-3">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  data-testid="input-search"
+                  placeholder="Search articles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full"
+                />
               </div>
+              <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
+                <SelectTrigger className="w-[180px]" data-testid="select-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                  <SelectItem value="views">Most Viewed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         )}
