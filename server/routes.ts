@@ -11083,6 +11083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/knowledge-base/articles/:articleId/bookmark", async (req, res) => {
     try {
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      console.log('Bookmark request - Article ID:', req.params.articleId, 'User ID:', userId);
       
       // Check if bookmark already exists
       const existing = await db.select({ id: knowledgeBaseBookmarks.id })
@@ -11092,17 +11093,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(knowledgeBaseBookmarks.userId, userId)
         ));
       
+      console.log('Existing bookmarks found:', existing.length);
+      
       if (existing.length > 0) {
         // Remove bookmark
+        console.log('Removing bookmark with ID:', existing[0].id);
         await db.delete(knowledgeBaseBookmarks)
           .where(eq(knowledgeBaseBookmarks.id, existing[0].id));
+        console.log('Bookmark removed successfully');
         res.json({ bookmarked: false });
       } else {
         // Add bookmark
+        console.log('Adding new bookmark');
         await db.insert(knowledgeBaseBookmarks).values({
           articleId: req.params.articleId,
           userId,
         });
+        console.log('Bookmark added successfully');
         res.json({ bookmarked: true });
       }
     } catch (error) {
