@@ -27,7 +27,6 @@ export default function WorkflowBuilderPage() {
   const [showActionPane, setShowActionPane] = useState(false);
   const [triggerSearch, setTriggerSearch] = useState("");
   const [actionSearch, setActionSearch] = useState("");
-  const [showTriggerConfigPane, setShowTriggerConfigPane] = useState(false);
   const [configuringTrigger, setConfiguringTrigger] = useState<{
     trigger: any;
     definition: any;
@@ -65,11 +64,6 @@ export default function WorkflowBuilderPage() {
 
   const { data: availableActions } = useQuery({
     queryKey: ["/api/automation-actions"]
-  });
-
-  // Fetch pipeline stages for trigger configuration
-  const { data: pipelineStages } = useQuery({
-    queryKey: ["/api/lead-pipeline-stages"]
   });
 
   // Populate form with existing data when editing
@@ -224,7 +218,6 @@ export default function WorkflowBuilderPage() {
       definition: triggerDefinition,
       index: triggerIndex
     });
-    setShowTriggerConfigPane(true);
   };
 
   // Handler for saving trigger configuration
@@ -241,7 +234,6 @@ export default function WorkflowBuilderPage() {
     });
 
     setConfiguringTrigger(null);
-    setShowTriggerConfigPane(false);
     toast({
       title: "Configuration Saved",
       description: "Trigger conditions have been updated"
@@ -847,23 +839,17 @@ export default function WorkflowBuilderPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Trigger Configuration Sidebar */}
-      <Sheet open={showTriggerConfigPane} onOpenChange={setShowTriggerConfigPane}>
-        <SheetContent className="w-96 sm:max-w-96">
-          <SheetHeader>
-            <SheetTitle>Configure Trigger</SheetTitle>
-          </SheetHeader>
-          {configuringTrigger && (
-            <TriggerConfigPanel
-              trigger={configuringTrigger.trigger}
-              triggerDefinition={configuringTrigger.definition}
-              pipelineStages={pipelineStages || []}
-              onSave={handleSaveTriggerConfig}
-              onClose={() => setShowTriggerConfigPane(false)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* Trigger Configuration Panel */}
+      {configuringTrigger && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <TriggerConfigPanel
+            trigger={configuringTrigger.trigger}
+            triggerDefinition={configuringTrigger.definition}
+            onSave={handleSaveTriggerConfig}
+            onClose={() => setConfiguringTrigger(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -993,19 +993,20 @@ export class MemStorage implements IStorage {
       },
       {
         id: "trigger-4",
-        name: "Lead Stage Changed",
-        type: "lead_stage_changed",
-        description: "Triggers when a lead moves between pipeline stages",
+        name: "Client Status Changed",
+        type: "client_status_changed",
+        description: "Triggers when a client's status changes",
         category: "contact_management",
         configSchema: {
-          from_stage_id: { 
-            type: "pipeline_stage", 
-            label: "From Stage",
-            required: false
+          from_status: { 
+            type: "string", 
+            options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "From Status"
           },
-          to_stage_id: { 
-            type: "pipeline_stage", 
-            label: "To Stage",
+          to_status: { 
+            type: "string", 
+            options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "To Status",
             required: true
           },
           contact_source: { 
