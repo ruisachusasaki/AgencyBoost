@@ -187,109 +187,12 @@ export default function WorkflowsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="workflows" className="space-y-4">
+      <Tabs defaultValue="templates" className="space-y-4">
         <TabsList className="workflows-tabslist">
-          <TabsTrigger value="workflows" className="workflows-tab">Active Workflows</TabsTrigger>
           <TabsTrigger value="templates" className="workflows-tab">Templates</TabsTrigger>
           <TabsTrigger value="analytics" className="workflows-tab">Analytics</TabsTrigger>
-          <TabsTrigger value="automation" className="workflows-tab">Automation Builder</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="workflows" className="space-y-4">
-
-          {filteredWorkflows.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No workflows yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first automated workflow to streamline your business processes
-                </p>
-                <Button 
-                  onClick={createSampleWorkflow}
-                  className="bg-[#46a1a0] hover:bg-[#3a8a89]"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Sample Workflow
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredWorkflows.map((workflow: Workflow) => (
-                <Card key={workflow.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="outline" 
-                          className={`${getStatusColor(workflow.status)} text-white border-none`}
-                        >
-                          {getStatusIcon(workflow.status)}
-                          <span className="ml-1 capitalize">{workflow.status}</span>
-                        </Badge>
-                        {workflow.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {workflow.category.replace('_', ' ')}
-                          </Badge>
-                        )}
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => {
-                          const newStatus = workflow.status === "active" ? "paused" : "active";
-                          updateWorkflowMutation.mutate({ id: workflow.id, status: newStatus });
-                        }}
-                      >
-                        {workflow.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <CardTitle className="text-lg">{workflow.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {workflow.description || "No description provided"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total Runs:</span>
-                        <span className="font-medium">{workflow.totalRuns ?? 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Success Rate:</span>
-                        <span className="font-medium">
-                          {(workflow.totalRuns ?? 0) > 0 
-                            ? `${Math.round(((workflow.successfulRuns ?? 0) / (workflow.totalRuns ?? 1)) * 100)}%`
-                            : "N/A"
-                          }
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Last Run:</span>
-                        <span className="font-medium">
-                          {workflow.lastRun 
-                            ? new Date(workflow.lastRun).toLocaleDateString()
-                            : "Never"
-                          }
-                        </span>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-4"
-                      onClick={() => handleViewDetails(workflow)}
-                    >
-                      View Details
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -399,61 +302,6 @@ export default function WorkflowsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="automation" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Available Triggers
-                </CardTitle>
-                <CardDescription>
-                  Events that can start your workflows
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(triggers as any[]).length > 0 ? (
-                    (triggers as any[]).slice(0, 5).map((trigger: any) => (
-                      <div key={trigger.id} className="p-2 border rounded">
-                        <div className="font-medium">{trigger.name}</div>
-                        <div className="text-sm text-muted-foreground">{trigger.description}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">No triggers configured yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Available Actions
-                </CardTitle>
-                <CardDescription>
-                  Actions your workflows can perform
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(actions as any[]).length > 0 ? (
-                    (actions as any[]).slice(0, 5).map((action: any) => (
-                      <div key={action.id} className="p-2 border rounded">
-                        <div className="font-medium">{action.name}</div>
-                        <div className="text-sm text-muted-foreground">{action.description}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">No actions configured yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* Workflow Builder */}
