@@ -65,13 +65,28 @@ export default function WorkflowBuilderPage() {
     }
   }, [existingWorkflow, editingWorkflowId]);
 
+  // Auto-save mutation (separate from manual save)
+  const autoSaveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PUT", `/api/workflows/${editingWorkflowId}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
+      // No navigation or toast for auto-save
+    },
+    onError: () => {
+      // Silent auto-save errors
+    }
+  });
+
   // Auto-save when triggers or actions change (debounced)
   useEffect(() => {
     if (!editingWorkflowId) return; // Only auto-save when editing existing workflows
     
     const timeoutId = setTimeout(() => {
       if (workflowData.name.trim()) {
-        createWorkflowMutation.mutate({
+        autoSaveMutation.mutate({
           ...workflowData,
           createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390"
         });
@@ -98,7 +113,8 @@ export default function WorkflowBuilderPage() {
         title: "Success", 
         description: editingWorkflowId ? "Workflow updated successfully" : "Workflow created successfully" 
       });
-      navigate("/workflows");
+      // Stay in workflow builder instead of navigating away
+      // navigate("/workflows"); // Removed auto-navigation
     },
     onError: () => {
       toast({ 
