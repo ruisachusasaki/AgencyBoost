@@ -32,6 +32,11 @@ export default function WorkflowBuilderPage() {
     definition: any;
     index: number;
   } | null>(null);
+
+  // Debug the configuringTrigger state
+  useEffect(() => {
+    console.log('configuringTrigger state changed:', configuringTrigger);
+  }, [configuringTrigger]);
   
   const [workflowData, setWorkflowData] = useState<{
     name: string;
@@ -206,13 +211,26 @@ export default function WorkflowBuilderPage() {
 
   // Handler for configuring triggers
   const handleConfigureTrigger = (triggerIndex: number) => {
+    console.log('handleConfigureTrigger called with index:', triggerIndex);
     const trigger = workflowData.triggers[triggerIndex];
-    if (!trigger) return;
+    if (!trigger) {
+      console.log('No trigger found at index:', triggerIndex);
+      return;
+    }
+
+    console.log('Trigger found:', trigger);
+    console.log('Available triggers:', availableTriggers);
 
     // Find the trigger definition to get the config schema
     const triggerDefinition = (availableTriggers as any[])?.find((t: any) => t.type === trigger.type);
-    if (!triggerDefinition) return;
+    if (!triggerDefinition) {
+      console.log('No trigger definition found for type:', trigger.type);
+      return;
+    }
 
+    console.log('Found trigger definition:', triggerDefinition);
+    console.log('Setting configuringTrigger state...');
+    
     setConfiguringTrigger({
       trigger,
       definition: triggerDefinition,

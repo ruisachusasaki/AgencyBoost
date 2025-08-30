@@ -48,7 +48,10 @@ const TriggerNode = ({ data }: { data: any }) => {
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0" onClick={() => data.onConfigure?.()}>
+      <CardContent className="pt-0" onClick={() => {
+        console.log('Trigger node clicked, calling onConfigure');
+        data.onConfigure?.();
+      }}>
         <div className="font-medium text-blue-900">{data.label}</div>
         {hasConditions && (
           <div className="text-xs text-blue-700 mt-1">
@@ -56,7 +59,11 @@ const TriggerNode = ({ data }: { data: any }) => {
           </div>
         )}
         <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2">
-          <Button size="sm" variant="outline" className="text-xs h-6">
+          <Button size="sm" variant="outline" className="text-xs h-6" onClick={(e) => {
+            e.stopPropagation(); // Prevent double click handling
+            console.log('Configure button clicked');
+            data.onConfigure?.();
+          }}>
             <Settings className="h-3 w-3 mr-1" />
             Configure
           </Button>
