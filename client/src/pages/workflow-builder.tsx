@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,28 @@ export default function WorkflowBuilderPage() {
     },
     actions: []
   });
+
+  // Fetch existing workflow data when editing
+  const { data: existingWorkflow, isLoading: isLoadingWorkflow } = useQuery({
+    queryKey: [`/api/workflows/${editingWorkflowId}`],
+    enabled: !!editingWorkflowId,
+  });
+
+  // Populate form with existing data when editing
+  useEffect(() => {
+    if (existingWorkflow && editingWorkflowId) {
+      setWorkflowData({
+        name: (existingWorkflow as any).name || "",
+        description: (existingWorkflow as any).description || "",
+        status: (existingWorkflow as any).status || "draft",
+        trigger: (existingWorkflow as any).trigger || {
+          type: "manual",
+          conditions: {}
+        },
+        actions: (existingWorkflow as any).actions || []
+      });
+    }
+  }, [existingWorkflow, editingWorkflowId]);
 
   // Create workflow mutation
   const createWorkflowMutation = useMutation({
@@ -145,7 +167,8 @@ export default function WorkflowBuilderPage() {
                   id="workflow-name"
                   value={workflowData.name}
                   onChange={(e) => setWorkflowData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter workflow name..."
+                  placeholder={isLoadingWorkflow ? "Loading..." : "Enter workflow name..."}
+                  disabled={isLoadingWorkflow}
                   required
                 />
               </div>
@@ -185,12 +208,12 @@ export default function WorkflowBuilderPage() {
 
         {/* Workflow Canvas */}
         <div className="lg:col-span-2">
-          <Card className="h-[600px]">
-            <CardHeader>
+          <Card className="h-[600px] flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Workflow Designer</CardTitle>
             </CardHeader>
-            <CardContent className="h-full">
-              <div className="h-full border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
+            <CardContent className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center min-h-0">
                 <div className="text-center">
                   <div className="text-gray-400 mb-4">
                     <Settings className="h-12 w-12 mx-auto" />
