@@ -59,7 +59,7 @@ export default function WorkflowBuilderPage() {
         name: workflow.name || "",
         description: workflow.description || "",
         status: workflow.status || "draft",
-        triggers: workflow.triggers || workflow.trigger ? [workflow.trigger] : [], // Handle backward compatibility
+        triggers: workflow.triggers || (workflow.trigger ? [workflow.trigger] : []), // Handle backward compatibility properly
         actions: workflow.actions || []
       });
     }
@@ -86,7 +86,6 @@ export default function WorkflowBuilderPage() {
     
     const timeoutId = setTimeout(() => {
       if (workflowData.name.trim()) {
-        console.log('Auto-saving workflow data:', workflowData); // Debug log
         autoSaveMutation.mutate({
           ...workflowData,
           createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390"
@@ -154,16 +153,10 @@ export default function WorkflowBuilderPage() {
       name: trigger.name
     };
     
-    console.log('Adding trigger:', newTrigger); // Debug log
-    
-    setWorkflowData(prev => {
-      const updatedData = {
-        ...prev,
-        triggers: [...prev.triggers, newTrigger]
-      };
-      console.log('Updated workflow data:', updatedData); // Debug log
-      return updatedData;
-    });
+    setWorkflowData(prev => ({
+      ...prev,
+      triggers: [...prev.triggers, newTrigger]
+    }));
     
     setShowTriggerPane(false);
     toast({ 
