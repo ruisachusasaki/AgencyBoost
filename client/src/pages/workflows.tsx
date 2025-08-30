@@ -544,7 +544,11 @@ export default function WorkflowsPage() {
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
+                              <div 
+                                className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]"
+                                onClick={() => handleEditWorkflow(item.originalWorkflow)}
+                                data-testid={`workflow-${item.id}`}
+                              >
                                 <GitBranch className="h-4 w-4 text-[#46a1a0]" />
                                 <div>
                                   <div className="font-medium">{item.name}</div>
@@ -717,7 +721,12 @@ export default function WorkflowsPage() {
                           {workflow.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                         </Button>
                       </div>
-                      <CardTitle className="text-lg">{workflow.name}</CardTitle>
+                      <CardTitle 
+                        className="text-lg cursor-pointer hover:text-[#46a1a0] transition-colors"
+                        onClick={() => handleEditWorkflow(workflow)}
+                      >
+                        {workflow.name}
+                      </CardTitle>
                       <CardDescription className="line-clamp-2">
                         {workflow.description || "No description provided"}
                       </CardDescription>
