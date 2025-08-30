@@ -847,8 +847,8 @@ export default function KnowledgeBase() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
           <button
             data-testid="tab-articles"
             onClick={() => {
@@ -878,29 +878,34 @@ export default function KnowledgeBase() {
           </button>
         </div>
         
-        {/* Search and Sort - only show for articles view */}
+        {/* Search and Sort - only show for articles view, aligned with content grid */}
         {currentView === 'articles' && (
-          <div className="flex items-center gap-4 flex-1 max-w-2xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                data-testid="input-search"
-                placeholder="Search articles..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full"
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-1"></div>
+            <div className="lg:col-span-3">
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    data-testid="input-search"
+                    placeholder="Search articles..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
+                <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-sort">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Most Recent</SelectItem>
+                    <SelectItem value="popular">Most Popular</SelectItem>
+                    <SelectItem value="views">Most Viewed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
-              <SelectTrigger className="w-[180px]" data-testid="select-sort">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="popular">Most Popular</SelectItem>
-                <SelectItem value="views">Most Viewed</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         )}
       </div>
