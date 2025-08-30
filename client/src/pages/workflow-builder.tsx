@@ -10,10 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X } from "lucide-react";
+import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2 } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 import WorkflowCanvas from "@/components/workflow-canvas";
 import TriggerConfigPanel from "@/components/trigger-config-panel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function WorkflowBuilderPage() {
   const [location, navigate] = useLocation();
@@ -31,6 +41,13 @@ export default function WorkflowBuilderPage() {
     trigger: any;
     definition: any;
     index: number;
+  } | null>(null);
+
+  // State for delete confirmation modal
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'trigger' | 'action';
+    index: number;
+    name: string;
   } | null>(null);
 
   
@@ -259,18 +276,11 @@ export default function WorkflowBuilderPage() {
     const trigger = workflowData.triggers[triggerIndex];
     if (!trigger) return;
 
-    if (confirm(`Are you sure you want to delete the "${trigger.name}" trigger? This action cannot be undone.`)) {
-      const updatedTriggers = workflowData.triggers.filter((_, index) => index !== triggerIndex);
-      setWorkflowData(prev => ({
-        ...prev,
-        triggers: updatedTriggers
-      }));
-      
-      toast({
-        title: "Trigger Deleted",
-        description: `"${trigger.name}" has been removed from the workflow`
-      });
-    }
+    setDeleteConfirmation({
+      type: 'trigger',
+      index: triggerIndex,
+      name: trigger.name || 'Unnamed Trigger'
+    });
   };
 
   // Handler for deleting actions
@@ -278,18 +288,42 @@ export default function WorkflowBuilderPage() {
     const action = workflowData.actions[actionIndex];
     if (!action) return;
 
-    if (confirm(`Are you sure you want to delete the "${action.name}" action? This action cannot be undone.`)) {
-      const updatedActions = workflowData.actions.filter((_, index) => index !== actionIndex);
+    setDeleteConfirmation({
+      type: 'action',
+      index: actionIndex,
+      name: action.name || 'Unnamed Action'
+    });
+  };
+
+  // Handler for confirming deletion
+  const handleConfirmDelete = () => {
+    if (!deleteConfirmation) return;
+
+    if (deleteConfirmation.type === 'trigger') {
+      const updatedTriggers = workflowData.triggers.filter((_, index) => index !== deleteConfirmation.index);
+      setWorkflowData(prev => ({
+        ...prev,
+        triggers: updatedTriggers
+      }));
+      
+      toast({
+        title: "Trigger Deleted",
+        description: `"${deleteConfirmation.name}" has been removed from the workflow`
+      });
+    } else {
+      const updatedActions = workflowData.actions.filter((_, index) => index !== deleteConfirmation.index);
       setWorkflowData(prev => ({
         ...prev,
         actions: updatedActions
       }));
       
       toast({
-        title: "Action Deleted",
-        description: `"${action.name}" has been removed from the workflow`
+        title: "Action Deleted", 
+        description: `"${deleteConfirmation.name}" has been removed from the workflow`
       });
     }
+
+    setDeleteConfirmation(null);
   };
 
   // Filter triggers and actions based on search
@@ -904,6 +938,31 @@ export default function WorkflowBuilderPage() {
           />
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmation} onOpenChange={() => setDeleteConfirmation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete {deleteConfirmation?.type === 'trigger' ? 'Trigger' : 'Action'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmation?.name}"? This action cannot be undone and will permanently remove this {deleteConfirmation?.type} from your workflow.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
