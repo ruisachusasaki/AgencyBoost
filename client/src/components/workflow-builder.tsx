@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 // import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap } from "lucide-react";
+import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap, Users, Target, TrendingUp, DollarSign, FileText, Calendar, AlertCircle } from "lucide-react";
 
 interface WorkflowStep {
   id: string;
@@ -132,14 +133,51 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
   const [showTriggerSelect, setShowTriggerSelect] = useState(false);
   const [showActionSelect, setShowActionSelect] = useState(false);
 
+  // Fetch triggers from API
+  const { data: apiTriggers = [] } = useQuery({
+    queryKey: ["/api/automation-triggers"],
+  });
+
+  // Map trigger types to icons
+  const getIconForTrigger = (type: string) => {
+    const iconMap: { [key: string]: any } = {
+      contact_created: Plus,
+      form_submitted: CheckSquare,
+      tag_added: Tag,
+      client_status_changed: Users,
+      project_created: Plus,
+      project_status_changed: Settings,
+      project_completed: CheckSquare,
+      project_deadline_approaching: AlertCircle,
+      task_created: Plus,
+      task_completed: CheckSquare,
+      task_assigned: Users,
+      task_due_soon: Clock,
+      task_overdue: AlertCircle,
+      lead_created: Target,
+      lead_stage_changed: TrendingUp,
+      lead_assigned: Users,
+      lead_converted: CheckSquare,
+      campaign_created: Plus,
+      campaign_status_changed: Settings,
+      campaign_budget_exceeded: DollarSign,
+      campaign_milestone: TrendingUp,
+      invoice_created: FileText,
+      invoice_paid: DollarSign,
+      invoice_overdue: AlertCircle,
+      payment_received: DollarSign,
+    };
+    return iconMap[type] || Zap;
+  };
+
   const handleTriggerSelect = (trigger: any) => {
     const triggerStep: WorkflowStep = {
       id: `trigger-${Date.now()}`,
       type: "trigger",
       name: trigger.name,
-      description: trigger.description,
-      config: {},
-      icon: trigger.icon
+      description: trigger.description || "",
+      config: trigger.configSchema || {},
+      icon: getIconForTrigger(trigger.type)
     };
     setSelectedTrigger(triggerStep);
     setShowTriggerSelect(false);
@@ -272,7 +310,7 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                   </Button>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
-                    {AVAILABLE_TRIGGERS.map((trigger) => (
+                    {apiTriggers.map((trigger: any) => (
                       <Card 
                         key={trigger.id} 
                         className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-[#46a1a0]"
@@ -280,7 +318,10 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-center gap-2">
-                            <trigger.icon className="h-5 w-5 text-[#46a1a0]" />
+                            {(() => {
+                              const Icon = getIconForTrigger(trigger.type);
+                              return <Icon className="h-5 w-5 text-[#46a1a0]" />;
+                            })()}
                             <CardTitle className="text-base">{trigger.name}</CardTitle>
                           </div>
                           <CardDescription className="text-sm">
