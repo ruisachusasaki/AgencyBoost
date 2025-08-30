@@ -18,7 +18,7 @@ export default function WorkflowBuilderPage() {
   const queryClient = useQueryClient();
   
   // Parse URL parameters to see if we're editing an existing workflow
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const searchParams = new URLSearchParams(window.location.search);
   const editingWorkflowId = searchParams.get('edit');
   
   const [workflowData, setWorkflowData] = useState<{
