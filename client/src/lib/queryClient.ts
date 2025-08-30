@@ -33,6 +33,7 @@ export async function apiRequest(
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    signal: AbortSignal.timeout(10000), // 10 second timeout
   });
 
   await throwIfResNotOk(res);
