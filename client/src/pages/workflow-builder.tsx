@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X } from "lucide-react";
 import type { Workflow } from "@shared/schema";
+import WorkflowCanvas from "@/components/workflow-canvas";
 
 export default function WorkflowBuilderPage() {
   const [location, navigate] = useLocation();
@@ -238,83 +239,16 @@ export default function WorkflowBuilderPage() {
           <CardHeader className="flex-shrink-0">
             <CardTitle>Workflow Designer</CardTitle>
           </CardHeader>
-            <CardContent className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 border-2 border-dashed border-gray-200 rounded-lg p-6 overflow-y-auto">
-                {/* Workflow Visual Display */}
-                {workflowData.trigger.name || workflowData.actions.length > 0 ? (
-                  <div className="space-y-6">
-                    {/* Trigger Section */}
-                    {workflowData.trigger.name && (
-                      <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 border-2 border-blue-300 rounded-lg p-4 min-w-[200px]">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <span className="font-medium text-blue-900">TRIGGER</span>
-                          </div>
-                          <div className="text-sm text-blue-800">{workflowData.trigger.name}</div>
-                        </div>
-                        {workflowData.actions.length > 0 && (
-                          <div className="text-gray-400">→</div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Actions Section */}
-                    {workflowData.actions.length > 0 && (
-                      <div className="space-y-4">
-                        {workflowData.actions.map((action: any, index: number) => (
-                          <div key={action.id} className="flex items-center gap-4">
-                            {index > 0 && <div className="text-gray-400">→</div>}
-                            <div className="bg-green-100 border-2 border-green-300 rounded-lg p-4 min-w-[200px]">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                <span className="font-medium text-green-900">ACTION</span>
-                              </div>
-                              <div className="text-sm text-green-800">{action.name}</div>
-                            </div>
-                            {index < workflowData.actions.length - 1 && (
-                              <div className="text-gray-400">→</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Add More Components */}
-                    <div className="flex gap-2 pt-4 border-t border-gray-200">
-                      <Button variant="outline" onClick={handleAddTrigger} disabled={!!workflowData.trigger.name}>
-                        {workflowData.trigger.name ? "Trigger Added" : "Add Trigger"}
-                      </Button>
-                      <Button variant="outline" onClick={handleAddAction}>
-                        Add Action
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Empty State */
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="text-gray-400 mb-4">
-                        <Settings className="h-12 w-12 mx-auto" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Workflow Canvas
-                      </h3>
-                      <p className="text-gray-500 mb-4">
-                        Start building your workflow by adding a trigger
-                      </p>
-                      <div className="flex gap-2 justify-center">
-                        <Button variant="outline" onClick={handleAddTrigger}>
-                          Add Trigger
-                        </Button>
-                        <Button variant="outline" onClick={handleAddAction}>
-                          Add Action
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
+              <WorkflowCanvas
+                workflowData={workflowData}
+                onAddTrigger={handleAddTrigger}
+                onAddAction={handleAddAction}
+                onAddCondition={() => {
+                  // TODO: Implement condition adding
+                  console.log('Add condition');
+                }}
+              />
             </CardContent>
           </Card>
       </div>
