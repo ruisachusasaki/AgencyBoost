@@ -430,9 +430,12 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           const [node, path] = Editor.node(editor, selection);
           
           // Debug logging
-          console.log('Enter pressed - Current node:', node);
+          console.log('Enter pressed - Current node:', JSON.stringify(node, null, 2));
           console.log('Enter pressed - Current path:', path);
-          console.log('Enter pressed - Selection:', selection);
+          console.log('Enter pressed - Selection anchor offset:', selection.anchor.offset);
+          console.log('Enter pressed - Node type:', node.type);
+          console.log('Enter pressed - Node text:', node.text);
+          console.log('Enter pressed - Is node an element?', SlateElement.isElement(node));
           
           // Check if we're at the edge of an embed or other void element
           if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
