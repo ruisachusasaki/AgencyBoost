@@ -171,7 +171,10 @@ export default function WorkflowsPage() {
     <div className="container mx-auto p-6 space-y-6 workflows-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#46a1a0]">Workflow Automation</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <GitBranch className="h-8 w-8 text-[#46a1a0]" />
+            <h1 className="text-3xl font-bold tracking-tight text-black">Workflow Automation</h1>
+          </div>
           <p className="text-muted-foreground">
             Create and manage automated workflows to streamline your business processes
           </p>
