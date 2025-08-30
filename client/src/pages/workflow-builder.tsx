@@ -382,7 +382,6 @@ export default function WorkflowBuilderPage() {
                       >
                         <div>
                           <div className="font-medium">{trigger.name}</div>
-                          <div className="text-xs text-muted-foreground">{trigger.type}</div>
                         </div>
                       </Button>
                     ))}
@@ -418,7 +417,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -449,7 +447,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -481,7 +478,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -514,7 +510,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -546,7 +541,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -576,7 +570,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -638,7 +631,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -672,7 +664,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -704,7 +695,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -736,7 +726,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -768,7 +757,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -799,7 +787,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
@@ -831,7 +818,6 @@ export default function WorkflowBuilderPage() {
                   >
                     <div>
                       <div className="font-medium">{action.name}</div>
-                      <div className="text-xs text-muted-foreground">{action.type}</div>
                     </div>
                   </Button>
                 ))}
