@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw } from "lucide-react";
 
 interface AutomationTrigger {
   id: string;
@@ -172,8 +172,12 @@ export default function AutomationTriggers() {
     const colors: { [key: string]: string } = {
       contact_management: "bg-blue-100 text-blue-800",
       form_management: "bg-green-100 text-green-800",
-      email_marketing: "bg-purple-100 text-purple-800",
-      task_automation: "bg-orange-100 text-orange-800",
+      project_management: "bg-indigo-100 text-indigo-800", 
+      task_management: "bg-orange-100 text-orange-800",
+      lead_management: "bg-yellow-100 text-yellow-800",
+      campaign_management: "bg-purple-100 text-purple-800",
+      financial_management: "bg-emerald-100 text-emerald-800",
+      email_marketing: "bg-pink-100 text-pink-800",
       time_based: "bg-cyan-100 text-cyan-800"
     };
     return colors[category] || "bg-gray-100 text-gray-800";
@@ -203,10 +207,20 @@ export default function AutomationTriggers() {
             Manage available trigger definitions for workflow automation
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-trigger">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Trigger
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/automation-triggers"] })} 
+            data-testid="button-refresh-triggers"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-trigger">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Trigger
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -335,8 +349,12 @@ export default function AutomationTriggers() {
                 <SelectContent>
                   <SelectItem value="contact_management">Contact Management</SelectItem>
                   <SelectItem value="form_management">Form Management</SelectItem>
+                  <SelectItem value="project_management">Project Management</SelectItem>
+                  <SelectItem value="task_management">Task Management</SelectItem>
+                  <SelectItem value="lead_management">Lead Management</SelectItem>
+                  <SelectItem value="campaign_management">Campaign Management</SelectItem>
+                  <SelectItem value="financial_management">Financial Management</SelectItem>
                   <SelectItem value="email_marketing">Email Marketing</SelectItem>
-                  <SelectItem value="task_automation">Task Automation</SelectItem>
                   <SelectItem value="time_based">Time Based</SelectItem>
                 </SelectContent>
               </Select>
