@@ -429,8 +429,14 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         try {
           const [node, path] = Editor.node(editor, selection);
           
+          // Debug logging
+          console.log('Enter pressed - Current node:', node);
+          console.log('Enter pressed - Current path:', path);
+          console.log('Enter pressed - Selection:', selection);
+          
           // Check if we're at the edge of an embed or other void element
           if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
+            console.log('Detected void element, inserting paragraph after');
             event.preventDefault();
             
             // Insert a new paragraph after the void element
