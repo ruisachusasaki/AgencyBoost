@@ -232,7 +232,7 @@ export default function WorkflowsPage() {
                   className="bg-[#46a1a0] hover:bg-[#3a8a89]"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Sample Workflow
+                  Create First Workflow
                 </Button>
               </CardContent>
             </Card>
