@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target } from "lucide-react";
+import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 
 export default function WorkflowBuilderPage() {
@@ -21,8 +21,10 @@ export default function WorkflowBuilderPage() {
   // Parse URL parameters to see if we're editing an existing workflow
   const searchParams = new URLSearchParams(window.location.search);
   const editingWorkflowId = searchParams.get('edit');
-  const [showTriggerDialog, setShowTriggerDialog] = useState(false);
-  const [showActionDialog, setShowActionDialog] = useState(false);
+  const [showTriggerPane, setShowTriggerPane] = useState(false);
+  const [showActionPane, setShowActionPane] = useState(false);
+  const [triggerSearch, setTriggerSearch] = useState("");
+  const [actionSearch, setActionSearch] = useState("");
   
   const [workflowData, setWorkflowData] = useState<{
     name: string;
@@ -112,7 +114,7 @@ export default function WorkflowBuilderPage() {
   };
 
   const handleAddTrigger = () => {
-    setShowTriggerDialog(true);
+    setShowTriggerPane(true);
   };
 
   const handleSelectTrigger = (trigger: { type: string; name: string; category: string }) => {
@@ -127,7 +129,7 @@ export default function WorkflowBuilderPage() {
       trigger: newTrigger
     }));
     
-    setShowTriggerDialog(false);
+    setShowTriggerPane(false);
     toast({ 
       title: "Trigger Added", 
       description: `${trigger.name} trigger has been added to your workflow` 
@@ -135,7 +137,7 @@ export default function WorkflowBuilderPage() {
   };
 
   const handleAddAction = () => {
-    setShowActionDialog(true);
+    setShowActionPane(true);
   };
 
   const handleSelectAction = (action: { type: string; name: string; category: string }) => {
@@ -151,11 +153,21 @@ export default function WorkflowBuilderPage() {
       actions: [...prev.actions, newAction]
     }));
     
-    setShowActionDialog(false);
+    setShowActionPane(false);
     toast({ 
       title: "Action Added", 
       description: `${action.name} has been added to your workflow` 
     });
+  };
+
+  // Filter triggers and actions based on search
+  const filterItems = (items: { type: string; name: string }[], searchTerm: string) => {
+    if (!searchTerm.trim()) return items;
+    const search = searchTerm.toLowerCase();
+    return items.filter(item => 
+      item.name.toLowerCase().includes(search) || 
+      item.type.toLowerCase().includes(search)
+    );
   };
 
   return (
@@ -309,47 +321,75 @@ export default function WorkflowBuilderPage() {
           </Card>
       </div>
 
-      {/* Trigger Selection Dialog */}
-      <Dialog open={showTriggerDialog} onOpenChange={setShowTriggerDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Select a Trigger for Your Workflow</DialogTitle>
-          </DialogHeader>
+      {/* Trigger Selection Pane */}
+      <Sheet open={showTriggerPane} onOpenChange={setShowTriggerPane}>
+        <SheetContent side="right" className="w-[600px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Select a Trigger for Your Workflow</SheetTitle>
+            {/* Search */}
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search triggers..."
+                value={triggerSearch}
+                onChange={(e) => setTriggerSearch(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {triggerSearch && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                  onClick={() => setTriggerSearch("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </SheetHeader>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Client & Lead Management */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  Client & Lead Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "client_created", name: "New client created" },
-                  { type: "client_status_changed", name: "Client status changed" },
-                  { type: "client_team_assigned", name: "Client team member assigned" },
-                  { type: "lead_created", name: "New lead created" },
-                  { type: "lead_status_changed", name: "Lead status changed" },
-                  { type: "lead_assigned", name: "Lead assigned to staff" },
-                  { type: "lead_converted", name: "Lead converted to client" },
-                  { type: "appointment_booked", name: "Appointment booked by lead" }
-                ].map((trigger) => (
-                  <Button
-                    key={trigger.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectTrigger({ ...trigger, category: "Client & Lead" })}
-                  >
-                    <div>
-                      <div className="font-medium">{trigger.name}</div>
-                      <div className="text-xs text-muted-foreground">{trigger.type}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
+            {(() => {
+              const triggers = [
+                { type: "client_created", name: "New client created" },
+                { type: "client_status_changed", name: "Client status changed" },
+                { type: "client_team_assigned", name: "Client team member assigned" },
+                { type: "lead_created", name: "New lead created" },
+                { type: "lead_status_changed", name: "Lead status changed" },
+                { type: "lead_assigned", name: "Lead assigned to staff" },
+                { type: "lead_converted", name: "Lead converted to client" },
+                { type: "appointment_booked", name: "Appointment booked by lead" }
+              ];
+              const filteredTriggers = filterItems(triggers, triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-blue-600" />
+                      Client & Lead Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "Client & Lead" })}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                          <div className="text-xs text-muted-foreground">{trigger.type}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Project & Task Management */}
             <Card>
@@ -543,15 +583,35 @@ export default function WorkflowBuilderPage() {
               </CardContent>
             </Card>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
-      {/* Action Selection Dialog */}
-      <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Select an Action for Your Workflow</DialogTitle>
-          </DialogHeader>
+      {/* Action Selection Pane */}
+      <Sheet open={showActionPane} onOpenChange={setShowActionPane}>
+        <SheetContent side="right" className="w-[600px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Select an Action for Your Workflow</SheetTitle>
+            {/* Search */}
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search actions..."
+                value={actionSearch}
+                onChange={(e) => setActionSearch(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {actionSearch && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                  onClick={() => setActionSearch("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </SheetHeader>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Communication Actions */}
@@ -778,8 +838,8 @@ export default function WorkflowBuilderPage() {
               </CardContent>
             </Card>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
