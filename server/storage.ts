@@ -55,7 +55,7 @@ import {
   type Position, type InsertPosition, positions,
   type JobApplication, type InsertJobApplication, jobApplications,
   type JobOpening, type InsertJobOpening, jobOpenings,
-  customFieldFileUploads, forms, formFields, formSubmissions, tags
+  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -230,6 +230,7 @@ export interface IStorage {
   getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]>;
   createAutomationTrigger(trigger: InsertAutomationTrigger): Promise<AutomationTrigger>;
   updateAutomationTrigger(id: string, trigger: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined>;
+  deleteAutomationTrigger(id: string): Promise<boolean>;
   
   // Automation Actions
   getAutomationActions(): Promise<AutomationAction[]>;
@@ -493,7 +494,6 @@ export class MemStorage implements IStorage {
   private taskTemplates: Map<string, TaskTemplate> = new Map();
   private enhancedTasks: Map<string, EnhancedTask> = new Map();
   private taskHistory: Map<string, TaskHistory[]> = new Map();
-  private automationTriggers: Map<string, AutomationTrigger> = new Map();
   private automationActions: Map<string, AutomationAction> = new Map();
   private notifications: Map<string, Notification> = new Map();
   private auditLogs: Map<string, AuditLog> = new Map();
@@ -1020,9 +1020,7 @@ export class MemStorage implements IStorage {
       }
     ];
 
-    triggers.forEach(trigger => {
-      this.automationTriggers.set(trigger.id, trigger);
-    });
+    // Note: Triggers are now stored in the database, not in memory
 
     // Comprehensive automation actions for AgencyFlow CRM
     const actions: AutomationAction[] = [
@@ -3047,42 +3045,38 @@ export class MemStorage implements IStorage {
 
   // Automation Triggers
   async getAutomationTriggers(): Promise<AutomationTrigger[]> {
-    return Array.from(this.automationTriggers.values());
+    const triggers = await db.select().from(automationTriggers).orderBy(asc(automationTriggers.createdAt));
+    return triggers;
   }
 
   async getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined> {
-    return this.automationTriggers.get(id);
+    const result = await db.select().from(automationTriggers).where(eq(automationTriggers.id, id)).limit(1);
+    return result[0];
   }
 
   async getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]> {
-    return Array.from(this.automationTriggers.values()).filter(trigger => trigger.category === category);
+    const triggers = await db.select().from(automationTriggers)
+      .where(eq(automationTriggers.category, category))
+      .orderBy(asc(automationTriggers.createdAt));
+    return triggers;
   }
 
   async createAutomationTrigger(triggerData: InsertAutomationTrigger): Promise<AutomationTrigger> {
-    const trigger: AutomationTrigger = {
-      id: randomUUID(),
-      name: triggerData.name,
-      type: triggerData.type,
-      description: triggerData.description || null,
-      category: triggerData.category,
-      configSchema: triggerData.configSchema || null,
-      isActive: triggerData.isActive || true,
-      createdAt: new Date(),
-    };
-    this.automationTriggers.set(trigger.id, trigger);
-    return trigger;
+    const result = await db.insert(automationTriggers).values(triggerData).returning();
+    return result[0];
   }
 
   async updateAutomationTrigger(id: string, triggerData: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined> {
-    const existing = this.automationTriggers.get(id);
-    if (!existing) return undefined;
-    
-    const updated: AutomationTrigger = {
-      ...existing,
-      ...triggerData,
-    };
-    this.automationTriggers.set(id, updated);
-    return updated;
+    const result = await db.update(automationTriggers)
+      .set(triggerData)
+      .where(eq(automationTriggers.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteAutomationTrigger(id: string): Promise<boolean> {
+    const result = await db.delete(automationTriggers).where(eq(automationTriggers.id, id)).returning();
+    return result.length > 0;
   }
 
   // Automation Actions

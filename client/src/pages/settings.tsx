@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Calendar,
   Layers,
-  UserCheck
+  UserCheck,
+  Zap
 } from "lucide-react";
 
 const settingsNavigation = [
@@ -31,6 +32,7 @@ const settingsNavigation = [
   { name: "Tags", href: "/settings/tags", icon: Tag },
   { name: "Products", href: "/settings/products", icon: Package },
   { name: "Tasks", href: "/settings/tasks", icon: Layers },
+  { name: "Automation Triggers", href: "/settings/automation-triggers", icon: Zap },
   { name: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText },
 ];
 
@@ -85,6 +87,7 @@ function getSettingDescription(name: string): string {
     "Tags": "Organize and manage system tags",
     "Products": "Manage your products and services catalog",
     "Tasks": "Configure task statuses, priorities, and settings",
+    "Automation Triggers": "Manage automation trigger definitions and workflows",
     "Audit Logs": "View system activity and audit trail",
   };
   return descriptions[name] || "";

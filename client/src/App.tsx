@@ -42,6 +42,7 @@ import Products from "@/pages/settings/products";
 import AuditLogs from "@/pages/settings/audit-logs";
 import PermissionAudit from "@/pages/settings/permission-audit";
 import TasksSettings from "@/pages/settings/tasks";
+import AutomationTriggers from "@/pages/settings/automation-triggers";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/settings/tags" component={Tags} />
       <Route path="/settings/products" component={Products} />
       <Route path="/settings/tasks" component={TasksSettings} />
+      <Route path="/settings/automation-triggers" component={AutomationTriggers} />
       <Route path="/settings/audit-logs" component={AuditLogs} />
       <Route path="/form-builder">
         {() => <FormBuilder />}

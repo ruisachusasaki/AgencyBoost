@@ -3455,12 +3455,220 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertAutomationTriggerSchema.parse(req.body);
       const trigger = await storage.createAutomationTrigger(validatedData);
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "automation_trigger",
+        trigger.id,
+        trigger.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Created automation trigger: ${trigger.name}`,
+        null,
+        { name: trigger.name, type: trigger.type, category: trigger.category },
+        req
+      );
+      
       res.status(201).json(trigger);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create automation trigger" });
+    }
+  });
+
+  app.get("/api/automation-triggers/:id", async (req, res) => {
+    try {
+      const trigger = await storage.getAutomationTrigger(req.params.id);
+      if (!trigger) {
+        return res.status(404).json({ message: "Automation trigger not found" });
+      }
+      res.json(trigger);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch automation trigger" });
+    }
+  });
+
+  app.put("/api/automation-triggers/:id", async (req, res) => {
+    try {
+      // Get the old trigger data first for audit logging
+      const oldTrigger = await storage.getAutomationTrigger(req.params.id);
+      if (!oldTrigger) {
+        return res.status(404).json({ message: "Automation trigger not found" });
+      }
+      
+      const validatedData = insertAutomationTriggerSchema.partial().parse(req.body);
+      const trigger = await storage.updateAutomationTrigger(req.params.id, validatedData);
+      
+      if (!trigger) {
+        return res.status(404).json({ message: "Automation trigger not found" });
+      }
+      
+      // Determine what changed for audit logging
+      const changes = [];
+      if (validatedData.name && validatedData.name !== oldTrigger.name) {
+        changes.push(`name from "${oldTrigger.name}" to "${validatedData.name}"`);
+      }
+      if (validatedData.description && validatedData.description !== oldTrigger.description) {
+        changes.push(`description updated`);
+      }
+      if (validatedData.isActive !== undefined && validatedData.isActive !== oldTrigger.isActive) {
+        changes.push(`status ${validatedData.isActive ? 'activated' : 'deactivated'}`);
+      }
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "automation_trigger",
+        trigger.id,
+        trigger.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        changes.length > 0 ? `Updated ${changes.join(", ")}` : "Automation trigger updated",
+        { name: oldTrigger.name, description: oldTrigger.description, isActive: oldTrigger.isActive },
+        { name: trigger.name, description: trigger.description, isActive: trigger.isActive },
+        req
+      );
+      
+      res.json(trigger);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update automation trigger" });
+    }
+  });
+
+  app.delete("/api/automation-triggers/:id", async (req, res) => {
+    try {
+      // Get trigger data before deletion for audit logging
+      const trigger = await storage.getAutomationTrigger(req.params.id);
+      if (!trigger) {
+        return res.status(404).json({ message: "Automation trigger not found" });
+      }
+      
+      const deleted = await storage.deleteAutomationTrigger(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Automation trigger not found" });
+      }
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "automation_trigger",
+        req.params.id,
+        trigger.name,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Automation trigger permanently deleted - ${trigger.name} (${trigger.type})`,
+        { name: trigger.name, type: trigger.type, category: trigger.category },
+        null,
+        req
+      );
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete automation trigger" });
+    }
+  });
+
+  // Initialize default automation triggers (one-time setup)
+  app.post("/api/automation-triggers/initialize", async (req, res) => {
+    try {
+      // Check if triggers already exist
+      const existingTriggers = await storage.getAutomationTriggers();
+      if (existingTriggers.length > 0) {
+        return res.status(400).json({ message: "Triggers already initialized" });
+      }
+
+      // Default trigger definitions
+      const defaultTriggers = [
+        {
+          name: "New Contact Created",
+          type: "contact_created",
+          description: "Triggers when a new contact is added to the system",
+          category: "contact_management",
+          configSchema: {
+            source: { type: "string", options: ["website", "manual", "import", "api"] },
+            tags: { type: "array", items: { type: "string" } }
+          },
+          isActive: true
+        },
+        {
+          name: "Form Submitted",
+          type: "form_submitted",
+          description: "Triggers when a specific form is submitted",
+          category: "form_management",
+          configSchema: {
+            form_id: { type: "string", required: true },
+            fields: { type: "object" }
+          },
+          isActive: true
+        },
+        {
+          name: "Tag Added",
+          type: "tag_added",
+          description: "Triggers when a specific tag is added to a contact",
+          category: "contact_management",
+          configSchema: {
+            tag_name: { type: "string", required: true }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Status Changed",
+          type: "client_status_changed",
+          description: "Triggers when a client's status changes",
+          category: "contact_management",
+          configSchema: {
+            from_status: { 
+              type: "string", 
+              options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+              label: "From Status"
+            },
+            to_status: { 
+              type: "string", 
+              options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+              label: "To Status",
+              required: true
+            },
+            contact_source: { 
+              type: "string",
+              options: ["website", "referral", "cold_outreach", "social_media", "paid_ads"],
+              label: "Contact Source (Optional)"
+            }
+          },
+          isActive: true
+        }
+      ];
+
+      // Create each trigger
+      const createdTriggers = [];
+      for (const triggerData of defaultTriggers) {
+        const trigger = await storage.createAutomationTrigger(triggerData);
+        createdTriggers.push(trigger);
+        
+        // Log the creation
+        await createAuditLog(
+          "created",
+          "automation_trigger",
+          trigger.id,
+          trigger.name,
+          "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          `System initialization: Created default automation trigger: ${trigger.name}`,
+          null,
+          { name: trigger.name, type: trigger.type, category: trigger.category },
+          req
+        );
+      }
+
+      res.status(201).json({ 
+        message: "Default automation triggers initialized successfully",
+        triggers: createdTriggers,
+        count: createdTriggers.length
+      });
+    } catch (error) {
+      console.error("Error initializing triggers:", error);
+      res.status(500).json({ message: "Failed to initialize automation triggers" });
     }
   });
 
