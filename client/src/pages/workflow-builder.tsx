@@ -47,15 +47,9 @@ export default function WorkflowBuilderPage() {
     enabled: !!editingWorkflowId,
   });
 
-  // Debug logging
-  console.log("Editing workflow ID:", editingWorkflowId);
-  console.log("Existing workflow data:", existingWorkflow);
-  console.log("Is loading:", isLoadingWorkflow);
-
   // Populate form with existing data when editing
   useEffect(() => {
     if (existingWorkflow && editingWorkflowId) {
-      console.log("Loading existing workflow data:", existingWorkflow);
       setWorkflowData({
         name: (existingWorkflow as any).name || "",
         description: (existingWorkflow as any).description || "",
