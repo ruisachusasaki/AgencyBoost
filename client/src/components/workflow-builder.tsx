@@ -28,44 +28,6 @@ interface WorkflowBuilderProps {
   editingWorkflow?: any;
 }
 
-const AVAILABLE_TRIGGERS = [
-  {
-    id: "contact_created",
-    name: "New Contact Created",
-    description: "Triggers when a new contact is added to the system",
-    icon: Plus,
-    config: {
-      conditions: ["source", "tags", "list"]
-    }
-  },
-  {
-    id: "form_submitted",
-    name: "Form Submitted",
-    description: "Triggers when a specific form is submitted",
-    icon: CheckSquare,
-    config: {
-      conditions: ["form_id", "fields"]
-    }
-  },
-  {
-    id: "tag_added",
-    name: "Tag Added",
-    description: "Triggers when a specific tag is added to a contact",
-    icon: Tag,
-    config: {
-      conditions: ["tag_name"]
-    }
-  },
-  {
-    id: "date_based",
-    name: "Date/Time Based",
-    description: "Triggers at a specific date or time interval",
-    icon: Clock,
-    config: {
-      conditions: ["date", "time", "recurrence"]
-    }
-  }
-];
 
 const AVAILABLE_ACTIONS = [
   {
@@ -134,9 +96,13 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
   const [showActionSelect, setShowActionSelect] = useState(false);
 
   // Fetch triggers from API
-  const { data: apiTriggers = [] } = useQuery({
+  const { data: apiTriggers = [] } = useQuery<any[]>({
     queryKey: ["/api/automation-triggers"],
   });
+
+  // Debug: Log trigger count
+  console.log("WorkflowBuilder - API Triggers count:", apiTriggers.length);
+  console.log("WorkflowBuilder - Triggers:", apiTriggers.slice(0, 3));
 
   // Map trigger types to icons
   const getIconForTrigger = (type: string) => {
@@ -310,6 +276,9 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                   </Button>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
+                    <div className="col-span-2 text-sm text-gray-500 mb-2">
+                      Found {apiTriggers.length} triggers from database
+                    </div>
                     {apiTriggers.map((trigger: any) => (
                       <Card 
                         key={trigger.id} 
