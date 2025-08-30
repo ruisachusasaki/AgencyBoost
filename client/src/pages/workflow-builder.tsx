@@ -86,6 +86,7 @@ export default function WorkflowBuilderPage() {
     
     const timeoutId = setTimeout(() => {
       if (workflowData.name.trim()) {
+        console.log('Auto-saving workflow data:', workflowData); // Debug log
         autoSaveMutation.mutate({
           ...workflowData,
           createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390"
@@ -147,15 +148,22 @@ export default function WorkflowBuilderPage() {
 
   const handleSelectTrigger = (trigger: { type: string; name: string; category: string }) => {
     const newTrigger = {
+      id: Date.now().toString(), // Add unique ID
       type: trigger.type,
       conditions: {},
       name: trigger.name
     };
     
-    setWorkflowData(prev => ({
-      ...prev,
-      triggers: [...prev.triggers, newTrigger]
-    }));
+    console.log('Adding trigger:', newTrigger); // Debug log
+    
+    setWorkflowData(prev => {
+      const updatedData = {
+        ...prev,
+        triggers: [...prev.triggers, newTrigger]
+      };
+      console.log('Updated workflow data:', updatedData); // Debug log
+      return updatedData;
+    });
     
     setShowTriggerPane(false);
     toast({ 
