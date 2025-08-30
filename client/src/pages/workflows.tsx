@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Play, Pause, FileTemplate, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity } from "lucide-react";
+import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings } from "lucide-react";
 import type { Workflow, EnhancedTask, WorkflowTemplate } from "@shared/schema";
 import WorkflowBuilder from "@/components/workflow-builder";
 import WorkflowDetail from "@/components/workflow-detail";
@@ -194,7 +194,7 @@ export default function WorkflowsPage() {
           <nav className="-mb-px flex space-x-8">
             {[
               { id: "workflows", name: "Active Workflows", icon: GitBranch },
-              { id: "templates", name: "Templates", icon: FileTemplate },
+              { id: "templates", name: "Templates", icon: Layout },
               { id: "analytics", name: "Analytics", icon: Activity }
             ].map((tab) => {
               const Icon = tab.icon;
