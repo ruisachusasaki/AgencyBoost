@@ -31,7 +31,6 @@ const TriggerNode = ({ data }: { data: any }) => (
     </CardHeader>
     <CardContent className="pt-0">
       <div className="font-medium text-blue-900">{data.label}</div>
-      <div className="text-xs text-blue-700 mt-1">{data.description}</div>
     </CardContent>
   </Card>
 );
@@ -48,7 +47,6 @@ const ActionNode = ({ data }: { data: any }) => (
     </CardHeader>
     <CardContent className="pt-0">
       <div className="font-medium text-green-900">{data.label}</div>
-      <div className="text-xs text-green-700 mt-1">{data.description}</div>
     </CardContent>
   </Card>
 );
@@ -177,7 +175,6 @@ export default function WorkflowCanvas({
         position: { x: xPosition, y: yPosition },
         data: {
           label: workflowData.trigger.name,
-          description: 'Workflow trigger',
         },
       });
       yPosition += 150;
@@ -202,7 +199,6 @@ export default function WorkflowCanvas({
         position: { x: xPosition, y: yPosition },
         data: {
           label: action.name,
-          description: 'Workflow action',
         },
       });
       yPosition += 150;
@@ -254,24 +250,8 @@ export default function WorkflowCanvas({
       return edges;
     }
 
-    let previousNodeId = 'trigger-1';
-
-    // Connect trigger to first plus button if no actions yet
-    if (workflowData.actions.length === 0) {
-      edges.push({
-        id: 'edge-trigger-add',
-        source: 'trigger-1',
-        target: 'add-action-after-trigger',
-        type: 'smoothstep',
-        markerEnd: {
-          type: MarkerType.Arrow,
-        },
-        style: {
-          strokeWidth: 2,
-          stroke: '#46a1a0',
-        },
-      });
-    } else {
+    // Connect trigger to first action (if exists) or to add button
+    if (workflowData.actions.length > 0) {
       // Connect trigger to first action
       edges.push({
         id: 'edge-trigger-action1',
@@ -286,17 +266,13 @@ export default function WorkflowCanvas({
           stroke: '#46a1a0',
         },
       });
-      previousNodeId = 'action-1';
-    }
 
-    // Connect actions to each other
-    workflowData.actions.forEach((_, index) => {
-      if (index > 0) {
-        const currentNodeId = `action-${index + 1}`;
+      // Connect each action to the next action
+      for (let i = 0; i < workflowData.actions.length - 1; i++) {
         edges.push({
-          id: `edge-${previousNodeId}-${currentNodeId}`,
-          source: previousNodeId,
-          target: currentNodeId,
+          id: `edge-action${i + 1}-action${i + 2}`,
+          source: `action-${i + 1}`,
+          target: `action-${i + 2}`,
           type: 'smoothstep',
           markerEnd: {
             type: MarkerType.Arrow,
@@ -306,15 +282,12 @@ export default function WorkflowCanvas({
             stroke: '#46a1a0',
           },
         });
-        previousNodeId = currentNodeId;
       }
-    });
 
-    // Connect last action to final plus button
-    if (workflowData.actions.length > 0) {
+      // Connect last action to final add button
       edges.push({
-        id: `edge-${previousNodeId}-final-add`,
-        source: previousNodeId,
+        id: `edge-action${workflowData.actions.length}-final-add`,
+        source: `action-${workflowData.actions.length}`,
         target: 'add-button-final',
         type: 'smoothstep',
         markerEnd: {
@@ -325,8 +298,8 @@ export default function WorkflowCanvas({
           stroke: '#46a1a0',
         },
       });
-      
-      // Connect final plus button to END
+
+      // Connect final add button to END
       edges.push({
         id: 'edge-final-add-end',
         source: 'add-button-final',
@@ -341,7 +314,21 @@ export default function WorkflowCanvas({
         },
       });
     } else {
-      // Connect add button directly to END if no actions
+      // No actions yet - connect trigger to add button, then to END
+      edges.push({
+        id: 'edge-trigger-add',
+        source: 'trigger-1',
+        target: 'add-action-after-trigger',
+        type: 'smoothstep',
+        markerEnd: {
+          type: MarkerType.Arrow,
+        },
+        style: {
+          strokeWidth: 2,
+          stroke: '#46a1a0',
+        },
+      });
+
       edges.push({
         id: 'edge-add-end',
         source: 'add-action-after-trigger',
