@@ -387,7 +387,7 @@ export const templateFolders = pgTable("template_folders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
-  type: text("type").notNull(), // email, sms, both
+  type: text("type").notNull(), // email, sms, workflow, both
   parentId: varchar("parent_id"),
   order: integer("order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1189,6 +1189,7 @@ export const workflows = pgTable("workflows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
+  folderId: varchar("folder_id").references(() => templateFolders.id),
   clientId: varchar("client_id").references(() => clients.id),
   category: text("category"), // lead_management, email_marketing, task_automation, deal_management
   status: text("status").notNull().default("draft"), // draft, active, paused, archived

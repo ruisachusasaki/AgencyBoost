@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings } from "lucide-react";
-import type { Workflow, EnhancedTask, WorkflowTemplate } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings, FolderPlus, FolderOpen, ArrowLeft } from "lucide-react";
+import type { Workflow, EnhancedTask, WorkflowTemplate, TemplateFolder } from "@shared/schema";
 import WorkflowBuilder from "@/components/workflow-builder";
 import WorkflowDetail from "@/components/workflow-detail";
 
@@ -22,6 +23,8 @@ export default function WorkflowsPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [activeTab, setActiveTab] = useState<string>("workflows");
+  const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,6 +41,11 @@ export default function WorkflowsPage() {
   // Fetch enhanced tasks related to workflows
   const { data: workflowTasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["/api/enhanced-tasks"],
+  });
+
+  // Fetch template folders for workflow organization
+  const { data: templateFolders = [], isLoading: loadingFolders } = useQuery<TemplateFolder[]>({
+    queryKey: ["/api/template-folders"],
   });
 
   // Fetch automation triggers and actions
@@ -88,7 +96,29 @@ export default function WorkflowsPage() {
     },
   });
 
-  const filteredWorkflows = workflows as Workflow[];
+  // Create folder mutation
+  const createFolderMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("/api/template-folders", "POST", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
+      toast({ title: "Success", description: "Folder created successfully" });
+      setIsCreateFolderDialogOpen(false);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to create folder" });
+    }
+  });
+
+  // Filter folders for workflow type
+  const workflowFolders = templateFolders.filter(folder => folder.type === "workflow" || folder.type === "both");
+
+  // Filter workflows based on selected folder
+  const filteredWorkflows = (workflows as Workflow[]).filter(workflow => {
+    const matchesFolder = selectedFolder ? workflow.folderId === selectedFolder : !workflow.folderId;
+    return matchesFolder;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -179,6 +209,13 @@ export default function WorkflowsPage() {
         </div>
         <div className="flex gap-2">
           <Button 
+            variant="outline"
+            onClick={() => setIsCreateFolderDialogOpen(true)}
+          >
+            <FolderPlus className="h-4 w-4 mr-2" />
+            New Folder
+          </Button>
+          <Button 
             onClick={() => setIsBuilderOpen(true)}
             className="bg-[#46a1a0] hover:bg-[#3a8a89]"
           >
@@ -218,8 +255,21 @@ export default function WorkflowsPage() {
 
         {/* Tab Content */}
         {activeTab === "workflows" && (<div className="space-y-4">
+          {/* Breadcrumb navigation when viewing a specific folder */}
+          {selectedFolder && (
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedFolder(null)}
+                className="text-blue-600 hover:text-blue-800 p-0 h-auto font-normal"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                All Workflows
+              </Button>
+            </div>
+          )}
 
-          {filteredWorkflows.length === 0 ? (
+          {filteredWorkflows.length === 0 && workflowFolders.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -238,6 +288,25 @@ export default function WorkflowsPage() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Show folders only when no folder is selected */}
+              {!selectedFolder && workflowFolders.map((folder: TemplateFolder) => (
+                <Card key={folder.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedFolder(folder.id)}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 text-blue-500" />
+                      <Badge variant="outline" className="text-xs">
+                        Folder
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-lg">{folder.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {folder.description || "No description"}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+              
+              {/* Show workflows */}
               {filteredWorkflows.map((workflow: Workflow) => (
                 <Card key={workflow.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
@@ -539,6 +608,63 @@ export default function WorkflowsPage() {
           onEdit={handleEditWorkflow}
         />
       )}
+
+      {/* Folder Creation Dialog */}
+      <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Workflow Folder</DialogTitle>
+            <DialogDescription>
+              Create a new folder to organize your workflows
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target as HTMLFormElement);
+            createFolderMutation.mutate({
+              name: formData.get('name'),
+              description: formData.get('description'),
+              type: 'workflow'
+            });
+          }}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="folder-name">Folder Name</Label>
+                <Input 
+                  id="folder-name"
+                  name="name"
+                  placeholder="Enter folder name..."
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="folder-description">Description (Optional)</Label>
+                <Textarea 
+                  id="folder-description"
+                  name="description"
+                  placeholder="Enter folder description..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsCreateFolderDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={createFolderMutation.isPending}
+              >
+                {createFolderMutation.isPending ? "Creating..." : "Create Folder"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
