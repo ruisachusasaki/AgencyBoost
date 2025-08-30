@@ -98,6 +98,8 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
   // Fetch triggers from API
   const { data: apiTriggers = [] } = useQuery<any[]>({
     queryKey: ["/api/automation-triggers"],
+    staleTime: 0, // Force fresh fetch
+    cacheTime: 0, // Don't cache
   });
 
   // Debug: Log trigger count
