@@ -154,28 +154,47 @@ export default function WorkflowBuilderPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Back Button */}
+      <div>
+        <Button 
+          variant="outline" 
+          onClick={handleBack}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Workflows
+        </Button>
+      </div>
+      
+      {/* Header with inline editable title */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={handleBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Workflows
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {editingWorkflowId ? 'Edit Workflow' : 'Build New Workflow'}
-            </h1>
-            <p className="text-muted-foreground">
-              {editingWorkflowId ? 'Modify your existing workflow' : 'Create an automated workflow for your business processes'}
-            </p>
-          </div>
+        <div className="flex-1">
+          <Input
+            value={workflowData.name}
+            onChange={(e) => setWorkflowData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder={isLoadingWorkflow ? "Loading..." : "Enter workflow name..."}
+            disabled={isLoadingWorkflow}
+            className="text-3xl font-bold tracking-tight border-none p-0 h-auto bg-transparent focus:bg-white focus:border focus:p-2 focus:h-10"
+            style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}
+          />
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Select
+            value={workflowData.status}
+            onValueChange={(value: "draft" | "active" | "paused") => 
+              setWorkflowData(prev => ({ ...prev, status: value }))
+            }
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
+            </SelectContent>
+          </Select>
           <Button 
             variant="outline"
             onClick={() => setWorkflowData(prev => ({ ...prev, status: "active" }))}
@@ -194,69 +213,13 @@ export default function WorkflowBuilderPage() {
         </div>
       </div>
 
-      {/* Workflow Builder Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Basic Information */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Workflow Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="workflow-name">Workflow Name</Label>
-                <Input
-                  id="workflow-name"
-                  value={workflowData.name}
-                  onChange={(e) => setWorkflowData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder={isLoadingWorkflow ? "Loading..." : "Enter workflow name..."}
-                  disabled={isLoadingWorkflow}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="workflow-description">Description</Label>
-                <Textarea
-                  id="workflow-description"
-                  value={workflowData.description}
-                  onChange={(e) => setWorkflowData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe what this workflow does..."
-                  rows={3}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="workflow-status">Status</Label>
-                <Select
-                  value={workflowData.status}
-                  onValueChange={(value: "draft" | "active" | "paused") => 
-                    setWorkflowData(prev => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="paused">Paused</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Workflow Canvas */}
-        <div className="lg:col-span-3">
-          <Card className="h-[700px] flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle>Workflow Designer</CardTitle>
-            </CardHeader>
+      {/* Workflow Builder Content - Full Width */}
+      <div>
+        {/* Workflow Canvas - Full Width */}
+        <Card className="h-[700px] flex flex-col">
+          <CardHeader className="flex-shrink-0">
+            <CardTitle>Workflow Designer</CardTitle>
+          </CardHeader>
             <CardContent className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 border-2 border-dashed border-gray-200 rounded-lg p-6 overflow-y-auto">
                 {/* Workflow Visual Display */}
@@ -338,7 +301,6 @@ export default function WorkflowBuilderPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
 
       {/* Trigger Selection Dialog */}
