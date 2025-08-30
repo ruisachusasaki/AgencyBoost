@@ -192,7 +192,6 @@ export default function WorkflowsPage() {
           <TabsTrigger value="workflows" className="workflows-tab">Active Workflows</TabsTrigger>
           <TabsTrigger value="templates" className="workflows-tab">Templates</TabsTrigger>
           <TabsTrigger value="analytics" className="workflows-tab">Analytics</TabsTrigger>
-          <TabsTrigger value="automation" className="workflows-tab">Automation Builder</TabsTrigger>
         </TabsList>
 
         <TabsContent value="workflows" className="space-y-4">
