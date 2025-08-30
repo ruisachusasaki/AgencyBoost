@@ -21,6 +21,7 @@ export default function WorkflowsPage() {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("workflows");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -216,7 +217,6 @@ export default function WorkflowsPage() {
         </div>
 
         {/* Tab Content */}
-        <>
         {activeTab === "workflows" && (<div className="space-y-4">
 
           {filteredWorkflows.length === 0 ? (
@@ -311,7 +311,7 @@ export default function WorkflowsPage() {
               ))}
             </div>
           )}
-        </div>}
+        </div>)}
 
         {activeTab === "templates" && <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -419,8 +419,7 @@ export default function WorkflowsPage() {
               </CardContent>
             </Card>
           </div>
-        </div>}
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2 mt-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -513,62 +512,6 @@ export default function WorkflowsPage() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </div>}
-
-        {activeTab === "analytics" && <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Available Triggers
-                </CardTitle>
-                <CardDescription>
-                  Events that can start your workflows
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(triggers as any[]).length > 0 ? (
-                    (triggers as any[]).slice(0, 5).map((trigger: any) => (
-                      <div key={trigger.id} className="p-2 border rounded">
-                        <div className="font-medium">{trigger.name}</div>
-                        <div className="text-sm text-muted-foreground">{trigger.description}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">No triggers configured yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Available Actions
-                </CardTitle>
-                <CardDescription>
-                  Actions your workflows can perform
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(actions as any[]).length > 0 ? (
-                    (actions as any[]).slice(0, 5).map((action: any) => (
-                      <div key={action.id} className="p-2 border rounded">
-                        <div className="font-medium">{action.name}</div>
-                        <div className="text-sm text-muted-foreground">{action.description}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">No actions configured yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>}
       </div>

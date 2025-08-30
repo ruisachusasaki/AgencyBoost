@@ -291,16 +291,16 @@ export default function KnowledgeBase() {
 
   const canManageCategories = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/knowledge-base/categories"],
   });
 
-  const { data: articles = [] } = useQuery({
+  const { data: articles = [] } = useQuery<any[]>({
     queryKey: ["/api/knowledge-base/articles/"],
   });
 
   // Fetch bookmarks
-  const { data: bookmarks, isLoading: isLoadingBookmarks } = useQuery({
+  const { data: bookmarks = [], isLoading: isLoadingBookmarks } = useQuery<any[]>({
     queryKey: ['/api/knowledge-base/bookmarks'],
     enabled: currentView === 'bookmarks',
   });
@@ -407,7 +407,7 @@ export default function KnowledgeBase() {
     },
   });
 
-  const filteredArticles = (articles || [])
+  const filteredArticles = (articles as any[])
     .filter((article: any) => {
       // When no category is selected, show all articles
       if (!selectedCategory) {
@@ -458,7 +458,7 @@ export default function KnowledgeBase() {
     return topLevel;
   };
 
-  const hierarchicalCategories = organizeCategories(categories || []);
+  const hierarchicalCategories = organizeCategories(categories as any[]);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -474,7 +474,7 @@ export default function KnowledgeBase() {
 
   // Render category tree recursively
   const renderCategoryTree = (cats: any[], level = 0) => {
-    return cats.map((category: any) => {
+    return (cats || []).map((category: any) => {
       const hasChildren = category.children.length > 0;
       const isExpanded = expandedCategories.has(category.id);
       
@@ -944,8 +944,8 @@ export default function KnowledgeBase() {
             {selectedCategory ? (
               <CategoryOverview 
                 categoryId={selectedCategory} 
-                categories={categories} 
-                articles={articles}
+                categories={categories as any[]} 
+                articles={articles as any[]}
                 onCategorySelect={setSelectedCategory}
               />
             ) : (
@@ -1033,7 +1033,7 @@ export default function KnowledgeBase() {
                 <p className="text-muted-foreground">Loading your bookmarks...</p>
               </CardContent>
             </Card>
-          ) : !bookmarks || bookmarks.length === 0 ? (
+          ) : !bookmarks || (bookmarks as any[]).length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Bookmark className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -1052,7 +1052,7 @@ export default function KnowledgeBase() {
               </CardContent>
             </Card>
           ) : (
-            bookmarks.map((bookmark: any) => (
+            (bookmarks as any[]).map((bookmark: any) => (
               <Card key={bookmark.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
@@ -1112,7 +1112,7 @@ export default function KnowledgeBase() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None (Top Level)</SelectItem>
-                  {categories.filter((cat: any) => cat.id !== editingCategory?.id).map((category: any) => (
+                  {(categories as any[]).filter((cat: any) => cat.id !== editingCategory?.id).map((category: any) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>
