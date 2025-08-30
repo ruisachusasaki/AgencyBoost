@@ -272,19 +272,6 @@ export default function AutomationTriggers() {
                 </div>
               </div>
             </CardHeader>
-            {trigger.configSchema && Object.keys(trigger.configSchema).length > 0 && (
-              <CardContent className="pt-0">
-                <div className="bg-gray-50 rounded p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Settings className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">Configuration Schema</span>
-                  </div>
-                  <pre className="text-xs text-gray-600 overflow-x-auto">
-                    {JSON.stringify(trigger.configSchema, null, 2)}
-                  </pre>
-                </div>
-              </CardContent>
-            )}
           </Card>
         ))}
 
@@ -368,6 +355,28 @@ export default function AutomationTriggers() {
                 placeholder="Describe when this trigger should fire..."
                 data-testid="textarea-trigger-description"
               />
+            </div>
+            <div>
+              <Label htmlFor="configSchema">Configuration Schema (JSON)</Label>
+              <Textarea
+                id="configSchema"
+                value={JSON.stringify(formData.configSchema, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const parsed = JSON.parse(e.target.value);
+                    setFormData({ ...formData, configSchema: parsed });
+                  } catch (err) {
+                    // Invalid JSON, keep the string value for now
+                  }
+                }}
+                placeholder='{"fields": [{"name": "fieldName", "label": "Field Label", "type": "text", "required": false}]}'
+                className="font-mono text-sm"
+                rows={6}
+                data-testid="textarea-config-schema"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Define configuration fields that users can set when using this trigger in workflows
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
