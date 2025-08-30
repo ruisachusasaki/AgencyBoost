@@ -21,26 +21,50 @@ import { Badge } from "@/components/ui/badge";
 import { Play, Settings, Mail, Plus, Check, X } from "lucide-react";
 
 // Custom Node Components
-const TriggerNode = ({ data }: { data: any }) => (
-  <Card className="w-64 border-2 border-blue-500 bg-blue-50 shadow-lg hover:shadow-xl transition-shadow cursor-move relative">
-    <Handle
-      type="source"
-      position={Position.Bottom}
-      className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
-    />
-    <CardHeader className="pb-2">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-        <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
-          TRIGGER
-        </Badge>
-      </div>
-    </CardHeader>
-    <CardContent className="pt-0">
-      <div className="font-medium text-blue-900">{data.label}</div>
-    </CardContent>
-  </Card>
-);
+const TriggerNode = ({ data }: { data: any }) => {
+  const hasConditions = data.trigger?.conditions && Object.keys(data.trigger.conditions).some(
+    key => data.trigger.conditions[key] !== "" && data.trigger.conditions[key] !== null && data.trigger.conditions[key] !== undefined
+  );
+
+  return (
+    <Card className="w-64 border-2 border-blue-500 bg-blue-50 shadow-lg hover:shadow-xl transition-shadow cursor-pointer relative group">
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
+      />
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
+              TRIGGER
+            </Badge>
+          </div>
+          {hasConditions && (
+            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+              ✓ Configured
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0" onClick={() => data.onConfigure?.()}>
+        <div className="font-medium text-blue-900">{data.label}</div>
+        {hasConditions && (
+          <div className="text-xs text-blue-700 mt-1">
+            Click to edit conditions
+          </div>
+        )}
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2">
+          <Button size="sm" variant="outline" className="text-xs h-6">
+            <Settings className="h-3 w-3 mr-1" />
+            Configure
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const ActionNode = ({ data }: { data: any }) => (
   <Card className="w-64 border-2 border-green-500 bg-green-50 shadow-lg hover:shadow-xl transition-shadow cursor-move relative">
@@ -148,19 +172,21 @@ const EndNode = ({ data }: { data: any }) => (
 
 interface WorkflowCanvasProps {
   workflowData: {
-    triggers: Array<{ type: string; name?: string }>;
+    triggers: Array<{ type: string; name?: string; conditions?: any }>;
     actions: any[];
   };
   onAddTrigger: () => void;
   onAddAction: () => void;
   onAddCondition: () => void;
+  onConfigureTrigger?: (triggerIndex: number) => void;
 }
 
 export default function WorkflowCanvas({ 
   workflowData, 
   onAddTrigger, 
   onAddAction, 
-  onAddCondition 
+  onAddCondition,
+  onConfigureTrigger
 }: WorkflowCanvasProps) {
   // Define custom node types
   const nodeTypes: NodeTypes = useMemo(() => ({
@@ -210,6 +236,8 @@ export default function WorkflowCanvas({
           position: { x: xPosition + (index * 300), y: yPosition },
           data: {
             label: trigger.name,
+            trigger: trigger,
+            onConfigure: () => onConfigureTrigger?.(index),
           },
         });
       }

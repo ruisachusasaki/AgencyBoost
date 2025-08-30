@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 import WorkflowCanvas from "@/components/workflow-canvas";
+import TriggerConfigPanel from "@/components/trigger-config-panel";
 
 export default function WorkflowBuilderPage() {
   const [location, navigate] = useLocation();
@@ -26,6 +27,11 @@ export default function WorkflowBuilderPage() {
   const [showActionPane, setShowActionPane] = useState(false);
   const [triggerSearch, setTriggerSearch] = useState("");
   const [actionSearch, setActionSearch] = useState("");
+  const [configuringTrigger, setConfiguringTrigger] = useState<{
+    trigger: any;
+    definition: any;
+    index: number;
+  } | null>(null);
   
   const [workflowData, setWorkflowData] = useState<{
     name: string;
@@ -49,6 +55,15 @@ export default function WorkflowBuilderPage() {
   const { data: existingWorkflow, isLoading: isLoadingWorkflow } = useQuery({
     queryKey: ["/api/workflows", editingWorkflowId],
     enabled: !!editingWorkflowId,
+  });
+
+  // Fetch available triggers and actions
+  const { data: availableTriggers } = useQuery({
+    queryKey: ["/api/automation-triggers"]
+  });
+
+  const { data: availableActions } = useQuery({
+    queryKey: ["/api/automation-actions"]
   });
 
   // Populate form with existing data when editing
@@ -177,7 +192,7 @@ export default function WorkflowBuilderPage() {
       settings: {}
     };
     
-    setWorkflowData(prev => ({
+    setWorkflowData((prev: any) => ({
       ...prev,
       actions: [...prev.actions, newAction]
     }));
@@ -186,6 +201,42 @@ export default function WorkflowBuilderPage() {
     toast({ 
       title: "Action Added", 
       description: `${action.name} has been added to your workflow` 
+    });
+  };
+
+  // Handler for configuring triggers
+  const handleConfigureTrigger = (triggerIndex: number) => {
+    const trigger = workflowData.triggers[triggerIndex];
+    if (!trigger) return;
+
+    // Find the trigger definition to get the config schema
+    const triggerDefinition = (availableTriggers as any[])?.find((t: any) => t.type === trigger.type);
+    if (!triggerDefinition) return;
+
+    setConfiguringTrigger({
+      trigger,
+      definition: triggerDefinition,
+      index: triggerIndex
+    });
+  };
+
+  // Handler for saving trigger configuration
+  const handleSaveTriggerConfig = (updatedTrigger: any) => {
+    if (configuringTrigger === null) return;
+
+    setWorkflowData((prev: any) => {
+      const newTriggers = [...prev.triggers];
+      newTriggers[configuringTrigger.index] = updatedTrigger;
+      return {
+        ...prev,
+        triggers: newTriggers
+      };
+    });
+
+    setConfiguringTrigger(null);
+    toast({
+      title: "Configuration Saved",
+      description: "Trigger conditions have been updated"
     });
   };
 
@@ -272,6 +323,7 @@ export default function WorkflowBuilderPage() {
                 workflowData={workflowData}
                 onAddTrigger={handleAddTrigger}
                 onAddAction={handleAddAction}
+                onConfigureTrigger={handleConfigureTrigger}
                 onAddCondition={() => {
                   // TODO: Implement condition adding
                   console.log('Add condition');
@@ -786,6 +838,18 @@ export default function WorkflowBuilderPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Trigger Configuration Panel */}
+      {configuringTrigger && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <TriggerConfigPanel
+            trigger={configuringTrigger.trigger}
+            triggerDefinition={configuringTrigger.definition}
+            onSave={handleSaveTriggerConfig}
+            onClose={() => setConfiguringTrigger(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

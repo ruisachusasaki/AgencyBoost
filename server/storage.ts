@@ -990,6 +990,33 @@ export class MemStorage implements IStorage {
         },
         isActive: true,
         createdAt: new Date()
+      },
+      {
+        id: "trigger-4",
+        name: "Client Status Changed",
+        type: "client_status_changed",
+        description: "Triggers when a client's status changes",
+        category: "contact_management",
+        configSchema: {
+          from_status: { 
+            type: "string", 
+            options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "From Status"
+          },
+          to_status: { 
+            type: "string", 
+            options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "To Status",
+            required: true
+          },
+          contact_source: { 
+            type: "string",
+            options: ["website", "referral", "cold_outreach", "social_media", "paid_ads"],
+            label: "Contact Source (Optional)"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
