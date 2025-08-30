@@ -1193,7 +1193,7 @@ export const workflows = pgTable("workflows", {
   clientId: varchar("client_id").references(() => clients.id),
   category: text("category"), // lead_management, email_marketing, task_automation, deal_management
   status: text("status").notNull().default("draft"), // draft, active, paused, archived
-  trigger: jsonb("trigger").notNull(), // trigger configuration
+  triggers: jsonb("triggers").notNull().default('[]'), // array of trigger configurations
   actions: jsonb("actions").notNull(), // array of actions
   conditions: jsonb("conditions"), // branching logic
   settings: jsonb("settings"), // workflow-specific settings
@@ -1231,7 +1231,7 @@ export const workflowTemplates = pgTable("workflow_templates", {
   category: text("category").notNull(),
   industry: text("industry"),
   useCase: text("use_case"),
-  trigger: jsonb("trigger").notNull(),
+  triggers: jsonb("triggers").notNull().default('[]'),
   actions: jsonb("actions").notNull(),
   conditions: jsonb("conditions"),
   settings: jsonb("settings"),

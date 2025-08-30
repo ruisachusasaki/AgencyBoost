@@ -31,20 +31,17 @@ export default function WorkflowBuilderPage() {
     name: string;
     description: string;
     status: "draft" | "active" | "paused";
-    trigger: {
+    triggers: Array<{
       type: string;
       conditions: any;
       name?: string;
-    };
+    }>;
     actions: any[];
   }>({
     name: "",
     description: "",
     status: "draft",
-    trigger: {
-      type: "manual",
-      conditions: {}
-    },
+    triggers: [],
     actions: []
   });
 
@@ -57,15 +54,13 @@ export default function WorkflowBuilderPage() {
   // Populate form with existing data when editing
   useEffect(() => {
     if (existingWorkflow && editingWorkflowId) {
+      const workflow = existingWorkflow as any;
       setWorkflowData({
-        name: (existingWorkflow as any).name || "",
-        description: (existingWorkflow as any).description || "",
-        status: (existingWorkflow as any).status || "draft",
-        trigger: (existingWorkflow as any).trigger || {
-          type: "manual",
-          conditions: {}
-        },
-        actions: (existingWorkflow as any).actions || []
+        name: workflow.name || "",
+        description: workflow.description || "",
+        status: workflow.status || "draft",
+        triggers: workflow.triggers || workflow.trigger ? [workflow.trigger] : [], // Handle backward compatibility
+        actions: workflow.actions || []
       });
     }
   }, [existingWorkflow, editingWorkflowId]);
@@ -127,7 +122,7 @@ export default function WorkflowBuilderPage() {
     
     setWorkflowData(prev => ({
       ...prev,
-      trigger: newTrigger
+      triggers: [...prev.triggers, newTrigger]
     }));
     
     setShowTriggerPane(false);

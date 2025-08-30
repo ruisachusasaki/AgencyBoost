@@ -2679,7 +2679,7 @@ export class MemStorage implements IStorage {
       clientId: workflowData.clientId || null,
       category: workflowData.category || null,
       status: workflowData.status || "draft",
-      trigger: workflowData.trigger,
+      triggers: workflowData.triggers || [],
       actions: workflowData.actions,
       conditions: workflowData.conditions || null,
       settings: workflowData.settings || null,

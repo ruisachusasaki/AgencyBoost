@@ -148,7 +148,7 @@ const EndNode = ({ data }: { data: any }) => (
 
 interface WorkflowCanvasProps {
   workflowData: {
-    trigger: { type: string; name?: string };
+    triggers: Array<{ type: string; name?: string }>;
     actions: any[];
   };
   onAddTrigger: () => void;
@@ -178,8 +178,8 @@ export default function WorkflowCanvas({
     let yPosition = 100;
     const xPosition = 400;
 
-    // If no trigger, show "Add New Trigger" card
-    if (!workflowData.trigger || !workflowData.trigger.name) {
+    // If no triggers, show "Add New Trigger" card
+    if (!workflowData.triggers || workflowData.triggers.length === 0) {
       nodes.push({
         id: 'add-trigger',
         type: 'addTriggerNode',
@@ -190,7 +190,7 @@ export default function WorkflowCanvas({
       });
       yPosition += 150;
       
-      // Add plus button below for actions (but only if no trigger yet)
+      // Add end node below for empty workflow
       nodes.push({
         id: 'end-placeholder',
         type: 'endNode',
@@ -201,29 +201,34 @@ export default function WorkflowCanvas({
       return nodes;
     }
 
-    // Add trigger node if it exists
-    if (workflowData.trigger && workflowData.trigger.name) {
-      nodes.push({
-        id: 'trigger-1',
-        type: 'triggerNode',
-        position: { x: xPosition, y: yPosition },
-        data: {
-          label: workflowData.trigger.name,
-        },
-      });
-      yPosition += 150;
-      
-      // Add plus button after trigger for actions
-      nodes.push({
-        id: 'add-action-after-trigger',
-        type: 'addButtonNode',
-        position: { x: xPosition + 110, y: yPosition },
-        data: {
-          onAdd: onAddAction,
-        },
-      });
-      yPosition += 100;
-    }
+    // Add all trigger nodes
+    workflowData.triggers.forEach((trigger, index) => {
+      if (trigger && trigger.name) {
+        nodes.push({
+          id: `trigger-${index + 1}`,
+          type: 'triggerNode',
+          position: { x: xPosition + (index * 300), y: yPosition },
+          data: {
+            label: trigger.name,
+          },
+        });
+      }
+    });
+    yPosition += 150;
+    
+    // Add plus button after triggers for actions (centered if multiple triggers)
+    const triggerCount = workflowData.triggers.length;
+    const centerX = triggerCount > 1 ? xPosition + ((triggerCount - 1) * 150) : xPosition;
+    
+    nodes.push({
+      id: 'add-action-after-triggers',
+      type: 'addButtonNode',
+      position: { x: centerX + 110, y: yPosition },
+      data: {
+        onAdd: onAddAction,
+      },
+    });
+    yPosition += 100;
 
     // Add action nodes
     workflowData.actions.forEach((action, index) => {
@@ -279,26 +284,30 @@ export default function WorkflowCanvas({
   const generateInitialEdges = (): Edge[] => {
     const edges: Edge[] = [];
     
-    // Only generate edges if we have a trigger
-    if (!workflowData.trigger || !workflowData.trigger.name) {
+    // Only generate edges if we have triggers
+    if (!workflowData.triggers || workflowData.triggers.length === 0) {
       return edges;
     }
 
-    // Connect trigger to first action (if exists) or to add button
+    // Connect all triggers to the add button or first action
     if (workflowData.actions.length > 0) {
-      // Connect trigger to first action
-      edges.push({
-        id: 'edge-trigger-action1',
-        source: 'trigger-1',
-        target: 'action-1',
-        type: 'smoothstep',
-        markerEnd: {
-          type: MarkerType.Arrow,
-        },
-        style: {
-          strokeWidth: 2,
-          stroke: '#46a1a0',
-        },
+      // Connect all triggers to first action
+      workflowData.triggers.forEach((trigger, index) => {
+        if (trigger && trigger.name) {
+          edges.push({
+            id: `edge-trigger${index + 1}-action1`,
+            source: `trigger-${index + 1}`,
+            target: 'action-1',
+            type: 'smoothstep',
+            markerEnd: {
+              type: MarkerType.Arrow,
+            },
+            style: {
+              strokeWidth: 2,
+              stroke: '#46a1a0',
+            },
+          });
+        }
       });
 
       // Connect each action to the next action
@@ -348,24 +357,28 @@ export default function WorkflowCanvas({
         },
       });
     } else {
-      // No actions yet - connect trigger to add button, then to END
-      edges.push({
-        id: 'edge-trigger-add',
-        source: 'trigger-1',
-        target: 'add-action-after-trigger',
-        type: 'smoothstep',
-        markerEnd: {
-          type: MarkerType.Arrow,
-        },
-        style: {
-          strokeWidth: 2,
-          stroke: '#46a1a0',
-        },
+      // No actions yet - connect all triggers to add button, then to END
+      workflowData.triggers.forEach((trigger, index) => {
+        if (trigger && trigger.name) {
+          edges.push({
+            id: `edge-trigger${index + 1}-add`,
+            source: `trigger-${index + 1}`,
+            target: 'add-action-after-triggers',
+            type: 'smoothstep',
+            markerEnd: {
+              type: MarkerType.Arrow,
+            },
+            style: {
+              strokeWidth: 2,
+              stroke: '#46a1a0',
+            },
+          });
+        }
       });
 
       edges.push({
         id: 'edge-add-end',
-        source: 'add-action-after-trigger',
+        source: 'add-action-after-triggers',
         target: 'end-node',
         type: 'smoothstep',
         markerEnd: {
