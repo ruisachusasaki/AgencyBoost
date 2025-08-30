@@ -422,6 +422,26 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       }
     }
 
+    // Handle Enter key for better navigation around void elements like embeds
+    if (event.key === 'Enter' && !showSlashMenu) {
+      const { selection } = editor;
+      if (selection && Range.isCollapsed(selection)) {
+        const [node, path] = Editor.node(editor, selection);
+        
+        // Check if we're at the edge of an embed or other void element
+        if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
+          event.preventDefault();
+          
+          // Insert a new paragraph after the void element
+          const nextPath = Path.next(path);
+          const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+          Transforms.insertNodes(editor, newParagraph, { at: nextPath });
+          Transforms.select(editor, Editor.start(editor, nextPath));
+          return;
+        }
+      }
+    }
+
 
     // Handle slash commands
     if (event.key === '/') {
@@ -1169,9 +1189,11 @@ const EmbedBlock = ({ attributes, children, element }: any) => {
   };
 
   return (
-    <div {...attributes} className="embed-block my-4" contentEditable={false}>
-      {renderEmbed()}
-      <div className="sr-only">{children}</div>
+    <div {...attributes} className="embed-block my-4">
+      <div contentEditable={false} className="relative">
+        {renderEmbed()}
+      </div>
+      <div style={{ height: 0, overflow: 'hidden' }}>{children}</div>
     </div>
   );
 };
