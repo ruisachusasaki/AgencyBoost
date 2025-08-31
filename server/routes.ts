@@ -8837,6 +8837,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get form fields for a specific form
+  app.get("/api/form-fields", async (req, res) => {
+    try {
+      const formId = req.query.formId as string;
+      if (!formId) {
+        return res.status(400).json({ message: "formId parameter is required" });
+      }
+      
+      const fieldsResult = await db.select()
+        .from(formFields)
+        .leftJoin(customFields, eq(formFields.customFieldId, customFields.id))
+        .where(eq(formFields.formId, formId))
+        .orderBy(formFields.order);
+      
+      // Format the response to include custom field info
+      const fields = fieldsResult.map(row => ({
+        ...row.form_fields,
+        customField: row.custom_fields
+      }));
+      
+      res.json(fields);
+    } catch (error) {
+      console.error("Error fetching form fields:", error);
+      res.status(500).json({ message: "Failed to fetch form fields" });
+    }
+  });
+
   app.post("/api/forms", async (req, res) => {
     try {
       const { fields, ...formData } = req.body;
