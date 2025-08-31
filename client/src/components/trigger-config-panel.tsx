@@ -428,115 +428,108 @@ export default function TriggerConfigPanel({
   const hasConditions = Object.keys(conditions).some(key => conditions[key] !== "" && conditions[key] !== null && conditions[key] !== undefined);
 
   return (
-    <Card className="w-80 border-2 border-blue-500 bg-white shadow-lg">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-blue-600" />
-            <CardTitle className="text-lg text-blue-900">Configure Trigger</CardTitle>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="space-y-2">
-          <Badge variant="outline" className="bg-blue-100 text-blue-800">
-            {trigger.name}
-          </Badge>
-          {triggerDefinition && (
-            <p className="text-sm text-muted-foreground">{triggerDefinition.description}</p>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {triggerDefinition?.configSchema ? (
-          <>
-            <div className="space-y-4">
-              {/* Always show form selection first */}
-              {triggerDefinition.configSchema.form_id && 
-                renderConfigField("form_id", triggerDefinition.configSchema.form_id)
-              }
-              
-              {/* Add separator if form_id exists */}
-              {triggerDefinition.configSchema.form_id && Object.keys(triggerDefinition.configSchema).length > 1 && (
-                <Separator className="my-4" />
-              )}
-              
-              {/* Then show filters and other fields */}
-              {Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
-                if (fieldName === "form_id") return null; // Already rendered above
-                return renderConfigField(fieldName, fieldSchema);
-              })}
-            </div>
-            
-            {hasConditions && (
-              <div className="pt-2 border-t">
-                <p className="text-xs text-green-600 font-medium mb-2">✓ Conditions Configured</p>
-                <div className="space-y-1">
-                  {Object.entries(conditions).map(([key, value]) => {
-                    if (value === "" || value === null || value === undefined) return null;
-                    
-                    // For form_id, show the form name instead of the ID
-                    if (key === "form_id") {
-                      const selectedForm = forms.find((form: any) => form.id === value);
-                      return (
-                        <div key={key} className="text-xs text-muted-foreground">
-                          <span className="font-medium">Form:</span> {selectedForm?.name || value}
-                        </div>
-                      );
-                    }
+    <div className="space-y-6">
+      {/* Trigger Info Header */}
+      <div className="space-y-3">
+        <Badge variant="outline" className="bg-blue-100 text-blue-800 w-fit">
+          {trigger.name}
+        </Badge>
+        {triggerDefinition?.description && (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {triggerDefinition.description}
+          </p>
+        )}
+      </div>
 
-                    // For filters, show a summary of applied filters
-                    if (key === "filters" && Array.isArray(value) && value.length > 0) {
-                      const availableFields = getAvailableFields();
-                      return (
-                        <div key={key} className="text-xs text-muted-foreground">
-                          <span className="font-medium">Filters:</span>
-                          <div className="ml-2 mt-1 space-y-1">
-                            {value.map((filter: any, idx: number) => {
-                              const field = availableFields.find(f => f.id === filter.field_id);
-                              const fieldName = field?.name || filter.field_id;
-                              const operator = filter.operator?.replace(/_/g, ' ') || 'equals';
-                              return (
-                                <div key={idx} className="text-xs">
-                                  {fieldName} {operator} "{filter.value}"
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div key={key} className="text-xs text-muted-foreground">
-                        <span className="font-medium">{key.replace(/_/g, ' ')}:</span> {
-                          Array.isArray(value) ? value.join(', ') : String(value)
-                        }
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+      {/* Configuration Content */}
+      {triggerDefinition?.configSchema ? (
+        <>
+          <div className="space-y-4">
+            {/* Always show form selection first */}
+            {triggerDefinition.configSchema.form_id && 
+              renderConfigField("form_id", triggerDefinition.configSchema.form_id)
+            }
+            
+            {/* Add separator if form_id exists */}
+            {triggerDefinition.configSchema.form_id && Object.keys(triggerDefinition.configSchema).length > 1 && (
+              <Separator className="my-4" />
             )}
             
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                <Check className="h-4 w-4 mr-2" />
-                Save Configuration
-              </Button>
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">No configuration options available for this trigger.</p>
-            <Button onClick={onClose} className="mt-2">Close</Button>
+            {/* Then show filters and other fields */}
+            {Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
+              if (fieldName === "form_id") return null; // Already rendered above
+              return renderConfigField(fieldName, fieldSchema);
+            })}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          
+          {hasConditions && (
+            <div className="pt-2 border-t">
+              <p className="text-xs text-green-600 font-medium mb-2">✓ Conditions Configured</p>
+              <div className="space-y-1">
+                {Object.entries(conditions).map(([key, value]) => {
+                  if (value === "" || value === null || value === undefined) return null;
+                  
+                  // For form_id, show the form name instead of the ID
+                  if (key === "form_id") {
+                    const selectedForm = forms.find((form: any) => form.id === value);
+                    return (
+                      <div key={key} className="text-xs text-muted-foreground">
+                        <span className="font-medium">Form:</span> {selectedForm?.name || value}
+                      </div>
+                    );
+                  }
+
+                  // For filters, show a summary of applied filters
+                  if (key === "filters" && Array.isArray(value) && value.length > 0) {
+                    const availableFields = getAvailableFields();
+                    return (
+                      <div key={key} className="text-xs text-muted-foreground">
+                        <span className="font-medium">Filters:</span>
+                        <div className="ml-2 mt-1 space-y-1">
+                          {value.map((filter: any, idx: number) => {
+                            const field = availableFields.find(f => f.id === filter.field_id);
+                            const fieldName = field?.name || filter.field_id;
+                            const operator = filter.operator?.replace(/_/g, ' ') || 'equals';
+                            return (
+                              <div key={idx} className="text-xs">
+                                {fieldName} {operator} "{filter.value}"
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div key={key} className="text-xs text-muted-foreground">
+                      <span className="font-medium">{key.replace(/_/g, ' ')}:</span> {
+                        Array.isArray(value) ? value.join(', ') : String(value)
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-6 border-t">
+            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 flex-1">
+              <Check className="h-4 w-4 mr-2" />
+              Save Configuration
+            </Button>
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">No configuration options available for this trigger.</p>
+          <Button onClick={onClose} className="mt-4">Close</Button>
+        </div>
+      )}
+    </div>
   );
 }

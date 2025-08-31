@@ -926,17 +926,29 @@ export default function WorkflowBuilderPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Trigger Configuration Panel */}
-      {configuringTrigger && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <TriggerConfigPanel
-            trigger={configuringTrigger.trigger}
-            triggerDefinition={configuringTrigger.definition}
-            onSave={handleSaveTriggerConfig}
-            onClose={() => setConfiguringTrigger(null)}
-          />
-        </div>
-      )}
+      {/* Trigger Configuration Side Panel */}
+      <Sheet open={!!configuringTrigger} onOpenChange={() => setConfiguringTrigger(null)}>
+        <SheetContent side="right" className="w-[600px] sm:w-[600px] overflow-y-auto">
+          {configuringTrigger && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Configure {configuringTrigger.definition?.name || 'Trigger'}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <TriggerConfigPanel
+                  trigger={configuringTrigger.trigger}
+                  triggerDefinition={configuringTrigger.definition}
+                  onSave={handleSaveTriggerConfig}
+                  onClose={() => setConfiguringTrigger(null)}
+                />
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmation} onOpenChange={() => setDeleteConfirmation(null)}>
