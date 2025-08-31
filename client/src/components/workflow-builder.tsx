@@ -98,8 +98,6 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
   // Fetch triggers from API
   const { data: apiTriggers = [] } = useQuery<any[]>({
     queryKey: ["/api/automation-triggers"],
-    staleTime: 0, // Force fresh fetch
-    cacheTime: 0, // Don't cache
   });
 
 
@@ -275,7 +273,7 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                   </Button>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
-                    {apiTriggers.map((trigger: any) => (
+                    {(apiTriggers as any[]).map((trigger: any) => (
                       <Card 
                         key={trigger.id} 
                         className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-[#46a1a0]"
