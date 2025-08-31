@@ -84,7 +84,7 @@ export default function TriggerConfigPanel({
       const activeForms = forms.filter((form: any) => form.status === "published");
       return (
         <div key={fieldName} className="space-y-2">
-          <Label htmlFor={fieldName}>{label}</Label>
+          <Label htmlFor={fieldName}>Choose a Form</Label>
           <Select 
             value={value} 
             onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
@@ -221,6 +221,17 @@ export default function TriggerConfigPanel({
                 <div className="space-y-1">
                   {Object.entries(conditions).map(([key, value]) => {
                     if (value === "" || value === null || value === undefined) return null;
+                    
+                    // For form_id, show the form name instead of the ID
+                    if (key === "form_id") {
+                      const selectedForm = forms.find((form: any) => form.id === value);
+                      return (
+                        <div key={key} className="text-xs text-muted-foreground">
+                          <span className="font-medium">Form:</span> {selectedForm?.name || value}
+                        </div>
+                      );
+                    }
+                    
                     return (
                       <div key={key} className="text-xs text-muted-foreground">
                         <span className="font-medium">{key.replace(/_/g, ' ')}:</span> {
