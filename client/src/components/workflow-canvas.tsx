@@ -232,7 +232,7 @@ export default function WorkflowCanvas({
     let yPosition = 100;
     const xPosition = 400;
 
-    // If no triggers, show "Add New Trigger" card
+    // If no triggers, show "Add New Trigger" card but continue to render actions
     if (!workflowData.triggers || workflowData.triggers.length === 0) {
       nodes.push({
         id: 'add-trigger',
@@ -244,93 +244,98 @@ export default function WorkflowCanvas({
       });
       yPosition += 150;
       
-      // Add end node below for empty workflow
-      nodes.push({
-        id: 'end-placeholder',
-        type: 'endNode',
-        position: { x: xPosition + 66, y: yPosition + 50 },
-        data: {},
+      // Continue to render actions even without triggers
+    } else {
+
+      // Add all trigger nodes
+      workflowData.triggers.forEach((trigger, index) => {
+        if (trigger && trigger.name) {
+          nodes.push({
+            id: `trigger-${index + 1}`,
+            type: 'triggerNode',
+            position: { x: xPosition + (index * 300), y: yPosition },
+            data: {
+              label: trigger.name,
+              trigger: trigger,
+              onConfigure: () => onConfigureTrigger?.(index),
+              onDelete: () => onDeleteTrigger?.(index),
+            },
+          });
+        }
       });
       
-      return nodes;
-    }
-
-    // Add all trigger nodes
-    workflowData.triggers.forEach((trigger, index) => {
-      if (trigger && trigger.name) {
-        nodes.push({
-          id: `trigger-${index + 1}`,
-          type: 'triggerNode',
-          position: { x: xPosition + (index * 300), y: yPosition },
-          data: {
-            label: trigger.name,
-            trigger: trigger,
-            onConfigure: () => onConfigureTrigger?.(index),
-            onDelete: () => onDeleteTrigger?.(index),
-          },
-        });
-      }
-    });
-    
-    // Add "Add Another Trigger" button after existing triggers
-    const triggerCount = workflowData.triggers.length;
-    nodes.push({
-      id: 'add-another-trigger',
-      type: 'addTriggerNode',
-      position: { x: xPosition + (triggerCount * 300), y: yPosition },
-      data: {
-        onAdd: onAddTrigger,
-        label: 'Add Another Trigger'
-      },
-    });
-    
-    yPosition += 150;
-    
-    // Add plus button after triggers for actions (centered if multiple triggers)
-    const centerX = triggerCount > 1 ? xPosition + ((triggerCount - 1) * 150) : xPosition;
-    
-    nodes.push({
-      id: 'add-action-after-triggers',
-      type: 'addButtonNode',
-      position: { x: centerX + 110, y: yPosition },
-      data: {
-        onAdd: onAddAction,
-      },
-    });
-    yPosition += 100;
-
-    // Add action nodes
-    workflowData.actions.forEach((action, index) => {
+      // Add "Add Another Trigger" button after existing triggers
+      const triggerCount = workflowData.triggers.length;
       nodes.push({
-        id: `action-${index + 1}`,
-        type: 'actionNode',
-        position: { x: xPosition, y: yPosition },
+        id: 'add-another-trigger',
+        type: 'addTriggerNode',
+        position: { x: xPosition + (triggerCount * 300), y: yPosition },
         data: {
-          label: action.name,
-          onConfigure: () => console.log('Configure action', index),
-          onDelete: () => onDeleteAction?.(index),
+          onAdd: onAddTrigger,
+          label: 'Add Another Trigger'
+        },
+      });
+      
+      yPosition += 150;
+      
+      // Add plus button after triggers for actions (centered if multiple triggers)
+      const centerX = triggerCount > 1 ? xPosition + ((triggerCount - 1) * 150) : xPosition;
+      
+      nodes.push({
+        id: 'add-action-after-triggers',
+        type: 'addButtonNode',
+        position: { x: centerX + 110, y: yPosition },
+        data: {
+          onAdd: onAddAction,
         },
       });
       yPosition += 150;
-      
-      // Add plus button after each action (except the last one)
-      if (index < workflowData.actions.length - 1) {
+    }
+
+    // Always render actions (whether triggers exist or not)
+    if (workflowData.actions && workflowData.actions.length > 0) {
+      // Add action nodes
+      workflowData.actions.forEach((action, index) => {
         nodes.push({
-          id: `add-after-action-${index}`,
-          type: 'addButtonNode',
-          position: { x: xPosition + 110, y: yPosition },
+          id: `action-${index + 1}`,
+          type: 'actionNode',
+          position: { x: xPosition, y: yPosition },
           data: {
-            onAdd: onAddAction,
+            label: action.name,
+            onConfigure: () => console.log('Configure action', index),
+            onDelete: () => onDeleteAction?.(index),
           },
         });
-        yPosition += 100;
-      }
-    });
+        yPosition += 150;
+        
+        // Add plus button after each action (except the last one)
+        if (index < workflowData.actions.length - 1) {
+          nodes.push({
+            id: `add-after-action-${index}`,
+            type: 'addButtonNode',
+            position: { x: xPosition + 110, y: yPosition },
+            data: {
+              onAdd: onAddAction,
+            },
+          });
+          yPosition += 100;
+        }
+      });
 
-    // Add final plus button and END node
-    if (workflowData.actions.length > 0) {
+      // Add final plus button after actions
       nodes.push({
         id: 'add-button-final',
+        type: 'addButtonNode',
+        position: { x: xPosition + 110, y: yPosition },
+        data: {
+          onAdd: onAddAction,
+        },
+      });
+      yPosition += 100;
+    } else if ((!workflowData.triggers || workflowData.triggers.length === 0)) {
+      // If no triggers and no actions, just add an action button
+      nodes.push({
+        id: 'add-first-action',
         type: 'addButtonNode',
         position: { x: xPosition + 110, y: yPosition },
         data: {
