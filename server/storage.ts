@@ -955,13 +955,79 @@ export class MemStorage implements IStorage {
     const triggers: AutomationTrigger[] = [
       {
         id: "trigger-1",
-        name: "New Contact Created",
-        type: "contact_created",
-        description: "Triggers when a new contact is added to the system",
+        name: "New Client Created",
+        type: "client_created",
+        description: "Triggers when a new client is added to the system",
         category: "contact_management",
         configSchema: {
-          source: { type: "string", options: ["website", "manual", "import", "api"] },
-          tags: { type: "array", items: { type: "string" } }
+          status: { 
+            type: "string", 
+            options: ["active", "inactive", "pending"],
+            label: "Client Status"
+          },
+          contactType: { 
+            type: "string", 
+            options: ["lead", "client"],
+            label: "Contact Type"
+          },
+          contactSource: { 
+            type: "string", 
+            options: ["website", "referral", "cold_outreach", "social_media", "paid_ads", "manual", "import"],
+            label: "Contact Source"
+          },
+          company: {
+            type: "string",
+            label: "Company Name"
+          },
+          city: {
+            type: "string", 
+            label: "City"
+          },
+          state: {
+            type: "string",
+            label: "State/Province"
+          },
+          country: {
+            type: "string",
+            label: "Country"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-1a",
+        name: "New Lead Created",
+        type: "lead_created", 
+        description: "Triggers when a new lead is added to the pipeline",
+        category: "contact_management",
+        configSchema: {
+          source: { 
+            type: "string", 
+            options: ["website", "referral", "social_media", "advertising", "cold_outreach"],
+            label: "Lead Source"
+          },
+          status: {
+            type: "string",
+            options: ["new", "contacted", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "Lead Status"
+          },
+          value: {
+            type: "number",
+            label: "Deal Value ($)",
+            placeholder: "e.g., 5000"
+          },
+          probability: {
+            type: "number",
+            label: "Probability (%)",
+            min: 0,
+            max: 100,
+            placeholder: "e.g., 75"
+          },
+          assignedTo: {
+            type: "staff_select",
+            label: "Assigned Staff Member"
+          }
         },
         isActive: true,
         createdAt: new Date()

@@ -391,6 +391,39 @@ export default function TriggerConfigPanel({
       );
     }
 
+    if (fieldSchema.type === "staff_select") {
+      // For staff selection, we'll need to fetch staff data
+      // For now, using placeholder staff options
+      const staffOptions = [
+        { id: "staff-1", name: "John Smith" },
+        { id: "staff-2", name: "Sarah Johnson" },
+        { id: "staff-3", name: "Mike Wilson" },
+        { id: "staff-4", name: "Emily Davis" }
+      ];
+      
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {staffOptions.map((staff: any) => (
+                <SelectItem key={staff.id} value={staff.id}>
+                  {staff.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
     if (fieldSchema.type === "boolean") {
       return (
         <div key={fieldName} className="flex items-center space-x-2">
