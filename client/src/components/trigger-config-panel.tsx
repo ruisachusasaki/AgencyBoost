@@ -105,9 +105,9 @@ export default function TriggerConfigPanel({
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="" disabled>
+                <div className="p-2 text-center text-sm text-muted-foreground">
                   No published forms available
-                </SelectItem>
+                </div>
               )}
             </SelectContent>
           </Select>
