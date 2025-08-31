@@ -452,9 +452,21 @@ export default function TriggerConfigPanel({
         {triggerDefinition?.configSchema ? (
           <>
             <div className="space-y-4">
-              {Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => 
-                renderConfigField(fieldName, fieldSchema)
+              {/* Always show form selection first */}
+              {triggerDefinition.configSchema.form_id && 
+                renderConfigField("form_id", triggerDefinition.configSchema.form_id)
+              }
+              
+              {/* Add separator if form_id exists */}
+              {triggerDefinition.configSchema.form_id && Object.keys(triggerDefinition.configSchema).length > 1 && (
+                <Separator className="my-4" />
               )}
+              
+              {/* Then show filters and other fields */}
+              {Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
+                if (fieldName === "form_id") return null; // Already rendered above
+                return renderConfigField(fieldName, fieldSchema);
+              })}
             </div>
             
             {hasConditions && (
