@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { X, Settings, Check, Plus, Trash2, Filter } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TriggerConfigPanelProps {
   trigger: {
@@ -57,6 +60,27 @@ export default function TriggerConfigPanel({
   // Fetch custom fields for the filter dropdowns
   const { data: customFields = [] } = useQuery<any[]>({
     queryKey: ["/api/custom-fields"],
+  });
+
+  // Fetch tags for tag autocomplete
+  const { data: tags = [] } = useQuery<any[]>({
+    queryKey: ["/api/tags"],
+  });
+
+  const queryClient = useQueryClient();
+
+  // Mutation to create new tags
+  const createTagMutation = useMutation({
+    mutationFn: async (tagName: string) => {
+      const response = await apiRequest("POST", "/api/tags", {
+        name: tagName,
+        color: "#3B82F6" // Default blue color
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
+    }
   });
 
   useEffect(() => {
@@ -317,6 +341,113 @@ export default function TriggerConfigPanel({
             </SelectContent>
           </Select>
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    // Special handling for tag_name fields - show tag autocomplete with create new functionality
+    if (fieldName === "tag_name" && fieldSchema.type === "string") {
+      const [open, setOpen] = useState(false);
+      const [searchValue, setSearchValue] = useState("");
+
+      const filteredTags = tags.filter((tag: any) => 
+        tag.name.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      
+      const exactMatch = tags.find((tag: any) => 
+        tag.name.toLowerCase() === searchValue.toLowerCase()
+      );
+
+      const handleCreateTag = async () => {
+        if (searchValue.trim() && !exactMatch) {
+          try {
+            await createTagMutation.mutateAsync(searchValue.trim());
+            setConditions((prev: any) => ({ ...prev, [fieldName]: searchValue.trim() }));
+            setOpen(false);
+            setSearchValue("");
+          } catch (error) {
+            console.error("Failed to create tag:", error);
+          }
+        }
+      };
+
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-full justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  {value || "Select or create a tag..."}
+                </div>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+              <Command>
+                <CommandInput 
+                  placeholder="Search tags..." 
+                  value={searchValue}
+                  onValueChange={setSearchValue}
+                />
+                <CommandEmpty>
+                  {searchValue.trim() && !exactMatch ? (
+                    <div className="p-2">
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        onClick={handleCreateTag}
+                        disabled={createTagMutation.isPending}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create "{searchValue.trim()}"
+                      </Button>
+                    </div>
+                  ) : (
+                    "No tags found."
+                  )}
+                </CommandEmpty>
+                {filteredTags.length > 0 && (
+                  <CommandGroup>
+                    {filteredTags.map((tag: any) => (
+                      <CommandItem
+                        key={tag.id}
+                        value={tag.name}
+                        onSelect={(currentValue) => {
+                          setConditions((prev: any) => ({ ...prev, [fieldName]: currentValue }));
+                          setOpen(false);
+                          setSearchValue("");
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-4 w-4" />
+                          {tag.name}
+                        </div>
+                        <Check
+                          className={`ml-auto h-4 w-4 ${
+                            value === tag.name ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+          {value && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Tag className="h-3 w-3" />
+              Selected: <Badge variant="secondary">{value}</Badge>
+            </div>
+          )}
         </div>
       );
     }
