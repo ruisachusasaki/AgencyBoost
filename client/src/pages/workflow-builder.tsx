@@ -928,7 +928,7 @@ export default function WorkflowBuilderPage() {
 
       {/* Trigger Configuration Side Panel */}
       <Sheet open={!!configuringTrigger} onOpenChange={() => setConfiguringTrigger(null)}>
-        <SheetContent side="right" className="w-[800px] sm:w-[800px] overflow-y-auto">
+        <SheetContent side="right" className="w-[800px] sm:w-[800px] sm:max-w-none overflow-y-auto">
           {configuringTrigger && (
             <>
               <SheetHeader>
