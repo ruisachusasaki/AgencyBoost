@@ -102,9 +102,6 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
     cacheTime: 0, // Don't cache
   });
 
-  // Debug: Log trigger count
-  console.log("WorkflowBuilder - API Triggers count:", apiTriggers.length);
-  console.log("WorkflowBuilder - Triggers:", apiTriggers.slice(0, 3));
 
   // Map trigger types to icons
   const getIconForTrigger = (type: string) => {
@@ -278,9 +275,6 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                   </Button>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="col-span-2 text-sm text-gray-500 mb-2">
-                      Found {apiTriggers.length} triggers from database
-                    </div>
                     {apiTriggers.map((trigger: any) => (
                       <Card 
                         key={trigger.id} 
