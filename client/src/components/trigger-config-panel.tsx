@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,11 @@ export default function TriggerConfigPanel({
 }: TriggerConfigPanelProps) {
   const [conditions, setConditions] = useState(trigger.conditions || {});
 
+  // Fetch all forms for form_id dropdowns
+  const { data: forms = [] } = useQuery<any[]>({
+    queryKey: ["/api/forms"],
+  });
+
   useEffect(() => {
     setConditions(trigger.conditions || {});
   }, [trigger]);
@@ -66,6 +72,43 @@ export default function TriggerConfigPanel({
                   {option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    // Special handling for form_id fields - show form dropdown
+    if (fieldName === "form_id" && fieldSchema.type === "string") {
+      const activeForms = forms.filter((form: any) => form.status === "published");
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a form" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeForms.length > 0 ? (
+                activeForms.map((form: any) => (
+                  <SelectItem key={form.id} value={form.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{form.name}</span>
+                      {form.description && (
+                        <span className="text-xs text-muted-foreground">{form.description}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="" disabled>
+                  No published forms available
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
