@@ -1056,12 +1056,7 @@ export default function TriggerConfigPanel({
               {calendars.length > 0 ? (
                 calendars.map((calendar: any) => (
                   <SelectItem key={calendar.id} value={calendar.id}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{calendar.name}</span>
-                      {calendar.description && (
-                        <span className="text-xs text-muted-foreground">{calendar.description}</span>
-                      )}
-                    </div>
+                    {calendar.name}
                   </SelectItem>
                 ))
               ) : (
