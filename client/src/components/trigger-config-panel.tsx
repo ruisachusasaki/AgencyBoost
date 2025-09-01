@@ -566,32 +566,53 @@ export default function TriggerConfigPanel({
                 </SelectContent>
               </Select>
             ) : selectedField?.type === "task_select" ? (
-              <Select
-                value={filter.value}
-                onValueChange={(value) => updateFilter(index, "value", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose task" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tasks.length > 0 ? (
-                    tasks.map((task: any) => (
-                      <SelectItem key={task.id} value={task.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{task.title}</span>
-                          {task.project && (
-                            <span className="text-xs text-muted-foreground">Project: {task.project.name}</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <div className="p-2 text-center text-sm text-muted-foreground">
-                      No tasks available
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                  >
+                    {filter.value ? 
+                      (() => {
+                        const selectedTask = tasks.find((task: any) => task.id === filter.value);
+                        return selectedTask ? selectedTask.title : "Task not found";
+                      })()
+                      : "Search and select task..."
+                    }
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search tasks..." />
+                    <CommandEmpty>No tasks found.</CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-auto">
+                      {tasks.map((task: any) => (
+                        <CommandItem
+                          key={task.id}
+                          value={`${task.title} ${task.project?.name || ''}`}
+                          onSelect={() => {
+                            updateFilter(index, "value", task.id);
+                          }}
+                        >
+                          <div className="flex flex-col w-full">
+                            <span className="font-medium">{task.title}</span>
+                            {task.project && (
+                              <span className="text-xs text-muted-foreground">Project: {task.project.name}</span>
+                            )}
+                          </div>
+                          <Check
+                            className={`ml-auto h-4 w-4 ${
+                              filter.value === task.id ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             ) : selectedField?.type === "dropdown" && selectedField?.options?.length > 0 ? (
               <Select
                 value={filter.value}
