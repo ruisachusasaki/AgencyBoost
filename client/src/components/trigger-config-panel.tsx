@@ -691,11 +691,32 @@ export default function TriggerConfigPanel({
               <Separator className="my-4" />
             )}
             
-            {/* Then show filters and other fields */}
-            {Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
-              if (fieldName === "form_id") return null; // Already rendered above
-              return renderConfigField(fieldName, fieldSchema);
-            })}
+            {/* For project triggers, show from_status and to_status first */}
+            {triggerDefinition.type?.includes('project') && (
+              <>
+                {triggerDefinition.configSchema.from_status && 
+                  renderConfigField("from_status", triggerDefinition.configSchema.from_status)
+                }
+                {triggerDefinition.configSchema.to_status && 
+                  renderConfigField("to_status", triggerDefinition.configSchema.to_status)
+                }
+                {(triggerDefinition.configSchema.from_status || triggerDefinition.configSchema.to_status) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+            
+            {/* For non-project triggers, show all fields normally */}
+            {!triggerDefinition.type?.includes('project') && 
+              Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
+                if (fieldName === "form_id") return null; // Already rendered above
+                return renderConfigField(fieldName, fieldSchema);
+              })
+            }
           </div>
           
           {hasConditions && (
