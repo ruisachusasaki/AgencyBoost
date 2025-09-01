@@ -103,6 +103,11 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/tasks"],
   });
 
+  // Fetch leads for lead selection filters
+  const { data: leads = [] } = useQuery<any[]>({
+    queryKey: ["/api/leads"],
+  });
+
   // Fetch lead pipeline stages for lead triggers
   const { data: leadPipelineStages = [] } = useQuery<any[]>({
     queryKey: ["/api/lead-pipeline-stages"],
@@ -1037,6 +1042,76 @@ export default function TriggerConfigPanel({
       );
     }
 
+    if (fieldSchema.type === "client_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.length > 0 ? (
+                clients.map((client: any) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{client.name}</span>
+                      {client.company && (
+                        <span className="text-xs text-muted-foreground">{client.company}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No clients available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "lead_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {leads.length > 0 ? (
+                leads.map((lead: any) => (
+                  <SelectItem key={lead.id} value={lead.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{lead.name}</span>
+                      {lead.company && (
+                        <span className="text-xs text-muted-foreground">{lead.company}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No leads available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
     if (fieldSchema.type === "custom_field_select") {
       return (
         <div key={fieldName} className="space-y-2">
@@ -1319,6 +1394,37 @@ export default function TriggerConfigPanel({
                 }
               </>
             )}
+
+            {/* For note added triggers, show core fields first */}
+            {triggerDefinition.type === 'note_added' && (
+              <>
+                {/* Entity Type Selection */}
+                {triggerDefinition.configSchema.entity_type && 
+                  renderConfigField("entity_type", triggerDefinition.configSchema.entity_type)
+                }
+                
+                {/* Client Selection (conditional - only show when entity_type is "client") */}
+                {triggerDefinition.configSchema.client_id && conditions.entity_type === "client" && 
+                  renderConfigField("client_id", triggerDefinition.configSchema.client_id)
+                }
+                
+                {/* Lead Selection (conditional - only show when entity_type is "lead") */}
+                {triggerDefinition.configSchema.lead_id && conditions.entity_type === "lead" && 
+                  renderConfigField("lead_id", triggerDefinition.configSchema.lead_id)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {triggerDefinition.configSchema.entity_type && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for note added triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
             
             {/* For other triggers, show all fields normally */}
             {!triggerDefinition.type?.includes('project') && 
@@ -1327,6 +1433,7 @@ export default function TriggerConfigPanel({
              !triggerDefinition.type?.includes('campaign') && 
              !triggerDefinition.type?.includes('invoice') && 
              triggerDefinition.type !== 'field_change' &&
+             triggerDefinition.type !== 'note_added' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);
