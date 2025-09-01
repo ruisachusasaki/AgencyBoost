@@ -404,6 +404,65 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
+    } else if (triggerDefinition?.type === 'appointment_booked') {
+      // For calendar triggers, add calendar-specific core fields FIRST
+      fields.push({
+        id: 'calendar',
+        name: 'Calendar',
+        type: 'calendar_select',
+        options: []
+      });
+      fields.push({
+        id: 'assignee',
+        name: 'Assigned Staff Member',
+        type: 'staff_select',
+        options: []
+      });
+      fields.push({
+        id: 'client',
+        name: 'Client',
+        type: 'client_select',
+        options: []
+      });
+      fields.push({
+        id: 'title',
+        name: 'Appointment Title',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'duration',
+        name: 'Duration (minutes)',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'booking_source',
+        name: 'Booking Source',
+        type: 'dropdown',
+        options: ['external_calendar_link', 'manually', 'api', 'sync_google', 'sync_microsoft']
+      });
+      fields.push({
+        id: 'tag',
+        name: 'Has Tag',
+        type: 'tag_select',
+        options: []
+      });
+      fields.push({
+        id: 'status',
+        name: 'Appointment Status',
+        type: 'dropdown',
+        options: ['scheduled', 'confirmed', 'cancelled', 'completed', 'no_show']
+      });
+      // Also include custom fields for appointments
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
     } else {
       // For other non-form triggers, use custom fields directly
       customFields.forEach((customField: any) => {
