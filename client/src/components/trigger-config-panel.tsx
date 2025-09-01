@@ -404,7 +404,7 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
-    } else if (triggerDefinition?.type === 'appointment_booked') {
+    } else if (triggerDefinition?.type === 'appointment_booked' || triggerDefinition?.type === 'appointment_status_changed') {
       // For calendar triggers, add calendar-specific core fields FIRST
       fields.push({
         id: 'calendar',
@@ -1587,30 +1587,45 @@ export default function TriggerConfigPanel({
             )}
 
             {/* For calendar triggers, show core fields first */}
-            {triggerDefinition.type === 'appointment_booked' && (
+            {(triggerDefinition.type === 'appointment_booked' || triggerDefinition.type === 'appointment_status_changed') && (
               <>
                 {/* Calendar Selection */}
                 {triggerDefinition.configSchema.calendar_id && 
                   renderConfigField("calendar_id", triggerDefinition.configSchema.calendar_id)
                 }
                 
-                {/* Staff Assignment */}
-                {triggerDefinition.configSchema.assigned_to && 
-                  renderConfigField("assigned_to", triggerDefinition.configSchema.assigned_to)
+                {/* Appointment Status Changed trigger - From/To Status */}
+                {triggerDefinition.configSchema.from_status && 
+                  renderConfigField("from_status", triggerDefinition.configSchema.from_status)
+                }
+                {triggerDefinition.configSchema.to_status && 
+                  renderConfigField("to_status", triggerDefinition.configSchema.to_status)
                 }
                 
-                {/* Tag Selection */}
-                {triggerDefinition.configSchema.has_tag && 
-                  renderConfigField("has_tag", triggerDefinition.configSchema.has_tag)
-                }
-                
-                {/* Booking Source */}
-                {triggerDefinition.configSchema.booking_source && 
-                  renderConfigField("booking_source", triggerDefinition.configSchema.booking_source)
-                }
+                {/* Appointment Booked trigger - Staff, Tag, Booking Source */}
+                {triggerDefinition.type === 'appointment_booked' && (
+                  <>
+                    {/* Staff Assignment */}
+                    {triggerDefinition.configSchema.assigned_to && 
+                      renderConfigField("assigned_to", triggerDefinition.configSchema.assigned_to)
+                    }
+                    
+                    {/* Tag Selection */}
+                    {triggerDefinition.configSchema.has_tag && 
+                      renderConfigField("has_tag", triggerDefinition.configSchema.has_tag)
+                    }
+                    
+                    {/* Booking Source */}
+                    {triggerDefinition.configSchema.booking_source && 
+                      renderConfigField("booking_source", triggerDefinition.configSchema.booking_source)
+                    }
+                  </>
+                )}
                 
                 {/* Add separator if core fields exist and filters exist */}
                 {(triggerDefinition.configSchema.calendar_id || 
+                  triggerDefinition.configSchema.from_status || 
+                  triggerDefinition.configSchema.to_status ||
                   triggerDefinition.configSchema.assigned_to || 
                   triggerDefinition.configSchema.has_tag || 
                   triggerDefinition.configSchema.booking_source) && 
@@ -1698,6 +1713,7 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'note_added' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
+             triggerDefinition.type !== 'appointment_status_changed' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);

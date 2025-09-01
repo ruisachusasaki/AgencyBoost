@@ -1120,6 +1120,39 @@ export class MemStorage implements IStorage {
         },
         isActive: true,
         createdAt: new Date()
+      },
+      {
+        id: "trigger-appointment-status-changed",
+        name: "Appointment Status Changed",
+        type: "appointment_status_changed",
+        description: "Triggers when an appointment status changes from one state to another",
+        category: "calendar_management",
+        configSchema: {
+          calendar_id: {
+            type: "calendar_select",
+            label: "Calendar",
+            required: false
+          },
+          from_status: {
+            type: "string",
+            label: "From Status",
+            options: ["scheduled", "confirmed", "cancelled", "completed", "no_show"],
+            required: false
+          },
+          to_status: {
+            type: "string", 
+            label: "To Status",
+            options: ["scheduled", "confirmed", "cancelled", "completed", "no_show"],
+            required: true
+          },
+          filters: {
+            type: "filters",
+            label: "Additional Filters",
+            description: "Add custom conditions to further refine when this trigger fires"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
