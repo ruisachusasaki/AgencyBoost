@@ -722,7 +722,7 @@ export default function TriggerConfigPanel({
     const label = fieldSchema.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
 
     // Special handling for filters array - show dynamic filter builder
-    if (fieldName === "filters" && fieldSchema.type === "array") {
+    if (fieldName === "filters" && (fieldSchema.type === "array" || fieldSchema.type === "filters")) {
       const filters = conditions.filters || [];
       return (
         <div key={fieldName} className="space-y-4">
