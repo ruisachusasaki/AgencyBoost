@@ -1083,6 +1083,38 @@ export class MemStorage implements IStorage {
         },
         isActive: true,
         createdAt: new Date()
+      },
+      {
+        id: "trigger-appointment-booked",
+        name: "Appointment Booked",
+        type: "appointment_booked",
+        description: "Triggers when a new appointment is scheduled",
+        category: "calendar_management",
+        configSchema: {
+          calendar_id: {
+            type: "calendar_select",
+            label: "Calendar",
+            required: false
+          },
+          staff_id: {
+            type: "staff_select", 
+            label: "Assigned Staff Member",
+            required: false
+          },
+          tag: {
+            type: "tag_select",
+            label: "Has Tag",
+            required: false
+          },
+          booking_source: {
+            type: "string",
+            label: "Booking Source",
+            options: ["external_calendar_link", "manually", "api", "sync_google", "sync_microsoft"],
+            required: false
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
