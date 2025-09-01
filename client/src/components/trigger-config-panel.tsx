@@ -103,6 +103,11 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/tasks"],
   });
 
+  // Fetch lead pipeline stages for lead triggers
+  const { data: leadPipelineStages = [] } = useQuery<any[]>({
+    queryKey: ["/api/lead-pipeline-stages"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -955,6 +960,42 @@ export default function TriggerConfigPanel({
             }))}
             placeholder={`Enter ${label.toLowerCase()} (comma-separated)`}
           />
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "lead_stage_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {leadPipelineStages.length > 0 ? (
+                leadPipelineStages.map((stage: any) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      {stage.name}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No pipeline stages available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
         </div>
       );
