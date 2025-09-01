@@ -136,28 +136,41 @@ export default function TriggerConfigPanel({
   const getAvailableFields = () => {
     const fields: any[] = [];
     
-    // Process form fields with enhanced API structure
-    formFields.forEach((formField: any) => {
-      if (formField.label && formField.type !== 'button' && formField.type !== 'html' && formField.type !== 'terms_conditions') {
-        if (formField.customFieldId && formField.customField) {
-          // Custom field reference
-          fields.push({
-            id: formField.customFieldId,
-            name: formField.label,
-            type: formField.customField.type,
-            options: formField.customField.options || []
-          });
-        } else if (!formField.customFieldId) {
-          // Standard form field
-          fields.push({
-            id: formField.id,
-            name: formField.label,
-            type: formField.type,
-            options: formField.options || []
-          });
+    // If this trigger has form_id in schema, use form fields
+    if (triggerDefinition?.configSchema?.form_id) {
+      // Process form fields with enhanced API structure
+      formFields.forEach((formField: any) => {
+        if (formField.label && formField.type !== 'button' && formField.type !== 'html' && formField.type !== 'terms_conditions') {
+          if (formField.customFieldId && formField.customField) {
+            // Custom field reference
+            fields.push({
+              id: formField.customFieldId,
+              name: formField.label,
+              type: formField.customField.type,
+              options: formField.customField.options || []
+            });
+          } else if (!formField.customFieldId) {
+            // Standard form field
+            fields.push({
+              id: formField.id,
+              name: formField.label,
+              type: formField.type,
+              options: formField.options || []
+            });
+          }
         }
-      }
-    });
+      });
+    } else {
+      // For non-form triggers, use custom fields directly
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
+    }
     
     return fields;
   };
@@ -289,14 +302,14 @@ export default function TriggerConfigPanel({
               size="sm"
               onClick={addFilter}
               className="text-blue-600 border-blue-600 hover:bg-blue-50"
-              disabled={!conditions.form_id}
+              disabled={triggerDefinition?.configSchema?.form_id && !conditions.form_id}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Filter
             </Button>
           </div>
           
-          {!conditions.form_id && (
+          {triggerDefinition?.configSchema?.form_id && !conditions.form_id && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
                 Please select a form first to add custom field filters.
@@ -310,10 +323,13 @@ export default function TriggerConfigPanel({
             </div>
           )}
 
-          {filters.length === 0 && conditions.form_id && (
+          {filters.length === 0 && (triggerDefinition?.configSchema?.form_id ? conditions.form_id : true) && (
             <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
               <p className="text-sm text-muted-foreground">
-                No filters added. This trigger will fire for any submission of the selected form.
+                {triggerDefinition?.configSchema?.form_id 
+                  ? "No filters added. This trigger will fire for any submission of the selected form."
+                  : "No filters added. This trigger will fire for any new client created."
+                }
               </p>
             </div>
           )}
