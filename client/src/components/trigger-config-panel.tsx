@@ -169,6 +169,12 @@ export default function TriggerConfigPanel({
     } else if (triggerDefinition?.type?.includes('project')) {
       // For project triggers, add project-specific core fields FIRST
       fields.push({
+        id: 'project',
+        name: 'Project',
+        type: 'project_select',
+        options: []
+      });
+      fields.push({
         id: 'client',
         name: 'Client',
         type: 'client_select',
@@ -459,6 +465,60 @@ export default function TriggerConfigPanel({
                   ) : (
                     <div className="p-2 text-center text-sm text-muted-foreground">
                       No clients available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            ) : selectedField?.type === "project_select" ? (
+              <Select
+                value={filter.value}
+                onValueChange={(value) => updateFilter(index, "value", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.length > 0 ? (
+                    projects.map((project: any) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{project.name}</span>
+                          {project.client && (
+                            <span className="text-xs text-muted-foreground">Client: {project.client.name}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No projects available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            ) : selectedField?.type === "staff_select" ? (
+              <Select
+                value={filter.value}
+                onValueChange={(value) => updateFilter(index, "value", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.length > 0 ? (
+                    staff.map((member: any) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{member.firstName} {member.lastName}</span>
+                          {member.department && (
+                            <span className="text-xs text-muted-foreground">{member.department}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No staff members available
                     </div>
                   )}
                 </SelectContent>
