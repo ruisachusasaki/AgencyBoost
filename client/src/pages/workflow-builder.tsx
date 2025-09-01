@@ -706,6 +706,38 @@ export default function WorkflowBuilderPage() {
               );
             })()}
 
+            {/* Calendar Management */}
+            {(() => {
+              const calendarTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "calendar_management") || [];
+              const filteredTriggers = filterItems(calendarTriggers.map((t: any) => ({ type: t.type, name: t.name })), triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-sky-600" />
+                      Calendar Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "calendar_management" })}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
           </div>
         </SheetContent>
       </Sheet>
