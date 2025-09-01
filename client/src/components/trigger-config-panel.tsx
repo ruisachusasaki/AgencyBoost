@@ -1040,10 +1040,16 @@ export default function TriggerConfigPanel({
                   renderConfigField("hours_before", triggerDefinition.configSchema.hours_before)
                 }
                 
+                {/* Task Overdue trigger */}
+                {triggerDefinition.configSchema.days_overdue && 
+                  renderConfigField("days_overdue", triggerDefinition.configSchema.days_overdue)
+                }
+                
                 {/* Add separator if core fields exist and filters exist */}
                 {(triggerDefinition.configSchema.from_status || 
                   triggerDefinition.configSchema.to_status || 
-                  triggerDefinition.configSchema.hours_before) && 
+                  triggerDefinition.configSchema.hours_before ||
+                  triggerDefinition.configSchema.days_overdue) && 
                  triggerDefinition.configSchema.filters && (
                   <Separator className="my-4" />
                 )}
