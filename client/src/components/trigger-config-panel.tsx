@@ -1041,32 +1041,60 @@ export default function TriggerConfigPanel({
       return (
         <div key={fieldName} className="space-y-2">
           <Label htmlFor={fieldName}>{label}</Label>
-          <Select 
-            value={value} 
-            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {customFields.length > 0 ? (
-                customFields.map((field: any) => (
-                  <SelectItem key={field.id} value={field.id}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{field.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {field.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} • {field.entity_type}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))
-              ) : (
-                <div className="p-2 text-center text-sm text-muted-foreground">
-                  No custom fields available
-                </div>
-              )}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between"
+              >
+                {value ? 
+                  (() => {
+                    const selectedField = customFields.find((field: any) => field.id === value);
+                    return selectedField ? (
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{selectedField.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedField.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} • {selectedField.entity_type}
+                        </span>
+                      </div>
+                    ) : "Field not found";
+                  })()
+                  : "Search and select custom field..."
+                }
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+              <Command>
+                <CommandInput placeholder="Search custom fields..." />
+                <CommandEmpty>No custom fields found.</CommandEmpty>
+                <CommandGroup className="max-h-64 overflow-auto">
+                  {customFields.map((field: any) => (
+                    <CommandItem
+                      key={field.id}
+                      value={`${field.name} ${field.entity_type} ${field.type}`}
+                      onSelect={() => {
+                        setConditions((prev: any) => ({ ...prev, [fieldName]: field.id }));
+                      }}
+                    >
+                      <div className="flex flex-col w-full">
+                        <span className="font-medium">{field.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {field.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} • {field.entity_type}
+                        </span>
+                      </div>
+                      <Check
+                        className={`ml-auto h-4 w-4 ${
+                          value === field.id ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
         </div>
       );
