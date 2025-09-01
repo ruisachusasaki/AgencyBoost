@@ -73,6 +73,16 @@ export default function TriggerConfigPanel({
   });
   const clients = clientsData?.clients || [];
 
+  // Fetch projects for project selection filters
+  const { data: projects = [] } = useQuery<any[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  // Fetch staff for staff selection filters
+  const { data: staff = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
