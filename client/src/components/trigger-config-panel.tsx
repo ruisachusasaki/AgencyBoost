@@ -113,6 +113,11 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/lead-pipeline-stages"],
   });
 
+  // Fetch calendars for calendar selection filters
+  const { data: calendars = [] } = useQuery<any[]>({
+    queryKey: ["/api/calendars"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -943,15 +948,6 @@ export default function TriggerConfigPanel({
     }
 
     if (fieldSchema.type === "staff_select") {
-      // For staff selection, we'll need to fetch staff data
-      // For now, using placeholder staff options
-      const staffOptions = [
-        { id: "staff-1", name: "John Smith" },
-        { id: "staff-2", name: "Sarah Johnson" },
-        { id: "staff-3", name: "Mike Wilson" },
-        { id: "staff-4", name: "Emily Davis" }
-      ];
-      
       return (
         <div key={fieldName} className="space-y-2">
           <Label htmlFor={fieldName}>{label}</Label>
@@ -963,11 +959,93 @@ export default function TriggerConfigPanel({
               <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
-              {staffOptions.map((staff: any) => (
-                <SelectItem key={staff.id} value={staff.id}>
-                  {staff.name}
-                </SelectItem>
-              ))}
+              {staff.length > 0 ? (
+                staff.map((staffMember: any) => (
+                  <SelectItem key={staffMember.id} value={staffMember.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{staffMember.firstName} {staffMember.lastName}</span>
+                      {staffMember.email && (
+                        <span className="text-xs text-muted-foreground">{staffMember.email}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No staff members available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "calendar_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {calendars.length > 0 ? (
+                calendars.map((calendar: any) => (
+                  <SelectItem key={calendar.id} value={calendar.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{calendar.name}</span>
+                      {calendar.description && (
+                        <span className="text-xs text-muted-foreground">{calendar.description}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No calendars available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "tag_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {tags.length > 0 ? (
+                tags.map((tag: any) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span className="font-medium">{tag.name}</span>
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No tags available
+                </div>
+              )}
             </SelectContent>
           </Select>
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
