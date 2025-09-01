@@ -83,6 +83,21 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/staff"],
   });
 
+  // Fetch dynamic task statuses for task triggers
+  const { data: taskStatuses = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-statuses"],
+  });
+
+  // Fetch dynamic task priorities for task triggers
+  const { data: taskPriorities = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-priorities"],
+  });
+
+  // Fetch team workflows for task triggers (contains workflow-specific statuses)
+  const { data: teamWorkflows = [] } = useQuery<any[]>({
+    queryKey: ["/api/team-workflows"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -223,13 +238,19 @@ export default function TriggerConfigPanel({
         id: 'priority',
         name: 'Task Priority',
         type: 'dropdown',
-        options: ['low', 'normal', 'high', 'urgent']
+        options: taskPriorities.map((priority: any) => priority.value)
       });
       fields.push({
         id: 'status',
         name: 'Task Status',
         type: 'dropdown',
-        options: ['pending', 'in_progress', 'completed', 'cancelled']
+        options: taskStatuses.map((status: any) => status.value)
+      });
+      fields.push({
+        id: 'workflow',
+        name: 'Task Workflow',
+        type: 'dropdown',
+        options: teamWorkflows.map((workflow: any) => workflow.name)
       });
       fields.push({
         id: 'client',
