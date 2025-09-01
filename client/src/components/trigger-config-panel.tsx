@@ -714,7 +714,43 @@ export default function TriggerConfigPanel({
             <SelectContent>
               {fieldSchema.options.map((option: string) => (
                 <SelectItem key={option} value={option}>
-                  {option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  {fieldName === "change_type" ? (
+                    option === "has_changed" ? "Has Changed" : 
+                    option === "has_changed_to" ? "Has Changed To" : 
+                    option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                  ) : (
+                    option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {fieldSchema.options.map((option: string) => (
+                <SelectItem key={option} value={option}>
+                  {fieldName === "change_type" ? (
+                    option === "has_changed" ? "Has Changed" : 
+                    option === "has_changed_to" ? "Has Changed To" : 
+                    option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                  ) : (
+                    option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                  )}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1001,6 +1037,41 @@ export default function TriggerConfigPanel({
       );
     }
 
+    if (fieldSchema.type === "custom_field_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {customFields.length > 0 ? (
+                customFields.map((field: any) => (
+                  <SelectItem key={field.id} value={field.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{field.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {field.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} • {field.entity_type}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No custom fields available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -1188,6 +1259,38 @@ export default function TriggerConfigPanel({
                 }
               </>
             )}
+
+            {/* For field change triggers, show core fields first */}
+            {triggerDefinition.type === 'field_change' && (
+              <>
+                {/* Custom Field Selection */}
+                {triggerDefinition.configSchema.custom_field_id && 
+                  renderConfigField("custom_field_id", triggerDefinition.configSchema.custom_field_id)
+                }
+                
+                {/* Change Detection Type */}
+                {triggerDefinition.configSchema.change_type && 
+                  renderConfigField("change_type", triggerDefinition.configSchema.change_type)
+                }
+                
+                {/* Target Value (conditional - only show when "Has Changed To" is selected) */}
+                {triggerDefinition.configSchema.target_value && conditions.change_type === "has_changed_to" && 
+                  renderConfigField("target_value", triggerDefinition.configSchema.target_value)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.custom_field_id || 
+                  triggerDefinition.configSchema.change_type) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for field change triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
             
             {/* For other triggers, show all fields normally */}
             {!triggerDefinition.type?.includes('project') && 
@@ -1195,6 +1298,7 @@ export default function TriggerConfigPanel({
              !triggerDefinition.type?.includes('lead') && 
              !triggerDefinition.type?.includes('campaign') && 
              !triggerDefinition.type?.includes('invoice') && 
+             triggerDefinition.type !== 'field_change' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);
