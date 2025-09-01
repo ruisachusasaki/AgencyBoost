@@ -138,7 +138,7 @@ export default function TriggerConfigPanel({
     });
   };
 
-  // Get available fields for filtering (combine form fields and custom fields)
+  // Get available fields for filtering (combine core fields and custom fields)
   const getAvailableFields = () => {
     const fields: any[] = [];
     
@@ -167,10 +167,10 @@ export default function TriggerConfigPanel({
         }
       });
     } else if (triggerDefinition?.type?.includes('project')) {
-      // For project triggers, add project-specific fields
+      // For project triggers, add project-specific core fields FIRST
       fields.push({
         id: 'client',
-        name: 'Specific Client',
+        name: 'Client',
         type: 'client_select',
         options: []
       });
@@ -180,7 +180,159 @@ export default function TriggerConfigPanel({
         type: 'dropdown',
         options: ['low', 'medium', 'high']
       });
+      fields.push({
+        id: 'status',
+        name: 'Project Status',
+        type: 'dropdown',
+        options: ['planning', 'active', 'completed', 'cancelled', 'on_hold']
+      });
       // Also include custom fields for projects
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
+    } else if (triggerDefinition?.type?.includes('task')) {
+      // For task triggers, add task-specific core fields FIRST
+      fields.push({
+        id: 'assignee',
+        name: 'Assigned To',
+        type: 'staff_select',
+        options: []
+      });
+      fields.push({
+        id: 'priority',
+        name: 'Task Priority',
+        type: 'dropdown',
+        options: ['low', 'normal', 'high', 'urgent']
+      });
+      fields.push({
+        id: 'status',
+        name: 'Task Status',
+        type: 'dropdown',
+        options: ['pending', 'in_progress', 'completed', 'cancelled']
+      });
+      fields.push({
+        id: 'client',
+        name: 'Client',
+        type: 'client_select',
+        options: []
+      });
+      fields.push({
+        id: 'project',
+        name: 'Project',
+        type: 'project_select',
+        options: []
+      });
+      // Also include custom fields for tasks
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
+    } else if (triggerDefinition?.type?.includes('lead')) {
+      // For lead triggers, add lead-specific core fields FIRST
+      fields.push({
+        id: 'assignee',
+        name: 'Assigned To',
+        type: 'staff_select',
+        options: []
+      });
+      fields.push({
+        id: 'source',
+        name: 'Lead Source',
+        type: 'dropdown',
+        options: ['website', 'referral', 'social_media', 'advertising', 'cold_outreach']
+      });
+      fields.push({
+        id: 'stage',
+        name: 'Lead Stage',
+        type: 'dropdown',
+        options: ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
+      });
+      fields.push({
+        id: 'value',
+        name: 'Lead Value',
+        type: 'number',
+        options: []
+      });
+      // Also include custom fields for leads
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
+    } else if (triggerDefinition?.type?.includes('campaign')) {
+      // For campaign triggers, add campaign-specific core fields FIRST
+      fields.push({
+        id: 'client',
+        name: 'Client',
+        type: 'client_select',
+        options: []
+      });
+      fields.push({
+        id: 'type',
+        name: 'Campaign Type',
+        type: 'dropdown',
+        options: ['social_media', 'ppc', 'seo', 'email', 'content']
+      });
+      fields.push({
+        id: 'status',
+        name: 'Campaign Status',
+        type: 'dropdown',
+        options: ['draft', 'active', 'paused', 'completed', 'cancelled']
+      });
+      fields.push({
+        id: 'budget',
+        name: 'Budget',
+        type: 'number',
+        options: []
+      });
+      // Also include custom fields for campaigns
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
+    } else if (triggerDefinition?.type?.includes('invoice')) {
+      // For financial triggers, add financial-specific core fields FIRST
+      fields.push({
+        id: 'client',
+        name: 'Client',
+        type: 'client_select',
+        options: []
+      });
+      fields.push({
+        id: 'project',
+        name: 'Project',
+        type: 'project_select',
+        options: []
+      });
+      fields.push({
+        id: 'amount',
+        name: 'Invoice Amount',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'status',
+        name: 'Invoice Status',
+        type: 'dropdown',
+        options: ['draft', 'sent', 'paid', 'overdue', 'cancelled']
+      });
+      // Also include custom fields for invoices
       customFields.forEach((customField: any) => {
         fields.push({
           id: customField.id,
