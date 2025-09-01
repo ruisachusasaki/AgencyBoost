@@ -1112,6 +1112,60 @@ export default function TriggerConfigPanel({
       );
     }
 
+    if (fieldSchema.type === "webhook_url_display") {
+      // Generate webhook ID if not exists
+      if (!conditions.webhook_id) {
+        const webhookId = `wh_${Math.random().toString(36).substr(2, 9)}`;
+        setConditions((prev: any) => ({ ...prev, webhook_id: webhookId }));
+      }
+      
+      const webhookUrl = conditions.webhook_id ? 
+        `${window.location.origin}/api/webhooks/${conditions.webhook_id}` : 
+        "Generating webhook URL...";
+      
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          {fieldSchema.description && (
+            <p className="text-xs text-muted-foreground">{fieldSchema.description}</p>
+          )}
+          <div className="flex items-center space-x-2">
+            <Input
+              id={fieldName}
+              value={webhookUrl}
+              readOnly
+              className="bg-gray-50 text-gray-700"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(webhookUrl);
+                // Could add a toast notification here
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+          <p className="text-xs text-blue-600">
+            💡 Use this URL to send {conditions.webhook_method || 'POST'} requests to trigger this automation
+          </p>
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "hidden") {
+      // Hidden fields don't render anything but ensure the value exists
+      if (!value && fieldSchema.auto_generate) {
+        const generatedValue = fieldName === "webhook_id" ? 
+          `wh_${Math.random().toString(36).substr(2, 9)}` :
+          `gen_${Math.random().toString(36).substr(2, 9)}`;
+        setConditions((prev: any) => ({ ...prev, [fieldName]: generatedValue }));
+      }
+      return null;
+    }
+
     if (fieldSchema.type === "custom_field_select") {
       return (
         <div key={fieldName} className="space-y-2">
@@ -1425,6 +1479,38 @@ export default function TriggerConfigPanel({
                 }
               </>
             )}
+
+            {/* For webhook triggers, show core fields first */}
+            {triggerDefinition.type === 'inbound_webhook' && (
+              <>
+                {/* HTTP Method Selection */}
+                {triggerDefinition.configSchema.webhook_method && 
+                  renderConfigField("webhook_method", triggerDefinition.configSchema.webhook_method)
+                }
+                
+                {/* Webhook URL Display */}
+                {triggerDefinition.configSchema.webhook_url && 
+                  renderConfigField("webhook_url", triggerDefinition.configSchema.webhook_url)
+                }
+                
+                {/* Hidden webhook_id field */}
+                {triggerDefinition.configSchema.webhook_id && 
+                  renderConfigField("webhook_id", triggerDefinition.configSchema.webhook_id)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.webhook_method || 
+                  triggerDefinition.configSchema.webhook_url) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for webhook triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
             
             {/* For other triggers, show all fields normally */}
             {!triggerDefinition.type?.includes('project') && 
@@ -1434,6 +1520,7 @@ export default function TriggerConfigPanel({
              !triggerDefinition.type?.includes('invoice') && 
              triggerDefinition.type !== 'field_change' &&
              triggerDefinition.type !== 'note_added' &&
+             triggerDefinition.type !== 'inbound_webhook' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);

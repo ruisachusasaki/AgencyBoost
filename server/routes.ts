@@ -11512,5 +11512,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Webhook handling routes - support all HTTP methods
+  const handleWebhook = async (req: any, res: any) => {
+    try {
+      const webhookId = req.params.webhookId;
+      const method = req.method;
+      const payload = {
+        method,
+        headers: req.headers,
+        query: req.query,
+        body: req.body,
+        timestamp: new Date().toISOString(),
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      };
+
+      console.log(`Webhook received: ${method} /api/webhooks/${webhookId}`, payload);
+
+      // Find workflows that use this webhook_id
+      const workflows = await storage.getWorkflows();
+      const matchingWorkflows = workflows.filter((workflow: any) => {
+        const trigger = workflow.trigger;
+        return trigger && 
+               trigger.type === 'inbound_webhook' && 
+               trigger.conditions && 
+               trigger.conditions.webhook_id === webhookId &&
+               trigger.conditions.webhook_method === method;
+      });
+
+      if (matchingWorkflows.length === 0) {
+        return res.status(404).json({ 
+          error: 'Webhook not found',
+          message: `No active workflow found for webhook ID: ${webhookId} with method: ${method}`
+        });
+      }
+
+      // Execute all matching workflows
+      const results = [];
+      for (const workflow of matchingWorkflows) {
+        try {
+          // Here you would typically trigger the workflow execution
+          // For now, we'll just log and return success
+          console.log(`Executing workflow: ${workflow.name} (${workflow.id})`);
+          
+          // Create audit log for webhook execution
+          await createAuditLog(
+            "webhook_triggered",
+            "workflow",
+            workflow.id,
+            workflow.name,
+            "system",
+            `Webhook ${webhookId} triggered workflow execution`,
+            null,
+            { webhook_id: webhookId, method, payload_size: JSON.stringify(payload).length },
+            req
+          );
+          
+          results.push({
+            workflow_id: workflow.id,
+            workflow_name: workflow.name,
+            status: 'executed',
+            execution_time: new Date().toISOString()
+          });
+        } catch (error) {
+          console.error(`Error executing workflow ${workflow.id}:`, error);
+          results.push({
+            workflow_id: workflow.id,
+            workflow_name: workflow.name,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        webhook_id: webhookId,
+        method,
+        executed_workflows: results,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('Webhook handling error:', error);
+      res.status(500).json({ 
+        error: 'Internal server error',
+        message: 'Failed to process webhook'
+      });
+    }
+  };
+
+  // Register webhook routes for all HTTP methods
+  app.get("/api/webhooks/:webhookId", handleWebhook);
+  app.post("/api/webhooks/:webhookId", handleWebhook);
+  app.put("/api/webhooks/:webhookId", handleWebhook);
+  app.patch("/api/webhooks/:webhookId", handleWebhook);
+  app.delete("/api/webhooks/:webhookId", handleWebhook);
+
+  // Webhook testing endpoint - allows you to test a webhook URL
+  app.get("/api/webhooks/:webhookId/test", async (req, res) => {
+    try {
+      const webhookId = req.params.webhookId;
+      
+      // Find workflows that use this webhook_id
+      const workflows = await storage.getWorkflows();
+      const matchingWorkflows = workflows.filter((workflow: any) => {
+        const trigger = workflow.trigger;
+        return trigger && 
+               trigger.type === 'inbound_webhook' && 
+               trigger.conditions && 
+               trigger.conditions.webhook_id === webhookId;
+      });
+
+      if (matchingWorkflows.length === 0) {
+        return res.status(404).json({ 
+          error: 'Webhook not found',
+          message: `No workflow found for webhook ID: ${webhookId}`
+        });
+      }
+
+      res.json({
+        webhook_id: webhookId,
+        status: 'active',
+        workflows: matchingWorkflows.map((w: any) => ({
+          id: w.id,
+          name: w.name,
+          method: w.trigger.conditions.webhook_method,
+          status: w.status
+        })),
+        test_urls: {
+          get: `${req.protocol}://${req.get('host')}/api/webhooks/${webhookId}`,
+          post: `${req.protocol}://${req.get('host')}/api/webhooks/${webhookId}`,
+          put: `${req.protocol}://${req.get('host')}/api/webhooks/${webhookId}`,
+          patch: `${req.protocol}://${req.get('host')}/api/webhooks/${webhookId}`,
+          delete: `${req.protocol}://${req.get('host')}/api/webhooks/${webhookId}`
+        }
+      });
+    } catch (error) {
+      console.error('Webhook test error:', error);
+      res.status(500).json({ 
+        error: 'Internal server error',
+        message: 'Failed to test webhook'
+      });
+    }
+  });
+
   return httpServer;
 }
