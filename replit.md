@@ -11,6 +11,7 @@ AgencyFlow is a comprehensive Customer Relationship Management (CRM) system desi
 - **Field→Condition→Value Pattern**: ✅ COMPLETED - Implemented consistent GoHighLevel-style filtering with core entity fields (Client, Project, Staff) alongside custom fields, supporting all 6 condition types (Equals, Not Equals, Contains, Does Not Contain, Is Empty, Is Not Empty)
 - **Task Overdue Timing Controls**: ✅ COMPLETED - Enhanced Task Overdue trigger with "Days Overdue" field (1-30 days, default 1) for precise automation timing control, matching sophistication of Task Due Soon trigger
 - **Dynamic Lead Pipeline Integration**: ✅ COMPLETED - Updated Lead Stage Changed trigger to use dynamic pipeline stages from actual pipeline configuration, replacing hardcoded options with live data from Leads > Manage Pipeline
+- **Field Change Trigger System**: ✅ COMPLETED - Created new automation trigger for monitoring custom field changes with searchable custom field selection, "Has Changed" vs "Has Changed To" detection options, and conditional target value input for precise field change monitoring
 
 ## Previous Changes (August 28, 2025)
 - **Rich Text Editor Enhancement**: ✅ COMPLETED - Comprehensive Tiptap editor fixes for checklist and toggle functionality
