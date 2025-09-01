@@ -98,6 +98,11 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/team-workflows"],
   });
 
+  // Fetch tasks for task selection filters
+  const { data: tasks = [] } = useQuery<any[]>({
+    queryKey: ["/api/tasks"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -228,6 +233,12 @@ export default function TriggerConfigPanel({
       });
     } else if (triggerDefinition?.type?.includes('task')) {
       // For task triggers, add task-specific core fields FIRST
+      fields.push({
+        id: 'task',
+        name: 'Task',
+        type: 'task_select',
+        options: []
+      });
       fields.push({
         id: 'assignee',
         name: 'Assigned To',
@@ -550,6 +561,33 @@ export default function TriggerConfigPanel({
                   ) : (
                     <div className="p-2 text-center text-sm text-muted-foreground">
                       No staff members available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            ) : selectedField?.type === "task_select" ? (
+              <Select
+                value={filter.value}
+                onValueChange={(value) => updateFilter(index, "value", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose task" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tasks.length > 0 ? (
+                    tasks.map((task: any) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{task.title}</span>
+                          {task.project && (
+                            <span className="text-xs text-muted-foreground">Project: {task.project.name}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No tasks available
                     </div>
                   )}
                 </SelectContent>
