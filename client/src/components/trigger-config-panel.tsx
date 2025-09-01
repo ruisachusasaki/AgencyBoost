@@ -1638,6 +1638,7 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'field_change' &&
              triggerDefinition.type !== 'note_added' &&
              triggerDefinition.type !== 'inbound_webhook' &&
+             triggerDefinition.type !== 'appointment_booked' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);
