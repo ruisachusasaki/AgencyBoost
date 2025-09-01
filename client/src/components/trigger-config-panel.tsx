@@ -67,6 +67,12 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/tags"],
   });
 
+  // Fetch clients for client selection filters
+  const { data: clientsData } = useQuery<any>({
+    queryKey: ["/api/clients"],
+  });
+  const clients = clientsData?.clients || [];
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -160,8 +166,31 @@ export default function TriggerConfigPanel({
           }
         }
       });
+    } else if (triggerDefinition?.type?.includes('project')) {
+      // For project triggers, add project-specific fields
+      fields.push({
+        id: 'client',
+        name: 'Specific Client',
+        type: 'client_select',
+        options: []
+      });
+      fields.push({
+        id: 'priority',
+        name: 'Project Priority',
+        type: 'dropdown',
+        options: ['low', 'medium', 'high']
+      });
+      // Also include custom fields for projects
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
     } else {
-      // For non-form triggers, use custom fields directly
+      // For other non-form triggers, use custom fields directly
       customFields.forEach((customField: any) => {
         fields.push({
           id: customField.id,
@@ -255,7 +284,34 @@ export default function TriggerConfigPanel({
           {/* Value Input */}
           <div className="space-y-2">
             <Label>Value</Label>
-            {selectedField?.type === "dropdown" && selectedField?.options?.length > 0 ? (
+            {selectedField?.type === "client_select" ? (
+              <Select
+                value={filter.value}
+                onValueChange={(value) => updateFilter(index, "value", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.length > 0 ? (
+                    clients.map((client: any) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{client.name}</span>
+                          {client.company && (
+                            <span className="text-xs text-muted-foreground">{client.company}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No clients available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            ) : selectedField?.type === "dropdown" && selectedField?.options?.length > 0 ? (
               <Select
                 value={filter.value}
                 onValueChange={(value) => updateFilter(index, "value", value)}
@@ -266,7 +322,7 @@ export default function TriggerConfigPanel({
                 <SelectContent>
                   {selectedField.options.map((option: string) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {option.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </SelectItem>
                   ))}
                 </SelectContent>
