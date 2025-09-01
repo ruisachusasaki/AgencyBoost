@@ -1111,6 +1111,11 @@ export class MemStorage implements IStorage {
             label: "Booking Source",
             options: ["external_calendar_link", "manually", "api", "sync_google", "sync_microsoft"],
             required: false
+          },
+          filters: {
+            type: "filters",
+            label: "Additional Filters",
+            description: "Add custom conditions to further refine when this trigger fires"
           }
         },
         isActive: true,

@@ -1527,6 +1527,45 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For calendar triggers, show core fields first */}
+            {triggerDefinition.type === 'appointment_booked' && (
+              <>
+                {/* Calendar Selection */}
+                {triggerDefinition.configSchema.calendar_id && 
+                  renderConfigField("calendar_id", triggerDefinition.configSchema.calendar_id)
+                }
+                
+                {/* Staff Assignment */}
+                {triggerDefinition.configSchema.staff_id && 
+                  renderConfigField("staff_id", triggerDefinition.configSchema.staff_id)
+                }
+                
+                {/* Tag Selection */}
+                {triggerDefinition.configSchema.tag && 
+                  renderConfigField("tag", triggerDefinition.configSchema.tag)
+                }
+                
+                {/* Booking Source */}
+                {triggerDefinition.configSchema.booking_source && 
+                  renderConfigField("booking_source", triggerDefinition.configSchema.booking_source)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.calendar_id || 
+                  triggerDefinition.configSchema.staff_id || 
+                  triggerDefinition.configSchema.tag || 
+                  triggerDefinition.configSchema.booking_source) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for calendar triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
             {/* For note added triggers, show core fields first */}
             {triggerDefinition.type === 'note_added' && (
               <>
