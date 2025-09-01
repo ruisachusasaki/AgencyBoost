@@ -691,19 +691,31 @@ export default function TriggerConfigPanel({
               <Separator className="my-4" />
             )}
             
-            {/* For project triggers, show from_status and to_status first */}
+            {/* For project triggers, show core fields first */}
             {triggerDefinition.type?.includes('project') && (
               <>
+                {/* Project Status Changed trigger */}
                 {triggerDefinition.configSchema.from_status && 
                   renderConfigField("from_status", triggerDefinition.configSchema.from_status)
                 }
                 {triggerDefinition.configSchema.to_status && 
                   renderConfigField("to_status", triggerDefinition.configSchema.to_status)
                 }
-                {(triggerDefinition.configSchema.from_status || triggerDefinition.configSchema.to_status) && 
+                
+                {/* Project Deadline Approaching trigger */}
+                {triggerDefinition.configSchema.days_before && 
+                  renderConfigField("days_before", triggerDefinition.configSchema.days_before)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.from_status || 
+                  triggerDefinition.configSchema.to_status || 
+                  triggerDefinition.configSchema.days_before) && 
                  triggerDefinition.configSchema.filters && (
                   <Separator className="my-4" />
                 )}
+                
+                {/* Show filters for all project triggers */}
                 {triggerDefinition.configSchema.filters && 
                   renderConfigField("filters", triggerDefinition.configSchema.filters)
                 }
