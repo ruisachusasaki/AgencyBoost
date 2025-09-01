@@ -721,9 +721,131 @@ export default function TriggerConfigPanel({
                 }
               </>
             )}
+
+            {/* For task triggers, show core fields first */}
+            {triggerDefinition.type?.includes('task') && (
+              <>
+                {/* Task Status Changed trigger */}
+                {triggerDefinition.configSchema.from_status && 
+                  renderConfigField("from_status", triggerDefinition.configSchema.from_status)
+                }
+                {triggerDefinition.configSchema.to_status && 
+                  renderConfigField("to_status", triggerDefinition.configSchema.to_status)
+                }
+                
+                {/* Task Due Soon trigger */}
+                {triggerDefinition.configSchema.hours_before && 
+                  renderConfigField("hours_before", triggerDefinition.configSchema.hours_before)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.from_status || 
+                  triggerDefinition.configSchema.to_status || 
+                  triggerDefinition.configSchema.hours_before) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for all task triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For lead triggers, show core fields first */}
+            {triggerDefinition.type?.includes('lead') && (
+              <>
+                {/* Lead Stage Changed trigger */}
+                {triggerDefinition.configSchema.from_stage && 
+                  renderConfigField("from_stage", triggerDefinition.configSchema.from_stage)
+                }
+                {triggerDefinition.configSchema.to_stage && 
+                  renderConfigField("to_stage", triggerDefinition.configSchema.to_stage)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.from_stage || 
+                  triggerDefinition.configSchema.to_stage) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for all lead triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For campaign triggers, show core fields first */}
+            {triggerDefinition.type?.includes('campaign') && (
+              <>
+                {/* Campaign Status Changed trigger */}
+                {triggerDefinition.configSchema.from_status && 
+                  renderConfigField("from_status", triggerDefinition.configSchema.from_status)
+                }
+                {triggerDefinition.configSchema.to_status && 
+                  renderConfigField("to_status", triggerDefinition.configSchema.to_status)
+                }
+                
+                {/* Campaign Performance Milestone trigger */}
+                {triggerDefinition.configSchema.metric_type && 
+                  renderConfigField("metric_type", triggerDefinition.configSchema.metric_type)
+                }
+                {triggerDefinition.configSchema.threshold && 
+                  renderConfigField("threshold", triggerDefinition.configSchema.threshold)
+                }
+                
+                {/* Campaign Budget Exceeded trigger */}
+                {triggerDefinition.configSchema.percentage_threshold && 
+                  renderConfigField("percentage_threshold", triggerDefinition.configSchema.percentage_threshold)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.from_status || 
+                  triggerDefinition.configSchema.to_status || 
+                  triggerDefinition.configSchema.metric_type || 
+                  triggerDefinition.configSchema.threshold || 
+                  triggerDefinition.configSchema.percentage_threshold) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for all campaign triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For financial triggers, show core fields first */}
+            {triggerDefinition.type?.includes('invoice') && (
+              <>
+                {/* Invoice Overdue trigger */}
+                {triggerDefinition.configSchema.days_overdue && 
+                  renderConfigField("days_overdue", triggerDefinition.configSchema.days_overdue)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {triggerDefinition.configSchema.days_overdue && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for all financial triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
             
-            {/* For non-project triggers, show all fields normally */}
+            {/* For other triggers, show all fields normally */}
             {!triggerDefinition.type?.includes('project') && 
+             !triggerDefinition.type?.includes('task') && 
+             !triggerDefinition.type?.includes('lead') && 
+             !triggerDefinition.type?.includes('campaign') && 
+             !triggerDefinition.type?.includes('invoice') && 
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);
