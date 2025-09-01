@@ -1595,13 +1595,13 @@ export default function TriggerConfigPanel({
                 }
                 
                 {/* Staff Assignment */}
-                {triggerDefinition.configSchema.staff_id && 
-                  renderConfigField("staff_id", triggerDefinition.configSchema.staff_id)
+                {triggerDefinition.configSchema.assigned_to && 
+                  renderConfigField("assigned_to", triggerDefinition.configSchema.assigned_to)
                 }
                 
                 {/* Tag Selection */}
-                {triggerDefinition.configSchema.tag && 
-                  renderConfigField("tag", triggerDefinition.configSchema.tag)
+                {triggerDefinition.configSchema.has_tag && 
+                  renderConfigField("has_tag", triggerDefinition.configSchema.has_tag)
                 }
                 
                 {/* Booking Source */}
@@ -1611,8 +1611,8 @@ export default function TriggerConfigPanel({
                 
                 {/* Add separator if core fields exist and filters exist */}
                 {(triggerDefinition.configSchema.calendar_id || 
-                  triggerDefinition.configSchema.staff_id || 
-                  triggerDefinition.configSchema.tag || 
+                  triggerDefinition.configSchema.assigned_to || 
+                  triggerDefinition.configSchema.has_tag || 
                   triggerDefinition.configSchema.booking_source) && 
                  triggerDefinition.configSchema.filters && (
                   <Separator className="my-4" />
