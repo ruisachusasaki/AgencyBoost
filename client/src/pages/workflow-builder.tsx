@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2, Globe } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 import WorkflowCanvas from "@/components/workflow-canvas";
 import TriggerConfigPanel from "@/components/trigger-config-panel";
@@ -663,6 +663,38 @@ export default function WorkflowBuilderPage() {
                         variant="outline"
                         className="w-full justify-start text-left h-auto p-3"
                         onClick={() => handleSelectTrigger({ ...trigger, category: "financial_management" })}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {/* Integration */}
+            {(() => {
+              const integrationTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "integration") || [];
+              const filteredTriggers = filterItems(integrationTriggers.map((t: any) => ({ type: t.type, name: t.name })), triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-indigo-600" />
+                      Integration
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "integration" })}
                       >
                         <div>
                           <div className="font-medium">{trigger.name}</div>
