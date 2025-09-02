@@ -12585,6 +12585,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const userId = req.session?.userId;
       
+      console.log("Fetching course details for ID:", id);
+      
       // Get course details
       const [course] = await db.select({
         id: trainingCourses.id,
@@ -12631,12 +12633,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json({
+      const result = {
         ...course,
         lessons,
         enrollment,
         progress
+      };
+      
+      console.log("Returning course data:", {
+        id: result.id,
+        title: result.title,
+        description: result.description,
+        categoryId: result.categoryId
       });
+      
+      res.json(result);
     } catch (error) {
       console.error('Error fetching training course:', error);
       res.status(500).json({ error: "Failed to fetch training course" });
@@ -12667,8 +12678,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/training/courses/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Handle empty category_id by converting to null
+      const bodyData = { ...req.body };
+      if (bodyData.categoryId === "" || bodyData.categoryId === undefined) {
+        bodyData.categoryId = null;
+      }
+      
       const updates = insertTrainingCourseSchema.partial().parse({
-        ...req.body,
+        ...bodyData,
         updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
       });
       

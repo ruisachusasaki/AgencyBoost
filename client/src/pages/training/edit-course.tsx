@@ -69,7 +69,7 @@ export default function EditCourse() {
   useEffect(() => {
     if (course) {
       console.log("Populating form with course data:", course);
-      form.reset({
+      const formData = {
         title: course.title || "",
         description: course.description || "",
         shortDescription: course.shortDescription || "",
@@ -79,7 +79,9 @@ export default function EditCourse() {
         thumbnailUrl: course.thumbnailUrl || "",
         isPublished: course.isPublished || false,
         tags: course.tags || [],
-      });
+      };
+      console.log("Form data being set:", formData);
+      form.reset(formData);
       console.log("Form reset complete");
     }
   }, [course, form]);
