@@ -90,10 +90,11 @@ export default function LessonManagement() {
         description: "The module has been created successfully.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Module creation error:', error);
       toast({
-        title: "Error",
-        description: "Failed to create module. Please try again.",
+        title: "Error", 
+        description: error?.message || "Failed to create module. Please try again.",
         variant: "destructive",
       });
     },
