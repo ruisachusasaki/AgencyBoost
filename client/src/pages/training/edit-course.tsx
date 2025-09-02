@@ -68,8 +68,7 @@ export default function EditCourse() {
   // Update form when course data loads
   useEffect(() => {
     if (course) {
-      console.log("Populating form with course data:", course);
-      const formData = {
+      form.reset({
         title: course.title || "",
         description: course.description || "",
         shortDescription: course.shortDescription || "",
@@ -79,10 +78,7 @@ export default function EditCourse() {
         thumbnailUrl: course.thumbnailUrl || "",
         isPublished: course.isPublished || false,
         tags: course.tags || [],
-      };
-      console.log("Form data being set:", formData);
-      form.reset(formData);
-      console.log("Form reset complete");
+      });
     }
   }, [course, form]);
 

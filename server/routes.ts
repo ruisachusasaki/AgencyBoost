@@ -12585,7 +12585,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const userId = req.session?.userId;
       
-      console.log("Fetching course details for ID:", id);
       
       // Get course details
       const [course] = await db.select({
@@ -12640,12 +12639,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progress
       };
       
-      console.log("Returning course data:", {
-        id: result.id,
-        title: result.title,
-        description: result.description,
-        categoryId: result.categoryId
-      });
       
       res.json(result);
     } catch (error) {

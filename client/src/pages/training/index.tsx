@@ -167,7 +167,29 @@ export default function Training() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
-                  <Card key={course.id} className="hover:shadow-md transition-shadow" data-testid={`course-card-${course.id}`}>
+                  <Card key={course.id} className="hover:shadow-md transition-shadow overflow-hidden" data-testid={`course-card-${course.id}`}>
+                    {/* Course Thumbnail */}
+                    {course.thumbnailUrl ? (
+                      <div className="aspect-video w-full overflow-hidden bg-gray-100">
+                        <img 
+                          src={course.thumbnailUrl} 
+                          alt={course.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
+                          <BookOpen className="h-12 w-12 text-gray-400" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -246,7 +268,29 @@ export default function Training() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {myCourses.map((enrollment) => (
-                  <Card key={enrollment.enrollmentId} className="hover:shadow-md transition-shadow" data-testid={`my-course-card-${enrollment.courseId}`}>
+                  <Card key={enrollment.enrollmentId} className="hover:shadow-md transition-shadow overflow-hidden" data-testid={`my-course-card-${enrollment.courseId}`}>
+                    {/* Course Thumbnail */}
+                    {enrollment.thumbnailUrl ? (
+                      <div className="aspect-video w-full overflow-hidden bg-gray-100">
+                        <img 
+                          src={enrollment.thumbnailUrl} 
+                          alt={enrollment.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
+                          <BookOpen className="h-12 w-12 text-gray-400" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
