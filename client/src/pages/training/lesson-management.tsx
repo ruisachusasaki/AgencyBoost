@@ -59,7 +59,13 @@ export default function LessonManagement() {
 
   // Module form
   const moduleForm = useForm<InsertTrainingModule>({
-    resolver: zodResolver(insertTrainingModuleSchema),
+    resolver: zodResolver(insertTrainingModuleSchema.omit({
+      courseId: true,
+      createdBy: true,
+      updatedBy: true,
+      createdAt: true,
+      updatedAt: true
+    })),
     defaultValues: {
       title: "",
       description: "",
@@ -94,6 +100,7 @@ export default function LessonManagement() {
   });
 
   const onCreateModule = (data: InsertTrainingModule) => {
+    console.log('Creating module with data:', data);
     createModuleMutation.mutate(data);
   };
 
@@ -183,9 +190,9 @@ export default function LessonManagement() {
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Module Title</FormLabel>
+                        <FormLabel>Module Title *</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., Introduction to Marketing" {...field} />
+                          <Input placeholder="e.g., Introduction to Marketing" {...field} data-testid="input-module-title" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
