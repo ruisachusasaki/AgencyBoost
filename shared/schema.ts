@@ -1942,6 +1942,7 @@ export const calendarIntegrations = pgTable("calendar_integrations", {
 export const smsIntegrations = pgTable("sms_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   provider: text("provider").notNull(), // 'twilio', 'sendgrid', etc.
+  name: text("name").notNull().default("Primary"), // Purpose/name for the phone number (Sales, Support, etc.)
   accountSid: text("account_sid").notNull(), // Twilio Account SID
   authToken: text("auth_token").notNull(), // Twilio Auth Token (encrypted)
   phoneNumber: text("phone_number").notNull(), // From phone number

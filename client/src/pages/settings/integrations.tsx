@@ -120,8 +120,9 @@ export default function Integrations() {
     // Check Google Calendar status
     checkGoogleCalendarStatus();
     
-    // Check Twilio status
+    // Check Twilio status and load phone numbers
     checkTwilioStatus();
+    loadTwilioNumbers();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -153,12 +154,51 @@ export default function Integrations() {
           ? { 
               ...integration, 
               status: status.connected ? "connected" as const : "disconnected" as const,
-              lastSync: status.lastTest ? new Date(status.lastTest).toLocaleString() : ""
+              lastSync: status.lastTest ? new Date(status.lastTest).toLocaleString() : "",
+              phoneNumbers: status.phoneNumbers || []
             }
           : integration
       ));
     } catch (error) {
       console.error('Error checking Twilio status:', error);
+    }
+  };
+  
+  // Load all Twilio phone numbers
+  const loadTwilioNumbers = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/twilio/numbers');
+      const data = await response.json();
+      setTwilioNumbers(data.phoneNumbers || []);
+    } catch (error) {
+      console.error('Error loading phone numbers:', error);
+    }
+  };
+  
+  // Delete a phone number
+  const deleteTwilioNumber = async (id, name) => {
+    if (!confirm(`Are you sure you want to delete the phone number "${name}"?`)) return;
+    
+    setIsLoading(true);
+    try {
+      await apiRequest('DELETE', `/api/integrations/twilio/numbers/${id}`);
+      toast({
+        title: "Success",
+        description: `Phone number "${name}" deleted successfully`,
+      });
+      
+      // Refresh the lists
+      loadTwilioNumbers();
+      checkTwilioStatus();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete phone number",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -373,14 +413,19 @@ export default function Integrations() {
     accountSid: "",
     authToken: "",
     phoneNumber: "",
+    name: "",
     testPhoneNumber: ""
   });
+  
+  // State for managing multiple phone numbers
+  const [twilioNumbers, setTwilioNumbers] = useState([]);
+  const [showManageNumbers, setShowManageNumbers] = useState(false);
 
   const handleTwilioConnect = async () => {
-    if (!twilioSettings.accountSid || !twilioSettings.authToken || !twilioSettings.phoneNumber) {
+    if (!twilioSettings.accountSid || !twilioSettings.authToken || !twilioSettings.phoneNumber || !twilioSettings.name) {
       toast({
-        title: "Missing Credentials",
-        description: "Please fill in all required fields (Account SID, Auth Token, and Phone Number).",
+        title: "Missing Information",
+        description: "Please fill in all required fields (Account SID, Auth Token, Phone Number, and Name).",
         variant: "destructive",
       });
       return;
@@ -391,7 +436,8 @@ export default function Integrations() {
       const response = await apiRequest('POST', '/api/integrations/twilio/connect', {
         accountSid: twilioSettings.accountSid,
         authToken: twilioSettings.authToken,
-        phoneNumber: twilioSettings.phoneNumber
+        phoneNumber: twilioSettings.phoneNumber,
+        name: twilioSettings.name
       });
       const result = await response.json();
       
@@ -408,8 +454,12 @@ export default function Integrations() {
       
       toast({
         title: "Success",
-        description: "Twilio SMS integration connected successfully!",
+        description: result.message || "Twilio SMS phone number added successfully!",
       });
+      
+      // Refresh phone numbers list and status
+      checkTwilioStatus();
+      loadTwilioNumbers();
       
       setIsConfigDialogOpen(false);
       
@@ -418,6 +468,7 @@ export default function Integrations() {
         accountSid: "",
         authToken: "",
         phoneNumber: "",
+        name: "",
         testPhoneNumber: ""
       });
     } catch (error) {
@@ -605,6 +656,48 @@ export default function Integrations() {
                             Last sync: {integration.lastSync}
                           </p>
                         )}
+                        
+                        {/* Show phone numbers for Twilio */}
+                        {integration.id === "twilio" && integration.status === "connected" && twilioNumbers.length > 0 && (
+                          <div className="mt-3">
+                            <h5 className="text-sm font-medium text-gray-700 mb-2">Phone Numbers ({twilioNumbers.length}):</h5>
+                            <div className="space-y-1">
+                              {twilioNumbers.slice(0, showManageNumbers ? twilioNumbers.length : 2).map((number) => (
+                                <div key={number.id} className="flex items-center justify-between bg-gray-50 p-2 rounded text-xs">
+                                  <div>
+                                    <span className="font-medium">{number.name}</span>
+                                    <span className="text-gray-600 ml-2">{number.phoneNumber}</span>
+                                  </div>
+                                  {showManageNumbers && (
+                                    <button
+                                      onClick={() => deleteTwilioNumber(number.id, number.name)}
+                                      className="text-red-600 hover:text-red-800"
+                                      disabled={isLoading}
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              {twilioNumbers.length > 2 && !showManageNumbers && (
+                                <button
+                                  onClick={() => setShowManageNumbers(true)}
+                                  className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  Show all {twilioNumbers.length} numbers
+                                </button>
+                              )}
+                              {showManageNumbers && twilioNumbers.length > 2 && (
+                                <button
+                                  onClick={() => setShowManageNumbers(false)}
+                                  className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  Show less
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -622,14 +715,26 @@ export default function Integrations() {
                               Sync
                             </Button>
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openConfigDialog(integration)}
-                          >
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                          </Button>
+                          {integration.id === "twilio" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openConfigDialog(integration)}
+                            >
+                              <span className="mr-2">+</span>
+                              Add Number
+                            </Button>
+                          )}
+                          {integration.id !== "twilio" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openConfigDialog(integration)}
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Settings
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -654,7 +759,7 @@ export default function Integrations() {
                           onClick={() => handleConnect(integration.id)}
                           disabled={isLoading}
                         >
-                          {isLoading ? "Connecting..." : "Connect"}
+                          {isLoading ? "Connecting..." : integration.id === "twilio" ? "Add First Number" : "Connect"}
                         </Button>
                       )}
                       
@@ -746,6 +851,15 @@ export default function Integrations() {
 
               {selectedIntegration?.id === "twilio" && (
                 <>
+                  <div>
+                    <Label htmlFor="numberName">Name/Purpose</Label>
+                    <Input
+                      id="numberName"
+                      value={twilioSettings.name}
+                      onChange={(e) => setTwilioSettings({...twilioSettings, name: e.target.value})}
+                      placeholder="e.g., Sales, Support, Marketing"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="accountSid">Account SID</Label>
                     <Input

@@ -8997,14 +8997,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return twilio(accountSid, authToken);
   }
 
-  // Connect Twilio SMS integration
+  // Connect Twilio SMS integration (supports multiple phone numbers)
   app.post("/api/integrations/twilio/connect", async (req, res) => {
     try {
-      const { accountSid, authToken, phoneNumber } = req.body;
+      const { accountSid, authToken, phoneNumber, name } = req.body;
       
       if (!accountSid || !authToken || !phoneNumber) {
         return res.status(400).json({ 
           message: "Account SID, Auth Token, and Phone Number are required" 
+        });
+      }
+      
+      if (!name || name.trim() === '') {
+        return res.status(400).json({ 
+          message: "Name/Purpose is required (e.g., Sales, Support, Marketing)" 
         });
       }
       
@@ -9029,6 +9035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const integrationData = {
         provider: 'twilio',
+        name: name.trim(),
         accountSid,
         authToken, // Note: In production, this should be encrypted
         phoneNumber,
@@ -9037,29 +9044,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         connectionErrors: null,
       };
       
-      // Check if integration already exists for this provider
-      const [existingIntegration] = await db
+      // Check if this exact phone number already exists
+      const [existingPhone] = await db
         .select()
         .from(smsIntegrations)
-        .where(eq(smsIntegrations.provider, 'twilio'));
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.phoneNumber, phoneNumber)
+        ));
       
-      if (existingIntegration) {
-        // Update existing integration
-        await db
-          .update(smsIntegrations)
-          .set({
-            ...integrationData,
-            updatedAt: new Date()
-          })
-          .where(eq(smsIntegrations.id, existingIntegration.id));
-      } else {
-        // Create new integration
-        await db.insert(smsIntegrations).values(integrationData);
+      if (existingPhone) {
+        return res.status(400).json({ 
+          message: `Phone number ${phoneNumber} is already configured with name "${existingPhone.name}"` 
+        });
       }
       
+      // Check if this name already exists
+      const [existingName] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.name, name.trim())
+        ));
+      
+      if (existingName) {
+        return res.status(400).json({ 
+          message: `A phone number with name "${name}" already exists. Please use a different name.` 
+        });
+      }
+      
+      // Create new phone number
+      await db.insert(smsIntegrations).values(integrationData);
+      
       res.json({ 
-        message: "Twilio SMS integration connected successfully",
-        phoneNumber: phoneNumber
+        message: `Twilio SMS phone number "${name}" (${phoneNumber}) added successfully`,
+        phoneNumber: phoneNumber,
+        name: name
       });
     } catch (error) {
       console.error('Error connecting Twilio SMS:', error);
@@ -9085,10 +9106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check Twilio SMS connection status
+  // Check Twilio SMS connection status (returns all phone numbers)
   app.get("/api/integrations/twilio/status", async (req, res) => {
     try {
-      const [integration] = await db
+      const integrations = await db
         .select()
         .from(smsIntegrations)
         .where(and(
@@ -9096,44 +9117,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(smsIntegrations.isActive, true)
         ));
       
-      if (!integration) {
+      if (integrations.length === 0) {
         return res.json({ 
           connected: false, 
           status: "disconnected",
-          lastTest: null
+          phoneNumbers: [],
+          totalNumbers: 0
         });
       }
       
-      // Test the connection by making a simple API call
+      // Test the connection using the first integration's credentials
+      const firstIntegration = integrations[0];
+      let connected = true;
+      let statusMessage = "connected";
+      
       try {
-        const client = createTwilioClient(integration.accountSid, integration.authToken);
-        await client.api.accounts(integration.accountSid).fetch();
-        
-        res.json({
-          connected: true,
-          status: "connected",
-          lastTest: integration.lastTestAt,
-          phoneNumber: integration.phoneNumber
-        });
+        const client = createTwilioClient(firstIntegration.accountSid, firstIntegration.authToken);
+        await client.api.accounts(firstIntegration.accountSid).fetch();
       } catch (apiError) {
         console.error('Twilio API error:', apiError);
+        connected = false;
+        statusMessage = "error";
         
-        // Update integration to show error
+        // Update all integrations to show error
         await db
           .update(smsIntegrations)
           .set({
             connectionErrors: `API Error: ${(apiError as Error).message}`,
             updatedAt: new Date()
           })
-          .where(eq(smsIntegrations.id, integration.id));
-        
-        res.json({
-          connected: false,
-          status: "error",
-          lastTest: integration.lastTestAt,
-          error: "Authentication failed. Please check your credentials."
-        });
+          .where(eq(smsIntegrations.provider, 'twilio'));
       }
+      
+      const phoneNumbers = integrations.map(integration => ({
+        id: integration.id,
+        name: integration.name,
+        phoneNumber: integration.phoneNumber,
+        lastTest: integration.lastTestAt,
+        errors: integration.connectionErrors
+      }));
+      
+      res.json({
+        connected,
+        status: statusMessage,
+        phoneNumbers,
+        totalNumbers: phoneNumbers.length,
+        lastTest: firstIntegration.lastTestAt
+      });
     } catch (error) {
       console.error('Error checking Twilio status:', error);
       res.status(500).json({ message: "Failed to check connection status" });
@@ -9211,6 +9241,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to send test SMS",
         error: (error as Error).message
       });
+    }
+  });
+
+  // Get all Twilio phone numbers
+  app.get("/api/integrations/twilio/numbers", async (req, res) => {
+    try {
+      const numbers = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ))
+        .orderBy(smsIntegrations.name);
+      
+      res.json({
+        phoneNumbers: numbers.map(num => ({
+          id: num.id,
+          name: num.name,
+          phoneNumber: num.phoneNumber,
+          lastTest: num.lastTestAt,
+          errors: num.connectionErrors,
+          createdAt: num.createdAt
+        })),
+        total: numbers.length
+      });
+    } catch (error) {
+      console.error('Error fetching phone numbers:', error);
+      res.status(500).json({ message: "Failed to fetch phone numbers" });
+    }
+  });
+
+  // Delete individual Twilio phone number
+  app.delete("/api/integrations/twilio/numbers/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [phoneNumber] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.id, id),
+          eq(smsIntegrations.provider, 'twilio')
+        ));
+      
+      if (!phoneNumber) {
+        return res.status(404).json({ message: "Phone number not found" });
+      }
+      
+      await db
+        .update(smsIntegrations)
+        .set({
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(smsIntegrations.id, id));
+      
+      res.json({ 
+        message: `Phone number "${phoneNumber.name}" (${phoneNumber.phoneNumber}) deleted successfully`
+      });
+    } catch (error) {
+      console.error('Error deleting phone number:', error);
+      res.status(500).json({ message: "Failed to delete phone number" });
+    }
+  });
+
+  // Update individual Twilio phone number
+  app.put("/api/integrations/twilio/numbers/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, phoneNumber } = req.body;
+      
+      if (!name || name.trim() === '') {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      const [existingNumber] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.id, id),
+          eq(smsIntegrations.provider, 'twilio')
+        ));
+      
+      if (!existingNumber) {
+        return res.status(404).json({ message: "Phone number not found" });
+      }
+      
+      // Check if new name conflicts with existing names (excluding current record)
+      if (name.trim() !== existingNumber.name) {
+        const [nameConflict] = await db
+          .select()
+          .from(smsIntegrations)
+          .where(and(
+            eq(smsIntegrations.provider, 'twilio'),
+            eq(smsIntegrations.name, name.trim()),
+            sql`${smsIntegrations.id} != ${id}`
+          ));
+        
+        if (nameConflict) {
+          return res.status(400).json({ 
+            message: `A phone number with name "${name}" already exists` 
+          });
+        }
+      }
+      
+      await db
+        .update(smsIntegrations)
+        .set({
+          name: name.trim(),
+          updatedAt: new Date()
+        })
+        .where(eq(smsIntegrations.id, id));
+      
+      res.json({ 
+        message: `Phone number updated successfully`,
+        name: name.trim(),
+        phoneNumber: existingNumber.phoneNumber
+      });
+    } catch (error) {
+      console.error('Error updating phone number:', error);
+      res.status(500).json({ message: "Failed to update phone number" });
     }
   });
 
