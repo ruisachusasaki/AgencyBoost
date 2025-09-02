@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,7 +27,8 @@ import {
   Folder,
   FolderOpen,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  MoreVertical
 } from "lucide-react";
 import { Link } from "wouter";
 import type { TrainingLesson, TrainingModule, InsertTrainingModule } from "@shared/schema";
@@ -36,6 +39,8 @@ export default function LessonManagement() {
   const courseId = params?.id;
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
+  const [editingModule, setEditingModule] = useState<TrainingModule | null>(null);
+  const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -111,6 +116,87 @@ export default function LessonManagement() {
     createModuleMutation.mutate(data);
   };
 
+  // Update module mutation
+  const updateModuleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<InsertTrainingModule> }) => 
+      fetch(`/api/training/modules/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to update module");
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/modules`] });
+      setEditingModule(null);
+      setModuleDialogOpen(false);
+      moduleForm.reset();
+      toast({
+        title: "Module updated",
+        description: "The module has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Module update error:', error);
+      toast({
+        title: "Error", 
+        description: error?.message || "Failed to update module. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete module mutation
+  const deleteModuleMutation = useMutation({
+    mutationFn: (moduleId: string) => 
+      fetch(`/api/training/modules/${moduleId}`, {
+        method: "DELETE",
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to delete module");
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/modules`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
+      setDeleteModuleId(null);
+      toast({
+        title: "Module deleted",
+        description: "The module has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Module delete error:', error);
+      toast({
+        title: "Error", 
+        description: error?.message || "Failed to delete module. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onUpdateModule = (data: InsertTrainingModule) => {
+    if (!editingModule) return;
+    updateModuleMutation.mutate({ id: editingModule.id, data });
+  };
+
+  const onDeleteModule = () => {
+    if (!deleteModuleId) return;
+    deleteModuleMutation.mutate(deleteModuleId);
+  };
+
+  const openEditModule = (module: TrainingModule) => {
+    setEditingModule(module);
+    moduleForm.reset({
+      title: module.title,
+      description: module.description || "",
+      order: module.order,
+      isRequired: module.isRequired
+    });
+    setModuleDialogOpen(true);
+  };
+
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
     if (newExpanded.has(moduleId)) {
@@ -178,8 +264,14 @@ export default function LessonManagement() {
         </div>
         
         <div className="flex gap-2">
-          {/* Create Module Dialog */}
-          <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
+          {/* Create/Edit Module Dialog */}
+          <Dialog open={moduleDialogOpen} onOpenChange={(open) => {
+            setModuleDialogOpen(open);
+            if (!open) {
+              setEditingModule(null);
+              moduleForm.reset();
+            }
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline" data-testid="button-add-module">
                 <Folder className="h-4 w-4 mr-2" />
@@ -188,10 +280,12 @@ export default function LessonManagement() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Module</DialogTitle>
+                <DialogTitle>
+                  {editingModule ? "Edit Module" : "Create New Module"}
+                </DialogTitle>
               </DialogHeader>
               <Form {...moduleForm}>
-                <form onSubmit={moduleForm.handleSubmit(onCreateModule)} className="space-y-4">
+                <form onSubmit={moduleForm.handleSubmit(editingModule ? onUpdateModule : onCreateModule)} className="space-y-4">
                   <FormField
                     control={moduleForm.control}
                     name="title"
@@ -227,8 +321,11 @@ export default function LessonManagement() {
                     <Button type="button" variant="outline" onClick={() => setModuleDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={createModuleMutation.isPending}>
-                      {createModuleMutation.isPending ? "Creating..." : "Create Module"}
+                    <Button type="submit" disabled={createModuleMutation.isPending || updateModuleMutation.isPending}>
+                      {editingModule 
+                        ? (updateModuleMutation.isPending ? "Updating..." : "Update Module")
+                        : (createModuleMutation.isPending ? "Creating..." : "Create Module")
+                      }
                     </Button>
                   </div>
                 </form>
@@ -257,12 +354,12 @@ export default function LessonManagement() {
             
             return (
               <Card key={module.id} className="overflow-hidden">
-                <CardHeader 
-                  className="cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => toggleModule(module.id)}
-                >
+                <CardHeader className="hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div 
+                      className="flex items-center gap-3 cursor-pointer flex-1"
+                      onClick={() => toggleModule(module.id)}
+                    >
                       {isExpanded ? (
                         <ChevronDown className="h-4 w-4 text-gray-500" />
                       ) : (
@@ -280,9 +377,33 @@ export default function LessonManagement() {
                         )}
                       </div>
                     </div>
-                    <Badge variant="secondary">
-                      {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''}
+                      </Badge>
+                      
+                      {/* Module Actions */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditModule(module)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Module
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => setDeleteModuleId(module.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Module
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
                 
@@ -414,6 +535,29 @@ export default function LessonManagement() {
           )}
         </div>
       )}
+
+      {/* Delete Module Confirmation */}
+      <AlertDialog open={!!deleteModuleId} onOpenChange={() => setDeleteModuleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Module</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this module? This action cannot be undone. 
+              All lessons in this module will become unorganized.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={onDeleteModule}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteModuleMutation.isPending}
+            >
+              {deleteModuleMutation.isPending ? "Deleting..." : "Delete Module"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
