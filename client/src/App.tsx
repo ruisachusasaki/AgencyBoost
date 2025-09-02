@@ -55,6 +55,8 @@ import ArticleView from "@/pages/article-view";
 import Training from "@/pages/training";
 import CourseDetail from "@/pages/training/course-detail";
 import CreateCourse from "@/pages/training/create-course";
+import EditCourse from "@/pages/training/edit-course";
+import LessonManagement from "@/pages/training/lesson-management";
 
 function Router() {
   return (
@@ -78,6 +80,8 @@ function Router() {
       <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
       <Route path="/training" component={Training} />
       <Route path="/training/courses/:id" component={CourseDetail} />
+      <Route path="/training/courses/:id/edit" component={EditCourse} />
+      <Route path="/training/courses/:id/lessons" component={LessonManagement} />
       <Route path="/training/create" component={CreateCourse} />
       <Route path="/resources" component={KnowledgeBase} />
       <Route path="/resources/articles/:id" component={ArticleView} />

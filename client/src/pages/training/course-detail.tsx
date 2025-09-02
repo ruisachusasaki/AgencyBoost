@@ -9,7 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Play, Clock, Users, BookOpen, CheckCircle, Lock, 
-  ArrowLeft, Award, FileText, Video, FileIcon, Download
+  ArrowLeft, Award, FileText, Video, FileIcon, Download,
+  Edit, Plus, Settings
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -22,6 +23,12 @@ export default function CourseDetail() {
   // Fetch course data
   const { data: course, isLoading } = useQuery({
     queryKey: ["/api/training/courses", courseId],
+    enabled: !!courseId,
+  });
+
+  // Fetch course lessons
+  const { data: lessons = [] } = useQuery({
+    queryKey: ["/api/training/courses", courseId, "lessons"],
     enabled: !!courseId,
   });
 
@@ -111,6 +118,22 @@ export default function CourseDetail() {
             Back to Training
           </Link>
         </Button>
+        
+        {/* Course Management Actions - Show for course creators/admins */}
+        <div className="flex gap-2">
+          <Button variant="outline" asChild data-testid="button-edit-course">
+            <Link href={`/training/courses/${courseId}/edit`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Course
+            </Link>
+          </Button>
+          <Button variant="outline" asChild data-testid="button-manage-lessons">
+            <Link href={`/training/courses/${courseId}/lessons`}>
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Content
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -203,7 +226,21 @@ export default function CourseDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {course.lessons?.map((lesson, index) => {
+                {lessons.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No lessons yet</h3>
+                    <p className="text-gray-600 mb-4">
+                      This course doesn't have any lessons yet. 
+                    </p>
+                    <Button variant="outline" asChild>
+                      <Link href={`/training/courses/${courseId}/lessons`}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Lessons
+                      </Link>
+                    </Button>
+                  </div>
+                ) : lessons.map((lesson, index) => {
                   const progress = progressMap.get(lesson.id);
                   const isCompleted = isLessonCompleted(lesson.id);
                   const canAccess = canAccessLesson(index);

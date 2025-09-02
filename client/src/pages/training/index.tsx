@@ -28,7 +28,7 @@ export default function Training() {
       search: searchTerm,
       category: selectedCategory !== "all" ? selectedCategory : undefined,
       difficulty: selectedDifficulty !== "all" ? selectedDifficulty : undefined,
-      published: true
+      // Show all courses (published and unpublished) so you can see your created courses
     }],
   });
   
