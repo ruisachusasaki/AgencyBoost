@@ -13,13 +13,13 @@ export default function LessonManagement() {
 
   // Fetch course data
   const { data: course, isLoading: courseLoading } = useQuery({
-    queryKey: ["/api/training/courses", courseId],
+    queryKey: [`/api/training/courses/${courseId}`],
     enabled: !!courseId,
   });
 
   // Fetch lessons data
   const { data: lessons = [], isLoading: lessonsLoading } = useQuery({
-    queryKey: ["/api/training/courses", courseId, "lessons"],
+    queryKey: [`/api/training/courses/${courseId}/lessons`],
     enabled: !!courseId,
   });
 

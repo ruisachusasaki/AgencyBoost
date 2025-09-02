@@ -57,6 +57,8 @@ import CourseDetail from "@/pages/training/course-detail";
 import CreateCourse from "@/pages/training/create-course";
 import EditCourse from "@/pages/training/edit-course";
 import LessonManagement from "@/pages/training/lesson-management";
+import CreateLesson from "@/pages/training/create-lesson";
+import EditLesson from "@/pages/training/edit-lesson";
 
 function Router() {
   return (
@@ -82,6 +84,8 @@ function Router() {
       <Route path="/training/courses/:id" component={CourseDetail} />
       <Route path="/training/courses/:id/edit" component={EditCourse} />
       <Route path="/training/courses/:id/lessons" component={LessonManagement} />
+      <Route path="/training/courses/:id/lessons/create" component={CreateLesson} />
+      <Route path="/training/lessons/:id/edit" component={EditLesson} />
       <Route path="/training/create" component={CreateCourse} />
       <Route path="/resources" component={KnowledgeBase} />
       <Route path="/resources/articles/:id" component={ArticleView} />
