@@ -1938,6 +1938,20 @@ export const calendarIntegrations = pgTable("calendar_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// SMS integrations (Twilio, etc.)
+export const smsIntegrations = pgTable("sms_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(), // 'twilio', 'sendgrid', etc.
+  accountSid: text("account_sid").notNull(), // Twilio Account SID
+  authToken: text("auth_token").notNull(), // Twilio Auth Token (encrypted)
+  phoneNumber: text("phone_number").notNull(), // From phone number
+  isActive: boolean("is_active").default(true),
+  lastTestAt: timestamp("last_test_at"),
+  connectionErrors: text("connection_errors"), // Latest connection error messages
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Lead Notes - Multiple notes per lead  
 export const leadNotes = pgTable("lead_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2071,6 +2085,12 @@ export const insertCalendarIntegrationSchema = createInsertSchema(calendarIntegr
   updatedAt: true,
 });
 
+export const insertSmsIntegrationSchema = createInsertSchema(smsIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCalendarAppointmentSchema = createInsertSchema(calendarAppointments).omit({
   id: true,
   createdAt: true,
@@ -2102,6 +2122,9 @@ export type InsertCalendarDateOverride = z.infer<typeof insertCalendarDateOverri
 
 export type CalendarIntegration = typeof calendarIntegrations.$inferSelect;
 export type InsertCalendarIntegration = z.infer<typeof insertCalendarIntegrationSchema>;
+
+export type SmsIntegration = typeof smsIntegrations.$inferSelect;
+export type InsertSmsIntegration = z.infer<typeof insertSmsIntegrationSchema>;
 
 export type CalendarAppointment = typeof calendarAppointments.$inferSelect;
 export type InsertCalendarAppointment = z.infer<typeof insertCalendarAppointmentSchema>;

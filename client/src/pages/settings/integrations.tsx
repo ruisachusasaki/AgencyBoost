@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -36,6 +36,16 @@ export default function Integrations() {
       status: "disconnected",
       lastSync: "",
       features: ["2-way calendar sync", "Meeting scheduling", "Appointment reminders"],
+      settingsRequired: true
+    },
+    {
+      id: "twilio",
+      name: "Twilio SMS",
+      description: "Send SMS messages and notifications to clients and leads",
+      icon: Smartphone,
+      status: "disconnected",
+      lastSync: "",
+      features: ["SMS notifications", "Client messaging", "Lead follow-ups"],
       settingsRequired: true
     },
     {
@@ -109,6 +119,9 @@ export default function Integrations() {
     
     // Check Google Calendar status
     checkGoogleCalendarStatus();
+    
+    // Check Twilio status
+    checkTwilioStatus();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -127,6 +140,25 @@ export default function Integrations() {
       ));
     } catch (error) {
       console.error('Error checking Google Calendar status:', error);
+    }
+  };
+
+  const checkTwilioStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/twilio/status');
+      const status = await response.json();
+      
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "twilio" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : "disconnected" as const,
+              lastSync: status.lastTest ? new Date(status.lastTest).toLocaleString() : ""
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking Twilio status:', error);
     }
   };
 
@@ -168,66 +200,231 @@ export default function Integrations() {
   };
 
   const handleConnect = async (integrationId: string) => {
-    if (integrationId !== "google-calendar") {
-      toast({
-        title: "Coming Soon",
-        description: "This integration is not yet available.",
-      });
+    if (integrationId === "google-calendar") {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('POST', '/api/integrations/google-calendar/connect');
+        const data = await response.json();
+        
+        if (data.authUrl) {
+          // Redirect to Google OAuth
+          window.location.href = data.authUrl;
+        }
+      } catch (error) {
+        console.error('Connection error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to connect to Google Calendar. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    } else if (integrationId === "twilio") {
+      // Open Twilio configuration dialog
+      const twilioIntegration = integrations.find(i => i.id === "twilio");
+      if (twilioIntegration) {
+        openConfigDialog(twilioIntegration);
+      }
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await apiRequest('POST', '/api/integrations/google-calendar/connect');
-      const data = await response.json();
-      
-      if (data.authUrl) {
-        // Redirect to Google OAuth
-        window.location.href = data.authUrl;
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to connect to Google Calendar. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Coming Soon",
+      description: "This integration is not yet available.",
+    });
   };
 
   const handleDisconnect = async (integrationId: string, integrationName: string) => {
     if (!confirm(`Are you sure you want to disconnect ${integrationName}? This will stop all data syncing.`)) return;
     
-    if (integrationId !== "google-calendar") {
+    if (integrationId === "google-calendar") {
+      setIsLoading(true);
+      try {
+        await apiRequest('POST', '/api/integrations/google-calendar/disconnect');
+        
+        // Update local state
+        setIntegrations(prev => prev.map(integration => 
+          integration.id === integrationId 
+            ? { ...integration, status: "disconnected" as const, lastSync: "" }
+            : integration
+        ));
+        
+        toast({
+          title: "Success",
+          description: `Disconnected from ${integrationName}`,
+        });
+      } catch (error) {
+        console.error('Disconnect error:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to disconnect integration. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    } else if (integrationId === "twilio") {
+      setIsLoading(true);
+      try {
+        await apiRequest('POST', '/api/integrations/twilio/disconnect');
+        
+        // Update local state
+        setIntegrations(prev => prev.map(integration => 
+          integration.id === integrationId 
+            ? { ...integration, status: "disconnected" as const, lastSync: "" }
+            : integration
+        ));
+        
+        toast({
+          title: "Success",
+          description: `Disconnected from ${integrationName}`,
+        });
+      } catch (error) {
+        console.error('Disconnect error:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to disconnect integration. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    toast({
+      title: "Coming Soon",
+      description: "This integration is not yet available.",
+    });
+  };
+
+  const handleTestConnection = async (integrationId: string) => {
+    if (integrationId === "google-calendar") {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('GET', '/api/integrations/google-calendar/status');
+        const status = await response.json();
+        
+        if (status.connected) {
+          toast({
+            title: "Success",
+            description: "Google Calendar connection is working correctly!",
+          });
+        } else {
+          toast({
+            title: "Connection Issue",
+            description: "Google Calendar is not properly connected. Please reconnect.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Test connection error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to test connection. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    } else if (integrationId === "twilio") {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('GET', '/api/integrations/twilio/status');
+        const status = await response.json();
+        
+        if (status.connected) {
+          toast({
+            title: "Success",
+            description: "Twilio SMS connection is working correctly!",
+          });
+        } else {
+          toast({
+            title: "Connection Issue",
+            description: "Twilio SMS is not properly connected. Please check your credentials.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Test connection error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to test connection. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    toast({
+      title: "Coming Soon",
+      description: "This integration is not yet available.",
+    });
+  };
+
+  // Twilio configuration settings
+  const [twilioSettings, setTwilioSettings] = useState({
+    accountSid: "",
+    authToken: "",
+    phoneNumber: "",
+    testPhoneNumber: ""
+  });
+
+  const handleTwilioConnect = async () => {
+    if (!twilioSettings.accountSid || !twilioSettings.authToken || !twilioSettings.phoneNumber) {
       toast({
-        title: "Coming Soon",
-        description: "This integration is not yet available.",
+        title: "Missing Credentials",
+        description: "Please fill in all required fields (Account SID, Auth Token, and Phone Number).",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      await apiRequest('POST', '/api/integrations/google-calendar/disconnect');
+      const response = await apiRequest('POST', '/api/integrations/twilio/connect', {
+        accountSid: twilioSettings.accountSid,
+        authToken: twilioSettings.authToken,
+        phoneNumber: twilioSettings.phoneNumber
+      });
+      const result = await response.json();
       
-      // Update local state
+      // Update integration status
       setIntegrations(prev => prev.map(integration => 
-        integration.id === integrationId 
-          ? { ...integration, status: "disconnected" as const, lastSync: "" }
+        integration.id === "twilio" 
+          ? { 
+              ...integration, 
+              status: "connected" as const,
+              lastSync: new Date().toLocaleString()
+            }
           : integration
       ));
       
       toast({
         title: "Success",
-        description: `Disconnected from ${integrationName}`,
+        description: "Twilio SMS integration connected successfully!",
+      });
+      
+      setIsConfigDialogOpen(false);
+      
+      // Clear the form
+      setTwilioSettings({
+        accountSid: "",
+        authToken: "",
+        phoneNumber: "",
+        testPhoneNumber: ""
       });
     } catch (error) {
-      console.error('Disconnect error:', error);
+      console.error('Twilio connection error:', error);
       toast({
-        title: "Error", 
-        description: "Failed to disconnect integration. Please try again.",
+        title: "Connection Failed",
+        description: "Failed to connect to Twilio. Please check your credentials.",
         variant: "destructive",
       });
     } finally {
@@ -235,42 +432,51 @@ export default function Integrations() {
     }
   };
 
-  const handleTestConnection = async (integrationId: string) => {
-    if (integrationId !== "google-calendar") {
+  const handleTwilioTest = async () => {
+    if (!twilioSettings.testPhoneNumber) {
       toast({
-        title: "Coming Soon",
-        description: "This integration is not yet available.",
+        title: "Missing Phone Number",
+        description: "Please enter a test phone number.",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await apiRequest('GET', '/api/integrations/google-calendar/status');
-      const status = await response.json();
+      const response = await apiRequest('POST', '/api/integrations/twilio/test', {
+        testPhoneNumber: twilioSettings.testPhoneNumber
+      });
+      const result = await response.json();
       
-      if (status.connected) {
-        toast({
-          title: "Success",
-          description: "Google Calendar connection is working correctly!",
-        });
-      } else {
-        toast({
-          title: "Connection Issue",
-          description: status.error || "Connection test failed. Please reconnect.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Test connection error:', error);
       toast({
-        title: "Error",
-        description: "Connection test failed. Please check your settings.",
+        title: "Test SMS Sent",
+        description: `Test message sent successfully to ${twilioSettings.testPhoneNumber}`,
+      });
+    } catch (error) {
+      console.error('Twilio test error:', error);
+      toast({
+        title: "Test Failed",
+        description: "Failed to send test SMS. Please check your configuration.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+
+  const getStatusColor = (status: Integration['status']) => {
+    switch (status) {
+      case "connected": return "border-l-green-500";
+      case "error": return "border-l-red-500";
+      default: return "border-l-gray-300";
+    }
+  };
+
+  const openConfigDialog = (integration: Integration) => {
+    setSelectedIntegration(integration);
+    setIsConfigDialogOpen(true);
   };
 
   const getStatusBadge = (status: Integration['status']) => {

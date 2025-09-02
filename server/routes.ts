@@ -22,14 +22,14 @@ import {
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
-  insertCalendarIntegrationSchema,
+  insertCalendarIntegrationSchema, insertSmsIntegrationSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, customFieldFileUploads,
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
@@ -43,6 +43,7 @@ import { randomUUID } from "crypto";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
 import { google } from "googleapis";
+import twilio from "twilio";
 import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
@@ -8987,6 +8988,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to sync Google Calendar" });
+    }
+  });
+
+  // Twilio SMS Integration Routes
+  // Helper function to create Twilio client
+  function createTwilioClient(accountSid: string, authToken: string) {
+    return twilio(accountSid, authToken);
+  }
+
+  // Connect Twilio SMS integration
+  app.post("/api/integrations/twilio/connect", async (req, res) => {
+    try {
+      const { accountSid, authToken, phoneNumber } = req.body;
+      
+      if (!accountSid || !authToken || !phoneNumber) {
+        return res.status(400).json({ 
+          message: "Account SID, Auth Token, and Phone Number are required" 
+        });
+      }
+      
+      // Test the credentials by making a test API call
+      try {
+        const client = createTwilioClient(accountSid, authToken);
+        await client.api.accounts(accountSid).fetch();
+        
+        // Validate phone number format
+        const phoneNumberRegex = /^\+?[1-9]\d{1,14}$/;
+        if (!phoneNumberRegex.test(phoneNumber)) {
+          return res.status(400).json({ 
+            message: "Invalid phone number format. Please use E.164 format (e.g., +1234567890)" 
+          });
+        }
+        
+      } catch (twilioError) {
+        return res.status(400).json({ 
+          message: "Invalid credentials. Please check your Account SID and Auth Token." 
+        });
+      }
+      
+      const integrationData = {
+        provider: 'twilio',
+        accountSid,
+        authToken, // Note: In production, this should be encrypted
+        phoneNumber,
+        isActive: true,
+        lastTestAt: new Date(),
+        connectionErrors: null,
+      };
+      
+      // Check if integration already exists for this provider
+      const [existingIntegration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(eq(smsIntegrations.provider, 'twilio'));
+      
+      if (existingIntegration) {
+        // Update existing integration
+        await db
+          .update(smsIntegrations)
+          .set({
+            ...integrationData,
+            updatedAt: new Date()
+          })
+          .where(eq(smsIntegrations.id, existingIntegration.id));
+      } else {
+        // Create new integration
+        await db.insert(smsIntegrations).values(integrationData);
+      }
+      
+      res.json({ 
+        message: "Twilio SMS integration connected successfully",
+        phoneNumber: phoneNumber
+      });
+    } catch (error) {
+      console.error('Error connecting Twilio SMS:', error);
+      res.status(500).json({ message: "Failed to connect Twilio SMS" });
+    }
+  });
+
+  // Disconnect Twilio SMS integration
+  app.post("/api/integrations/twilio/disconnect", async (req, res) => {
+    try {
+      await db
+        .update(smsIntegrations)
+        .set({
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(smsIntegrations.provider, 'twilio'));
+      
+      res.json({ message: "Twilio SMS disconnected successfully" });
+    } catch (error) {
+      console.error('Error disconnecting Twilio SMS:', error);
+      res.status(500).json({ message: "Failed to disconnect Twilio SMS" });
+    }
+  });
+
+  // Check Twilio SMS connection status
+  app.get("/api/integrations/twilio/status", async (req, res) => {
+    try {
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ));
+      
+      if (!integration) {
+        return res.json({ 
+          connected: false, 
+          status: "disconnected",
+          lastTest: null
+        });
+      }
+      
+      // Test the connection by making a simple API call
+      try {
+        const client = createTwilioClient(integration.accountSid, integration.authToken);
+        await client.api.accounts(integration.accountSid).fetch();
+        
+        res.json({
+          connected: true,
+          status: "connected",
+          lastTest: integration.lastTestAt,
+          phoneNumber: integration.phoneNumber
+        });
+      } catch (apiError) {
+        console.error('Twilio API error:', apiError);
+        
+        // Update integration to show error
+        await db
+          .update(smsIntegrations)
+          .set({
+            connectionErrors: `API Error: ${(apiError as Error).message}`,
+            updatedAt: new Date()
+          })
+          .where(eq(smsIntegrations.id, integration.id));
+        
+        res.json({
+          connected: false,
+          status: "error",
+          lastTest: integration.lastTestAt,
+          error: "Authentication failed. Please check your credentials."
+        });
+      }
+    } catch (error) {
+      console.error('Error checking Twilio status:', error);
+      res.status(500).json({ message: "Failed to check connection status" });
+    }
+  });
+
+  // Test Twilio SMS connection by sending a test message
+  app.post("/api/integrations/twilio/test", async (req, res) => {
+    try {
+      const { testPhoneNumber } = req.body;
+      
+      if (!testPhoneNumber) {
+        return res.status(400).json({ 
+          message: "Test phone number is required" 
+        });
+      }
+      
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ));
+      
+      if (!integration) {
+        return res.status(400).json({ 
+          message: "Twilio SMS integration not connected" 
+        });
+      }
+      
+      const client = createTwilioClient(integration.accountSid, integration.authToken);
+      
+      const message = await client.messages.create({
+        body: 'Test message from your CRM system. Twilio SMS integration is working!',
+        from: integration.phoneNumber,
+        to: testPhoneNumber
+      });
+      
+      // Update last test time
+      await db
+        .update(smsIntegrations)
+        .set({
+          lastTestAt: new Date(),
+          connectionErrors: null,
+          updatedAt: new Date()
+        })
+        .where(eq(smsIntegrations.id, integration.id));
+      
+      res.json({
+        message: "Test SMS sent successfully",
+        messageId: message.sid,
+        to: testPhoneNumber
+      });
+    } catch (error) {
+      console.error('Error sending test SMS:', error);
+      
+      // Log error to integration
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(eq(smsIntegrations.provider, 'twilio'));
+      
+      if (integration) {
+        await db
+          .update(smsIntegrations)
+          .set({
+            connectionErrors: `Test Error: ${(error as Error).message}`,
+            updatedAt: new Date()
+          })
+          .where(eq(smsIntegrations.id, integration.id));
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to send test SMS",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // Send SMS using connected Twilio integration
+  app.post("/api/integrations/twilio/send", async (req, res) => {
+    try {
+      const { to, message, templateId } = req.body;
+      
+      if (!to || !message) {
+        return res.status(400).json({ 
+          message: "Phone number and message are required" 
+        });
+      }
+      
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ));
+      
+      if (!integration) {
+        return res.status(400).json({ 
+          message: "Twilio SMS integration not connected" 
+        });
+      }
+      
+      const client = createTwilioClient(integration.accountSid, integration.authToken);
+      
+      const smsMessage = await client.messages.create({
+        body: message,
+        from: integration.phoneNumber,
+        to: to
+      });
+      
+      res.json({
+        message: "SMS sent successfully",
+        messageId: smsMessage.sid,
+        to: to,
+        status: smsMessage.status
+      });
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+      res.status(500).json({ 
+        message: "Failed to send SMS",
+        error: (error as Error).message
+      });
     }
   });
 
