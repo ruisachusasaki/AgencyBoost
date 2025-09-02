@@ -229,8 +229,14 @@ export class ObjectStorageService {
       throw new ObjectNotFoundError();
     }
 
-    const entityId = parts.slice(1).join("/");
+    let entityId = parts.slice(1).join("/");
     console.log("Entity ID extracted:", entityId);
+    
+    // Fix double objects prefix issue
+    if (entityId.startsWith("objects/")) {
+      entityId = entityId.substring(8); // Remove "objects/" prefix
+      console.log("Removed double objects prefix, new entityId:", entityId);
+    }
     
     // Check if entityId already contains the full bucket path (old format)
     if (entityId.includes("replit-objstore-")) {
