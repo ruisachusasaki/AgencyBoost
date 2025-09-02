@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Integration {
   id: string;
@@ -25,8 +26,8 @@ export default function Integrations() {
   const { toast } = useToast();
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
-  
-  const [integrations] = useState<Integration[]>([
+  const [location] = useLocation();
+  const [integrations, setIntegrations] = useState<Integration[]>([
     {
       id: "google-calendar",
       name: "Google Calendar",
@@ -77,57 +78,200 @@ export default function Integrations() {
     syncFrequency: "hourly"
   });
 
-  const handleConnect = async (integrationId: string) => {
-    try {
-      // TODO: Implement actual integration connection logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Check for OAuth callback parameters and Google Calendar status on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    
+    if (params.get('connected') === 'google-calendar') {
       toast({
         title: "Success",
-        description: `Successfully connected to ${integrations.find(i => i.id === integrationId)?.name}`,
+        description: "Google Calendar connected successfully!",
       });
-    } catch (error) {
+      // Update the integration status
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "google-calendar" 
+          ? { ...integration, status: "connected" as const, lastSync: new Date().toISOString() }
+          : integration
+      ));
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('error') === 'connection-failed') {
       toast({
-        title: "Error",
-        description: "Failed to connect integration. Please try again.",
+        title: "Connection Failed",
+        description: "Failed to connect to Google Calendar. Please try again.",
         variant: "destructive",
       });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    // Check Google Calendar status
+    checkGoogleCalendarStatus();
+  }, []);
+
+  const checkGoogleCalendarStatus = async () => {
+    try {
+      const status = await apiRequest('/api/integrations/google-calendar/status');
+      
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "google-calendar" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : "disconnected" as const,
+              lastSync: status.lastSync ? new Date(status.lastSync).toLocaleString() : ""
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking Google Calendar status:', error);
+    }
+  };
+
+  const handleSync = async (integrationId: string) => {
+    if (integrationId !== "google-calendar") {
+      toast({
+        title: "Coming Soon",
+        description: "This integration is not yet available.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await apiRequest('/api/integrations/google-calendar/sync', {
+        method: 'POST',
+      });
+      
+      // Update last sync time
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === integrationId 
+          ? { ...integration, lastSync: new Date().toLocaleString() }
+          : integration
+      ));
+      
+      toast({
+        title: "Sync Complete",
+        description: `Synced ${result.syncedEvents} new events from Google Calendar`,
+      });
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync with Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConnect = async (integrationId: string) => {
+    if (integrationId !== "google-calendar") {
+      toast({
+        title: "Coming Soon",
+        description: "This integration is not yet available.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('/api/integrations/google-calendar/connect', {
+        method: 'POST',
+      });
+      
+      if (response.authUrl) {
+        // Redirect to Google OAuth
+        window.location.href = response.authUrl;
+      }
+    } catch (error) {
+      console.error('Connection error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect to Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDisconnect = async (integrationId: string, integrationName: string) => {
     if (!confirm(`Are you sure you want to disconnect ${integrationName}? This will stop all data syncing.`)) return;
     
+    if (integrationId !== "google-calendar") {
+      toast({
+        title: "Coming Soon",
+        description: "This integration is not yet available.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      // TODO: Implement disconnect logic
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await apiRequest('/api/integrations/google-calendar/disconnect', {
+        method: 'POST',
+      });
+      
+      // Update local state
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === integrationId 
+          ? { ...integration, status: "disconnected" as const, lastSync: "" }
+          : integration
+      ));
       
       toast({
         title: "Success",
         description: `Disconnected from ${integrationName}`,
       });
     } catch (error) {
+      console.error('Disconnect error:', error);
       toast({
         title: "Error", 
         description: "Failed to disconnect integration. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleTestConnection = async (integrationId: string) => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    if (integrationId !== "google-calendar") {
       toast({
-        title: "Success",
-        description: "Connection test successful!",
+        title: "Coming Soon",
+        description: "This integration is not yet available.",
       });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const status = await apiRequest('/api/integrations/google-calendar/status');
+      
+      if (status.connected) {
+        toast({
+          title: "Success",
+          description: "Google Calendar connection is working correctly!",
+        });
+      } else {
+        toast({
+          title: "Connection Issue",
+          description: status.error || "Connection test failed. Please reconnect.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error('Test connection error:', error);
       toast({
         title: "Error",
         description: "Connection test failed. Please check your settings.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -276,6 +420,17 @@ export default function Integrations() {
                     <div className="flex items-center space-x-2">
                       {integration.status === "connected" && (
                         <>
+                          {integration.id === "google-calendar" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSync(integration.id)}
+                              disabled={isLoading}
+                            >
+                              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                              Sync
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -288,6 +443,7 @@ export default function Integrations() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleTestConnection(integration.id)}
+                            disabled={isLoading}
                           >
                             Test
                           </Button>
@@ -295,6 +451,7 @@ export default function Integrations() {
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDisconnect(integration.id, integration.name)}
+                            disabled={isLoading}
                           >
                             Disconnect
                           </Button>
@@ -304,8 +461,9 @@ export default function Integrations() {
                       {integration.status === "disconnected" && (
                         <Button
                           onClick={() => handleConnect(integration.id)}
+                          disabled={isLoading}
                         >
-                          Connect
+                          {isLoading ? "Connecting..." : "Connect"}
                         </Button>
                       )}
                       
@@ -314,15 +472,17 @@ export default function Integrations() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openConfigDialog(integration)}
+                            onClick={() => handleConnect(integration.id)}
+                            disabled={isLoading}
                           >
                             <Settings className="h-4 w-4 mr-2" />
-                            Fix Settings
+                            Reconnect
                           </Button>
                           <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDisconnect(integration.id, integration.name)}
+                            disabled={isLoading}
                           >
                             Disconnect
                           </Button>

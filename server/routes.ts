@@ -22,13 +22,14 @@ import {
   insertClientDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
+  insertCalendarIntegrationSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, customFieldFileUploads,
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
@@ -41,6 +42,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
+import { google } from "googleapis";
 import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
@@ -8634,6 +8636,357 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating public booking:', error);
       res.status(500).json({ message: "Failed to create booking" });
+    }
+  });
+
+  // Google Calendar Integration Routes
+  // Helper function to create OAuth2 client
+  function createGoogleOAuth2Client() {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = `${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://localhost:5000'}/api/integrations/google-calendar/callback`;
+    
+    if (!clientId || !clientSecret) {
+      throw new Error('Google OAuth credentials not configured');
+    }
+    
+    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  }
+
+  // Generate OAuth authorization URL
+  app.get("/api/integrations/google-calendar/authorize", async (req, res) => {
+    try {
+      const oauth2Client = createGoogleOAuth2Client();
+      
+      const scopes = [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events'
+      ];
+      
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+        prompt: 'consent',
+        state: req.session?.userId || 'default-user'
+      });
+      
+      res.json({ authUrl });
+    } catch (error) {
+      console.error('Error generating auth URL:', error);
+      res.status(500).json({ message: "Failed to generate authorization URL" });
+    }
+  });
+
+  // Handle OAuth callback
+  app.get("/api/integrations/google-calendar/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code) {
+        return res.status(400).json({ message: "Authorization code not provided" });
+      }
+      
+      const oauth2Client = createGoogleOAuth2Client();
+      const { tokens } = await oauth2Client.getToken(code as string);
+      
+      // Get user info from Google
+      oauth2Client.setCredentials(tokens);
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+      const calendarList = await calendar.calendarList.list();
+      
+      const primaryCalendar = calendarList.data.items?.find(cal => cal.primary);
+      
+      if (!primaryCalendar) {
+        return res.status(400).json({ message: "No primary calendar found" });
+      }
+      
+      // Store integration in database
+      const staffId = state as string || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const integrationData = {
+        staffId,
+        provider: 'google',
+        externalCalendarId: primaryCalendar.id!,
+        accessToken: tokens.access_token!,
+        refreshToken: tokens.refresh_token || null,
+        tokenExpiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+        isActive: true,
+        lastSyncAt: new Date(),
+      };
+      
+      // Check if integration already exists for this user
+      const [existingIntegration] = await db
+        .select()
+        .from(calendarIntegrations)
+        .where(and(
+          eq(calendarIntegrations.staffId, staffId),
+          eq(calendarIntegrations.provider, 'google')
+        ));
+      
+      if (existingIntegration) {
+        // Update existing integration
+        await db
+          .update(calendarIntegrations)
+          .set({
+            ...integrationData,
+            updatedAt: new Date()
+          })
+          .where(eq(calendarIntegrations.id, existingIntegration.id));
+      } else {
+        // Create new integration
+        await db.insert(calendarIntegrations).values(integrationData);
+      }
+      
+      // Redirect to success page
+      res.redirect('/settings/integrations?connected=google-calendar');
+    } catch (error) {
+      console.error('Error handling OAuth callback:', error);
+      res.redirect('/settings/integrations?error=connection-failed');
+    }
+  });
+
+  // Connect Google Calendar integration (for testing/reconnection)
+  app.post("/api/integrations/google-calendar/connect", async (req, res) => {
+    try {
+      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      // Generate auth URL
+      const oauth2Client = createGoogleOAuth2Client();
+      const scopes = [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events'
+      ];
+      
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+        prompt: 'consent',
+        state: staffId
+      });
+      
+      res.json({ authUrl, redirectRequired: true });
+    } catch (error) {
+      console.error('Error connecting Google Calendar:', error);
+      res.status(500).json({ message: "Failed to connect Google Calendar" });
+    }
+  });
+
+  // Disconnect Google Calendar integration
+  app.post("/api/integrations/google-calendar/disconnect", async (req, res) => {
+    try {
+      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      await db
+        .update(calendarIntegrations)
+        .set({
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(calendarIntegrations.staffId, staffId),
+          eq(calendarIntegrations.provider, 'google')
+        ));
+      
+      res.json({ message: "Google Calendar disconnected successfully" });
+    } catch (error) {
+      console.error('Error disconnecting Google Calendar:', error);
+      res.status(500).json({ message: "Failed to disconnect Google Calendar" });
+    }
+  });
+
+  // Check Google Calendar connection status
+  app.get("/api/integrations/google-calendar/status", async (req, res) => {
+    try {
+      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [integration] = await db
+        .select()
+        .from(calendarIntegrations)
+        .where(and(
+          eq(calendarIntegrations.staffId, staffId),
+          eq(calendarIntegrations.provider, 'google'),
+          eq(calendarIntegrations.isActive, true)
+        ));
+      
+      if (!integration) {
+        return res.json({ 
+          connected: false, 
+          status: "disconnected",
+          lastSync: null
+        });
+      }
+      
+      // Test the connection by making a simple API call
+      try {
+        const oauth2Client = createGoogleOAuth2Client();
+        oauth2Client.setCredentials({
+          access_token: integration.accessToken,
+          refresh_token: integration.refreshToken,
+        });
+        
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+        await calendar.calendarList.list();
+        
+        res.json({
+          connected: true,
+          status: "connected",
+          lastSync: integration.lastSyncAt,
+          externalCalendarId: integration.externalCalendarId
+        });
+      } catch (apiError) {
+        console.error('Google Calendar API error:', apiError);
+        
+        // Update integration to show error
+        await db
+          .update(calendarIntegrations)
+          .set({
+            syncErrors: `API Error: ${(apiError as Error).message}`,
+            updatedAt: new Date()
+          })
+          .where(eq(calendarIntegrations.id, integration.id));
+        
+        res.json({
+          connected: false,
+          status: "error",
+          lastSync: integration.lastSyncAt,
+          error: "Authentication failed. Please reconnect."
+        });
+      }
+    } catch (error) {
+      console.error('Error checking Google Calendar status:', error);
+      res.status(500).json({ message: "Failed to check connection status" });
+    }
+  });
+
+  // Sync Google Calendar events
+  app.post("/api/integrations/google-calendar/sync", async (req, res) => {
+    try {
+      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [integration] = await db
+        .select()
+        .from(calendarIntegrations)
+        .where(and(
+          eq(calendarIntegrations.staffId, staffId),
+          eq(calendarIntegrations.provider, 'google'),
+          eq(calendarIntegrations.isActive, true)
+        ));
+      
+      if (!integration) {
+        return res.status(404).json({ message: "Google Calendar integration not found" });
+      }
+      
+      const oauth2Client = createGoogleOAuth2Client();
+      oauth2Client.setCredentials({
+        access_token: integration.accessToken,
+        refresh_token: integration.refreshToken,
+      });
+      
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+      
+      // Get events from the last 30 days to 30 days in the future
+      const timeMin = new Date();
+      timeMin.setDate(timeMin.getDate() - 30);
+      const timeMax = new Date();
+      timeMax.setDate(timeMax.getDate() + 30);
+      
+      const events = await calendar.events.list({
+        calendarId: integration.externalCalendarId,
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+      
+      let syncedCount = 0;
+      
+      for (const event of events.data.items || []) {
+        if (!event.start?.dateTime || !event.end?.dateTime) continue;
+        
+        // Check if event already exists
+        const [existingAppointment] = await db
+          .select()
+          .from(calendarAppointments)
+          .where(eq(calendarAppointments.externalEventId, event.id!));
+        
+        const appointmentData = {
+          title: event.summary || 'Google Calendar Event',
+          description: event.description || null,
+          startTime: new Date(event.start.dateTime),
+          endTime: new Date(event.end.dateTime),
+          location: event.location || null,
+          assignedTo: staffId,
+          status: 'confirmed',
+          externalEventId: event.id!,
+          bookingSource: 'google_calendar',
+        };
+        
+        if (existingAppointment) {
+          // Update existing appointment
+          await db
+            .update(calendarAppointments)
+            .set({
+              ...appointmentData,
+              updatedAt: new Date()
+            })
+            .where(eq(calendarAppointments.id, existingAppointment.id));
+        } else {
+          // Find a default calendar to assign to
+          const [defaultCalendar] = await db
+            .select()
+            .from(calendars)
+            .limit(1);
+          
+          if (defaultCalendar) {
+            // Create new appointment
+            await db.insert(calendarAppointments).values({
+              ...appointmentData,
+              calendarId: defaultCalendar.id,
+            });
+            syncedCount++;
+          }
+        }
+      }
+      
+      // Update last sync time
+      await db
+        .update(calendarIntegrations)
+        .set({
+          lastSyncAt: new Date(),
+          syncErrors: null,
+          updatedAt: new Date()
+        })
+        .where(eq(calendarIntegrations.id, integration.id));
+      
+      res.json({
+        message: "Sync completed successfully",
+        syncedEvents: syncedCount,
+        totalEvents: events.data.items?.length || 0
+      });
+    } catch (error) {
+      console.error('Error syncing Google Calendar:', error);
+      
+      // Log sync error
+      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const [integration] = await db
+        .select()
+        .from(calendarIntegrations)
+        .where(and(
+          eq(calendarIntegrations.staffId, staffId),
+          eq(calendarIntegrations.provider, 'google')
+        ));
+      
+      if (integration) {
+        await db
+          .update(calendarIntegrations)
+          .set({
+            syncErrors: `Sync Error: ${(error as Error).message}`,
+            updatedAt: new Date()
+          })
+          .where(eq(calendarIntegrations.id, integration.id));
+      }
+      
+      res.status(500).json({ message: "Failed to sync Google Calendar" });
     }
   });
 
