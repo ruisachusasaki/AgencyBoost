@@ -4619,6 +4619,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/course-thumbnails", async (req, res) => {
+    if (!req.body.thumbnailImageURL) {
+      return res.status(400).json({ error: "thumbnailImageURL is required" });
+    }
+
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.thumbnailImageURL);
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting course thumbnail:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Business Profile API
   app.get("/api/business-profile", async (req, res) => {
     try {

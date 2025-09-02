@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Save, X } from "lucide-react";
 import { Link } from "wouter";
+import { ThumbnailUpload } from "@/components/training/ThumbnailUpload";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const courseSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -35,11 +37,68 @@ export default function CreateCourse() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newTag, setNewTag] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/training/categories"],
   });
+
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: { name: string; description: string; color: string }) =>
+      fetch("/api/training/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: async (response) => {
+      if (response.ok) {
+        const newCategory = await response.json();
+        toast({
+          title: "Success",
+          description: "Category created successfully!",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/training/categories"] });
+        setCategoryDialogOpen(false);
+        setNewCategoryName("");
+        // Automatically select the new category
+        form.setValue("categoryId", newCategory.id);
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to create category",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createCategoryMutation.mutate({
+      name: newCategoryName.trim(),
+      description: `${newCategoryName.trim()} training courses`,
+      color: "#3b82f6", // Default blue color
+    });
+  };
 
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
@@ -64,13 +123,22 @@ export default function CreateCourse() {
         body: JSON.stringify(data),
       }),
     onSuccess: async (response) => {
-      const course = await response.json();
-      toast({
-        title: "Success",
-        description: "Course created successfully!",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/training/courses"] });
-      setLocation(`/training/courses/${course.id}`);
+      if (response.ok) {
+        const course = await response.json();
+        toast({
+          title: "Success",
+          description: "Course created successfully!",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/training/courses"] });
+        setLocation(`/training/courses/${course.id}`);
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to create course",
+          variant: "destructive",
+        });
+      }
     },
     onError: () => {
       toast({
@@ -164,20 +232,86 @@ export default function CreateCourse() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Category</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-category">
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-category">
+                                  <SelectValue placeholder="Select a category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            
+                            <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="sm"
+                                  data-testid="button-add-category"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Create New Category</DialogTitle>
+                                  <DialogDescription>
+                                    Add a new training category to organize your courses.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                
+                                <div className="grid gap-4 py-4">
+                                  <div className="grid gap-2">
+                                    <label htmlFor="category-name" className="text-sm font-medium">
+                                      Category Name
+                                    </label>
+                                    <Input
+                                      id="category-name"
+                                      placeholder="e.g. Sales Training"
+                                      value={newCategoryName}
+                                      onChange={(e) => setNewCategoryName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          handleCreateCategory();
+                                        }
+                                      }}
+                                      data-testid="input-category-name"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <DialogFooter>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setCategoryDialogOpen(false);
+                                      setNewCategoryName("");
+                                    }}
+                                    data-testid="button-cancel-category"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    onClick={handleCreateCategory}
+                                    disabled={createCategoryMutation.isPending || !newCategoryName.trim()}
+                                    data-testid="button-create-category"
+                                  >
+                                    {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -237,13 +371,13 @@ export default function CreateCourse() {
                       name="thumbnailUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Thumbnail URL</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} data-testid="input-thumbnail" />
+                            <ThumbnailUpload
+                              value={field.value}
+                              onChange={field.onChange}
+                              onRemove={() => field.onChange("")}
+                            />
                           </FormControl>
-                          <FormDescription>
-                            Optional course thumbnail image URL
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
