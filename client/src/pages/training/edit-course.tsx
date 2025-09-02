@@ -24,7 +24,7 @@ const courseSchema = z.object({
   categoryId: z.string().optional(),
   difficulty: z.enum(["beginner", "intermediate", "advanced"]),
   estimatedDuration: z.number().min(1, "Duration must be at least 1 minute").optional(),
-  thumbnailUrl: z.string().url().optional().or(z.literal("")),
+  thumbnailUrl: z.string().optional(),
   isPublished: z.boolean(),
   tags: z.array(z.string()).default([]),
 });
@@ -68,6 +68,7 @@ export default function EditCourse() {
   // Update form when course data loads
   useEffect(() => {
     if (course) {
+      console.log("Populating form with course data:", course);
       form.reset({
         title: course.title || "",
         description: course.description || "",
@@ -79,6 +80,7 @@ export default function EditCourse() {
         isPublished: course.isPublished || false,
         tags: course.tags || [],
       });
+      console.log("Form reset complete");
     }
   }, [course, form]);
 
