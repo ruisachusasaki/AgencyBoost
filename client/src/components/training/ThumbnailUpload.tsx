@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Image, AlertCircle } from "lucide-react";
+import { Upload, X, Image, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ThumbnailUploadProps {
   value?: string;
@@ -140,7 +141,27 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
 
   return (
     <div className="space-y-4">
-      <Label>Course Thumbnail</Label>
+      <div className="flex items-center gap-2">
+        <Label>Course Thumbnail</Label>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-3">
+              <div className="text-sm">
+                <p className="font-medium mb-2">Thumbnail Guidelines:</p>
+                <ul className="text-xs space-y-1">
+                  <li>• Recommended size: 1200×675 pixels (16:9 aspect ratio)</li>
+                  <li>• Supported formats: JPG, PNG, GIF, WebP</li>
+                  <li>• Maximum file size: 5MB</li>
+                  <li>• Use high-quality images for best results</li>
+                </ul>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
       
       {/* Upload Area */}
       <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
@@ -226,20 +247,6 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
           </div>
         </CardContent>
       </Card>
-
-      {/* Info Box */}
-      <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div className="text-sm text-blue-800">
-          <p className="font-medium">Thumbnail Guidelines:</p>
-          <ul className="mt-1 text-xs space-y-1">
-            <li>• Recommended size: 1200×675 pixels (16:9 aspect ratio)</li>
-            <li>• Supported formats: JPG, PNG, GIF, WebP</li>
-            <li>• Maximum file size: 5MB</li>
-            <li>• Use high-quality images for best results</li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 }
