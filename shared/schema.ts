@@ -2594,4 +2594,302 @@ export type InsertKnowledgeBaseView = z.infer<typeof insertKnowledgeBaseViewSche
 export type KnowledgeBaseSetting = typeof knowledgeBaseSettings.$inferSelect;
 export type InsertKnowledgeBaseSetting = z.infer<typeof insertKnowledgeBaseSettingSchema>;
 
+// =============================================================================
+// TRAINING/LMS SYSTEM SCHEMA
+// =============================================================================
+
+// Training Categories
+export const trainingCategories = pgTable("training_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").default("#3B82F6"), // For visual organization
+  order: integer("order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training Courses
+export const trainingCourses = pgTable("training_courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  shortDescription: text("short_description"), // For course cards
+  categoryId: varchar("category_id").references(() => trainingCategories.id),
+  tags: text("tags").array(), // For filtering and search
+  thumbnailUrl: text("thumbnail_url"), // Course cover image
+  estimatedDuration: integer("estimated_duration"), // Minutes
+  difficulty: text("difficulty").default("beginner"), // beginner, intermediate, advanced
+  isPublished: boolean("is_published").default(false),
+  order: integer("order").default(0),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training Lessons
+export const trainingLessons = pgTable("training_lessons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => trainingCourses.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content"), // Rich text content for articles
+  contentType: text("content_type").notNull(), // video, article, pdf, quiz, assignment
+  videoUrl: text("video_url"), // YouTube/Loom embed URL
+  videoEmbedId: text("video_embed_id"), // Extracted video ID for embedding
+  videoDuration: integer("video_duration"), // Seconds
+  pdfUrl: text("pdf_url"), // For PDF lessons
+  order: integer("order").default(0),
+  isRequired: boolean("is_required").default(true),
+  canDownload: boolean("can_download").default(false), // For PDFs
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training Enrollments
+export const trainingEnrollments = pgTable("training_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => trainingCourses.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  status: text("status").default("enrolled"), // enrolled, in_progress, completed, dropped
+  progress: integer("progress").default(0), // Percentage 0-100
+  completedLessons: integer("completed_lessons").default(0),
+  totalLessons: integer("total_lessons").default(0),
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
+});
+
+// Training Progress (per lesson)
+export const trainingProgress = pgTable("training_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enrollmentId: varchar("enrollment_id").notNull().references(() => trainingEnrollments.id, { onDelete: "cascade" }),
+  lessonId: varchar("lesson_id").notNull().references(() => trainingLessons.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  status: text("status").default("not_started"), // not_started, in_progress, completed
+  watchTime: integer("watch_time").default(0), // Seconds watched for videos
+  completionPercentage: integer("completion_percentage").default(0),
+  firstStartedAt: timestamp("first_started_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Training Quizzes
+export const trainingQuizzes = pgTable("training_quizzes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id").notNull().references(() => trainingLessons.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  passingScore: integer("passing_score").default(70), // Percentage
+  maxAttempts: integer("max_attempts").default(3), // 0 = unlimited
+  timeLimit: integer("time_limit"), // Minutes, null = no limit
+  shuffleQuestions: boolean("shuffle_questions").default(false),
+  showCorrectAnswers: boolean("show_correct_answers").default(true),
+  isRequired: boolean("is_required").default(true),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training Quiz Questions
+export const trainingQuizQuestions = pgTable("training_quiz_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quizId: varchar("quiz_id").notNull().references(() => trainingQuizzes.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  questionType: text("question_type").default("multiple_choice"), // multiple_choice, true_false, short_answer
+  options: jsonb("options"), // Array of options for multiple choice
+  correctAnswer: text("correct_answer").notNull(), // Index for MC, text for others
+  explanation: text("explanation"), // Explanation shown after answer
+  points: integer("points").default(1),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Training Quiz Attempts
+export const trainingQuizAttempts = pgTable("training_quiz_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quizId: varchar("quiz_id").notNull().references(() => trainingQuizzes.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  enrollmentId: varchar("enrollment_id").notNull().references(() => trainingEnrollments.id, { onDelete: "cascade" }),
+  score: integer("score").default(0), // Percentage
+  totalPoints: integer("total_points").default(0),
+  earnedPoints: integer("earned_points").default(0),
+  answers: jsonb("answers"), // User's answers
+  isPassed: boolean("is_passed").default(false),
+  attemptNumber: integer("attempt_number").default(1),
+  startedAt: timestamp("started_at").defaultNow(),
+  submittedAt: timestamp("submitted_at"),
+  timeSpent: integer("time_spent"), // Minutes
+});
+
+// Training Assignments
+export const trainingAssignments = pgTable("training_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id").notNull().references(() => trainingLessons.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  instructions: text("instructions"), // Detailed instructions
+  allowedFileTypes: text("allowed_file_types").array(), // ['pdf', 'doc', 'docx', 'txt']
+  maxFileSize: integer("max_file_size").default(10), // MB
+  maxFiles: integer("max_files").default(1),
+  isRequired: boolean("is_required").default(true),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training Assignment Submissions
+export const trainingAssignmentSubmissions = pgTable("training_assignment_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assignmentId: varchar("assignment_id").notNull().references(() => trainingAssignments.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  enrollmentId: varchar("enrollment_id").notNull().references(() => trainingEnrollments.id, { onDelete: "cascade" }),
+  submissionText: text("submission_text"), // Text response
+  files: jsonb("files"), // Array of uploaded file info
+  status: text("status").default("submitted"), // submitted, graded, returned
+  grade: integer("grade"), // Percentage or points
+  feedback: text("feedback"), // Instructor feedback
+  gradedBy: uuid("graded_by").references(() => staff.id),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  gradedAt: timestamp("graded_at"),
+});
+
+// Training Discussions/Comments
+export const trainingDiscussions = pgTable("training_discussions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => trainingCourses.id, { onDelete: "cascade" }),
+  lessonId: varchar("lesson_id").references(() => trainingLessons.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  parentId: varchar("parent_id").references(() => trainingDiscussions.id), // For replies
+  content: text("content").notNull(),
+  isInstructor: boolean("is_instructor").default(false),
+  isPinned: boolean("is_pinned").default(false),
+  likesCount: integer("likes_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training Discussion Likes
+export const trainingDiscussionLikes = pgTable("training_discussion_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  discussionId: varchar("discussion_id").notNull().references(() => trainingDiscussions.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// =============================================================================
+// TRAINING SYSTEM SCHEMAS & TYPES
+// =============================================================================
+
+// Training Categories
+export const insertTrainingCategorySchema = createInsertSchema(trainingCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingCourseSchema = createInsertSchema(trainingCourses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingLessonSchema = createInsertSchema(trainingLessons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingEnrollmentSchema = createInsertSchema(trainingEnrollments).omit({
+  id: true,
+  enrolledAt: true,
+});
+
+export const insertTrainingProgressSchema = createInsertSchema(trainingProgress).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTrainingQuizSchema = createInsertSchema(trainingQuizzes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingQuizQuestionSchema = createInsertSchema(trainingQuizQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTrainingQuizAttemptSchema = createInsertSchema(trainingQuizAttempts).omit({
+  id: true,
+  startedAt: true,
+});
+
+export const insertTrainingAssignmentSchema = createInsertSchema(trainingAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingAssignmentSubmissionSchema = createInsertSchema(trainingAssignmentSubmissions).omit({
+  id: true,
+  submittedAt: true,
+});
+
+export const insertTrainingDiscussionSchema = createInsertSchema(trainingDiscussions).omit({
+  id: true,
+  likesCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingDiscussionLikeSchema = createInsertSchema(trainingDiscussionLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Training Types
+export type TrainingCategory = typeof trainingCategories.$inferSelect;
+export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema>;
+
+export type TrainingCourse = typeof trainingCourses.$inferSelect;
+export type InsertTrainingCourse = z.infer<typeof insertTrainingCourseSchema>;
+
+export type TrainingLesson = typeof trainingLessons.$inferSelect;
+export type InsertTrainingLesson = z.infer<typeof insertTrainingLessonSchema>;
+
+export type TrainingEnrollment = typeof trainingEnrollments.$inferSelect;
+export type InsertTrainingEnrollment = z.infer<typeof insertTrainingEnrollmentSchema>;
+
+export type TrainingProgress = typeof trainingProgress.$inferSelect;
+export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema>;
+
+export type TrainingQuiz = typeof trainingQuizzes.$inferSelect;
+export type InsertTrainingQuiz = z.infer<typeof insertTrainingQuizSchema>;
+
+export type TrainingQuizQuestion = typeof trainingQuizQuestions.$inferSelect;
+export type InsertTrainingQuizQuestion = z.infer<typeof insertTrainingQuizQuestionSchema>;
+
+export type TrainingQuizAttempt = typeof trainingQuizAttempts.$inferSelect;
+export type InsertTrainingQuizAttempt = z.infer<typeof insertTrainingQuizAttemptSchema>;
+
+export type TrainingAssignment = typeof trainingAssignments.$inferSelect;
+export type InsertTrainingAssignment = z.infer<typeof insertTrainingAssignmentSchema>;
+
+export type TrainingAssignmentSubmission = typeof trainingAssignmentSubmissions.$inferSelect;
+export type InsertTrainingAssignmentSubmission = z.infer<typeof insertTrainingAssignmentSubmissionSchema>;
+
+export type TrainingDiscussion = typeof trainingDiscussions.$inferSelect;
+export type InsertTrainingDiscussion = z.infer<typeof insertTrainingDiscussionSchema>;
+
+export type TrainingDiscussionLike = typeof trainingDiscussionLikes.$inferSelect;
+export type InsertTrainingDiscussionLike = z.infer<typeof insertTrainingDiscussionLikeSchema>;
+
 // Smart Lists schema exports - remove duplicate and use existing one

@@ -52,6 +52,9 @@ import HRSettings from "@/pages/settings/hr-settings";
 import CareersPage from "@/pages/careers";
 import KnowledgeBase from "@/pages/knowledge-base";
 import ArticleView from "@/pages/article-view";
+import Training from "@/pages/training";
+import CourseDetail from "@/pages/training/course-detail";
+import CreateCourse from "@/pages/training/create-course";
 
 function Router() {
   return (
@@ -73,6 +76,9 @@ function Router() {
       <Route path="/workflows/build" component={WorkflowBuilder} />
       <Route path="/hr" component={HRPage} />
       <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
+      <Route path="/training" component={Training} />
+      <Route path="/training/courses/:id" component={CourseDetail} />
+      <Route path="/training/create" component={CreateCourse} />
       <Route path="/resources" component={KnowledgeBase} />
       <Route path="/resources/articles/:id" component={ArticleView} />
       <Route path="/calendar" component={CalendarMain} />

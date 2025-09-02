@@ -26,6 +26,10 @@ import {
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
+  insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingLessonSchema,
+  insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingQuizSchema,
+  insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema,
+  insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
@@ -36,7 +40,10 @@ import {
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
   jobOpenings, jobApplicationFormConfig, clientTeamAssignments,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks,
-  knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings
+  knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings,
+  trainingCategories, trainingCourses, trainingLessons, trainingEnrollments, trainingProgress,
+  trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
+  trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -12431,6 +12438,677 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Internal server error',
         message: 'Failed to test webhook'
       });
+    }
+  });
+
+  // =============================================================================
+  // TRAINING/LMS API ROUTES
+  // =============================================================================
+
+  // ===== TRAINING CATEGORIES =====
+  
+  // Get all training categories
+  app.get("/api/training/categories", async (req, res) => {
+    try {
+      const categories = await db.select().from(trainingCategories).orderBy(asc(trainingCategories.order), asc(trainingCategories.name));
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching training categories:', error);
+      res.status(500).json({ error: "Failed to fetch training categories" });
+    }
+  });
+
+  // Create training category (Admin/Manager only)
+  app.post("/api/training/categories", async (req, res) => {
+    try {
+      const newCategory = insertTrainingCategorySchema.parse(req.body);
+      const [category] = await db.insert(trainingCategories).values(newCategory).returning();
+      
+      await createAuditLog("created", "training_category", category.id, category.name, req.session?.userId, 
+        "Training category created", null, category, req);
+      
+      res.status(201).json(category);
+    } catch (error) {
+      console.error('Error creating training category:', error);
+      res.status(500).json({ error: "Failed to create training category" });
+    }
+  });
+
+  // Update training category
+  app.put("/api/training/categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertTrainingCategorySchema.parse(req.body);
+      
+      const [oldCategory] = await db.select().from(trainingCategories).where(eq(trainingCategories.id, id));
+      if (!oldCategory) {
+        return res.status(404).json({ error: "Training category not found" });
+      }
+      
+      const [updatedCategory] = await db.update(trainingCategories)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(trainingCategories.id, id))
+        .returning();
+      
+      await createAuditLog("updated", "training_category", id, updatedCategory.name, req.session?.userId,
+        "Training category updated", oldCategory, updatedCategory, req);
+      
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating training category:', error);
+      res.status(500).json({ error: "Failed to update training category" });
+    }
+  });
+
+  // Delete training category
+  app.delete("/api/training/categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [category] = await db.select().from(trainingCategories).where(eq(trainingCategories.id, id));
+      if (!category) {
+        return res.status(404).json({ error: "Training category not found" });
+      }
+      
+      await db.delete(trainingCategories).where(eq(trainingCategories.id, id));
+      
+      await createAuditLog("deleted", "training_category", id, category.name, req.session?.userId,
+        "Training category deleted", category, null, req);
+      
+      res.json({ message: "Training category deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting training category:', error);
+      res.status(500).json({ error: "Failed to delete training category" });
+    }
+  });
+
+  // ===== TRAINING COURSES =====
+  
+  // Get all training courses (with filtering and search)
+  app.get("/api/training/courses", async (req, res) => {
+    try {
+      const { category, search, tags, difficulty, published } = req.query;
+      
+      let query = db.select({
+        id: trainingCourses.id,
+        title: trainingCourses.title,
+        description: trainingCourses.description,
+        shortDescription: trainingCourses.shortDescription,
+        categoryId: trainingCourses.categoryId,
+        categoryName: trainingCategories.name,
+        categoryColor: trainingCategories.color,
+        tags: trainingCourses.tags,
+        thumbnailUrl: trainingCourses.thumbnailUrl,
+        estimatedDuration: trainingCourses.estimatedDuration,
+        difficulty: trainingCourses.difficulty,
+        isPublished: trainingCourses.isPublished,
+        order: trainingCourses.order,
+        createdBy: trainingCourses.createdBy,
+        createdAt: trainingCourses.createdAt,
+        updatedAt: trainingCourses.updatedAt,
+        creatorName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
+      }).from(trainingCourses)
+        .leftJoin(trainingCategories, eq(trainingCourses.categoryId, trainingCategories.id))
+        .leftJoin(staff, eq(trainingCourses.createdBy, staff.id));
+      
+      // Apply filters
+      const conditions = [];
+      if (category) conditions.push(eq(trainingCourses.categoryId, category as string));
+      if (published !== undefined) conditions.push(eq(trainingCourses.isPublished, published === 'true'));
+      if (difficulty) conditions.push(eq(trainingCourses.difficulty, difficulty as string));
+      if (search) {
+        conditions.push(or(
+          like(trainingCourses.title, `%${search}%`),
+          like(trainingCourses.description, `%${search}%`)
+        ));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      const courses = await query.orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt));
+      
+      // Get lesson counts for each course
+      const coursesWithCounts = await Promise.all(courses.map(async (course) => {
+        const [lessonCount] = await db.select({ count: sql<number>`count(*)` })
+          .from(trainingLessons)
+          .where(eq(trainingLessons.courseId, course.id));
+        
+        const [enrollmentCount] = await db.select({ count: sql<number>`count(*)` })
+          .from(trainingEnrollments)
+          .where(eq(trainingEnrollments.courseId, course.id));
+        
+        return {
+          ...course,
+          lessonCount: lessonCount.count || 0,
+          enrollmentCount: enrollmentCount.count || 0
+        };
+      }));
+      
+      res.json(coursesWithCounts);
+    } catch (error) {
+      console.error('Error fetching training courses:', error);
+      res.status(500).json({ error: "Failed to fetch training courses" });
+    }
+  });
+
+  // Get single training course with lessons
+  app.get("/api/training/courses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session?.userId;
+      
+      // Get course details
+      const [course] = await db.select({
+        id: trainingCourses.id,
+        title: trainingCourses.title,
+        description: trainingCourses.description,
+        shortDescription: trainingCourses.shortDescription,
+        categoryId: trainingCourses.categoryId,
+        categoryName: trainingCategories.name,
+        categoryColor: trainingCategories.color,
+        tags: trainingCourses.tags,
+        thumbnailUrl: trainingCourses.thumbnailUrl,
+        estimatedDuration: trainingCourses.estimatedDuration,
+        difficulty: trainingCourses.difficulty,
+        isPublished: trainingCourses.isPublished,
+        order: trainingCourses.order,
+        createdBy: trainingCourses.createdBy,
+        createdAt: trainingCourses.createdAt,
+        updatedAt: trainingCourses.updatedAt,
+        creatorName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
+      }).from(trainingCourses)
+        .leftJoin(trainingCategories, eq(trainingCourses.categoryId, trainingCategories.id))
+        .leftJoin(staff, eq(trainingCourses.createdBy, staff.id))
+        .where(eq(trainingCourses.id, id));
+      
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      
+      // Get course lessons
+      const lessons = await db.select().from(trainingLessons)
+        .where(eq(trainingLessons.courseId, id))
+        .orderBy(asc(trainingLessons.order));
+      
+      // Get user enrollment if logged in
+      let enrollment = null;
+      let progress = [];
+      if (userId) {
+        [enrollment] = await db.select().from(trainingEnrollments)
+          .where(and(eq(trainingEnrollments.courseId, id), eq(trainingEnrollments.userId, userId)));
+        
+        if (enrollment) {
+          progress = await db.select().from(trainingProgress)
+            .where(eq(trainingProgress.enrollmentId, enrollment.id));
+        }
+      }
+      
+      res.json({
+        ...course,
+        lessons,
+        enrollment,
+        progress
+      });
+    } catch (error) {
+      console.error('Error fetching training course:', error);
+      res.status(500).json({ error: "Failed to fetch training course" });
+    }
+  });
+
+  // Create training course (Admin/Manager only)
+  app.post("/api/training/courses", async (req, res) => {
+    try {
+      const newCourse = insertTrainingCourseSchema.parse({
+        ...req.body,
+        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      const [course] = await db.insert(trainingCourses).values(newCourse).returning();
+      
+      await createAuditLog("created", "training_course", course.id, course.title, req.session?.userId,
+        "Training course created", null, course, req);
+      
+      res.status(201).json(course);
+    } catch (error) {
+      console.error('Error creating training course:', error);
+      res.status(500).json({ error: "Failed to create training course" });
+    }
+  });
+
+  // Update training course
+  app.put("/api/training/courses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertTrainingCourseSchema.partial().parse({
+        ...req.body,
+        updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      const [oldCourse] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, id));
+      if (!oldCourse) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      
+      const [updatedCourse] = await db.update(trainingCourses)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(trainingCourses.id, id))
+        .returning();
+      
+      await createAuditLog("updated", "training_course", id, updatedCourse.title, req.session?.userId,
+        "Training course updated", oldCourse, updatedCourse, req);
+      
+      res.json(updatedCourse);
+    } catch (error) {
+      console.error('Error updating training course:', error);
+      res.status(500).json({ error: "Failed to update training course" });
+    }
+  });
+
+  // Delete training course
+  app.delete("/api/training/courses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, id));
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      
+      await db.delete(trainingCourses).where(eq(trainingCourses.id, id));
+      
+      await createAuditLog("deleted", "training_course", id, course.title, req.session?.userId,
+        "Training course deleted", course, null, req);
+      
+      res.json({ message: "Training course deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting training course:', error);
+      res.status(500).json({ error: "Failed to delete training course" });
+    }
+  });
+
+  // ===== COURSE ENROLLMENT =====
+  
+  // Enroll user in course
+  app.post("/api/training/courses/:id/enroll", async (req, res) => {
+    try {
+      const { id: courseId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      // Check if course exists and is published
+      const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, courseId));
+      if (!course || !course.isPublished) {
+        return res.status(404).json({ error: "Course not found or not available" });
+      }
+      
+      // Check if already enrolled
+      const [existingEnrollment] = await db.select().from(trainingEnrollments)
+        .where(and(eq(trainingEnrollments.courseId, courseId), eq(trainingEnrollments.userId, userId)));
+      
+      if (existingEnrollment) {
+        return res.status(400).json({ error: "Already enrolled in this course" });
+      }
+      
+      // Get lesson count
+      const [lessonCount] = await db.select({ count: sql<number>`count(*)` })
+        .from(trainingLessons)
+        .where(eq(trainingLessons.courseId, courseId));
+      
+      // Create enrollment
+      const enrollment = {
+        courseId,
+        userId,
+        status: "enrolled" as const,
+        totalLessons: lessonCount.count || 0
+      };
+      
+      const [newEnrollment] = await db.insert(trainingEnrollments).values(enrollment).returning();
+      
+      await createAuditLog("created", "training_enrollment", newEnrollment.id, course.title, userId,
+        "Enrolled in training course", null, newEnrollment, req);
+      
+      res.status(201).json(newEnrollment);
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+      res.status(500).json({ error: "Failed to enroll in course" });
+    }
+  });
+
+  // Get user's enrolled courses
+  app.get("/api/training/my-courses", async (req, res) => {
+    try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const enrolledCourses = await db.select({
+        enrollmentId: trainingEnrollments.id,
+        courseId: trainingCourses.id,
+        title: trainingCourses.title,
+        shortDescription: trainingCourses.shortDescription,
+        thumbnailUrl: trainingCourses.thumbnailUrl,
+        estimatedDuration: trainingCourses.estimatedDuration,
+        difficulty: trainingCourses.difficulty,
+        categoryName: trainingCategories.name,
+        categoryColor: trainingCategories.color,
+        enrollmentStatus: trainingEnrollments.status,
+        progress: trainingEnrollments.progress,
+        completedLessons: trainingEnrollments.completedLessons,
+        totalLessons: trainingEnrollments.totalLessons,
+        enrolledAt: trainingEnrollments.enrolledAt,
+        lastAccessedAt: trainingEnrollments.lastAccessedAt,
+        completedAt: trainingEnrollments.completedAt
+      }).from(trainingEnrollments)
+        .leftJoin(trainingCourses, eq(trainingEnrollments.courseId, trainingCourses.id))
+        .leftJoin(trainingCategories, eq(trainingCourses.categoryId, trainingCategories.id))
+        .where(eq(trainingEnrollments.userId, userId))
+        .orderBy(desc(trainingEnrollments.lastAccessedAt), desc(trainingEnrollments.enrolledAt));
+      
+      res.json(enrolledCourses);
+    } catch (error) {
+      console.error('Error fetching enrolled courses:', error);
+      res.status(500).json({ error: "Failed to fetch enrolled courses" });
+    }
+  });
+
+  // ===== TRAINING LESSONS =====
+  
+  // Get lessons for a course
+  app.get("/api/training/courses/:courseId/lessons", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const userId = req.session?.userId;
+      
+      const lessons = await db.select().from(trainingLessons)
+        .where(eq(trainingLessons.courseId, courseId))
+        .orderBy(asc(trainingLessons.order));
+      
+      // Get progress for user if logged in
+      if (userId) {
+        const [enrollment] = await db.select().from(trainingEnrollments)
+          .where(and(eq(trainingEnrollments.courseId, courseId), eq(trainingEnrollments.userId, userId)));
+        
+        if (enrollment) {
+          const progressData = await db.select().from(trainingProgress)
+            .where(eq(trainingProgress.enrollmentId, enrollment.id));
+          
+          const lessonsWithProgress = lessons.map(lesson => {
+            const progress = progressData.find(p => p.lessonId === lesson.id);
+            return {
+              ...lesson,
+              progress: progress || null
+            };
+          });
+          
+          return res.json(lessonsWithProgress);
+        }
+      }
+      
+      res.json(lessons);
+    } catch (error) {
+      console.error('Error fetching lessons:', error);
+      res.status(500).json({ error: "Failed to fetch lessons" });
+    }
+  });
+
+  // Get single lesson with content
+  app.get("/api/training/lessons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session?.userId;
+      
+      const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, id));
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      // Track lesson access if user is enrolled
+      if (userId) {
+        const [enrollment] = await db.select().from(trainingEnrollments)
+          .where(and(eq(trainingEnrollments.courseId, lesson.courseId), eq(trainingEnrollments.userId, userId)));
+        
+        if (enrollment) {
+          // Update or create progress
+          const [existingProgress] = await db.select().from(trainingProgress)
+            .where(and(eq(trainingProgress.enrollmentId, enrollment.id), eq(trainingProgress.lessonId, id)));
+          
+          if (existingProgress) {
+            await db.update(trainingProgress)
+              .set({ lastAccessedAt: new Date() })
+              .where(eq(trainingProgress.id, existingProgress.id));
+          } else {
+            await db.insert(trainingProgress).values({
+              enrollmentId: enrollment.id,
+              lessonId: id,
+              userId,
+              status: "in_progress",
+              firstStartedAt: new Date(),
+              lastAccessedAt: new Date()
+            });
+          }
+          
+          // Update enrollment access time
+          await db.update(trainingEnrollments)
+            .set({ 
+              lastAccessedAt: new Date(),
+              status: enrollment.status === "enrolled" ? "in_progress" : enrollment.status
+            })
+            .where(eq(trainingEnrollments.id, enrollment.id));
+        }
+      }
+      
+      res.json(lesson);
+    } catch (error) {
+      console.error('Error fetching lesson:', error);
+      res.status(500).json({ error: "Failed to fetch lesson" });
+    }
+  });
+
+  // Create lesson (Admin/Manager only)
+  app.post("/api/training/courses/:courseId/lessons", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const newLesson = insertTrainingLessonSchema.parse({
+        ...req.body,
+        courseId,
+        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      const [lesson] = await db.insert(trainingLessons).values(newLesson).returning();
+      
+      await createAuditLog("created", "training_lesson", lesson.id, lesson.title, req.session?.userId,
+        "Training lesson created", null, lesson, req);
+      
+      res.status(201).json(lesson);
+    } catch (error) {
+      console.error('Error creating lesson:', error);
+      res.status(500).json({ error: "Failed to create lesson" });
+    }
+  });
+
+  // Update lesson
+  app.put("/api/training/lessons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertTrainingLessonSchema.partial().parse({
+        ...req.body,
+        updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      const [oldLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, id));
+      if (!oldLesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      const [updatedLesson] = await db.update(trainingLessons)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(trainingLessons.id, id))
+        .returning();
+      
+      await createAuditLog("updated", "training_lesson", id, updatedLesson.title, req.session?.userId,
+        "Training lesson updated", oldLesson, updatedLesson, req);
+      
+      res.json(updatedLesson);
+    } catch (error) {
+      console.error('Error updating lesson:', error);
+      res.status(500).json({ error: "Failed to update lesson" });
+    }
+  });
+
+  // Delete lesson
+  app.delete("/api/training/lessons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, id));
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      await db.delete(trainingLessons).where(eq(trainingLessons.id, id));
+      
+      await createAuditLog("deleted", "training_lesson", id, lesson.title, req.session?.userId,
+        "Training lesson deleted", lesson, null, req);
+      
+      res.json({ message: "Lesson deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting lesson:', error);
+      res.status(500).json({ error: "Failed to delete lesson" });
+    }
+  });
+
+  // Mark lesson as completed
+  app.post("/api/training/lessons/:id/complete", async (req, res) => {
+    try {
+      const { id: lessonId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      const [enrollment] = await db.select().from(trainingEnrollments)
+        .where(and(eq(trainingEnrollments.courseId, lesson.courseId), eq(trainingEnrollments.userId, userId)));
+      
+      if (!enrollment) {
+        return res.status(404).json({ error: "Not enrolled in this course" });
+      }
+      
+      // Update lesson progress to completed
+      const [existingProgress] = await db.select().from(trainingProgress)
+        .where(and(eq(trainingProgress.enrollmentId, enrollment.id), eq(trainingProgress.lessonId, lessonId)));
+      
+      if (existingProgress) {
+        await db.update(trainingProgress)
+          .set({ 
+            status: "completed",
+            completionPercentage: 100,
+            completedAt: new Date(),
+            lastAccessedAt: new Date()
+          })
+          .where(eq(trainingProgress.id, existingProgress.id));
+      } else {
+        await db.insert(trainingProgress).values({
+          enrollmentId: enrollment.id,
+          lessonId,
+          userId,
+          status: "completed",
+          completionPercentage: 100,
+          firstStartedAt: new Date(),
+          completedAt: new Date(),
+          lastAccessedAt: new Date()
+        });
+      }
+      
+      // Update enrollment progress
+      const [completedCount] = await db.select({ count: sql<number>`count(*)` })
+        .from(trainingProgress)
+        .where(and(
+          eq(trainingProgress.enrollmentId, enrollment.id),
+          eq(trainingProgress.status, "completed")
+        ));
+      
+      const progress = Math.round((completedCount.count / enrollment.totalLessons) * 100);
+      const status = progress === 100 ? "completed" : "in_progress";
+      
+      await db.update(trainingEnrollments)
+        .set({
+          completedLessons: completedCount.count,
+          progress,
+          status,
+          completedAt: progress === 100 ? new Date() : null,
+          lastAccessedAt: new Date()
+        })
+        .where(eq(trainingEnrollments.id, enrollment.id));
+      
+      res.json({ message: "Lesson marked as completed", progress });
+    } catch (error) {
+      console.error('Error marking lesson as completed:', error);
+      res.status(500).json({ error: "Failed to mark lesson as completed" });
+    }
+  });
+
+  // ===== TRAINING ANALYTICS (Admin/Manager only) =====
+  
+  // Get training analytics dashboard
+  app.get("/api/training/analytics", async (req, res) => {
+    try {
+      // Total courses and categories
+      const [totalCourses] = await db.select({ count: sql<number>`count(*)` }).from(trainingCourses);
+      const [totalCategories] = await db.select({ count: sql<number>`count(*)` }).from(trainingCategories);
+      const [totalEnrollments] = await db.select({ count: sql<number>`count(*)` }).from(trainingEnrollments);
+      
+      // Course completion rates
+      const courseStats = await db.select({
+        courseId: trainingCourses.id,
+        courseTitle: trainingCourses.title,
+        totalEnrollments: sql<number>`count(${trainingEnrollments.id})`,
+        completedEnrollments: sql<number>`count(case when ${trainingEnrollments.status} = 'completed' then 1 end)`,
+        avgProgress: sql<number>`avg(${trainingEnrollments.progress})`
+      }).from(trainingCourses)
+        .leftJoin(trainingEnrollments, eq(trainingCourses.id, trainingEnrollments.courseId))
+        .where(eq(trainingCourses.isPublished, true))
+        .groupBy(trainingCourses.id, trainingCourses.title);
+      
+      // User progress overview
+      const userStats = await db.select({
+        userId: staff.id,
+        userName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
+        totalEnrollments: sql<number>`count(${trainingEnrollments.id})`,
+        completedCourses: sql<number>`count(case when ${trainingEnrollments.status} = 'completed' then 1 end)`,
+        avgProgress: sql<number>`avg(${trainingEnrollments.progress})`
+      }).from(staff)
+        .leftJoin(trainingEnrollments, eq(staff.id, trainingEnrollments.userId))
+        .groupBy(staff.id, staff.firstName, staff.lastName)
+        .having(sql`count(${trainingEnrollments.id}) > 0`);
+      
+      // Recent activity
+      const recentEnrollments = await db.select({
+        id: trainingEnrollments.id,
+        courseTitle: trainingCourses.title,
+        userName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
+        enrolledAt: trainingEnrollments.enrolledAt,
+        status: trainingEnrollments.status,
+        progress: trainingEnrollments.progress
+      }).from(trainingEnrollments)
+        .leftJoin(trainingCourses, eq(trainingEnrollments.courseId, trainingCourses.id))
+        .leftJoin(staff, eq(trainingEnrollments.userId, staff.id))
+        .orderBy(desc(trainingEnrollments.enrolledAt))
+        .limit(20);
+      
+      res.json({
+        summary: {
+          totalCourses: totalCourses.count,
+          totalCategories: totalCategories.count,
+          totalEnrollments: totalEnrollments.count
+        },
+        courseStats,
+        userStats,
+        recentActivity: recentEnrollments
+      });
+    } catch (error) {
+      console.error('Error fetching training analytics:', error);
+      res.status(500).json({ error: "Failed to fetch training analytics" });
     }
   });
 

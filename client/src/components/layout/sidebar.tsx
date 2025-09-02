@@ -21,7 +21,8 @@ import {
   Settings,
   Layout,
   UserCheck,
-  BookOpen
+  BookOpen,
+  GraduationCap
 } from "lucide-react";
 
 interface SidebarProps {
@@ -41,6 +42,7 @@ const navigation = [
   { name: "Calendars", href: "/calendar", icon: Calendar },
   { name: "Workflows", href: "/workflows", icon: GitBranch },
   { name: "HR", href: "/hr", icon: UserCheck },
+  { name: "Training", href: "/training", icon: GraduationCap },
   { name: "Resources", href: "/resources", icon: BookOpen },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
