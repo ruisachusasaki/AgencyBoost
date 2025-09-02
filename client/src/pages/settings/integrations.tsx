@@ -113,7 +113,8 @@ export default function Integrations() {
 
   const checkGoogleCalendarStatus = async () => {
     try {
-      const status = await apiRequest('/api/integrations/google-calendar/status');
+      const response = await apiRequest('GET', '/api/integrations/google-calendar/status');
+      const status = await response.json();
       
       setIntegrations(prev => prev.map(integration => 
         integration.id === "google-calendar" 
@@ -140,9 +141,8 @@ export default function Integrations() {
 
     setIsLoading(true);
     try {
-      const result = await apiRequest('/api/integrations/google-calendar/sync', {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', '/api/integrations/google-calendar/sync');
+      const result = await response.json();
       
       // Update last sync time
       setIntegrations(prev => prev.map(integration => 
@@ -178,13 +178,12 @@ export default function Integrations() {
 
     setIsLoading(true);
     try {
-      const response = await apiRequest('/api/integrations/google-calendar/connect', {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', '/api/integrations/google-calendar/connect');
+      const data = await response.json();
       
-      if (response.authUrl) {
+      if (data.authUrl) {
         // Redirect to Google OAuth
-        window.location.href = response.authUrl;
+        window.location.href = data.authUrl;
       }
     } catch (error) {
       console.error('Connection error:', error);
@@ -211,9 +210,7 @@ export default function Integrations() {
 
     setIsLoading(true);
     try {
-      await apiRequest('/api/integrations/google-calendar/disconnect', {
-        method: 'POST',
-      });
+      await apiRequest('POST', '/api/integrations/google-calendar/disconnect');
       
       // Update local state
       setIntegrations(prev => prev.map(integration => 
@@ -249,7 +246,8 @@ export default function Integrations() {
 
     setIsLoading(true);
     try {
-      const status = await apiRequest('/api/integrations/google-calendar/status');
+      const response = await apiRequest('GET', '/api/integrations/google-calendar/status');
+      const status = await response.json();
       
       if (status.connected) {
         toast({
