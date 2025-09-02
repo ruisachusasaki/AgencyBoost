@@ -743,6 +743,48 @@ export default function Integrations() {
                   </div>
                 </>
               )}
+
+              {selectedIntegration?.id === "twilio" && (
+                <>
+                  <div>
+                    <Label htmlFor="accountSid">Account SID</Label>
+                    <Input
+                      id="accountSid"
+                      value={twilioSettings.accountSid}
+                      onChange={(e) => setTwilioSettings({...twilioSettings, accountSid: e.target.value})}
+                      placeholder="Your Twilio Account SID"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="authToken">Auth Token</Label>
+                    <Input
+                      id="authToken"
+                      type="password"
+                      value={twilioSettings.authToken}
+                      onChange={(e) => setTwilioSettings({...twilioSettings, authToken: e.target.value})}
+                      placeholder="Your Twilio Auth Token"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                    <Input
+                      id="phoneNumber"
+                      value={twilioSettings.phoneNumber}
+                      onChange={(e) => setTwilioSettings({...twilioSettings, phoneNumber: e.target.value})}
+                      placeholder="+1234567890 (E.164 format)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="testPhoneNumber">Test Phone Number (Optional)</Label>
+                    <Input
+                      id="testPhoneNumber"
+                      value={twilioSettings.testPhoneNumber}
+                      onChange={(e) => setTwilioSettings({...twilioSettings, testPhoneNumber: e.target.value})}
+                      placeholder="+1234567890 (for testing SMS)"
+                    />
+                  </div>
+                </>
+              )}
               
               <div>
                 <Label htmlFor="syncFreq">Sync Frequency</Label>
@@ -766,7 +808,13 @@ export default function Integrations() {
                 >
                   Cancel
                 </Button>
-                <Button onClick={() => handleTestConnection(selectedIntegration?.id || "")}>
+                <Button onClick={() => {
+                  if (selectedIntegration?.id === "twilio") {
+                    handleTwilioConnect();
+                  } else {
+                    handleTestConnection(selectedIntegration?.id || "");
+                  }
+                }}>
                   Test & Save
                 </Button>
               </div>
