@@ -8006,27 +8006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve documents securely
-  app.get("/objects/:objectPath(*)", async (req, res) => {
-    try {
-      const objectStorageService = new ObjectStorageService();
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
-      
-      // In a real implementation with user authentication, you would:
-      // 1. Check if user is authenticated
-      // 2. Verify user has access to the client associated with this document
-      // 3. Check document permissions
-      
-      // For now, allow access (in production, implement proper access control)
-      objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error serving document:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.status(404).json({ message: "Document not found" });
-      }
-      return res.status(500).json({ message: "Failed to serve document" });
-    }
-  });
+  // Duplicate route removed - consolidated into the main objects route above
 
   // Temporary auth endpoint for demo purposes (returns admin user)
   app.get("/api/auth/current-user", async (req, res) => {
@@ -9981,20 +9961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // File download route for comment files
-  app.get("/objects/:objectPath(*)", async (req, res) => {
-    const objectStorageService = new ObjectStorageService();
-    try {
-      const objectFile = await objectStorageService.getObjectEntityFile(`/objects/${req.params.objectPath}`);
-      await objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.status(404).json({ error: "File not found" });
-      }
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  });
+  // Duplicate route removed - consolidated into the main objects route above
 
   // Add file to comment after upload
   app.post("/api/comments/:commentId/files", async (req, res) => {
