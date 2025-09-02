@@ -490,19 +490,6 @@ export default function Integrations() {
     }
   };
 
-  const getStatusColor = (status: Integration['status']) => {
-    switch (status) {
-      case "connected": return "border-l-green-500";
-      case "error": return "border-l-red-500";
-      default: return "border-l-gray-300";
-    }
-  };
-
-  const openConfigDialog = (integration: Integration) => {
-    setSelectedIntegration(integration);
-    setIsConfigDialogOpen(true);
-  };
-
   return (
     <div className="p-6">
       <div className="max-w-6xl mx-auto">
