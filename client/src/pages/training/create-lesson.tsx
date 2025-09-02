@@ -23,6 +23,7 @@ const lessonSchema = z.object({
   duration: z.number().min(0, "Duration must be positive").optional(),
   order: z.number().min(0, "Order must be positive").default(0),
   isRequired: z.boolean().default(true),
+  moduleId: z.string().optional(),
 });
 
 type LessonFormData = z.infer<typeof lessonSchema>;
@@ -38,6 +39,21 @@ export default function CreateLesson() {
   const { data: course, isLoading } = useQuery({
     queryKey: [`/api/training/courses/${courseId}`],
     enabled: !!courseId,
+  });
+
+  // Fetch modules for the course
+  const { data: modules = [] } = useQuery({
+    queryKey: [`/api/training/courses/${courseId}/modules`],
+    enabled: !!courseId,
+  });
+
+  // Check for moduleId in URL params
+  useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const moduleId = urlParams.get('moduleId');
+    if (moduleId) {
+      form.setValue('moduleId', moduleId);
+    }
   });
 
   const form = useForm<LessonFormData>({
@@ -189,6 +205,35 @@ export default function CreateLesson() {
                     </FormControl>
                     <FormDescription>
                       A brief description of what this lesson covers
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="moduleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Module (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-module">
+                          <SelectValue placeholder="Select a module or leave unorganized" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No Module (Unorganized)</SelectItem>
+                        {modules.map((module: any) => (
+                          <SelectItem key={module.id} value={module.id}>
+                            {module.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Group this lesson under a module for better organization
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -2629,10 +2629,25 @@ export const trainingCourses = pgTable("training_courses", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Training Modules (groups lessons within courses)
+export const trainingModules = pgTable("training_modules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => trainingCourses.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  order: integer("order").default(0),
+  isRequired: boolean("is_required").default(true),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Training Lessons
 export const trainingLessons = pgTable("training_lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => trainingCourses.id, { onDelete: "cascade" }),
+  moduleId: varchar("module_id").references(() => trainingModules.id, { onDelete: "cascade" }), // Optional: lessons can be in modules or directly in course
   title: text("title").notNull(),
   description: text("description"),
   content: text("content"), // Rich text content for articles
@@ -2800,6 +2815,12 @@ export const insertTrainingCourseSchema = createInsertSchema(trainingCourses).om
   updatedAt: true,
 });
 
+export const insertTrainingModuleSchema = createInsertSchema(trainingModules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTrainingLessonSchema = createInsertSchema(trainingLessons).omit({
   id: true,
   createdAt: true,
@@ -2861,6 +2882,9 @@ export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema
 
 export type TrainingCourse = typeof trainingCourses.$inferSelect;
 export type InsertTrainingCourse = z.infer<typeof insertTrainingCourseSchema>;
+
+export type TrainingModule = typeof trainingModules.$inferSelect;
+export type InsertTrainingModule = z.infer<typeof insertTrainingModuleSchema>;
 
 export type TrainingLesson = typeof trainingLessons.$inferSelect;
 export type InsertTrainingLesson = z.infer<typeof insertTrainingLessonSchema>;

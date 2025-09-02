@@ -26,7 +26,7 @@ import {
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
-  insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingLessonSchema,
+  insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema,
   insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingQuizSchema,
   insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema,
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
@@ -41,7 +41,7 @@ import {
   jobOpenings, jobApplicationFormConfig, clientTeamAssignments,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks,
   knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings,
-  trainingCategories, trainingCourses, trainingLessons, trainingEnrollments, trainingProgress,
+  trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes
 } from "@shared/schema";
@@ -12804,6 +12804,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching enrolled courses:', error);
       res.status(500).json({ error: "Failed to fetch enrolled courses" });
+    }
+  });
+
+  // ===== TRAINING MODULES =====
+  
+  // Get modules for a course
+  app.get("/api/training/courses/:courseId/modules", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      const modules = await db.select().from(trainingModules)
+        .where(eq(trainingModules.courseId, courseId))
+        .orderBy(asc(trainingModules.order), asc(trainingModules.createdAt));
+      
+      res.json(modules);
+    } catch (error) {
+      console.error('Error fetching training modules:', error);
+      res.status(500).json({ error: "Failed to fetch training modules" });
+    }
+  });
+  
+  // Create training module
+  app.post("/api/training/courses/:courseId/modules", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const newModule = insertTrainingModuleSchema.parse({
+        ...req.body,
+        courseId,
+        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      const [module] = await db.insert(trainingModules).values(newModule).returning();
+      
+      await createAuditLog("created", "training_module", module.id, module.title, req.session?.userId,
+        "Training module created", null, module, req);
+      
+      res.status(201).json(module);
+    } catch (error) {
+      console.error('Error creating training module:', error);
+      res.status(500).json({ error: "Failed to create training module" });
+    }
+  });
+  
+  // Update training module
+  app.put("/api/training/modules/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertTrainingModuleSchema.partial().parse({
+        ...req.body,
+        updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      const [oldModule] = await db.select().from(trainingModules).where(eq(trainingModules.id, id));
+      if (!oldModule) {
+        return res.status(404).json({ error: "Module not found" });
+      }
+      
+      const [module] = await db.update(trainingModules)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(trainingModules.id, id))
+        .returning();
+      
+      await createAuditLog("updated", "training_module", module.id, module.title, req.session?.userId,
+        "Training module updated", oldModule, module, req);
+      
+      res.json(module);
+    } catch (error) {
+      console.error('Error updating training module:', error);
+      res.status(500).json({ error: "Failed to update training module" });
+    }
+  });
+  
+  // Delete training module
+  app.delete("/api/training/modules/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [module] = await db.select().from(trainingModules).where(eq(trainingModules.id, id));
+      if (!module) {
+        return res.status(404).json({ error: "Module not found" });
+      }
+      
+      await db.delete(trainingModules).where(eq(trainingModules.id, id));
+      
+      await createAuditLog("deleted", "training_module", module.id, module.title, req.session?.userId,
+        "Training module deleted", module, null, req);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting training module:', error);
+      res.status(500).json({ error: "Failed to delete training module" });
     }
   });
 
