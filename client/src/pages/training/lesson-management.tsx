@@ -77,9 +77,15 @@ export default function LessonManagement() {
   // Create module mutation
   const createModuleMutation = useMutation({
     mutationFn: (data: InsertTrainingModule) => 
-      apiRequest(`/api/training/courses/${courseId}/modules`, {
+      fetch(`/api/training/courses/${courseId}/modules`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to create module");
+        return res.json();
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/modules`] });
