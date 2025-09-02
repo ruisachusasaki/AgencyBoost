@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Search, Plus, Users, Clock, Star, Play, BookOpen, 
@@ -17,6 +16,7 @@ export default function Training() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("browse");
   
   // Fetch training data
   const { data: categories = [] } = useQuery({
@@ -122,187 +122,206 @@ export default function Training() {
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="browse" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="browse" data-testid="tab-browse">
-            <Search className="h-4 w-4 mr-2" />
-            Browse Courses
-          </TabsTrigger>
-          <TabsTrigger value="my-courses" data-testid="tab-my-courses">
-            <BookOpen className="h-4 w-4 mr-2" />
-            My Courses ({myCourses.length})
-          </TabsTrigger>
-        </TabsList>
+      <div className="space-y-6">
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { id: "browse", name: "Browse Courses", icon: Search },
+              { id: "my-courses", name: `My Courses (${myCourses.length})`, icon: BookOpen }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  data-testid={`tab-${tab.id}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.name}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Browse Courses Tab */}
-        <TabsContent value="browse" className="space-y-6">
-          {filteredCourses.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
-                <p className="text-gray-500">
-                  {searchTerm || selectedCategory !== "all" || selectedDifficulty !== "all"
-                    ? "Try adjusting your search criteria"
-                    : "No courses are available yet"}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourses.map((course) => (
-                <Card key={course.id} className="hover:shadow-md transition-shadow" data-testid={`course-card-${course.id}`}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{course.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {course.shortDescription || course.description?.substring(0, 100) + "..."}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {course.categoryName && (
-                        <Badge variant="secondary" style={{ backgroundColor: course.categoryColor + "20", color: course.categoryColor }}>
-                          {course.categoryName}
-                        </Badge>
-                      )}
-                      <Badge variant="outline" className="capitalize">
-                        {course.difficulty}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <BookOpen className="h-4 w-4" />
-                        {course.lessonCount} lessons
-                      </div>
-                      
-                      {course.estimatedDuration && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {Math.round(course.estimatedDuration / 60)}h
+        {activeTab === "browse" && (
+          <div className="space-y-6">
+            {filteredCourses.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
+                  <p className="text-gray-500">
+                    {searchTerm || selectedCategory !== "all" || selectedDifficulty !== "all"
+                      ? "Try adjusting your search criteria"
+                      : "No courses are available yet"}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredCourses.map((course) => (
+                  <Card key={course.id} className="hover:shadow-md transition-shadow" data-testid={`course-card-${course.id}`}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{course.title}</CardTitle>
+                          <CardDescription className="mt-1">
+                            {course.shortDescription || course.description?.substring(0, 100) + "..."}
+                          </CardDescription>
                         </div>
-                      )}
-                      
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {course.enrollmentCount} enrolled
                       </div>
-                    </div>
+                      
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {course.categoryName && (
+                          <Badge variant="secondary" style={{ backgroundColor: course.categoryColor + "20", color: course.categoryColor }}>
+                            {course.categoryName}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="capitalize">
+                          {course.difficulty}
+                        </Badge>
+                      </div>
+                    </CardHeader>
                     
-                    <Button asChild className="w-full" data-testid={`button-start-course-${course.id}`}>
-                      <Link href={`/training/courses/${course.id}`}>
-                        <Play className="h-4 w-4 mr-2" />
-                        Start Course
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <BookOpen className="h-4 w-4" />
+                          {course.lessonCount} lessons
+                        </div>
+                        
+                        {course.estimatedDuration && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {Math.round(course.estimatedDuration / 60)}h
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          {course.enrollmentCount} enrolled
+                        </div>
+                      </div>
+                      
+                      <Button asChild className="w-full" data-testid={`button-start-course-${course.id}`}>
+                        <Link href={`/training/courses/${course.id}`}>
+                          <Play className="h-4 w-4 mr-2" />
+                          Start Course
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* My Courses Tab */}
-        <TabsContent value="my-courses" className="space-y-6">
-          {myCourses.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <GraduationCap className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled courses</h3>
-                <p className="text-gray-500 mb-4">
-                  You haven't enrolled in any courses yet. Browse available courses to get started.
-                </p>
-                <Button asChild data-testid="button-browse-courses">
-                  <Link href="/training">
-                    <Search className="h-4 w-4 mr-2" />
-                    Browse Courses
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myCourses.map((enrollment) => (
-                <Card key={enrollment.enrollmentId} className="hover:shadow-md transition-shadow" data-testid={`my-course-card-${enrollment.courseId}`}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{enrollment.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {enrollment.shortDescription}
-                        </CardDescription>
+        {activeTab === "my-courses" && (
+          <div className="space-y-6">
+            {myCourses.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <GraduationCap className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled courses</h3>
+                  <p className="text-gray-500 mb-4">
+                    You haven't enrolled in any courses yet. Browse available courses to get started.
+                  </p>
+                  <Button asChild data-testid="button-browse-courses">
+                    <Link href="/training">
+                      <Search className="h-4 w-4 mr-2" />
+                      Browse Courses
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myCourses.map((enrollment) => (
+                  <Card key={enrollment.enrollmentId} className="hover:shadow-md transition-shadow" data-testid={`my-course-card-${enrollment.courseId}`}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{enrollment.title}</CardTitle>
+                          <CardDescription className="mt-1">
+                            {enrollment.shortDescription}
+                          </CardDescription>
+                        </div>
+                        
+                        {enrollment.enrollmentStatus === "completed" && (
+                          <Award className="h-5 w-5 text-green-600" />
+                        )}
                       </div>
                       
-                      {enrollment.enrollmentStatus === "completed" && (
-                        <Award className="h-5 w-5 text-green-600" />
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {enrollment.categoryName && (
-                        <Badge variant="secondary" style={{ backgroundColor: enrollment.categoryColor + "20", color: enrollment.categoryColor }}>
-                          {enrollment.categoryName}
-                        </Badge>
-                      )}
-                      <Badge 
-                        variant={enrollment.enrollmentStatus === "completed" ? "default" : "outline"}
-                        className="capitalize"
-                      >
-                        {enrollment.enrollmentStatus.replace("_", " ")}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>Progress</span>
-                        <span>{enrollment.progress || 0}%</span>
-                      </div>
-                      <Progress value={enrollment.progress || 0} className="h-2" />
-                      <div className="text-xs text-gray-500 mt-1">
-                        {enrollment.completedLessons || 0} of {enrollment.totalLessons || 0} lessons completed
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>
-                        Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}
-                      </span>
-                      {enrollment.lastAccessedAt && (
-                        <span>
-                          Last accessed: {new Date(enrollment.lastAccessedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <Button asChild className="w-full" data-testid={`button-continue-course-${enrollment.courseId}`}>
-                      <Link href={`/training/courses/${enrollment.courseId}`}>
-                        {enrollment.enrollmentStatus === "completed" ? (
-                          <>
-                            <Award className="h-4 w-4 mr-2" />
-                            Review Course
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            Continue Learning
-                          </>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {enrollment.categoryName && (
+                          <Badge variant="secondary" style={{ backgroundColor: enrollment.categoryColor + "20", color: enrollment.categoryColor }}>
+                            {enrollment.categoryName}
+                          </Badge>
                         )}
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                        <Badge 
+                          variant={enrollment.enrollmentStatus === "completed" ? "default" : "outline"}
+                          className="capitalize"
+                        >
+                          {enrollment.enrollmentStatus.replace("_", " ")}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span>Progress</span>
+                          <span>{enrollment.progress || 0}%</span>
+                        </div>
+                        <Progress value={enrollment.progress || 0} className="h-2" />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {enrollment.completedLessons || 0} of {enrollment.totalLessons || 0} lessons completed
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>
+                          Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                        </span>
+                        {enrollment.lastAccessedAt && (
+                          <span>
+                            Last accessed: {new Date(enrollment.lastAccessedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <Button asChild className="w-full" data-testid={`button-continue-course-${enrollment.courseId}`}>
+                        <Link href={`/training/courses/${enrollment.courseId}`}>
+                          {enrollment.enrollmentStatus === "completed" ? (
+                            <>
+                              <Award className="h-4 w-4 mr-2" />
+                              Review Course
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Continue Learning
+                            </>
+                          )}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
