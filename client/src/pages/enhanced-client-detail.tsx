@@ -933,7 +933,7 @@ export default function EnhancedClientDetail() {
   });
 
   // Fetch custom fields
-  const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
+  const { data: customFieldsData, isLoading: customFieldsLoading } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
     queryKey: ['/api/custom-fields'],
   });
 
@@ -1074,7 +1074,13 @@ export default function EnhancedClientDetail() {
 
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = () => {
-    if (!client || !customFieldsData) return client?.name || "";
+    // Always return client name if available, regardless of custom fields loading state
+    if (!client) return "";
+    
+    // If custom fields are still loading, show database name as fallback
+    if (customFieldsLoading || !customFieldsData) {
+      return client.name || "";
+    }
     
     // Find First Name and Last Name fields by exact name match
     const firstNameField = customFieldsData.find(field => 
@@ -1101,7 +1107,13 @@ export default function EnhancedClientDetail() {
   };
 
   const getBusinessDisplayName = () => {
-    if (!client || !customFieldsData) return client?.company || "";
+    // Always return client company if available, regardless of custom fields loading state
+    if (!client) return "";
+    
+    // If custom fields are still loading, show database company as fallback
+    if (customFieldsLoading || !customFieldsData) {
+      return client.company || "";
+    }
     
     // Find Business Name field by exact name match
     const businessNameField = customFieldsData.find(field => 
