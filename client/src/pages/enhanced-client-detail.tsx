@@ -921,53 +921,6 @@ export default function EnhancedClientDetail() {
 
 
 
-  // Helper functions to get dynamic names from custom fields
-  const getClientDisplayName = () => {
-    if (!client || !customFieldsData) return client?.name || "";
-    
-    // Find First Name and Last Name fields by exact name match
-    const firstNameField = customFieldsData.find(field => 
-      field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
-    );
-    const lastNameField = customFieldsData.find(field => 
-      field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
-    );
-    
-    const customFieldValues = client.customFieldValues as Record<string, any> || {};
-    const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
-    const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
-    
-    // If we have both first and last name from custom fields, use them
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
-    // If we only have first name, use it
-    if (firstName) {
-      return firstName;
-    }
-    // Otherwise fall back to database name
-    return client.name || "";
-  };
-
-  const getBusinessDisplayName = () => {
-    if (!client || !customFieldsData) return client?.company || "";
-    
-    // Find Business Name field by exact name match
-    const businessNameField = customFieldsData.find(field => 
-      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name'
-    );
-    
-    const customFieldValues = client.customFieldValues as Record<string, any> || {};
-    const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
-    
-    // If we have business name from custom fields, use it
-    if (businessName) {
-      return businessName;
-    }
-    // Otherwise fall back to database company
-    return client.company || "";
-  };
-
   // Fetch client data
   const { data: client, isLoading, error } = useQuery<Client>({
     queryKey: ['/api/clients', clientId],
@@ -1118,6 +1071,53 @@ export default function EnhancedClientDetail() {
     },
     enabled: expandedBundles.size > 0 && !!clientId,
   });
+
+  // Helper functions to get dynamic names from custom fields
+  const getClientDisplayName = () => {
+    if (!client || !customFieldsData) return client?.name || "";
+    
+    // Find First Name and Last Name fields by exact name match
+    const firstNameField = customFieldsData.find(field => 
+      field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
+    );
+    const lastNameField = customFieldsData.find(field => 
+      field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
+    const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
+    
+    // If we have both first and last name from custom fields, use them
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`.trim();
+    }
+    // If we only have first name, use it
+    if (firstName) {
+      return firstName;
+    }
+    // Otherwise fall back to database name
+    return client.name || "";
+  };
+
+  const getBusinessDisplayName = () => {
+    if (!client || !customFieldsData) return client?.company || "";
+    
+    // Find Business Name field by exact name match
+    const businessNameField = customFieldsData.find(field => 
+      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
+    
+    // If we have business name from custom fields, use it
+    if (businessName) {
+      return businessName;
+    }
+    // Otherwise fall back to database company
+    return client.company || "";
+  };
 
   // Fixed height for notes section to enable consistent scrolling
   const calculateNotesMaxHeight = () => {
