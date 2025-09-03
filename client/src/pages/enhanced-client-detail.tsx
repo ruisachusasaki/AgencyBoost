@@ -1074,23 +1074,11 @@ export default function EnhancedClientDetail() {
 
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = () => {
-    // Always return client name if available, regardless of custom fields loading state
-    if (!client) {
-      console.log("getClientDisplayName: No client data");
-      return "";
-    }
-    
-    console.log("getClientDisplayName: client data:", client);
-    console.log("getClientDisplayName: client.name:", client.name);
-    console.log("getClientDisplayName: all client fields:", Object.keys(client));
-    console.log("getClientDisplayName: customFieldsLoading:", customFieldsLoading);
-    console.log("getClientDisplayName: customFieldsData:", customFieldsData);
+    if (!client) return "";
     
     // If custom fields are still loading, show database name as fallback
     if (customFieldsLoading || !customFieldsData) {
-      const fallbackName = client.name || client.email || "Unnamed Client";
-      console.log("getClientDisplayName: returning database name:", fallbackName);
-      return fallbackName;
+      return client.name || client.email || "Loading...";
     }
     
     // Find First Name and Last Name fields by exact name match
@@ -1113,31 +1101,25 @@ export default function EnhancedClientDetail() {
     if (firstName) {
       return firstName;
     }
-    // Otherwise fall back to database name
+    // If we only have last name, use it
+    if (lastName) {
+      return lastName;
+    }
+    // Otherwise fall back to database name or email
     return client.name || client.email || "Unnamed Client";
   };
 
   const getBusinessDisplayName = () => {
-    // Always return client company if available, regardless of custom fields loading state
-    if (!client) {
-      console.log("getBusinessDisplayName: No client data");
-      return "";
-    }
-    
-    console.log("getBusinessDisplayName: client data:", client);
-    console.log("getBusinessDisplayName: client.company:", client.company);
-    console.log("getBusinessDisplayName: all client fields:", Object.keys(client));
+    if (!client) return "";
     
     // If custom fields are still loading, show database company as fallback
     if (customFieldsLoading || !customFieldsData) {
-      const fallbackCompany = client.company || "No company set";
-      console.log("getBusinessDisplayName: returning database company:", fallbackCompany);
-      return fallbackCompany;
+      return client.company || "Loading...";
     }
     
     // Find Business Name field by exact name match
     const businessNameField = customFieldsData.find(field => 
-      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name'
+      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name' || field.name === 'Company'
     );
     
     const customFieldValues = client.customFieldValues as Record<string, any> || {};
@@ -1148,7 +1130,7 @@ export default function EnhancedClientDetail() {
       return businessName;
     }
     // Otherwise fall back to database company
-    return client.company || "No company set";
+    return client.company || "";
   };
 
   // Fixed height for notes section to enable consistent scrolling
