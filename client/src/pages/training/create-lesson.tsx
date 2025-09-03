@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -47,15 +47,6 @@ export default function CreateLesson() {
     enabled: !!courseId,
   });
 
-  // Check for moduleId in URL params
-  useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const moduleId = urlParams.get('moduleId');
-    if (moduleId) {
-      form.setValue('moduleId', moduleId);
-    }
-  });
-
   const form = useForm<LessonFormData>({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
@@ -69,6 +60,15 @@ export default function CreateLesson() {
       isRequired: true,
     },
   });
+
+  // Check for moduleId in URL params and set form value
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const moduleId = urlParams.get('moduleId');
+    if (moduleId) {
+      form.setValue('moduleId', moduleId);
+    }
+  }, [form]);
 
   const createLessonMutation = useMutation({
     mutationFn: (data: LessonFormData) =>
