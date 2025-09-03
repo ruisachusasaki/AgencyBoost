@@ -1082,13 +1082,15 @@ export default function EnhancedClientDetail() {
     
     console.log("getClientDisplayName: client data:", client);
     console.log("getClientDisplayName: client.name:", client.name);
+    console.log("getClientDisplayName: all client fields:", Object.keys(client));
     console.log("getClientDisplayName: customFieldsLoading:", customFieldsLoading);
     console.log("getClientDisplayName: customFieldsData:", customFieldsData);
     
     // If custom fields are still loading, show database name as fallback
     if (customFieldsLoading || !customFieldsData) {
-      console.log("getClientDisplayName: returning database name:", client.name || "");
-      return client.name || "";
+      const fallbackName = client.name || client.email || "Unnamed Client";
+      console.log("getClientDisplayName: returning database name:", fallbackName);
+      return fallbackName;
     }
     
     // Find First Name and Last Name fields by exact name match
@@ -1112,7 +1114,7 @@ export default function EnhancedClientDetail() {
       return firstName;
     }
     // Otherwise fall back to database name
-    return client.name || "";
+    return client.name || client.email || "Unnamed Client";
   };
 
   const getBusinessDisplayName = () => {
@@ -1124,11 +1126,13 @@ export default function EnhancedClientDetail() {
     
     console.log("getBusinessDisplayName: client data:", client);
     console.log("getBusinessDisplayName: client.company:", client.company);
+    console.log("getBusinessDisplayName: all client fields:", Object.keys(client));
     
     // If custom fields are still loading, show database company as fallback
     if (customFieldsLoading || !customFieldsData) {
-      console.log("getBusinessDisplayName: returning database company:", client.company || "");
-      return client.company || "";
+      const fallbackCompany = client.company || "No company set";
+      console.log("getBusinessDisplayName: returning database company:", fallbackCompany);
+      return fallbackCompany;
     }
     
     // Find Business Name field by exact name match
@@ -1144,7 +1148,7 @@ export default function EnhancedClientDetail() {
       return businessName;
     }
     // Otherwise fall back to database company
-    return client.company || "";
+    return client.company || "No company set";
   };
 
   // Fixed height for notes section to enable consistent scrolling
