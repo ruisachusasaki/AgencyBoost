@@ -19,12 +19,14 @@ import {
   Users,
   CalendarDays,
   Clock,
-  Briefcase
+  Briefcase,
+  ArrowLeft
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import JobApplicationFormEditor from "@/components/hr/job-application-form-editor";
+import { useLocation } from "wouter";
 
 // Schema for time off categories
 const timeOffCategorySchema = z.object({
@@ -51,6 +53,7 @@ export default function HRSettingsPage() {
   const [editingCategory, setEditingCategory] = useState<TimeOffCategory | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
 
   // Default time off categories if none exist
   const defaultCategories: Omit<TimeOffCategory, 'id' | 'createdAt'>[] = [
@@ -147,6 +150,19 @@ export default function HRSettingsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Back to Settings Button */}
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setLocation("/settings")}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Settings
+        </Button>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
