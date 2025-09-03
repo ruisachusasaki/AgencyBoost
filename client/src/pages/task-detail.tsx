@@ -765,7 +765,7 @@ export default function TaskDetail() {
                 </TableHeader>
                 <TableBody>
                   <SubTaskList 
-                    parentTaskId={task.id}
+                    parentTaskId={taskId!}
                     level={0}
                     maxLevel={5}
                   />
@@ -775,7 +775,7 @@ export default function TaskDetail() {
           </Card>
 
           {/* Task Attachments */}
-          <TaskAttachments taskId={task.id} />
+          <TaskAttachments taskId={taskId!} />
 
         </div>
 
@@ -814,15 +814,15 @@ export default function TaskDetail() {
           <CardContent className="pt-6">
             {/* Tab Content */}
             {activeTab === "comments" && (
-              <TaskComments taskId={task.id} />
+              <TaskComments taskId={taskId!} />
             )}
             
             {activeTab === "activity" && (
-              <TaskActivities taskId={task.id} showCard={false} />
+              <TaskActivities taskId={taskId!} showCard={false} />
             )}
             
             {activeTab === "dependencies" && (
-              <TaskDependencies taskId={task.id} />
+              <TaskDependencies taskId={taskId!} />
             )}
           </CardContent>
         </Card>
