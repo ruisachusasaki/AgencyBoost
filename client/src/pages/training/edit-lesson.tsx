@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -268,15 +269,15 @@ export default function EditLesson() {
                   <FormItem>
                     <FormLabel>Content</FormLabel>
                     <FormControl>
-                      <Textarea
+                      <RichTextEditor
+                        content={field.value || ""}
+                        onChange={field.onChange}
                         placeholder="Enter lesson content..."
-                        className="min-h-[200px]"
-                        {...field}
-                        data-testid="textarea-content"
+                        className="w-full"
                       />
                     </FormControl>
                     <FormDescription>
-                      The main content of the lesson (text, instructions, etc.)
+                      The main content of the lesson (rich text with formatting)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
