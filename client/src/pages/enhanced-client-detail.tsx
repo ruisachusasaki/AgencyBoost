@@ -1075,10 +1075,19 @@ export default function EnhancedClientDetail() {
   // Helper functions to get dynamic names from custom fields
   const getClientDisplayName = () => {
     // Always return client name if available, regardless of custom fields loading state
-    if (!client) return "";
+    if (!client) {
+      console.log("getClientDisplayName: No client data");
+      return "";
+    }
+    
+    console.log("getClientDisplayName: client data:", client);
+    console.log("getClientDisplayName: client.name:", client.name);
+    console.log("getClientDisplayName: customFieldsLoading:", customFieldsLoading);
+    console.log("getClientDisplayName: customFieldsData:", customFieldsData);
     
     // If custom fields are still loading, show database name as fallback
     if (customFieldsLoading || !customFieldsData) {
+      console.log("getClientDisplayName: returning database name:", client.name || "");
       return client.name || "";
     }
     
@@ -1108,10 +1117,17 @@ export default function EnhancedClientDetail() {
 
   const getBusinessDisplayName = () => {
     // Always return client company if available, regardless of custom fields loading state
-    if (!client) return "";
+    if (!client) {
+      console.log("getBusinessDisplayName: No client data");
+      return "";
+    }
+    
+    console.log("getBusinessDisplayName: client data:", client);
+    console.log("getBusinessDisplayName: client.company:", client.company);
     
     // If custom fields are still loading, show database company as fallback
     if (customFieldsLoading || !customFieldsData) {
+      console.log("getBusinessDisplayName: returning database company:", client.company || "");
       return client.company || "";
     }
     
