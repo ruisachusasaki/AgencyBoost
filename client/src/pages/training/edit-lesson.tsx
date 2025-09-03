@@ -28,8 +28,9 @@ const lessonSchema = z.object({
 type LessonFormData = z.infer<typeof lessonSchema>;
 
 export default function EditLesson() {
-  const [match, params] = useRoute("/training/lessons/:id/edit");
+  const [match, params] = useRoute("/training/courses/:courseId/lessons/:id/edit");
   const lessonId = params?.id;
+  const courseId = params?.courseId;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -88,9 +89,9 @@ export default function EditLesson() {
         description: "Lesson updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
-      if (lesson?.courseId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${lesson.courseId}/lessons`] });
-        setLocation(`/training/courses/${lesson.courseId}/lessons`);
+      if (courseId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
+        setLocation(`/training/courses/${courseId}/lessons`);
       }
     },
     onError: () => {
@@ -129,7 +130,7 @@ export default function EditLesson() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" asChild data-testid="button-back">
-          <Link href={`/training/courses/${lesson.courseId}/lessons`}>
+          <Link href={`/training/courses/${courseId}/lessons`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Lessons
           </Link>

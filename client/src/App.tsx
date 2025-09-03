@@ -85,7 +85,7 @@ function Router() {
       <Route path="/training/courses/:id/edit" component={EditCourse} />
       <Route path="/training/courses/:id/lessons" component={LessonManagement} />
       <Route path="/training/courses/:id/lessons/create" component={CreateLesson} />
-      <Route path="/training/lessons/:id/edit" component={EditLesson} />
+      <Route path="/training/courses/:courseId/lessons/:id/edit" component={EditLesson} />
       <Route path="/training/create" component={CreateCourse} />
       <Route path="/resources" component={KnowledgeBase} />
       <Route path="/resources/articles/:id" component={ArticleView} />

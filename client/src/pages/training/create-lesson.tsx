@@ -100,7 +100,12 @@ export default function CreateLesson() {
   });
 
   const onSubmit = (data: LessonFormData) => {
-    createLessonMutation.mutate(data);
+    // Convert "unorganized" to undefined/null for backend
+    const submitData = {
+      ...data,
+      moduleId: data.moduleId === "unorganized" ? undefined : data.moduleId,
+    };
+    createLessonMutation.mutate(submitData);
   };
 
   if (isLoading) {
@@ -224,7 +229,7 @@ export default function CreateLesson() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No Module (Unorganized)</SelectItem>
+                        <SelectItem value="unorganized">No Module (Unorganized)</SelectItem>
                         {modules.map((module: any) => (
                           <SelectItem key={module.id} value={module.id}>
                             {module.title}
