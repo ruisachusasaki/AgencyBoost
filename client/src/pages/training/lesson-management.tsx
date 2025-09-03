@@ -41,6 +41,7 @@ export default function LessonManagement() {
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<TrainingModule | null>(null);
   const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
+  const [deleteLessonId, setDeleteLessonId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -195,6 +196,37 @@ export default function LessonManagement() {
       isRequired: module.isRequired
     });
     setModuleDialogOpen(true);
+  };
+
+  // Delete lesson mutation
+  const deleteLessonMutation = useMutation({
+    mutationFn: (lessonId: string) => 
+      fetch(`/api/training/lessons/${lessonId}`, {
+        method: "DELETE",
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to delete lesson");
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
+      setDeleteLessonId(null);
+      toast({
+        title: "Lesson deleted",
+        description: "The lesson has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Lesson delete error:', error);
+      toast({
+        title: "Error", 
+        description: error?.message || "Failed to delete lesson. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onDeleteLesson = () => {
+    if (!deleteLessonId) return;
+    deleteLessonMutation.mutate(deleteLessonId);
   };
 
   const toggleModule = (moduleId: string) => {
@@ -446,6 +478,14 @@ export default function LessonManagement() {
                                   <Edit className="h-4 w-4" />
                                 </Link>
                               </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setDeleteLessonId(lesson.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         ))}
@@ -501,6 +541,14 @@ export default function LessonManagement() {
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setDeleteLessonId(lesson.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -554,6 +602,29 @@ export default function LessonManagement() {
               disabled={deleteModuleMutation.isPending}
             >
               {deleteModuleMutation.isPending ? "Deleting..." : "Delete Module"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Lesson Confirmation */}
+      <AlertDialog open={!!deleteLessonId} onOpenChange={() => setDeleteLessonId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lesson</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this lesson? This action cannot be undone and 
+              all lesson content will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={onDeleteLesson}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteLessonMutation.isPending}
+            >
+              {deleteLessonMutation.isPending ? "Deleting..." : "Delete Lesson"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
