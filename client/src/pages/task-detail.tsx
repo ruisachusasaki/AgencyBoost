@@ -33,7 +33,8 @@ export default function TaskDetail() {
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
 
   const { data: task, isLoading } = useQuery<Task>({
-    queryKey: ["/api/tasks", taskId],
+    queryKey: [`/api/tasks/${taskId}`],
+    enabled: !!taskId,
   });
 
   const { data: clientsData } = useQuery<{ clients: Client[] }>({
@@ -208,7 +209,8 @@ export default function TaskDetail() {
       await apiRequest("PUT", `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
       toast({
         title: "Task updated",
         description: "Task has been updated successfully",

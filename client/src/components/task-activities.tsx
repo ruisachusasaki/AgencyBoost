@@ -10,7 +10,8 @@ interface TaskActivitiesProps {
 
 export default function TaskActivities({ taskId, showCard = true }: TaskActivitiesProps) {
   const { data: activities = [], isLoading } = useQuery<TaskActivity[]>({
-    queryKey: ["/api/tasks", taskId, "activities"],
+    queryKey: [`/api/tasks/${taskId}/activities`],
+    enabled: !!taskId,
   });
 
   const formatActivityMessage = (activity: TaskActivity) => {
