@@ -409,7 +409,7 @@ export default function TaskDetail() {
             )}
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary" className={getStatusColor(task.status)}>
-                {task.status.replace('_', ' ')}
+                {task.status?.replace('_', ' ') || 'Unknown'}
               </Badge>
               <Badge variant="outline" className={getPriorityColor(task.priority)}>
                 {task.priority} priority

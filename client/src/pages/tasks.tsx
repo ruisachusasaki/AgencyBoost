@@ -458,7 +458,7 @@ export default function Tasks() {
       case "status":
         return (
           <Badge className={getStatusColor(task.status)}>
-            {task.status.replace('_', ' ')}
+            {task.status?.replace('_', ' ') || 'Unknown'}
           </Badge>
         );
       

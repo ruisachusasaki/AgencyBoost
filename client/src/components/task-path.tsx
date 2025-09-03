@@ -66,7 +66,7 @@ export function TaskPath({ taskId, className = "" }: TaskPathProps) {
                       {task.title}
                     </span>
                     <Badge className={getStatusColor(task.status)} data-testid={`current-task-status-${task.id}`}>
-                      {task.status.replace('_', ' ')}
+                      {task.status?.replace('_', ' ') || 'Unknown'}
                     </Badge>
                     <span className="text-xs text-gray-500 dark:text-gray-500">
                       Level {task.level! + 1}
@@ -83,7 +83,7 @@ export function TaskPath({ taskId, className = "" }: TaskPathProps) {
                         {task.title}
                       </span>
                       <Badge className={getStatusColor(task.status)} data-testid={`parent-task-status-${task.id}`}>
-                        {task.status.replace('_', ' ')}
+                        {task.status?.replace('_', ' ') || 'Unknown'}
                       </Badge>
                       <span className="text-xs text-gray-500 dark:text-gray-500">
                         Level {task.level! + 1}
