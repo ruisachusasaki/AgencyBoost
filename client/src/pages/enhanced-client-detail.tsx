@@ -5970,9 +5970,9 @@ export default function EnhancedClientDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {appointmentsData && appointmentsData.length > 0 ? (
+                  {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
                     <div className="space-y-3">
-                      {appointmentsData.slice(0, 2).map((appointment: any) => (
+                      {clientAppointmentsData.slice(0, 2).map((appointment: any) => (
                         <div key={appointment.id} className="p-3 bg-gray-50 rounded border">
                           <div className="flex justify-between items-start">
                             <div>
