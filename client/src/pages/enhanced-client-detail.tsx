@@ -929,6 +929,15 @@ export default function EnhancedClientDetail() {
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<'contact' | 'activity' | 'communication' | 'hub'>('contact');
 
+  // SMS Template functions
+  const openSmsTemplates = () => {
+    setSmsTemplatesOpen(true);
+  };
+
+  const openSmsMergeTags = () => {
+    setShowSmsMergeTagsModal(true);
+  };
+
 
 
   // Fetch client data
