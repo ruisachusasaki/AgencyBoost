@@ -728,6 +728,7 @@ export default function EnhancedClientDetail() {
   const [searchDocuments, setSearchDocuments] = useState("");
   const [documentFilterType, setDocumentFilterType] = useState("all");
   const [documentSortBy, setDocumentSortBy] = useState("newest");
+  const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -6288,7 +6289,7 @@ export default function EnhancedClientDetail() {
                                   <div className="flex items-center gap-2 flex-1">
                                     <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
-                                      <h4 className="font-medium text-sm text-gray-900 truncate">{doc.originalName}</h4>
+                                      <h4 className="font-medium text-sm text-gray-900 truncate">{doc.originalName || 'Untitled Document'}</h4>
                                       <div className="flex items-center gap-3 mt-1">
                                         <span className="text-xs text-gray-500">
                                           {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Unknown date'}
@@ -6306,11 +6307,7 @@ export default function EnhancedClientDetail() {
                                       variant="ghost" 
                                       size="sm" 
                                       className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 flex-shrink-0 ml-2" 
-                                      onClick={() => {
-                                        if (confirm(`Are you sure you want to delete "${doc.originalName}"?`)) {
-                                          deleteDocumentMutation.mutate(doc.id);
-                                        }
-                                      }}
+                                      onClick={() => setDocumentToDelete(doc)}
                                       title="Delete document"
                                     >
                                       <Trash2 className="h-3 w-3" />
@@ -6340,6 +6337,38 @@ export default function EnhancedClientDetail() {
         </Tabs>
 
         {/* Modals and Dialogs */}
+        {/* Delete Document Confirmation Modal */}
+        <Dialog open={!!documentToDelete} onOpenChange={() => setDocumentToDelete(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Document</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-600">
+                Are you sure you want to delete "{documentToDelete?.originalName || 'this document'}"? 
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDocumentToDelete(null)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  if (documentToDelete) {
+                    deleteDocumentMutation.mutate(documentToDelete.id);
+                    setDocumentToDelete(null);
+                  }
+                }}
+                disabled={deleteDocumentMutation.isPending}
+              >
+                {deleteDocumentMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <AppointmentModal
           open={showAppointmentModal}
           onOpenChange={(open) => {
