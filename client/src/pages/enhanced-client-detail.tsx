@@ -5685,6 +5685,361 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
+            {/* Communication Section */}
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900">Communication</h2>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={communicationTab} onValueChange={(value) => setCommunicationTab(value as 'sms' | 'email')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="sms" className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      SMS
+                    </TabsTrigger>
+                    <TabsTrigger value="email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="sms" className="mt-0">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium text-gray-700">Send SMS</Label>
+                        {(client?.dndAll || client?.dndSms) && (
+                          <Badge variant="destructive" className="text-xs">
+                            <ShieldOff className="h-3 w-3 mr-1" />
+                            DND Active
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* First Row: From and To fields */}
+                      <div className="flex items-center gap-4">
+                        {/* From Field - Left Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">From</Label>
+                          <Select
+                            value={smsData.fromNumber}
+                            onValueChange={(value) => handleSmsFieldChange('fromNumber', value)}
+                            disabled={!!client?.dndAll || !!client?.dndSms}
+                          >
+                            <SelectTrigger className={`mt-1 ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600' : ''}`}>
+                              <SelectValue placeholder="Select phone number..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="+1234567890">+1 (234) 567-8900 - Main</SelectItem>
+                              <SelectItem value="+1234567891">+1 (234) 567-8901 - Sales</SelectItem>
+                              <SelectItem value="+1234567892">+1 (234) 567-8902 - Support</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* To Field - Right Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">To</Label>
+                          <Input
+                            value={smsData.to}
+                            onChange={(e) => handleSmsFieldChange('to', e.target.value)}
+                            placeholder="Phone number..."
+                            disabled={!!client?.dndAll || !!client?.dndSms}
+                            className={`mt-1 ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Message Input Field */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Message</Label>
+                        <Textarea
+                          value={smsData.message}
+                          onChange={(e) => handleSmsFieldChange('message', e.target.value)}
+                          placeholder={
+                            (client?.dndAll || client?.dndSms) 
+                              ? "SMS blocked by DND settings..." 
+                              : "Type your SMS message here..."
+                          }
+                          disabled={!!client?.dndAll || !!client?.dndSms}
+                          className={`mt-1 min-h-[120px] resize-y ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                        />
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        {/* Left Side - Tools */}
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            {/* Insert Template */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsTemplateModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndSms}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Template</TooltipContent>
+                            </Tooltip>
+
+                            {/* Insert Merge Tags */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsMergeTagsModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndSms}
+                                >
+                                  <TagIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Merge Tags</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+
+                        {/* Right Side - Actions */}
+                        <div className="flex items-center gap-4">
+                          {/* Character Count */}
+                          <span className={`text-sm ${characterCount > 160 ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                            {characterCount} {characterCount > 160 ? '(Multiple messages)' : 'characters'}
+                          </span>
+                          
+                          {/* Clear Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearSmsMessage}
+                            disabled={!smsData.message.trim() || !!client?.dndAll || !!client?.dndSms}
+                          >
+                            Clear
+                          </Button>
+
+                          {/* Send Button */}
+                          <Button
+                            onClick={handleSendSms}
+                            disabled={!smsData.message.trim() || !smsData.to.trim() || !!client?.dndAll || !!client?.dndSms}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="email" className="mt-0">
+                    <div className="space-y-4">
+                      {/* DND Warning */}
+                      {(client?.dndAll || client?.dndEmail) && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <ShieldOff className="h-4 w-4 text-red-600" />
+                          <span className="text-sm text-red-600 font-medium">
+                            Email communication is blocked by DND settings
+                          </span>
+                        </div>
+                      )}
+
+                      {/* First Row: From Email and From Name fields */}
+                      <div className="flex items-center gap-4">
+                        {/* From Email - Left Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">From Email</Label>
+                          <Select
+                            value={emailData.fromEmail}
+                            onValueChange={(value) => handleEmailFieldChange('fromEmail', value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                          >
+                            <SelectTrigger className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600' : ''}`}>
+                              <SelectValue placeholder="Select email address..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hello@themediaoptimizers.com">hello@themediaoptimizers.com</SelectItem>
+                              <SelectItem value="support@themediaoptimizers.com">support@themediaoptimizers.com</SelectItem>
+                              <SelectItem value="sales@themediaoptimizers.com">sales@themediaoptimizers.com</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* From Name - Right Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">From Name</Label>
+                          <Input
+                            value={emailData.fromName}
+                            onChange={(e) => handleEmailFieldChange('fromName', e.target.value)}
+                            placeholder="Your name..."
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* To Field */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">To</Label>
+                        <Input
+                          value={emailData.to}
+                          onChange={(e) => handleEmailFieldChange('to', e.target.value)}
+                          placeholder="Recipient email address..."
+                          disabled={!!client?.dndAll || !!client?.dndEmail}
+                          className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                        />
+                      </div>
+
+                      {/* CC Field */}
+                      {showCC && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">CC</Label>
+                          <Input
+                            value={emailData.cc}
+                            onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
+                            placeholder="CC email addresses..."
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      )}
+
+                      {/* BCC Field */}
+                      {showBCC && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">BCC</Label>
+                          <Input
+                            value={emailData.bcc}
+                            onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
+                            placeholder="BCC email addresses..."
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      )}
+
+                      {/* Subject Field */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Subject</Label>
+                        <Input
+                          value={emailData.subject}
+                          onChange={(e) => handleEmailFieldChange('subject', e.target.value)}
+                          placeholder="Email subject..."
+                          disabled={!!client?.dndAll || !!client?.dndEmail}
+                          className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                        />
+                      </div>
+
+                      {/* Message Input Field */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Message</Label>
+                        <div className="relative">
+                          <Textarea
+                            value={emailData.message}
+                            onChange={(e) => handleEmailFieldChange('message', e.target.value)}
+                            placeholder={
+                              (client?.dndAll || client?.dndEmail) 
+                                ? "Email blocked by DND settings..." 
+                                : "Type your email message here..."
+                            }
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className={`mt-1 min-h-[200px] resize-y ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        {/* Left Side - Tools */}
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            {/* Insert Template */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowTemplateModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndEmail}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Template</TooltipContent>
+                            </Tooltip>
+
+                            {/* Insert Merge Tags */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowMergeTagsModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndEmail}
+                                >
+                                  <TagIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Merge Tags</TooltipContent>
+                            </Tooltip>
+
+                            {/* CC/BCC Toggle Buttons */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowCC(!showCC)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className={showCC ? "bg-gray-100" : ""}
+                            >
+                              CC
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowBCC(!showBCC)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className={showBCC ? "bg-gray-100" : ""}
+                            >
+                              BCC
+                            </Button>
+                          </TooltipProvider>
+                        </div>
+
+                        {/* Right Side - Actions */}
+                        <div className="flex items-center gap-4">
+                          {/* Word Count */}
+                          <span className="text-sm text-gray-500">
+                            {wordCount} words
+                          </span>
+                          
+                          {/* Clear Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearEmailMessage}
+                            disabled={!emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
+                          >
+                            Clear
+                          </Button>
+
+                          {/* Send Button */}
+                          <Button
+                            onClick={handleSendEmail}
+                            disabled={!emailData.message.trim() || !emailData.to.trim() || !emailData.subject.trim() || !!client?.dndAll || !!client?.dndEmail}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+
           </TabsContent>
 
           {/* Client Hub Tab */}
