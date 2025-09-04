@@ -735,7 +735,7 @@ export default function EnhancedClientDetail() {
   const [emailMergeTagsOpen, setEmailMergeTagsOpen] = useState(false);
   
   // Communication form state
-  const [smsData, setSmsData] = useState({ message: "" });
+  const [smsData, setSmsData] = useState({ fromNumber: "", message: "" });
   const [emailData, setEmailData] = useState({ to: "", cc: "", bcc: "", subject: "", message: "" });
   const [showCC, setShowCC] = useState(false);
   const [showBCC, setShowBCC] = useState(false);
@@ -5698,6 +5698,20 @@ export default function EnhancedClientDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* From Field */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">From</Label>
+                    <Select value={smsData.fromNumber} onValueChange={(value) => handleSmsFieldChange('fromNumber', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select phone number" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="+1234567890">(123) 456-7890</SelectItem>
+                        <SelectItem value="+0987654321">(098) 765-4321</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* To Field */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700">To</Label>
@@ -5758,7 +5772,7 @@ export default function EnhancedClientDetail() {
                               onClick={() => setSmsMergeTagsOpen(true)}
                               disabled={!!client?.dndAll || !!client?.dndSms}
                             >
-                              <AtSign className="h-4 w-4" />
+                              <TagIcon className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Merge Tags</TooltipContent>
@@ -5911,7 +5925,7 @@ export default function EnhancedClientDetail() {
                               onClick={() => setEmailMergeTagsOpen(true)}
                               disabled={!!client?.dndAll || !!client?.dndEmail}
                             >
-                              <AtSign className="h-4 w-4" />
+                              <TagIcon className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Merge Tags</TooltipContent>
@@ -6148,10 +6162,18 @@ function SmsMergeTagsModal({ isOpen, onClose, onSelectTag }: {
   onClose: () => void; 
   onSelectTag: (tag: string) => void; 
 }) {
+  const { data: customFields = [] } = useQuery({
+    queryKey: ["/api/custom-fields"],
+  });
+
   const mergeTags = [
     { category: "Contact Information", tags: ["{{firstName}}", "{{lastName}}", "{{email}}", "{{phone}}"] },
     { category: "Business Information", tags: ["{{companyName}}", "{{industry}}", "{{website}}"] },
     { category: "Address", tags: ["{{address1}}", "{{city}}", "{{state}}", "{{zipCode}}"] },
+    { 
+      category: "Custom Fields", 
+      tags: customFields.map((field: any) => `{{${field.name}}}`) 
+    },
   ];
 
   if (!isOpen) return null;
@@ -6231,10 +6253,18 @@ function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: {
   onClose: () => void; 
   onSelectTag: (tag: string) => void; 
 }) {
+  const { data: customFields = [] } = useQuery({
+    queryKey: ["/api/custom-fields"],
+  });
+
   const mergeTags = [
     { category: "Contact Information", tags: ["{{firstName}}", "{{lastName}}", "{{email}}", "{{phone}}"] },
     { category: "Business Information", tags: ["{{companyName}}", "{{industry}}", "{{website}}"] },
     { category: "Address", tags: ["{{address1}}", "{{city}}", "{{state}}", "{{zipCode}}"] },
+    { 
+      category: "Custom Fields", 
+      tags: customFields.map((field: any) => `{{${field.name}}}`) 
+    },
   ];
 
   if (!isOpen) return null;
