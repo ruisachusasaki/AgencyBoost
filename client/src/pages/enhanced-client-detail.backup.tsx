@@ -5524,67 +5524,6 @@ export default function EnhancedClientDetail() {
             setEditingAppointment(null);
           }}
         />
-          </TabsContent>
-
-          {/* Recent Activity Tab */}
-          <TabsContent value="activity" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-lg font-medium">Activity tracking coming soon</p>
-                  <p className="text-sm">View client interactions, notes, and communication history</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Communication Tab */}
-          <TabsContent value="communication" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  Communication
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-lg font-medium">Communication tools coming soon</p>
-                  <p className="text-sm">Send emails, SMS, and manage communication templates</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Client Hub Tab */}
-          <TabsContent value="hub" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-primary" />
-                  Client Hub
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Zap className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-lg font-medium">Client hub coming soon</p>
-                  <p className="text-sm">Manage products, documents, appointments, and billing</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Modals and Dialogs */}
     </div>
   );
 }
