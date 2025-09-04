@@ -6081,7 +6081,11 @@ export default function EnhancedClientDetail() {
                           </div>
                         ) : (
                           clientTasksData.map((task: any) => (
-                            <div key={task.id} className="border rounded-lg p-3 space-y-2">
+                            <div 
+                              key={task.id} 
+                              className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => setLocation(`/tasks/${task.id}`)}
+                            >
                               <div className="flex items-center justify-between">
                                 <h4 className="font-medium text-sm">{task.title}</h4>
                                 <Badge variant={task.status === "completed" ? "default" : "secondary"}>
