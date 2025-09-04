@@ -9375,16 +9375,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to process merge tags in messages
+  function processMergeTags(message: string, clientData: any): string {
+    if (!clientData) return message;
+    
+    // Replace common merge tags with client data
+    return message
+      .replace(/{{firstName}}/g, clientData.firstName || '')
+      .replace(/{{lastName}}/g, clientData.lastName || '')
+      .replace(/{{name}}/g, clientData.name || `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim())
+      .replace(/{{email}}/g, clientData.email || '')
+      .replace(/{{phone}}/g, clientData.phone || '')
+      .replace(/{{companyName}}/g, clientData.companyName || '')
+      .replace(/{{industry}}/g, clientData.industry || '')
+      .replace(/{{website}}/g, clientData.website || '')
+      .replace(/{{address1}}/g, clientData.address1 || '')
+      .replace(/{{city}}/g, clientData.city || '')
+      .replace(/{{state}}/g, clientData.state || '')
+      .replace(/{{zipCode}}/g, clientData.zipCode || '');
+  }
+
   // Send SMS using connected Twilio integration
   app.post("/api/integrations/twilio/send", async (req, res) => {
     try {
-      const { to, message, fromNumber, templateId } = req.body;
-      console.log('SMS Request received:', { to, fromNumber, message: message?.substring(0, 50) + '...' });
+      const { to, message, fromNumber, clientId, templateId } = req.body;
+      console.log('SMS Request received:', { to, fromNumber, clientId, message: message?.substring(0, 50) + '...' });
       
       if (!to || !message) {
         return res.status(400).json({ 
           message: "Phone number and message are required" 
         });
+      }
+
+      // Get client data for merge tag processing
+      let processedMessage = message;
+      if (clientId) {
+        try {
+          const [clientData] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, clientId));
+          
+          if (clientData) {
+            processedMessage = processMergeTags(message, clientData);
+            console.log('Processed message:', processedMessage?.substring(0, 50) + '...');
+          }
+        } catch (error) {
+          console.error('Error fetching client data for merge tags:', error);
+          // Continue with original message if client fetch fails
+        }
       }
       
       // Find the specific integration for the FROM number
@@ -9418,7 +9457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const client = createTwilioClient(fallbackIntegration.accountSid, fallbackIntegration.authToken);
         
         const smsMessage = await client.messages.create({
-          body: message,
+          body: processedMessage,
           from: fallbackIntegration.phoneNumber,
           to: to
         });
@@ -9447,7 +9486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = createTwilioClient(integration.accountSid, integration.authToken);
       
       const smsMessage = await client.messages.create({
-        body: message,
+        body: processedMessage,
         from: integration.phoneNumber,
         to: to
       });

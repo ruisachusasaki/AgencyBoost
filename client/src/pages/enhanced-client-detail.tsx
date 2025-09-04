@@ -806,7 +806,8 @@ export default function EnhancedClientDetail() {
     sendSmsMutation.mutate({
       fromNumber: smsData.fromNumber,
       to: formattedToNumber,
-      message: smsData.message
+      message: smsData.message,
+      clientId: client?.id
     });
   };
 
