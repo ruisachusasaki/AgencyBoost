@@ -767,6 +767,30 @@ export default function EnhancedClientDetail() {
     }
   });
 
+  // Helper function to format phone number for Twilio
+  const formatPhoneNumber = (phone: string): string => {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // If it's 10 digits, assume US number and add +1
+    if (cleaned.length === 10) {
+      return `+1${cleaned}`;
+    }
+    
+    // If it's 11 digits starting with 1, add +
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      return `+${cleaned}`;
+    }
+    
+    // If it already starts with +, return as is
+    if (phone.startsWith('+')) {
+      return phone;
+    }
+    
+    // Otherwise, assume US and add +1
+    return `+1${cleaned}`;
+  };
+
   const handleSendSms = () => {
     if (!smsData.fromNumber || !smsData.message.trim() || !client?.phone) {
       toast({
@@ -777,9 +801,11 @@ export default function EnhancedClientDetail() {
       return;
     }
 
+    const formattedToNumber = formatPhoneNumber(client.phone);
+
     sendSmsMutation.mutate({
       fromNumber: smsData.fromNumber,
-      to: client.phone,
+      to: formattedToNumber,
       message: smsData.message
     });
   };
@@ -1892,14 +1918,7 @@ export default function EnhancedClientDetail() {
     setShowSendModal(false);
   };
 
-  // Utility functions
-  const formatPhoneNumber = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
-  };
+  // Removed duplicate formatPhoneNumber function - using the one with Twilio formatting above
 
   const toggleSection = (sectionId: string) => {
     setSections(prev => prev.map(section => 
@@ -5763,9 +5782,10 @@ export default function EnhancedClientDetail() {
                   <div>
                     <Label className="text-sm font-medium text-gray-700">To</Label>
                     <Input
-                      value={client?.phone || ""}
+                      value={client?.phone ? formatPhoneNumber(client.phone) : ""}
                       disabled
                       className="mt-1 bg-gray-50"
+                      placeholder="Phone number will be auto-formatted with +1"
                     />
                   </div>
 
