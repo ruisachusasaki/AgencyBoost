@@ -752,7 +752,7 @@ export default function EnhancedClientDetail() {
   // SMS sending functionality
   const sendSmsMutation = useMutation({
     mutationFn: async (smsPayload: { fromNumber: string; to: string; message: string }) => {
-      return await apiRequest("/api/integrations/twilio/send-sms", "POST", smsPayload);
+      return await apiRequest("POST", "/api/integrations/twilio/send", smsPayload);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "SMS sent successfully!" });
