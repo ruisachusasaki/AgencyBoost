@@ -23,6 +23,7 @@ import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate } from "@shared
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 // EmailTemplateSelector Component
 function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
@@ -732,6 +733,22 @@ export default function EnhancedClientDetail() {
   const [smsMergeTagsOpen, setSmsMergeTagsOpen] = useState(false);
   const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
   const [emailMergeTagsOpen, setEmailMergeTagsOpen] = useState(false);
+  
+  // Communication form state
+  const [smsData, setSmsData] = useState({ message: "" });
+  const [emailData, setEmailData] = useState({ to: "", cc: "", bcc: "", subject: "", message: "" });
+  const [showCC, setShowCC] = useState(false);
+  const [showBCC, setShowBCC] = useState(false);
+  
+  // Handler functions for communication forms
+  const handleSmsFieldChange = (field: string, value: string) => {
+    setSmsData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEmailFieldChange = (field: string, value: string) => {
+    setEmailData(prev => ({ ...prev, [field]: value }));
+  };
+
   const [documentFilterType, setDocumentFilterType] = useState("all");
   const [documentSortBy, setDocumentSortBy] = useState("newest");
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
@@ -892,29 +909,13 @@ export default function EnhancedClientDetail() {
   // Communication tabs state
   const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
 
-  // SMS composition state
-  const [smsData, setSmsData] = useState({
-    fromNumber: '',
-    to: '',
-    message: ''
-  });
+  // SMS composition state (removed duplicate)
   const [characterCount, setCharacterCount] = useState(0);
   const [showSmsTemplateModal, setShowSmsTemplateModal] = useState(false);
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
 
-  // Email composition state
-  const [emailData, setEmailData] = useState({
-    fromName: '',
-    fromEmail: '',
-    to: '',
-    cc: '',
-    bcc: '',
-    subject: '',
-    message: ''
-  });
-  const [showCC, setShowCC] = useState(false);
-  const [showBCC, setShowBCC] = useState(false);
+  // Email composition state (removed duplicate)
   const [showWysiwyg, setShowWysiwyg] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showMergeTagsModal, setShowMergeTagsModal] = useState(false);
@@ -1778,10 +1779,7 @@ export default function EnhancedClientDetail() {
     }
   }, [clientPhone]);
 
-  // Email utility functions
-  const handleEmailFieldChange = useCallback((field: string, value: string) => {
-    setEmailData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  // Email utility functions (removed duplicate)
 
   const clearEmailMessage = useCallback(() => {
     setEmailData(prev => ({ ...prev, message: '' }));
@@ -1791,10 +1789,7 @@ export default function EnhancedClientDetail() {
     handleEmailFieldChange('message', value);
   }, [handleEmailFieldChange]);
 
-  // SMS utility functions
-  const handleSmsFieldChange = useCallback((field: string, value: string) => {
-    setSmsData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  // SMS utility functions (removed duplicate)
 
   const clearSmsMessage = useCallback(() => {
     setSmsData(prev => ({ ...prev, message: '' }));
@@ -5692,6 +5687,251 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
+            {/* Email & SMS Communication Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* SMS Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-green-500" />
+                    Send SMS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* To Field */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">To</Label>
+                    <Input
+                      value={client?.phone || ""}
+                      disabled
+                      className="mt-1 bg-gray-50"
+                    />
+                  </div>
+
+                  {/* SMS Message */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Message</Label>
+                    <div className="relative">
+                      <Textarea
+                        value={smsData.message}
+                        onChange={(e) => handleSmsFieldChange('message', e.target.value)}
+                        placeholder={
+                          (client?.dndAll || client?.dndSms) 
+                            ? "SMS blocked by DND settings..." 
+                            : "Type your SMS message here..."
+                        }
+                        disabled={!!client?.dndAll || !!client?.dndSms}
+                        className={`mt-1 min-h-[120px] resize-y ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                      />
+                      <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+                        {smsData.message.length}/160
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SMS Action Bar */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    {/* Left Side - Tools */}
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        {/* SMS Templates */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSmsTemplatesOpen(true)}
+                              disabled={!!client?.dndAll || !!client?.dndSms}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>SMS Templates</TooltipContent>
+                        </Tooltip>
+
+                        {/* SMS Merge Tags */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSmsMergeTagsOpen(true)}
+                              disabled={!!client?.dndAll || !!client?.dndSms}
+                            >
+                              <AtSign className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Merge Tags</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    {/* Right Side - Send Button */}
+                    <Button
+                      size="sm"
+                      disabled={!smsData.message.trim() || !!client?.dndAll || !!client?.dndSms}
+                      className="flex items-center gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Send SMS
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Email Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5 text-blue-500" />
+                    Send Email
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* To Field */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">To</Label>
+                    <Input
+                      value={emailData.to}
+                      onChange={(e) => handleEmailFieldChange('to', e.target.value)}
+                      placeholder={client?.email || "Enter email address..."}
+                      disabled={!!client?.dndAll || !!client?.dndEmail}
+                      className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                    />
+                  </div>
+
+                  {/* CC/BCC Links */}
+                  <div className="flex items-center gap-4 text-sm">
+                    {!showCC && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCC(true)}
+                        className="text-blue-600 hover:text-blue-800"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                      >
+                        Add CC
+                      </button>
+                    )}
+                    {!showBCC && (
+                      <button
+                        type="button"
+                        onClick={() => setShowBCC(true)}
+                        className="text-blue-600 hover:text-blue-800"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                      >
+                        Add BCC
+                      </button>
+                    )}
+                  </div>
+
+                  {/* CC Field */}
+                  {showCC && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">CC</Label>
+                      <Input
+                        value={emailData.cc}
+                        onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
+                        placeholder="CC email addresses..."
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                      />
+                    </div>
+                  )}
+
+                  {/* BCC Field */}
+                  {showBCC && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">BCC</Label>
+                      <Input
+                        value={emailData.bcc}
+                        onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
+                        placeholder="BCC email addresses..."
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Subject Field */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Subject</Label>
+                    <Input
+                      value={emailData.subject}
+                      onChange={(e) => handleEmailFieldChange('subject', e.target.value)}
+                      placeholder="Email subject..."
+                      disabled={!!client?.dndAll || !!client?.dndEmail}
+                      className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                    />
+                  </div>
+
+                  {/* Message Input Field */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Message</Label>
+                    <div className="relative">
+                      <Textarea
+                        value={emailData.message}
+                        onChange={(e) => handleEmailFieldChange('message', e.target.value)}
+                        placeholder={
+                          (client?.dndAll || client?.dndEmail) 
+                            ? "Email blocked by DND settings..." 
+                            : "Type your email message here..."
+                        }
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                        className={`mt-1 min-h-[200px] resize-y ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email Action Bar */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    {/* Left Side - Tools */}
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        {/* Email Templates */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEmailTemplatesOpen(true)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Email Templates</TooltipContent>
+                        </Tooltip>
+
+                        {/* Email Merge Tags */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEmailMergeTagsOpen(true)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                            >
+                              <AtSign className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Merge Tags</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    {/* Right Side - Send Button */}
+                    <Button
+                      size="sm"
+                      disabled={!emailData.to.trim() || !emailData.subject.trim() || !emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
+                      className="flex items-center gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Send Email
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Client Hub Tab */}
@@ -5859,5 +6099,171 @@ export default function EnhancedClientDetail() {
         )}
       </Tabs>
     </div>
+  );
+}
+
+// Modal Components for Communication Tab
+function SmsTemplatesModal({ isOpen, onClose, onSelectTemplate }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTemplate: (template: any) => void; 
+}) {
+  const { data: smsTemplates = [] } = useQuery({
+    queryKey: ["/api/sms-templates"],
+  });
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>SMS Templates</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-96 overflow-y-auto">
+          {smsTemplates.length === 0 ? (
+            <p className="text-center py-8 text-gray-500">No SMS templates found</p>
+          ) : (
+            <div className="space-y-2">
+              {smsTemplates.map((template: any) => (
+                <div
+                  key={template.id}
+                  className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => onSelectTemplate(template)}
+                >
+                  <h4 className="font-medium">{template.name}</h4>
+                  <p className="text-sm text-gray-600 mt-1">{template.content.substring(0, 100)}...</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SmsMergeTagsModal({ isOpen, onClose, onSelectTag }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTag: (tag: string) => void; 
+}) {
+  const mergeTags = [
+    { category: "Contact Information", tags: ["{{firstName}}", "{{lastName}}", "{{email}}", "{{phone}}"] },
+    { category: "Business Information", tags: ["{{companyName}}", "{{industry}}", "{{website}}"] },
+    { category: "Address", tags: ["{{address1}}", "{{city}}", "{{state}}", "{{zipCode}}"] },
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>SMS Merge Tags</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-96 overflow-y-auto">
+          {mergeTags.map((category) => (
+            <div key={category.category} className="mb-4">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">{category.category}</h4>
+              <div className="space-y-1">
+                {category.tags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer text-sm"
+                    onClick={() => onSelectTag(tag)}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailTemplatesModal({ isOpen, onClose, onSelectTemplate }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTemplate: (template: any) => void; 
+}) {
+  const { data: emailTemplates = [] } = useQuery({
+    queryKey: ["/api/email-templates"],
+  });
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Email Templates</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-96 overflow-y-auto">
+          {emailTemplates.length === 0 ? (
+            <p className="text-center py-8 text-gray-500">No email templates found</p>
+          ) : (
+            <div className="space-y-2">
+              {emailTemplates.map((template: any) => (
+                <div
+                  key={template.id}
+                  className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => onSelectTemplate(template)}
+                >
+                  <h4 className="font-medium">{template.name}</h4>
+                  <p className="text-sm text-gray-500">{template.subject}</p>
+                  <p className="text-sm text-gray-600 mt-1">{template.content.substring(0, 100)}...</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTag: (tag: string) => void; 
+}) {
+  const mergeTags = [
+    { category: "Contact Information", tags: ["{{firstName}}", "{{lastName}}", "{{email}}", "{{phone}}"] },
+    { category: "Business Information", tags: ["{{companyName}}", "{{industry}}", "{{website}}"] },
+    { category: "Address", tags: ["{{address1}}", "{{city}}", "{{state}}", "{{zipCode}}"] },
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Email Merge Tags</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-96 overflow-y-auto">
+          {mergeTags.map((category) => (
+            <div key={category.category} className="mb-4">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">{category.category}</h4>
+              <div className="space-y-1">
+                {category.tags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer text-sm"
+                    onClick={() => onSelectTag(tag)}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
