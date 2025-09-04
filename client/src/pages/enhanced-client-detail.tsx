@@ -6291,7 +6291,7 @@ export default function EnhancedClientDetail() {
                                       <h4 className="font-medium text-sm text-gray-900 truncate">{doc.originalName}</h4>
                                       <div className="flex items-center gap-3 mt-1">
                                         <span className="text-xs text-gray-500">
-                                          {new Date(doc.uploadedAt).toLocaleDateString()}
+                                          {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Unknown date'}
                                         </span>
                                         {doc.size && (
                                           <span className="text-xs text-gray-500">
@@ -6301,7 +6301,7 @@ export default function EnhancedClientDetail() {
                                       </div>
                                     </div>
                                   </div>
-                                  {currentUser?.role === 'Admin' && (
+                                  {currentUser && ['Admin', 'Manager'].includes(currentUser.role) && (
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
