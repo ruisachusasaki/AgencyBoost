@@ -6161,7 +6161,16 @@ export default function EnhancedClientDetail() {
             isOpen={emailTemplatesOpen}
             onClose={() => setEmailTemplatesOpen(false)}
             onSelectTemplate={(template) => {
-              handleEmailFieldChange('message', template.content);
+              // Strip HTML tags from template content for plain text email editor
+              const stripHtml = (html: string) => {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                return tempDiv.textContent || tempDiv.innerText || '';
+              };
+              
+              const plainTextContent = stripHtml(template.content);
+              handleEmailFieldChange('message', plainTextContent);
+              handleEmailFieldChange('subject', template.name); // Also set subject
               setEmailTemplatesOpen(false);
             }}
           />
