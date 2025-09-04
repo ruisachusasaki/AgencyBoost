@@ -3068,10 +3068,7 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    console.log('SMS Templates button clicked, current state:', showSmsTemplateModal);
-                                    setShowSmsTemplateModal(true);
-                                  }}
+                                  onClick={() => setShowSmsTemplateModal(true)}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <FileText className="h-4 w-4" />
@@ -3086,10 +3083,7 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    console.log('SMS Merge Tags button clicked, current state:', showSmsMergeTagsModal);
-                                    setShowSmsMergeTagsModal(true);
-                                  }}
+                                  onClick={() => setShowSmsMergeTagsModal(true)}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <TagIcon className="h-4 w-4" />
@@ -3559,7 +3553,7 @@ export default function EnhancedClientDetail() {
 
             {/* SMS Template Selection Modal */}
             <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl z-50">
                 <DialogHeader>
                   <DialogTitle>Select SMS Template</DialogTitle>
                 </DialogHeader>
@@ -3569,7 +3563,7 @@ export default function EnhancedClientDetail() {
 
             {/* SMS Merge Tags Modal */}
             <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl z-50">
                 <DialogHeader>
                   <DialogTitle>Insert Merge Tags</DialogTitle>
                   <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
@@ -5783,10 +5777,7 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    console.log('SMS Templates button clicked, current state:', showSmsTemplateModal);
-                                    setShowSmsTemplateModal(true);
-                                  }}
+                                  onClick={() => setShowSmsTemplateModal(true)}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <FileText className="h-4 w-4" />
@@ -5801,10 +5792,7 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    console.log('SMS Merge Tags button clicked, current state:', showSmsMergeTagsModal);
-                                    setShowSmsMergeTagsModal(true);
-                                  }}
+                                  onClick={() => setShowSmsMergeTagsModal(true)}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <TagIcon className="h-4 w-4" />
