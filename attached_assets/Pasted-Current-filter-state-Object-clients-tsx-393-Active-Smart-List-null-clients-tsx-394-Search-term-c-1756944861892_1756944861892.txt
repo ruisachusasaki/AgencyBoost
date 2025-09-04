@@ -1,0 +1,214 @@
+Current filter state: Object
+clients.tsx:393 Active Smart List: null
+clients.tsx:394 Search term: 
+clients.tsx:323 Applying filter with conditions: Array(0)
+clients.tsx:324 Filter logic: AND
+clients.tsx:327 No filter conditions, returning all clients
+clients.tsx:323 Applying filter with conditions: Array(1)
+clients.tsx:324 Filter logic: AND
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:392 Current filter state: Object
+clients.tsx:393 Active Smart List: null
+clients.tsx:394 Search term: 
+clients.tsx:323 Applying filter with conditions: Array(0)
+clients.tsx:324 Filter logic: AND
+clients.tsx:327 No filter conditions, returning all clients
+clients.tsx:323 Applying filter with conditions: Array(1)
+clients.tsx:324 Filter logic: AND
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): '' in client: Jorge Abreu
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Jamie Smith
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Eddie Wilson
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Financial Lead Gen' in client: Greg Garrick
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "financial lead gen", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Brian Petersen
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:392 Current filter state: Object
+clients.tsx:393 Active Smart List: null
+clients.tsx:394 Search term: 
+clients.tsx:323 Applying filter with conditions: Array(0)
+clients.tsx:324 Filter logic: AND
+clients.tsx:327 No filter conditions, returning all clients
+clients.tsx:323 Applying filter with conditions: Array(1)
+clients.tsx:324 Filter logic: AND
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): '' in client: Jorge Abreu
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Jamie Smith
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Eddie Wilson
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Financial Lead Gen' in client: Greg Garrick
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "financial lead gen", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Brian Petersen
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+chunk-RPCDYKBN.js?v=5ee51e89:521 Warning: validateDOMNesting(...): <button> cannot appear as a descendant of <button>.
+    at button
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/button.tsx:47:11)
+    at div
+    at button
+    at div
+    at div
+    at _c9 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at div
+    at EnhancedClientDetail (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/pages/enhanced-client-detail.tsx?t=1756944480950:1082:27)
+    at Route (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=5ee51e89:191:16)
+    at Switch (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=5ee51e89:247:17)
+    at Router
+    at div
+    at main
+    at div
+    at MainLayout (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/layout/main-layout.tsx:22:38)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=5ee51e89:38:15)
+    at TooltipProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=5ee51e89:64:5)
+    at TimerProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/contexts/TimerContext.tsx:31:33)
+    at QueryClientProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=5ee51e89:2805:3)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=5ee51e89:521Understand this error
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+enhanced-client-detail.tsx:1079 🔍 getClientDisplayName debug:
+enhanced-client-detail.tsx:1080 - client.customFieldValues: undefined
+enhanced-client-detail.tsx:1081 - customFieldsData: Array(35)
+enhanced-client-detail.tsx:1082 - customFieldsLoading: false
+enhanced-client-detail.tsx:1097 - firstNameField found: Object
+enhanced-client-detail.tsx:1098 - lastNameField found: Object
+enhanced-client-detail.tsx:1104 - firstName value: 
+enhanced-client-detail.tsx:1105 - lastName value: 
+AppointmentModal.tsx:132 Staff data in AppointmentModal: Array(35)
+AppointmentModal.tsx:133 Staff loading: false
+1673 log entries are not shown.Understand this warning
