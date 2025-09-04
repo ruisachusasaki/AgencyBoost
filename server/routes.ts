@@ -175,6 +175,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to populate display names for existing clients (one-time migration helper)
+  app.post("/api/admin/populate-display-names", async (req, res) => {
+    try {
+      console.log("🔄 Starting display name population...");
+      
+      // Get all clients and custom fields
+      const clients = await storage.getClients();
+      const customFields = await storage.getCustomFields();
+      
+      let updatedCount = 0;
+      
+      for (const client of clients) {
+        // Skip if already has display name
+        if (client.displayName) {
+          continue;
+        }
+        
+        // Compute display name from the utility function
+        const { computeClientDisplayName } = await import("@shared/utils");
+        const displayName = computeClientDisplayName(
+          client.customFieldValues,
+          customFields,
+          client.name,
+          client.email
+        );
+        
+        // Update client with display name
+        await storage.updateClient(client.id, { displayName });
+        updatedCount++;
+      }
+      
+      console.log(`✅ Updated ${updatedCount} clients with computed display names`);
+      res.json({ 
+        success: true, 
+        message: `Updated ${updatedCount} clients with computed display names`,
+        updatedCount 
+      });
+    } catch (error) {
+      console.error("❌ Error populating display names:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to populate display names", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
   app.post("/api/clients", async (req, res) => {
     try {
       const validatedData = insertClientSchema.parse(req.body);

@@ -1072,64 +1072,19 @@ export default function EnhancedClientDetail() {
     enabled: expandedBundles.size > 0 && !!clientId,
   });
 
-  // Helper functions to get dynamic names from custom fields
+  // Helper function to get cached display name (optimized for performance)
   const getClientDisplayName = () => {
     if (!client) return "";
     
-    // If custom fields are still loading, show database name as fallback
-    if (customFieldsLoading || !customFieldsData) {
-      return client.name || client.email || "Loading...";
-    }
-    
-    // Find First Name and Last Name fields by exact name match
-    const firstNameField = customFieldsData.find(field => 
-      field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
-    );
-    const lastNameField = customFieldsData.find(field => 
-      field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
-    );
-    
-    const customFieldValues = client.customFieldValues as Record<string, any> || {};
-    const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
-    const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
-    
-    // If we have both first and last name from custom fields, use them
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
-    // If we only have first name, use it
-    if (firstName) {
-      return firstName;
-    }
-    // If we only have last name, use it
-    if (lastName) {
-      return lastName;
-    }
-    // Otherwise fall back to database name or email
-    return client.name || client.email || "Unnamed Client";
+    // Use the cached displayName for optimal performance
+    // Falls back to database name/email if displayName not set
+    return client.displayName || client.name || client.email || "Unnamed Client";
   };
 
   const getBusinessDisplayName = () => {
     if (!client) return "";
     
-    // If custom fields are still loading, show database company as fallback
-    if (customFieldsLoading || !customFieldsData) {
-      return client.company || "Loading...";
-    }
-    
-    // Find Business Name field by exact name match
-    const businessNameField = customFieldsData.find(field => 
-      field.name === 'Business Name' || field.name === 'Company Name' || field.name === 'business name' || field.name === 'Company'
-    );
-    
-    const customFieldValues = client.customFieldValues as Record<string, any> || {};
-    const businessName = businessNameField ? customFieldValues[businessNameField.id] || "" : "";
-    
-    // If we have business name from custom fields, use it
-    if (businessName) {
-      return businessName;
-    }
-    // Otherwise fall back to database company
+    // For now, just use company field (can be enhanced later with caching)
     return client.company || "";
   };
 
