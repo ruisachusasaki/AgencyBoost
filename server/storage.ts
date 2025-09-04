@@ -58,7 +58,6 @@ import {
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { computeClientDisplayName } from "@shared/utils";
 import { db } from "./db";
 import { eq, sql, asc, desc, and } from "drizzle-orm";
 
@@ -2054,15 +2053,6 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     
-    // Get custom fields to compute display name
-    const customFields = await this.getCustomFields();
-    const displayName = computeClientDisplayName(
-      insertClient.customFieldValues || null,
-      customFields,
-      insertClient.name,
-      insertClient.email
-    );
-    
     const client: Client = { 
       id,
       name: insertClient.name,
@@ -2113,7 +2103,6 @@ export class MemStorage implements IStorage {
       
       groupId: insertClient.groupId || null,
       customFieldValues: insertClient.customFieldValues || null,
-      displayName, // Auto-computed display name
       followers: insertClient.followers || null,
       
       lastActivity: insertClient.lastActivity || null,
@@ -2129,17 +2118,6 @@ export class MemStorage implements IStorage {
     
     let updatedClient = { ...client, ...clientUpdate };
     
-    // If customFieldValues, name, or email are being updated, recompute display name
-    if (clientUpdate.customFieldValues !== undefined || clientUpdate.name !== undefined || clientUpdate.email !== undefined) {
-      const customFields = await this.getCustomFields();
-      const displayName = computeClientDisplayName(
-        updatedClient.customFieldValues,
-        customFields,
-        updatedClient.name,
-        updatedClient.email
-      );
-      updatedClient = { ...updatedClient, displayName };
-    }
     
     this.clients.set(id, updatedClient);
     return updatedClient;

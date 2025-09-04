@@ -313,7 +313,6 @@ export const clients = pgTable("clients", {
   customFieldValues: jsonb("custom_field_values"),
   
   // Computed display name for performance (auto-updated from custom fields)
-  displayName: text("display_name"),
   
   // Followers (users who follow this client)
   followers: varchar("followers").array(),
