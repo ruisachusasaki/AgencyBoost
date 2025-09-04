@@ -1797,6 +1797,7 @@ export default function EnhancedClientDetail() {
   const insertSmsTag = (tag: string) => {
     const newMessage = smsData.message + `{{${tag}}}`;
     setSmsData(prev => ({ ...prev, message: newMessage }));
+    setShowSmsMergeTagsModal(false);
   };
 
   const selectSmsTemplate = (content: string, templateName: string) => {
