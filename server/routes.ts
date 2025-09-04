@@ -9378,7 +9378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send SMS using connected Twilio integration
   app.post("/api/integrations/twilio/send", async (req, res) => {
     try {
-      const { to, message, templateId } = req.body;
+      const { to, message, fromNumber, templateId } = req.body;
+      console.log('SMS Request received:', { to, fromNumber, message: message?.substring(0, 50) + '...' });
       
       if (!to || !message) {
         return res.status(400).json({ 
@@ -9386,19 +9387,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Find the specific integration for the FROM number
       const [integration] = await db
         .select()
         .from(smsIntegrations)
         .where(and(
           eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.phoneNumber, fromNumber || ''),
           eq(smsIntegrations.isActive, true)
         ));
       
       if (!integration) {
-        return res.status(400).json({ 
-          message: "Twilio SMS integration not connected" 
+        console.log('No integration found for phone number:', fromNumber);
+        // Fallback to any active Twilio integration
+        const [fallbackIntegration] = await db
+          .select()
+          .from(smsIntegrations)
+          .where(and(
+            eq(smsIntegrations.provider, 'twilio'),
+            eq(smsIntegrations.isActive, true)
+          ));
+        
+        if (!fallbackIntegration) {
+          return res.status(400).json({ 
+            message: "No active Twilio integration found" 
+          });
+        }
+        
+        console.log('Using fallback Twilio integration:', fallbackIntegration.phoneNumber);
+        const client = createTwilioClient(fallbackIntegration.accountSid, fallbackIntegration.authToken);
+        
+        const smsMessage = await client.messages.create({
+          body: message,
+          from: fallbackIntegration.phoneNumber,
+          to: to
+        });
+        
+        console.log('Twilio response:', { 
+          sid: smsMessage.sid, 
+          status: smsMessage.status,
+          errorCode: smsMessage.errorCode,
+          errorMessage: smsMessage.errorMessage 
+        });
+        
+        return res.json({
+          message: "SMS sent successfully",
+          messageId: smsMessage.sid,
+          to: to,
+          status: smsMessage.status,
+          fromNumber: fallbackIntegration.phoneNumber
         });
       }
+
+      console.log('Using Twilio integration:', { 
+        phoneNumber: integration.phoneNumber, 
+        accountSid: integration.accountSid?.substring(0, 10) + '...' 
+      });
       
       const client = createTwilioClient(integration.accountSid, integration.authToken);
       
@@ -9406,6 +9450,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: message,
         from: integration.phoneNumber,
         to: to
+      });
+      
+      console.log('Twilio response:', { 
+        sid: smsMessage.sid, 
+        status: smsMessage.status,
+        errorCode: smsMessage.errorCode,
+        errorMessage: smsMessage.errorMessage 
       });
       
       res.json({
