@@ -5505,25 +5505,6 @@ export default function EnhancedClientDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* Appointment Modal */}
-        <AppointmentModal
-          open={showAppointmentModal}
-          onOpenChange={(open) => {
-            setShowAppointmentModal(open);
-            if (!open) {
-              setEditingAppointment(null);
-            }
-          }}
-          existingAppointment={editingAppointment}
-          appointmentId={editingAppointment?.id}
-          clientId={clientId!}
-          clientName={client?.name || client?.company || 'Client'}
-          clientEmail={client?.email || ''}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
-            setEditingAppointment(null);
-          }}
-        />
           </TabsContent>
 
           {/* Recent Activity Tab */}
@@ -6359,6 +6340,24 @@ export default function EnhancedClientDetail() {
         </Tabs>
 
         {/* Modals and Dialogs */}
+        <AppointmentModal
+          open={showAppointmentModal}
+          onOpenChange={(open) => {
+            setShowAppointmentModal(open);
+            if (!open) {
+              setEditingAppointment(null);
+            }
+          }}
+          existingAppointment={editingAppointment}
+          appointmentId={editingAppointment?.id}
+          clientId={clientId!}
+          clientName={client?.name || client?.company || 'Client'}
+          clientEmail={client?.email || ''}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+            setEditingAppointment(null);
+          }}
+        />
     </div>
   );
 }
