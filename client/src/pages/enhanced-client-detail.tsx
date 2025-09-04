@@ -6084,37 +6084,6 @@ export default function EnhancedClientDetail() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-gray-900">Tasks</h3>
-                        <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Create New Task</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                                <Input
-                                  value={newTask.title}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                  placeholder="Enter task title"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                                <Textarea
-                                  value={newTask.description}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                  placeholder="Enter task description (optional)"
-                                  className="min-h-[60px]"
-                                />
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
                       </div>
                       
                       <div className="space-y-2">
