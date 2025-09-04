@@ -5873,10 +5873,11 @@ export default function EnhancedClientDetail() {
 
           {/* Client Hub Tab */}
           <TabsContent value="hub" className="space-y-6 mt-6">
-            <Tabs value={activeRightSection} onValueChange={(value) => setActiveRightSection(value as any)} className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
-                <TabsList className="grid w-auto grid-cols-5">
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
+              
+              <Tabs value={activeRightSection} onValueChange={(value) => setActiveRightSection(value as any)} className="space-y-6">
+                <TabsList className="grid w-auto grid-cols-5 justify-start">
                   <TabsTrigger value="notes" className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4" />
                     Notes
@@ -5898,7 +5899,6 @@ export default function EnhancedClientDetail() {
                     Team
                   </TabsTrigger>
                 </TabsList>
-              </div>
 
               {/* Notes Section */}
               <TabsContent value="notes" className="mt-6">
@@ -6385,6 +6385,7 @@ export default function EnhancedClientDetail() {
                 </Card>
               </TabsContent>
             </Tabs>
+            </div>
           </TabsContent>
         </Tabs>
 
