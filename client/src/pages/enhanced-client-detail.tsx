@@ -736,7 +736,7 @@ export default function EnhancedClientDetail() {
   
   // Communication form state
   const [smsData, setSmsData] = useState({ fromNumber: "", message: "" });
-  const [emailData, setEmailData] = useState({ to: "", cc: "", bcc: "", subject: "", message: "" });
+  const [emailData, setEmailData] = useState({ fromName: "", fromEmail: "", to: "", cc: "", bcc: "", subject: "", message: "" });
   const [showCC, setShowCC] = useState(false);
   const [showBCC, setShowBCC] = useState(false);
   
@@ -5871,6 +5871,30 @@ export default function EnhancedClientDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* From Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">From Name</Label>
+                      <Input
+                        value={emailData.fromName || ""}
+                        onChange={(e) => handleEmailFieldChange('fromName', e.target.value)}
+                        placeholder="Your Name"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">From Email</Label>
+                      <Input
+                        value={emailData.fromEmail || ""}
+                        onChange={(e) => handleEmailFieldChange('fromEmail', e.target.value)}
+                        placeholder="your@email.com"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                      />
+                    </div>
+                  </div>
+
                   {/* To Field */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700">To</Label>
