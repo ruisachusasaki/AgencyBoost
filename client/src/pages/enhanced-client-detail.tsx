@@ -726,6 +726,12 @@ export default function EnhancedClientDetail() {
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [searchDocuments, setSearchDocuments] = useState("");
+  
+  // Modal state variables
+  const [smsTemplatesOpen, setSmsTemplatesOpen] = useState(false);
+  const [smsMergeTagsOpen, setSmsMergeTagsOpen] = useState(false);
+  const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
+  const [emailMergeTagsOpen, setEmailMergeTagsOpen] = useState(false);
   const [documentFilterType, setDocumentFilterType] = useState("all");
   const [documentSortBy, setDocumentSortBy] = useState("newest");
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
