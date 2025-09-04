@@ -749,6 +749,41 @@ export default function EnhancedClientDetail() {
     setEmailData(prev => ({ ...prev, [field]: value }));
   };
 
+  // SMS sending functionality
+  const sendSmsMutation = useMutation({
+    mutationFn: async (smsPayload: { fromNumber: string; to: string; message: string }) => {
+      return await apiRequest("/api/integrations/twilio/send-sms", "POST", smsPayload);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "SMS sent successfully!" });
+      setSmsData({ fromNumber: "", message: "" }); // Clear form
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error?.message || "Failed to send SMS" 
+      });
+    }
+  });
+
+  const handleSendSms = () => {
+    if (!smsData.fromNumber || !smsData.message.trim() || !client?.phone) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill in all required fields"
+      });
+      return;
+    }
+
+    sendSmsMutation.mutate({
+      fromNumber: smsData.fromNumber,
+      to: client.phone,
+      message: smsData.message
+    });
+  };
+
   const [documentFilterType, setDocumentFilterType] = useState("all");
   const [documentSortBy, setDocumentSortBy] = useState("newest");
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
@@ -947,6 +982,12 @@ export default function EnhancedClientDetail() {
   const { data: customFieldsData, isLoading: customFieldsLoading } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
     queryKey: ['/api/custom-fields'],
   });
+
+  // Fetch Twilio phone numbers for SMS dropdown
+  const { data: twilioResponse } = useQuery({
+    queryKey: ["/api/integrations/twilio/numbers"],
+  });
+  const twilioNumbers = twilioResponse?.phoneNumbers || [];
 
   // Fetch tags data
   const { data: tagsData = [], isLoading: tagsLoading } = useQuery({
@@ -1806,9 +1847,7 @@ export default function EnhancedClientDetail() {
     setShowSmsTemplateModal(false);
   };
 
-  const handleSendSms = () => {
-    setShowSmsSendModal(true);
-  };
+  // Removed duplicate handleSendSms function
 
   const sendSmsNow = () => {
     console.log('Sending SMS now:', smsData);
@@ -5706,8 +5745,16 @@ export default function EnhancedClientDetail() {
                         <SelectValue placeholder="Select phone number" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="+1234567890">(123) 456-7890</SelectItem>
-                        <SelectItem value="+0987654321">(098) 765-4321</SelectItem>
+                        {twilioNumbers.map((number: any) => (
+                          <SelectItem key={number.id} value={number.phoneNumber}>
+                            {number.friendlyName || number.phoneNumber}
+                          </SelectItem>
+                        ))}
+                        {twilioNumbers.length === 0 && (
+                          <SelectItem value="" disabled>
+                            No phone numbers available
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -5783,8 +5830,9 @@ export default function EnhancedClientDetail() {
                     {/* Right Side - Send Button */}
                     <Button
                       size="sm"
-                      disabled={!smsData.message.trim() || !!client?.dndAll || !!client?.dndSms}
+                      disabled={!smsData.message.trim() || !smsData.fromNumber || !!client?.dndAll || !!client?.dndSms}
                       className="flex items-center gap-2"
+                      onClick={handleSendSms}
                     >
                       <Send className="h-4 w-4" />
                       Send SMS
