@@ -19,7 +19,7 @@ import {
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
   insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
-  insertClientDocumentSchema, insertClientTransactionSchema,
+  insertClientDocumentSchema, insertDocumentSchema, insertClientTransactionSchema,
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertCalendarIntegrationSchema, insertSmsIntegrationSchema,
@@ -32,7 +32,7 @@ import {
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
-  clientNotes, clientTasks, clientAppointments, clientDocuments, clientTransactions,
+  clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
@@ -7887,8 +7887,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uploadedBy: uploadedBy,
       };
 
-      const validatedData = insertClientDocumentSchema.parse(documentData);
-      const [document] = await db.insert(clientDocuments).values(validatedData).returning();
+      const validatedData = insertDocumentSchema.parse(documentData);
+      const [document] = await db.insert(documents).values(validatedData).returning();
 
       // Create audit log
       await createAuditLog(
@@ -7925,17 +7925,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get documents first
-      const documents = await db
+      const docs = await db
         .select()
-        .from(clientDocuments)
-        .where(eq(clientDocuments.clientId, clientId))
-        .orderBy(desc(clientDocuments.createdAt));
+        .from(documents)
+        .where(eq(documents.clientId, clientId))
+        .orderBy(desc(documents.createdAt));
 
       // Format response with basic uploader info (we'll fetch staff info separately if needed)
-      const formattedDocuments = documents.map(doc => ({
+      const formattedDocuments = docs.map(doc => ({
         id: doc.id,
         clientId: doc.clientId,
-        fileName: doc.fileName,
+        name: doc.name, // Original filename for display
+        fileName: doc.fileName, // Sanitized filename
         fileType: doc.fileType,
         fileSize: doc.fileSize,
         fileUrl: doc.fileUrl,
@@ -7972,8 +7973,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get document info before deletion
       const document = await db
         .select()
-        .from(clientDocuments)
-        .where(eq(clientDocuments.id, id))
+        .from(documents)
+        .where(eq(documents.id, id))
         .limit(1);
 
       if (document.length === 0) {
@@ -7986,7 +7987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await storage.getClient(docRecord.clientId);
 
       // Delete from database
-      await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
+      await db.delete(documents).where(eq(documents.id, id));
 
       // Create audit log
       await createAuditLog(
