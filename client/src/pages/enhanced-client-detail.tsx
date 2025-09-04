@@ -3068,7 +3068,10 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setShowSmsTemplateModal(true)}
+                                  onClick={() => {
+                                    console.log('SMS Templates button clicked, current state:', showSmsTemplateModal);
+                                    setShowSmsTemplateModal(true);
+                                  }}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <FileText className="h-4 w-4" />
@@ -3083,7 +3086,10 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setShowSmsMergeTagsModal(true)}
+                                  onClick={() => {
+                                    console.log('SMS Merge Tags button clicked, current state:', showSmsMergeTagsModal);
+                                    setShowSmsMergeTagsModal(true);
+                                  }}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <TagIcon className="h-4 w-4" />
@@ -5777,7 +5783,10 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setShowSmsTemplateModal(true)}
+                                  onClick={() => {
+                                    console.log('SMS Templates button clicked, current state:', showSmsTemplateModal);
+                                    setShowSmsTemplateModal(true);
+                                  }}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <FileText className="h-4 w-4" />
@@ -5792,7 +5801,10 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setShowSmsMergeTagsModal(true)}
+                                  onClick={() => {
+                                    console.log('SMS Merge Tags button clicked, current state:', showSmsMergeTagsModal);
+                                    setShowSmsMergeTagsModal(true);
+                                  }}
                                   disabled={!!client?.dndAll || !!client?.dndSms}
                                 >
                                   <TagIcon className="h-4 w-4" />
