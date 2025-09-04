@@ -6302,17 +6302,37 @@ export default function EnhancedClientDetail() {
                                       </div>
                                     </div>
                                   </div>
-                                  {currentUser && ['Admin', 'Manager'].includes(currentUser.role) && (
+                                  <div className="flex gap-1">
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 flex-shrink-0 ml-2" 
-                                      onClick={() => setDocumentToDelete(doc)}
-                                      title="Delete document"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 flex-shrink-0" 
+                                      onClick={() => {
+                                        if (doc.fileUrl) {
+                                          const link = document.createElement('a');
+                                          link.href = doc.fileUrl;
+                                          link.download = doc.name || 'document';
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                        }
+                                      }}
+                                      title="Download document"
                                     >
-                                      <Trash2 className="h-3 w-3" />
+                                      <Download className="h-3 w-3" />
                                     </Button>
-                                  )}
+                                    {currentUser && ['Admin', 'Manager'].includes(currentUser.role) && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 flex-shrink-0" 
+                                        onClick={() => setDocumentToDelete(doc)}
+                                        title="Delete document"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))
