@@ -5873,176 +5873,518 @@ export default function EnhancedClientDetail() {
 
           {/* Client Hub Tab */}
           <TabsContent value="hub" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Products Section - Moved from Contact Tab */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-primary" />
-                    Products
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {clientProductsData && clientProductsData.length > 0 ? (
-                    <div className="space-y-2">
-                      {clientProductsData.slice(0, 3).map((clientProduct: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
-                          <div className="flex items-center gap-2">
-                            {clientProduct.itemType === 'bundle' ? (
-                              <Package className="h-4 w-4 text-teal-600" />
-                            ) : (
-                              <ShoppingCart className="h-4 w-4 text-gray-500" />
-                            )}
-                            <span className="text-sm font-medium">{clientProduct.productName}</span>
-                            {clientProduct.itemType === 'bundle' && (
-                              <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
-                                Bundle
-                              </Badge>
-                            )}
-                          </div>
-                          {clientProduct.productCost && (
-                            <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                              ${clientProduct.productCost}
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
-                      {clientProductsData.length > 3 && (
-                        <p className="text-sm text-gray-500 text-center pt-2">
-                          +{clientProductsData.length - 3} more products
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <ShoppingCart className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm">No products assigned</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            <Tabs value={activeRightSection} onValueChange={(value) => setActiveRightSection(value as any)} className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
+                <TabsList className="grid w-auto grid-cols-5">
+                  <TabsTrigger value="notes" className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </TabsTrigger>
+                  <TabsTrigger value="tasks" className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="appointments" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Calendar
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    Documents
+                  </TabsTrigger>
+                  <TabsTrigger value="team" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Team
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              {/* Notes Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <StickyNote className="h-5 w-5 text-primary" />
-                    Recent Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clientNotes.length > 0 ? (
-                    <div className="space-y-3">
-                      {clientNotes.slice(0, 2).map((note: any) => (
-                        <div key={note.id} className="p-3 bg-gray-50 rounded border">
-                          <p className="text-sm text-gray-600 line-clamp-2">{note.content}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-xs text-gray-400">
-                              {new Date(note.createdAt).toLocaleDateString()}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              by {note.createdBy?.firstName}
-                            </span>
-                          </div>
+              {/* Notes Section */}
+              <TabsContent value="notes" className="mt-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Notes</h3>
+                        <Button size="sm" variant="outline">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search notes..."
+                            value={searchNotes}
+                            onChange={(e) => setSearchNotes(e.target.value)}
+                            className="pl-10 text-sm"
+                          />
                         </div>
-                      ))}
-                      {clientNotes.length > 2 && (
-                        <p className="text-sm text-gray-500 text-center">
-                          +{clientNotes.length - 2} more notes
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <StickyNote className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm">No notes yet</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <Textarea
+                          placeholder="Add a note..."
+                          value={newNote}
+                          onChange={(e) => setNewNote(e.target.value)}
+                          className="min-h-[80px] text-sm"
+                        />
+                        <Button 
+                          size="sm" 
+                          className="w-full bg-primary hover:bg-primary/90"
+                          disabled={!newNote.trim() || createNoteMutation.isPending}
+                          onClick={() => createNoteMutation.mutate(newNote)}
+                        >
+                          {createNoteMutation.isPending ? "Adding..." : "Add Note"}
+                        </Button>
+                      </div>
 
-              {/* Appointments Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    Upcoming Appointments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
-                    <div className="space-y-3">
-                      {clientAppointmentsData.slice(0, 2).map((appointment: any) => (
-                        <div key={appointment.id} className="p-3 bg-gray-50 rounded border">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-medium">{appointment.title}</p>
-                              <p className="text-xs text-gray-500">{appointment.description}</p>
+                      <div 
+                        className="space-y-3 overflow-y-auto"
+                        style={{ 
+                          maxHeight: calculateNotesMaxHeight(),
+                          ...(calculateNotesMaxHeight() && { paddingRight: '8px' })
+                        }}
+                      >
+                        {notesLoading ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <div className="text-sm">Loading notes...</div>
+                          </div>
+                        ) : clientNotes.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm">No notes yet</p>
+                            <p className="text-xs text-gray-400">Add a note to get started</p>
+                          </div>
+                        ) : (
+                          clientNotes
+                            .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
+                            .map((note: any) => (
+                              <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="text-sm font-medium text-gray-900">Note</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {currentUser?.role === 'Admin' && (
+                                      <div className="flex gap-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                          onClick={() => {
+                                            setEditingNote(note.id);
+                                            setEditNoteContent(note.content);
+                                          }}
+                                          title="Edit note"
+                                        >
+                                          <Edit2 className="h-3 w-3" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
+                                          onClick={() => {
+                                            if (confirm('Are you sure you want to delete this note?')) {
+                                              deleteNoteMutation.mutate(note.id);
+                                            }
+                                          }}
+                                          title="Delete note"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {editingNote === note.id ? (
+                                  <div className="space-y-2">
+                                    <Textarea
+                                      value={editNoteContent}
+                                      onChange={(e) => setEditNoteContent(e.target.value)}
+                                      className="min-h-[60px] text-sm"
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          editNoteMutation.mutate({ 
+                                            noteId: note.id, 
+                                            content: editNoteContent 
+                                          });
+                                          setEditingNote(null);
+                                          setEditNoteContent("");
+                                        }}
+                                        disabled={!editNoteContent.trim() || editNoteMutation.isPending}
+                                        className="h-7"
+                                      >
+                                        {editNoteMutation.isPending ? "Saving..." : "Save"}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingNote(null);
+                                          setEditNoteContent("");
+                                        }}
+                                        className="h-7"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  (() => {
+                                    const { displayContent, shouldTruncate, isExpanded } = formatNoteContent(note.content, note.id);
+                                    return (
+                                      <div className="space-y-2">
+                                        <p 
+                                          className="text-sm text-gray-600 whitespace-pre-wrap"
+                                          style={{ wordBreak: 'break-word' }}
+                                        >
+                                          {displayContent}
+                                        </p>
+                                        {shouldTruncate && (
+                                          <button
+                                            onClick={() => toggleNoteExpansion(note.id)}
+                                            className="text-xs text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+                                          >
+                                            {isExpanded ? 'Show less' : 'Show more'}
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  })()
+                                )}
+                                
+                                <div className="mt-2 flex justify-between items-center">
+                                  <div className="text-xs text-gray-400">
+                                    by {note.createdBy?.firstName} {note.createdBy?.lastName}
+                                  </div>
+                                  {note.editedBy && (
+                                    <div className="text-xs text-gray-400">
+                                      edited by {note.editedBy?.firstName} {note.editedBy?.lastName}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tasks Section */}
+              <TabsContent value="tasks" className="mt-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Tasks</h3>
+                        <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Create New Task</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
+                                <Input
+                                  value={newTask.title}
+                                  onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                                  placeholder="Enter task title"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
+                                <Textarea
+                                  value={newTask.description}
+                                  onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                                  placeholder="Enter task description (optional)"
+                                  className="min-h-[60px]"
+                                />
+                              </div>
                             </div>
-                            <Badge variant="outline" className="text-xs">
-                              {appointment.status}
-                            </Badge>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {tasksLoading ? (
+                          <div className="text-center text-gray-500 text-sm py-8">
+                            Loading tasks...
                           </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Clock className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">
-                              {new Date(appointment.startDate).toLocaleDateString()} at {appointment.startTime}
-                            </span>
+                        ) : clientTasksData.length === 0 ? (
+                          <div className="text-center text-gray-500 text-sm py-8">
+                            <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm">No tasks yet</p>
+                            <p className="text-xs text-gray-400">Create your first task above</p>
                           </div>
-                        </div>
-                      ))}
+                        ) : (
+                          clientTasksData.map((task: any) => (
+                            <div key={task.id} className="border rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-sm">{task.title}</h4>
+                                <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                                  {task.status}
+                                </Badge>
+                              </div>
+                              {task.description && (
+                                <p className="text-xs text-gray-600">{task.description}</p>
+                              )}
+                              {task.dueDate && (
+                                <p className="text-xs text-gray-500">
+                                  Due: {new Date(task.dueDate).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm">No upcoming appointments</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-              {/* Documents Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Recent Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clientDocuments.length > 0 ? (
-                    <div className="space-y-3">
-                      {clientDocuments.slice(0, 2).map((doc: any) => (
-                        <div key={doc.id} className="p-3 bg-gray-50 rounded border">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm font-medium truncate">{doc.originalName}</span>
+              {/* Appointments/Calendar Section */}
+              <TabsContent value="appointments" className="mt-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Appointments</h3>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setShowAppointmentModal(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
+                          clientAppointmentsData.map((appointment: any) => (
+                            <div key={appointment.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-sm text-gray-900">{appointment.title}</h4>
+                                  {appointment.description && (
+                                    <p className="text-xs text-gray-600 mt-1">{appointment.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 ml-4">
+                                  <Badge variant="outline" className="text-xs">
+                                    {appointment.status}
+                                  </Badge>
+                                  {currentUser?.role === 'Admin' && (
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                        onClick={() => {
+                                          setEditingAppointment(appointment);
+                                          setShowAppointmentModal(true);
+                                        }}
+                                        title="Edit appointment"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700" 
+                                        onClick={() => {
+                                          if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
+                                            fetch(`/api/calendar-appointments/${appointment.id}`, { method: 'DELETE' })
+                                              .then(() => {
+                                                queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+                                                toast({ title: "Appointment deleted", description: "Appointment has been deleted successfully" });
+                                              })
+                                              .catch(() => {
+                                                toast({ title: "Error", description: "Failed to delete appointment", variant: "destructive" });
+                                              });
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(appointment.startDate).toLocaleDateString()}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{appointment.startTime} - {appointment.endTime}</span>
+                                </div>
+                                {appointment.location && (
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{appointment.location}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm">No meetings for this client</p>
+                            <p className="text-xs text-gray-400">Click the + button to schedule a meeting</p>
                           </div>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-xs text-gray-400">
-                              {new Date(doc.uploadedAt).toLocaleDateString()}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {doc.size ? `${(doc.size / 1024).toFixed(1)} KB` : ''}
-                            </span>
-                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Documents Section */}
+              <TabsContent value="documents" className="mt-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Documents</h3>
+                        <DocumentUploader
+                          clientId={clientId!}
+                          onUploadComplete={() => {
+                            queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
+                          }}
+                          maxNumberOfFiles={5}
+                          buttonClassName="text-sm"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Documents
+                        </DocumentUploader>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search documents..."
+                            value={searchDocuments}
+                            onChange={(e) => setSearchDocuments(e.target.value)}
+                            className="pl-10 text-sm"
+                          />
                         </div>
-                      ))}
-                      {clientDocuments.length > 2 && (
-                        <p className="text-sm text-gray-500 text-center">
-                          +{clientDocuments.length - 2} more documents
-                        </p>
-                      )}
+                        
+                        {/* Filter Controls */}
+                        <div className="flex gap-2 text-xs">
+                          <Select value={documentFilterType} onValueChange={setDocumentFilterType}>
+                            <SelectTrigger className="w-32 h-8">
+                              <SelectValue placeholder="File Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Types</SelectItem>
+                              <SelectItem value="pdf">PDF</SelectItem>
+                              <SelectItem value="doc">Documents</SelectItem>
+                              <SelectItem value="excel">Spreadsheets</SelectItem>
+                              <SelectItem value="presentation">Presentations</SelectItem>
+                              <SelectItem value="image">Images</SelectItem>
+                              <SelectItem value="text">Text Files</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          <Select value={documentSortBy} onValueChange={setDocumentSortBy}>
+                            <SelectTrigger className="w-32 h-8">
+                              <SelectValue placeholder="Sort By" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="newest">Newest First</SelectItem>
+                              <SelectItem value="oldest">Oldest First</SelectItem>
+                              <SelectItem value="name">Name A-Z</SelectItem>
+                              <SelectItem value="name-desc">Name Z-A</SelectItem>
+                              <SelectItem value="size-large">Largest First</SelectItem>
+                              <SelectItem value="size-small">Smallest First</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {documentsLoading ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <div className="text-sm">Loading documents...</div>
+                          </div>
+                        ) : clientDocuments.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm">No documents uploaded</p>
+                            <p className="text-xs text-gray-400">Upload a document to get started</p>
+                          </div>
+                        ) : (
+                          clientDocuments
+                            .filter((doc: any) => !searchDocuments || doc.originalName.toLowerCase().includes(searchDocuments.toLowerCase()))
+                            .map((doc: any) => (
+                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="font-medium text-sm text-gray-900 truncate">{doc.originalName}</h4>
+                                      <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-xs text-gray-500">
+                                          {new Date(doc.uploadedAt).toLocaleDateString()}
+                                        </span>
+                                        {doc.size && (
+                                          <span className="text-xs text-gray-500">
+                                            {(doc.size / 1024).toFixed(1)} KB
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {currentUser?.role === 'Admin' && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 flex-shrink-0 ml-2" 
+                                      onClick={() => {
+                                        if (confirm(`Are you sure you want to delete "${doc.originalName}"?`)) {
+                                          deleteDocumentMutation.mutate(doc.id);
+                                        }
+                                      }}
+                                      title="Delete document"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm">No documents uploaded</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Team Assignments Section */}
+              <TabsContent value="team" className="mt-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <TeamAssignmentSection clientId={clientId!} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
 
