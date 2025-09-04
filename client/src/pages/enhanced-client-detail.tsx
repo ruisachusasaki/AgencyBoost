@@ -6282,21 +6282,21 @@ export default function EnhancedClientDetail() {
                           </div>
                         ) : (
                           clientDocuments
-                            .filter((doc: any) => !searchDocuments || doc.originalName.toLowerCase().includes(searchDocuments.toLowerCase()))
+                            .filter((doc: any) => !searchDocuments || doc.name.toLowerCase().includes(searchDocuments.toLowerCase()))
                             .map((doc: any) => (
                               <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                                 <div className="flex justify-between items-start mb-2">
                                   <div className="flex items-center gap-2 flex-1">
                                     <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
-                                      <h4 className="font-medium text-sm text-gray-900 truncate">{doc.originalName || 'Untitled Document'}</h4>
+                                      <h4 className="font-medium text-sm text-gray-900 truncate">{doc.name || 'Untitled Document'}</h4>
                                       <div className="flex items-center gap-3 mt-1">
                                         <span className="text-xs text-gray-500">
-                                          {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Unknown date'}
+                                          {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'Unknown date'}
                                         </span>
-                                        {doc.size && (
+                                        {doc.fileSize && (
                                           <span className="text-xs text-gray-500">
-                                            {(doc.size / 1024).toFixed(1)} KB
+                                            {(doc.fileSize / 1024).toFixed(1)} KB
                                           </span>
                                         )}
                                       </div>
@@ -6345,7 +6345,7 @@ export default function EnhancedClientDetail() {
             </DialogHeader>
             <div className="py-4">
               <p className="text-sm text-gray-600">
-                Are you sure you want to delete "{documentToDelete?.originalName || 'this document'}"? 
+                Are you sure you want to delete "{documentToDelete?.name || 'this document'}"? 
                 This action cannot be undone.
               </p>
             </div>
