@@ -6161,15 +6161,26 @@ export default function EnhancedClientDetail() {
             isOpen={emailTemplatesOpen}
             onClose={() => setEmailTemplatesOpen(false)}
             onSelectTemplate={(template) => {
-              // Strip HTML tags from template content for plain text email editor
-              const stripHtml = (html: string) => {
+              // Convert HTML to properly formatted plain text
+              const htmlToPlainText = (html: string) => {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = html;
+                
+                // Replace block elements with line breaks
+                const blockElements = tempDiv.querySelectorAll('p, div, br, h1, h2, h3, h4, h5, h6');
+                blockElements.forEach(el => {
+                  if (el.tagName === 'BR') {
+                    el.replaceWith('\n');
+                  } else {
+                    el.insertAdjacentText('afterend', '\n\n');
+                  }
+                });
+                
                 return tempDiv.textContent || tempDiv.innerText || '';
               };
               
-              const plainTextContent = stripHtml(template.content);
-              handleEmailFieldChange('message', plainTextContent);
+              const plainTextContent = htmlToPlainText(template.content);
+              handleEmailFieldChange('message', plainTextContent.trim());
               handleEmailFieldChange('subject', template.name); // Also set subject
               setEmailTemplatesOpen(false);
             }}
@@ -6315,7 +6326,14 @@ function EmailTemplatesModal({ isOpen, onClose, onSelectTemplate }: {
                 >
                   <h4 className="font-medium">{template.name}</h4>
                   <p className="text-sm text-gray-500">{template.subject}</p>
-                  <p className="text-sm text-gray-600 mt-1">{template.content.substring(0, 100)}...</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {(() => {
+                      const tempDiv = document.createElement('div');
+                      tempDiv.innerHTML = template.content;
+                      const plainText = tempDiv.textContent || tempDiv.innerText || '';
+                      return plainText.substring(0, 100) + '...';
+                    })()}
+                  </p>
                 </div>
               ))}
             </div>
