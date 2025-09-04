@@ -169,17 +169,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
-      // DEBUG: Log the client data being returned
-      console.log(`🔍 Individual client API for ${req.params.id}:`, {
-        id: client.id,
-        name: client.name,
-        email: client.email,
-        customFieldValues: client.customFieldValues,
-        hasCustomFields: !!client.customFieldValues,
-        customFieldKeys: client.customFieldValues ? Object.keys(client.customFieldValues) : []
-      });
-      
       res.json(client);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch client" });

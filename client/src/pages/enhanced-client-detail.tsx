@@ -923,7 +923,7 @@ export default function EnhancedClientDetail() {
 
   // Fetch client data
   const { data: client, isLoading, error } = useQuery<Client>({
-    queryKey: ['/api/clients', clientId],
+    queryKey: [`/api/clients/${clientId}`],
     enabled: !!clientId,
   });
 
@@ -1076,11 +1076,6 @@ export default function EnhancedClientDetail() {
   const getClientDisplayName = () => {
     if (!client) return "";
     
-    console.log("🔍 getClientDisplayName debug:");
-    console.log("- client.customFieldValues:", client.customFieldValues);
-    console.log("- customFieldsData:", customFieldsData);
-    console.log("- customFieldsLoading:", customFieldsLoading);
-    
     // If custom fields are still loading, show database name as fallback
     if (customFieldsLoading || !customFieldsData) {
       return client.name || client.email || "Loading...";
@@ -1094,15 +1089,9 @@ export default function EnhancedClientDetail() {
       field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
     );
     
-    console.log("- firstNameField found:", firstNameField);
-    console.log("- lastNameField found:", lastNameField);
-    
     const customFieldValues = client.customFieldValues as Record<string, any> || {};
     const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
     const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
-    
-    console.log("- firstName value:", firstName);
-    console.log("- lastName value:", lastName);
     
     // If we have both first and last name from custom fields, use them
     if (firstName && lastName) {
