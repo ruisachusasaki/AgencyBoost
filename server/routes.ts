@@ -7878,8 +7878,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create document record
       const documentData = {
+        name: fileName, // Store original filename for display
         clientId: clientId,
-        fileName: sanitizedFileName,
+        fileName: sanitizedFileName, // Store sanitized filename for file system
         fileType: sanitizedFileName.split('.').pop()?.toLowerCase() || 'unknown',
         fileSize: fileSize,
         fileUrl: normalizedPath,
