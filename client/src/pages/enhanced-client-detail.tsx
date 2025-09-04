@@ -558,15 +558,15 @@ export default function EnhancedClientDetail() {
                 <Avatar className="h-16 w-16">
                   <AvatarImage 
                     src={client.avatar} 
-                    alt={client.name}
+                    alt={client.name || 'Client'}
                     className="object-cover"
                   />
                   <AvatarFallback className="bg-blue-100 text-blue-600 text-lg font-semibold">
-                    {client.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                    {client.name ? client.name.split(' ').map(n => n[0]).join('').substring(0, 2) : '??'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{client.name || 'Unnamed Client'}</h1>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge className={`${getStatusColor(client.status)} border`}>
                       {client.status}
