@@ -17,6 +17,7 @@ import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
+import { ProductSearchResults } from "@/components/ProductSearchResults";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate } from "@shared/schema";
@@ -944,6 +945,8 @@ export default function EnhancedClientDetail() {
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   // Owner and followers state
   const [isAssigningOwner, setIsAssigningOwner] = useState(false);
@@ -6681,14 +6684,26 @@ export default function EnhancedClientDetail() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Products & Services</h3>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => window.location.href = '/products'}
-                    >
-                      <Package className="h-4 w-4 mr-2" />
-                      Manage Products
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => setShowAddProductModal(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Product
+                      </Button>
+                      {userPermissions?.settings?.canAccess && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => window.location.href = '/settings/products'}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Manage Products
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-3">
@@ -6806,6 +6821,36 @@ export default function EnhancedClientDetail() {
                   </div>
                 </div>
               </TabsContent>
+
+              {/* Add Product Modal */}
+              <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Product or Service</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search products and bundles..."
+                        value={productSearchTerm}
+                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                    
+                    <ProductSearchResults 
+                      searchTerm={productSearchTerm}
+                      clientId={clientId}
+                      onProductAdded={() => {
+                        setShowAddProductModal(false);
+                        setProductSearchTerm('');
+                        queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/products`] });
+                      }}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
 
               {/* Team Section */}
               <TabsContent value="team" className="mt-6">
