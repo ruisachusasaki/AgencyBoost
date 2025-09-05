@@ -734,6 +734,11 @@ export default function EnhancedClientDetail() {
   const [smsMergeTagsOpen, setSmsMergeTagsOpen] = useState(false);
   const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
   const [emailMergeTagsOpen, setEmailMergeTagsOpen] = useState(false);
+  const [showLogActivityModal, setShowLogActivityModal] = useState(false);
+  
+  // Manual activity logging state
+  const [logActivityType, setLogActivityType] = useState("general");
+  const [logActivityDescription, setLogActivityDescription] = useState("");
   
   // Communication form state
   const [smsData, setSmsData] = useState({ fromNumber: "", message: "" });
@@ -1710,6 +1715,7 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!clientId,
+    staleTime: 1000 * 30, // Cache for 30 seconds
   });
 
   const auditLogs = auditLogsData?.logs || [];
@@ -1722,6 +1728,53 @@ export default function EnhancedClientDetail() {
     setActivityFilter(newFilter);
     setCurrentPage(1);
   };
+
+  // Manual activity logging mutation
+  const logActivityMutation = useMutation({
+    mutationFn: async ({ activityType, description }: { activityType: string; description: string }) => {
+      const activityDetails = activityType === 'general' 
+        ? description 
+        : `${activityType.charAt(0).toUpperCase() + activityType.slice(1)}: ${description}`;
+      
+      const payload = {
+        entityType: 'contact',
+        entityId: clientId,
+        action: 'manual_log',
+        details: activityDetails,
+        userId: currentUser?.id || 'unknown',
+        timestamp: new Date().toISOString()
+      };
+      
+      const response = await fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to log activity');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
+      setShowLogActivityModal(false);
+      setLogActivityDescription('');
+      setLogActivityType('general');
+      toast({
+        title: "Activity logged",
+        description: "Manual activity has been logged successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to log activity: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Update DND settings mutation
   const updateDNDMutation = useMutation({
@@ -5481,6 +5534,14 @@ export default function EnhancedClientDetail() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
                   <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => setShowLogActivityModal(true)}
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Log Activity
+                    </Button>
                     <Filter className="h-4 w-4 text-gray-500" />
                     <Select value={activityFilter} onValueChange={handleFilterChange}>
                       <SelectTrigger className="w-40">
@@ -5588,6 +5649,63 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Log Activity Modal */}
+            <Dialog open={showLogActivityModal} onOpenChange={setShowLogActivityModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Log Manual Activity</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Activity Type</Label>
+                    <Select value={logActivityType} onValueChange={setLogActivityType}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select activity type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="call">Call</SelectItem>
+                        <SelectItem value="meeting">Meeting</SelectItem>
+                        <SelectItem value="task">Task</SelectItem>
+                        <SelectItem value="note">Note</SelectItem>
+                        <SelectItem value="campaign">Campaign</SelectItem>
+                        <SelectItem value="workflow">Workflow</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Description</Label>
+                    <textarea
+                      value={logActivityDescription}
+                      onChange={(e) => setLogActivityDescription(e.target.value)}
+                      placeholder="Describe what happened..."
+                      className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowLogActivityModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => logActivityMutation.mutate({ 
+                        activityType: logActivityType, 
+                        description: logActivityDescription 
+                      })}
+                      disabled={!logActivityDescription.trim() || logActivityMutation.isPending}
+                    >
+                      {logActivityMutation.isPending ? "Logging..." : "Log Activity"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Communication Tab */}
