@@ -1732,6 +1732,10 @@ export default function EnhancedClientDetail() {
   // Manual activity logging mutation
   const logActivityMutation = useMutation({
     mutationFn: async ({ activityType, description }: { activityType: string; description: string }) => {
+      if (!currentUser?.id) {
+        throw new Error('User not authenticated');
+      }
+      
       const activityDetails = activityType === 'general' 
         ? description 
         : `${activityType.charAt(0).toUpperCase() + activityType.slice(1)}: ${description}`;
@@ -1739,10 +1743,12 @@ export default function EnhancedClientDetail() {
       const payload = {
         entityType: 'contact',
         entityId: clientId,
+        entityName: client?.firstName && client?.lastName 
+          ? `${client.firstName} ${client.lastName}` 
+          : client?.companyName || 'Unknown Client',
         action: 'manual_log',
         details: activityDetails,
-        userId: currentUser?.id || 'unknown',
-        timestamp: new Date().toISOString()
+        userId: currentUser.id
       };
       
       const response = await fetch('/api/audit-logs', {
