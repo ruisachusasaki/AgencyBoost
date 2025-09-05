@@ -1135,7 +1135,7 @@ export default function EnhancedClientDetail() {
   });
 
   // Get all bundle IDs from client products
-  const allClientBundleIds = React.useMemo(() => {
+  const allClientBundleIds = useMemo(() => {
     if (!clientProductsData) return [];
     return clientProductsData
       .filter((item: any) => item.itemType === 'bundle')
