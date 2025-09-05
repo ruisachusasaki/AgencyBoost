@@ -6063,7 +6063,7 @@ export default function EnhancedClientDetail() {
               <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
               
               <Tabs value={activeRightSection} onValueChange={(value) => setActiveRightSection(value as any)} className="space-y-6">
-                <TabsList className="grid w-auto grid-cols-5 justify-start">
+                <TabsList className="grid w-auto grid-cols-6 justify-start">
                   <TabsTrigger value="notes" className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4" />
                     Notes
@@ -6079,6 +6079,10 @@ export default function EnhancedClientDetail() {
                   <TabsTrigger value="documents" className="flex items-center gap-2">
                     <Upload className="h-4 w-4" />
                     Documents
+                  </TabsTrigger>
+                  <TabsTrigger value="products" className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Products & Services
                   </TabsTrigger>
                   <TabsTrigger value="team" className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
@@ -6667,6 +6671,81 @@ export default function EnhancedClientDetail() {
                             </div>
                           );
                         })
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Products & Services Section */}
+              <TabsContent value="products" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Products & Services</h3>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.location.href = '/products'}
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Manage Products
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {clientProductsLoading ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-sm">Loading products...</div>
+                      </div>
+                    ) : clientProductsData.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm">No products or services assigned</p>
+                        <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
+                      </div>
+                    ) : (
+                      clientProductsData.map((clientProduct: any, index: number) => (
+                        <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded ${clientProduct.itemType === 'bundle' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {clientProduct.itemType === 'bundle' ? (
+                                <Archive className="h-4 w-4" />
+                              ) : (
+                                <Package className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-sm text-gray-900">
+                                  {clientProduct.name || clientProduct.productName}
+                                </h4>
+                                <span className="text-sm font-medium text-green-600">
+                                  ${clientProduct.price?.toFixed(2) || '0.00'}
+                                </span>
+                              </div>
+                              
+                              {clientProduct.description && (
+                                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clientProduct.description}</p>
+                              )}
+                              
+                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  clientProduct.itemType === 'bundle' 
+                                    ? 'bg-purple-100 text-purple-700' 
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {clientProduct.itemType === 'bundle' ? 'Bundle' : 'Product'}
+                                </span>
+                                {clientProduct.quantity && (
+                                  <span>Qty: {clientProduct.quantity}</span>
+                                )}
+                                {clientProduct.isRecurring && (
+                                  <span className="text-green-600">Recurring</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
