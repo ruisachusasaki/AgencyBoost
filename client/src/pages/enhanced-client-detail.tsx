@@ -6273,136 +6273,14 @@ export default function EnhancedClientDetail() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Tasks</h3>
-                    <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create New Task</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                            <Input
-                              value={newTask.title}
-                              onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                              placeholder="Enter task title"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                            <Textarea
-                              value={newTask.description}
-                              onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                              placeholder="Enter task description"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                              <Input
-                                type="date"
-                                value={newTask.dueDate}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                              <Input
-                                type="time"
-                                value={newTask.dueTime}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                              />
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                            <Input
-                              value={assigneeSearchTerm}
-                              onChange={(e) => {
-                                setAssigneeSearchTerm(e.target.value);
-                                if (e.target.value.trim() && staffData) {
-                                  const filtered = staffData.filter((staff: any) => 
-                                    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
-                                    staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
-                                  );
-                                  setFilteredAssignees(filtered);
-                                  setShowAssigneeSuggestions(filtered.length > 0);
-                                } else {
-                                  setFilteredAssignees([]);
-                                  setShowAssigneeSuggestions(false);
-                                }
-                              }}
-                              placeholder="Search staff members..."
-                              onFocus={() => {
-                                if (assigneeSearchTerm.trim() && staffData) {
-                                  const filtered = staffData.filter((staff: any) => 
-                                    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
-                                    staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
-                                  );
-                                  setFilteredAssignees(filtered);
-                                  setShowAssigneeSuggestions(filtered.length > 0);
-                                }
-                              }}
-                              onBlur={() => {
-                                setTimeout(() => setShowAssigneeSuggestions(false), 200);
-                              }}
-                            />
-                            
-                            {showAssigneeSuggestions && (
-                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                {filteredAssignees.map((staff: any) => (
-                                  <button
-                                    key={staff.id}
-                                    onClick={() => {
-                                      setNewTask(prev => ({ ...prev, assignee: staff.id }));
-                                      setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
-                                      setShowAssigneeSuggestions(false);
-                                    }}
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
-                                  >
-                                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-                                      {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
-                                    </div>
-                                    <div>
-                                      <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
-                                      <div className="text-xs text-gray-500">{staff.email}</div>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                if (newTask.title.trim()) {
-                                  const taskData = {
-                                    title: newTask.title,
-                                    description: newTask.description,
-                                    dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
-                                    assignedTo: newTask.assignee || undefined,
-                                    isRecurring: newTask.recurring,
-                                    recurringConfig: newTask.recurring ? recurringConfig : undefined
-                                  };
-                                  createTaskMutation.mutate(taskData);
-                                }
-                              }}
-                              disabled={!newTask.title.trim() || createTaskMutation.isPending}
-                              className="bg-primary hover:bg-primary/90"
-                            >
-                              {createTaskMutation.isPending ? "Creating..." : "Create Task"}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.location.href = '/tasks'}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Manage Tasks
+                    </Button>
                   </div>
                   
                   <div className="space-y-3">
@@ -6413,25 +6291,23 @@ export default function EnhancedClientDetail() {
                     ) : clientTasksData.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm">No tasks yet</p>
-                        <p className="text-xs text-gray-400">Create a task to get started</p>
+                        <p className="text-sm">No tasks assigned to this client</p>
+                        <p className="text-xs text-gray-400">Tasks will appear here when assigned to this client</p>
                       </div>
                     ) : (
                       clientTasksData.map((task: any) => {
                         const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
                         return (
-                          <div key={task.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                          <div 
+                            key={task.id} 
+                            className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+                            onClick={() => {
+                              // Navigate to the main tasks page with this task selected/highlighted
+                              window.location.href = `/tasks?taskId=${task.id}`;
+                            }}
+                          >
                             <div className="flex items-start gap-3">
-                              <Checkbox
-                                checked={task.status === 'completed'}
-                                onCheckedChange={(checked) => {
-                                  updateTaskStatusMutation.mutate({
-                                    taskId: task.id,
-                                    status: checked ? 'completed' : 'pending'
-                                  });
-                                }}
-                                className="mt-0.5"
-                              />
+                              <div className={`w-3 h-3 rounded-full mt-1 ${task.status === 'completed' ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-gray-300'}`} />
                               
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
@@ -6440,61 +6316,11 @@ export default function EnhancedClientDetail() {
                                     {isOverdue && <span className="ml-2 text-red-500 text-xs">(Overdue)</span>}
                                   </h4>
                                   
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const expanded = new Set(expandedTasks);
-                                        if (expanded.has(task.id)) {
-                                          expanded.delete(task.id);
-                                        } else {
-                                          expanded.add(task.id);
-                                        }
-                                        setExpandedTasks(expanded);
-                                      }}
-                                      className="h-6 w-6 p-0"
-                                    >
-                                      <MessageCircle className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-                                      onClick={() => {
-                                        setEditingTaskId(task.id);
-                                        setEditTask({
-                                          title: task.title,
-                                          description: task.description || "",
-                                          dueDate: task.dueDate ? task.dueDate.split(' ')[0] : "",
-                                          dueTime: task.dueDate ? task.dueDate.split(' ')[1] || "" : "",
-                                          assignee: task.assignedTo || "",
-                                          recurring: task.isRecurring || false
-                                        });
-                                        setIsEditTaskDialogOpen(true);
-                                      }}
-                                      title="Edit task"
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                                      onClick={() => {
-                                        if (confirm('Are you sure you want to delete this task?')) {
-                                          deleteTaskMutation.mutate(task.id);
-                                        }
-                                      }}
-                                      title="Delete task"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
+                                  <ExternalLink className="h-3 w-3 text-gray-400" />
                                 </div>
                                 
                                 {task.description && (
-                                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{task.description}</p>
                                 )}
                                 
                                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
@@ -6508,14 +6334,10 @@ export default function EnhancedClientDetail() {
                                       Assigned to: {staffData.find((s: any) => s.id === task.assignedTo)?.firstName} {staffData.find((s: any) => s.id === task.assignedTo)?.lastName}
                                     </span>
                                   )}
+                                  <span className="text-blue-600">Click to view task details →</span>
                                 </div>
                               </div>
                             </div>
-                            
-                            {/* Comments Section */}
-                            {expandedTasks.has(task.id) && (
-                              <TaskComments taskId={task.id} />
-                            )}
                           </div>
                         );
                       })
