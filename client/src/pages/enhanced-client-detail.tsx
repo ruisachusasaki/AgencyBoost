@@ -5663,9 +5663,163 @@ export default function EnhancedClientDetail() {
                   <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-sm">Products feature temporarily disabled for debugging</p>
-                </div>
+                clientProductsData.map((clientProduct: any) => (
+                  <Card key={clientProduct.id} className="p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          {/* Product/Bundle name with expand functionality for bundles */}
+                          {clientProduct.itemType === 'bundle' ? (
+                            <button
+                              onClick={() => {
+                                const newExpanded = new Set(expandedBundles);
+                                if (newExpanded.has(clientProduct.productId || clientProduct.id)) {
+                                  newExpanded.delete(clientProduct.productId || clientProduct.id);
+                                } else {
+                                  newExpanded.add(clientProduct.productId || clientProduct.id);
+                                }
+                                setExpandedBundles(newExpanded);
+                              }}
+                              className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left"
+                            >
+                              <h4 className="font-medium text-sm text-gray-900">
+                                {clientProduct.name || clientProduct.productName}
+                              </h4>
+                              {expandedBundles.has(clientProduct.productId || clientProduct.id) ? (
+                                <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              )}
+                            </button>
+                          ) : (
+                            <h4 className="font-medium text-sm text-gray-900">
+                              {clientProduct.name || clientProduct.productName}
+                            </h4>
+                          )}
+                          <div className="flex items-center gap-2">
+                            {/* Calculate bundle cost dynamically */}
+                            <span className="text-sm font-medium text-green-600">
+                              ${(() => {
+                                if (clientProduct.itemType === 'bundle') {
+                                  const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                  const totalCost = bundleProducts.reduce((sum: number, product: any) => {
+                                    return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                                  }, 0);
+                                  return totalCost.toFixed(2);
+                                } else {
+                                  return (clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00');
+                                }
+                              })()}
+                            </span>
+                            {/* Add edit button for bundles */}
+                            {clientProduct.itemType === 'bundle' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
+                                  // Initialize temp quantities
+                                  const currentBundle = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                  const initialQuantities: Record<string, number> = {};
+                                  currentBundle.forEach((product: any) => {
+                                    initialQuantities[product.productId] = product.quantity || 1;
+                                  });
+                                  setTempQuantities(initialQuantities);
+                                }}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {clientProduct.description && (
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clientProduct.description}</p>
+                        )}
+
+                        {/* Bundle status and type badges */}
+                        <div className="flex items-center gap-2 mt-2">
+                          {clientProduct.itemType === 'bundle' ? (
+                            <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
+                              <Package className="h-3 w-3 mr-1" />
+                              Bundle
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              <ShoppingCart className="h-3 w-3 mr-1" />
+                              Product
+                            </Badge>
+                          )}
+                          <Badge variant={clientProduct.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                            {clientProduct.status}
+                          </Badge>
+                        </div>
+
+                        {/* Bundle products - show when expanded */}
+                        {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId || clientProduct.id) && (
+                          <div className="mt-3 pl-4 border-l-2 border-gray-200">
+                            {editingBundleQuantities === (clientProduct.productId || clientProduct.id) ? (
+                              <div className="space-y-2">
+                                <h5 className="text-xs font-semibold text-gray-700 mb-2">Edit Bundle Quantities:</h5>
+                                {(bundleDetailsData[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
+                                  <div key={product.productId} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                    <span className="text-xs font-medium">{product.productName}</span>
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={tempQuantities[product.productId] || 1}
+                                      onChange={(e) => setTempQuantities(prev => ({
+                                        ...prev,
+                                        [product.productId]: parseInt(e.target.value) || 1
+                                      }))}
+                                      className="w-16 h-6 text-xs"
+                                    />
+                                  </div>
+                                ))}
+                                <div className="flex gap-2 mt-3">
+                                  <Button size="sm" onClick={() => saveQuantityChanges(clientProduct.productId || clientProduct.id)}>
+                                    Save
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setEditingBundleQuantities(null)}>
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <h5 className="text-xs font-semibold text-gray-700 mb-2">Included Products:</h5>
+                                {(bundleDetailsData[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
+                                  <div key={product.productId} className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-600">{product.productName}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-500">Qty: {product.quantity || 1}</span>
+                                      <span className="text-green-600 font-medium">
+                                        ${(Number(product.productCost || 0) * Number(product.quantity || 1)).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Delete button */}
+                      {canDeleteProducts && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 text-red-600 hover:text-red-700"
+                          onClick={() => deleteProductMutation.mutate(clientProduct.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))
               )}
             </div>
           </div>
