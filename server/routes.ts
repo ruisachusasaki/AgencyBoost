@@ -3297,6 +3297,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values(dataWithCreatedBy)
         .returning();
       
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "workflow",
+        newWorkflow.id,
+        newWorkflow.name,
+        dataWithCreatedBy.createdBy,
+        `Created workflow: ${newWorkflow.name}`,
+        null,
+        { name: newWorkflow.name, category: newWorkflow.category, status: newWorkflow.status },
+        req
+      );
+      
       res.status(201).json(newWorkflow);
     } catch (error) {
       console.error("Error creating workflow:", error);
@@ -3309,6 +3322,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/workflows/:id", async (req, res) => {
     try {
+      // Get the old workflow data first for audit logging
+      const [oldWorkflow] = await db.select()
+        .from(workflows)
+        .where(eq(workflows.id, req.params.id));
+      
+      if (!oldWorkflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
       const validatedData = insertWorkflowSchema.partial().parse(req.body);
       
       const [updatedWorkflow] = await db.update(workflows)
@@ -3319,6 +3341,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedWorkflow) {
         return res.status(404).json({ message: "Workflow not found" });
       }
+      
+      // Create audit log
+      await createAuditLog(
+        "updated",
+        "workflow",
+        updatedWorkflow.id,
+        updatedWorkflow.name,
+        req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Updated workflow: ${updatedWorkflow.name}`,
+        { name: oldWorkflow.name, category: oldWorkflow.category, status: oldWorkflow.status },
+        { name: updatedWorkflow.name, category: updatedWorkflow.category, status: updatedWorkflow.status },
+        req
+      );
+      
       res.json(updatedWorkflow);
     } catch (error) {
       console.error("Error updating workflow:", error);
@@ -3331,12 +3367,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/workflows/:id", async (req, res) => {
     try {
+      // Get the workflow data before deletion for audit logging
+      const [workflowToDelete] = await db.select()
+        .from(workflows)
+        .where(eq(workflows.id, req.params.id));
+      
+      if (!workflowToDelete) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
       const deletedRows = await db.delete(workflows)
         .where(eq(workflows.id, req.params.id));
       
       if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Workflow not found" });
       }
+      
+      // Create audit log
+      await createAuditLog(
+        "deleted",
+        "workflow",
+        req.params.id,
+        workflowToDelete.name,
+        req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Deleted workflow: ${workflowToDelete.name}`,
+        { name: workflowToDelete.name, category: workflowToDelete.category, status: workflowToDelete.status },
+        null,
+        req
+      );
+      
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting workflow:", error);
@@ -9476,6 +9535,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errorMessage: smsMessage.errorMessage 
         });
         
+        // Create audit log for SMS sending
+        await createAuditLog(
+          "created",
+          "sms",
+          smsMessage.sid,
+          `SMS to ${to}`,
+          req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
+          null,
+          { to, from: fallbackIntegration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
+          req
+        );
+        
         return res.json({
           message: "SMS sent successfully",
           messageId: smsMessage.sid,
@@ -9504,6 +9576,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errorCode: smsMessage.errorCode,
         errorMessage: smsMessage.errorMessage 
       });
+      
+      // Create audit log for SMS sending
+      await createAuditLog(
+        "created",
+        "sms",
+        smsMessage.sid,
+        `SMS to ${to}`,
+        req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
+        null,
+        { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
+        req
+      );
       
       res.json({
         message: "SMS sent successfully",
