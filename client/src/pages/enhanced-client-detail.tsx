@@ -1728,7 +1728,7 @@ export default function EnhancedClientDetail() {
     },
     onSuccess: (data) => {
       console.log('DND mutation success, invalidating queries');
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
       toast({
         title: "Communication preferences updated",
