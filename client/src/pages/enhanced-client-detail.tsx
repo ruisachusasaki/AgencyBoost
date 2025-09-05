@@ -5601,76 +5601,75 @@ export default function EnhancedClientDetail() {
           </DialogContent>
         </Dialog>
 
-          </TabsContent>
+        </TabsContent>
 
-          {/* Products & Services Tab */}
-          <TabsContent value="products" className="space-y-6 mt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Products & Services</h3>
-                  {/* Bundle Spend Calculation */}
-                  {clientProductsData.length > 0 && (() => {
-                    const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
-                      if (clientProduct.itemType === 'bundle') {
-                        const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
-                        const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
-                          return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
-                        }, 0);
-                        return total + bundleCost;
-                      } else {
-                        return total + Number(clientProduct.price || 0);
-                      }
-                    }, 0);
-                    return (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
-                      </p>
-                    );
-                  })()}
-                </div>
-                <div className="flex gap-2">
+        {/* Products & Services Tab */}
+        <TabsContent value="products" className="space-y-6 mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Products & Services</h3>
+                {/* Bundle Spend Calculation */}
+                {clientProductsData.length > 0 && (() => {
+                  const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
+                    if (clientProduct.itemType === 'bundle') {
+                      const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                      const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
+                        return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                      }, 0);
+                      return total + bundleCost;
+                    } else {
+                      return total + Number(clientProduct.price || 0);
+                    }
+                  }, 0);
+                  return (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
+                    </p>
+                  );
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  onClick={() => setShowAddProductModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+                {userPermissions?.settings?.canAccess && (
                   <Button 
                     size="sm" 
-                    variant="default"
-                    onClick={() => setShowAddProductModal(true)}
+                    variant="outline"
+                    onClick={() => window.location.href = '/settings/products'}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
+                    <Package className="h-4 w-4 mr-2" />
+                    Manage Products
                   </Button>
-                  {userPermissions?.settings?.canAccess && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => window.location.href = '/settings/products'}
-                    >
-                      <Package className="h-4 w-4 mr-2" />
-                      Manage Products
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                {clientProductsLoading ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-sm">Loading products...</div>
-                  </div>
-                ) : clientProductsData.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm">No products or services assigned</p>
-                    <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p className="text-sm">Products feature temporarily disabled for debugging</p>
-                  </div>
                 )}
-                </div>
               </div>
             </div>
-          </TabsContent>
+            
+            <div className="space-y-3">
+              {clientProductsLoading ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-sm">Loading products...</div>
+                </div>
+              ) : clientProductsData.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm">No products or services assigned</p>
+                  <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">Products feature temporarily disabled for debugging</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
 
           {/* Add Product Modal */}
           <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
