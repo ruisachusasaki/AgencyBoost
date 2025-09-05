@@ -723,6 +723,7 @@ export default function EnhancedClientDetail() {
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
   const [activeRightSection, setActiveRightSection] = useState<"tasks" | "appointments" | "documents" | "payments" | "team">("tasks");
+  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -1112,7 +1113,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client notes');
       return response.json();
     },
-    enabled: false, // Notes moved to Client Hub tab
+    enabled: !!clientId, // Re-enabled for Client Hub tab
   });
 
   // Fetch client tasks data
@@ -5935,7 +5936,7 @@ export default function EnhancedClientDetail() {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
               
-              <Tabs value={activeRightSection} onValueChange={(value) => setActiveRightSection(value as any)} className="space-y-6">
+              <Tabs value={activeHubSection} onValueChange={(value) => setActiveHubSection(value as any)} className="space-y-6">
                 <TabsList className="grid w-fit grid-cols-6">
                   <TabsTrigger value="notes" className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4" />
