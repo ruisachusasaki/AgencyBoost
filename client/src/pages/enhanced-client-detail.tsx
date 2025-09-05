@@ -6683,7 +6683,28 @@ export default function EnhancedClientDetail() {
               <TabsContent value="products" className="mt-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Products & Services</h3>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Products & Services</h3>
+                      {/* Bundle Spend Calculation */}
+                      {clientProductsData.length > 0 && (() => {
+                        const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
+                          if (clientProduct.itemType === 'bundle') {
+                            const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                            const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
+                              return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                            }, 0);
+                            return total + bundleCost;
+                          } else {
+                            return total + Number(clientProduct.price || 0);
+                          }
+                        }, 0);
+                        return (
+                          <p className="text-sm text-gray-600 mt-1">
+                            Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
+                          </p>
+                        );
+                      })()}
+                    </div>
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
@@ -6759,9 +6780,42 @@ export default function EnhancedClientDetail() {
                                       {clientProduct.name || clientProduct.productName}
                                     </h4>
                                   )}
-                                  <span className="text-sm font-medium text-green-600">
-                                    ${clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00'}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    {/* Calculate bundle cost dynamically */}
+                                    <span className="text-sm font-medium text-green-600">
+                                      ${(() => {
+                                        if (clientProduct.itemType === 'bundle') {
+                                          const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                          const totalCost = bundleProducts.reduce((sum: number, product: any) => {
+                                            return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                                          }, 0);
+                                          return totalCost.toFixed(2);
+                                        } else {
+                                          return (clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00');
+                                        }
+                                      })()}
+                                    </span>
+                                    {/* Add edit button for bundles */}
+                                    {clientProduct.itemType === 'bundle' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() => {
+                                          setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
+                                          // Initialize temp quantities
+                                          const currentBundle = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                          const initialQuantities: Record<string, number> = {};
+                                          currentBundle.forEach((product: any) => {
+                                            initialQuantities[product.productId] = product.quantity || 1;
+                                          });
+                                          setTempQuantities(initialQuantities);
+                                        }}
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                                 
                                 {clientProduct.description && (
@@ -6807,6 +6861,66 @@ export default function EnhancedClientDetail() {
                                       </div>
                                     </div>
                                   ))}
+                                  
+                                  {/* Edit mode for bundle quantities */}
+                                  {editingBundleQuantities === (clientProduct.productId || clientProduct.id) && (
+                                    <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <h6 className="font-medium text-blue-900 text-sm">Edit Quantities</h6>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              // Save the updated quantities
+                                              updateBundleQuantitiesMutation.mutate({
+                                                bundleId: clientProduct.productId || clientProduct.id,
+                                                quantities: tempQuantities
+                                              });
+                                            }}
+                                            disabled={updateBundleQuantitiesMutation.isPending}
+                                            className="h-6 text-xs"
+                                          >
+                                            {updateBundleQuantitiesMutation.isPending ? 'Saving...' : 'Save'}
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setEditingBundleQuantities(null);
+                                              setTempQuantities({});
+                                            }}
+                                            className="h-6 text-xs"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        {bundleDetailsData[clientProduct.productId || clientProduct.id]?.map((product: any) => (
+                                          <div key={product.productId} className="flex items-center gap-2 p-2 bg-white rounded text-sm">
+                                            <ShoppingCart className="w-4 h-4 text-gray-500" />
+                                            <span className="flex-1 font-medium">{product.productName}</span>
+                                            <span className="text-xs text-gray-500 mr-2">Qty:</span>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              value={tempQuantities[product.productId] || product.quantity || 1}
+                                              onChange={(e) => {
+                                                setTempQuantities(prev => ({
+                                                  ...prev,
+                                                  [product.productId]: parseInt(e.target.value) || 0
+                                                }));
+                                              }}
+                                              className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            />
+                                            <span className="text-blue-600 font-medium text-xs">
+                                              ${Number(product.productCost || 0).toFixed(2)} each
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="p-3 bg-white rounded border border-gray-200 text-center text-gray-500 text-sm">
