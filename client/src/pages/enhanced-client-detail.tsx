@@ -2428,18 +2428,18 @@ export default function EnhancedClientDetail() {
                 Contact
               </TabsTrigger>
               <TabsTrigger 
+                value="hub" 
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
+              >
+                <Zap className="h-4 w-4" />
+                Client Hub
+              </TabsTrigger>
+              <TabsTrigger 
                 value="products" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
               >
                 <ShoppingCart className="h-4 w-4" />
-                Products & Services
-              </TabsTrigger>
-              <TabsTrigger 
-                value="activity" 
-                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
-              >
-                <Activity className="h-4 w-4" />
-                Recent Activity
+                Products
               </TabsTrigger>
               <TabsTrigger 
                 value="communication" 
@@ -2449,11 +2449,11 @@ export default function EnhancedClientDetail() {
                 Communication
               </TabsTrigger>
               <TabsTrigger 
-                value="hub" 
+                value="activity" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
               >
-                <Zap className="h-4 w-4" />
-                Client Hub
+                <Activity className="h-4 w-4" />
+                Recent Activity
               </TabsTrigger>
             </TabsList>
           </div>
