@@ -1134,12 +1134,20 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId && activeRightSection === "documents",
   });
 
-  // Fetch bundle details for expanded bundles with client-specific quantities
+  // Get all bundle IDs from client products
+  const allClientBundleIds = React.useMemo(() => {
+    if (!clientProductsData) return [];
+    return clientProductsData
+      .filter((item: any) => item.itemType === 'bundle')
+      .map((item: any) => item.productId || item.id);
+  }, [clientProductsData]);
+
+  // Fetch bundle details for ALL client bundles with client-specific quantities (not just expanded ones)
   const { data: bundleDetailsData = {} } = useQuery({
-    queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId],
+    queryKey: ['/api/bundle-details', 'all-client-bundles', allClientBundleIds, clientId],
     queryFn: async () => {
       const bundleDetails: Record<string, any> = {};
-      for (const bundleId of Array.from(expandedBundles)) {
+      for (const bundleId of allClientBundleIds) {
         try {
           const response = await fetch(`/api/product-bundles/${bundleId}/products?clientId=${clientId}`);
           if (response.ok) {
@@ -1151,7 +1159,7 @@ export default function EnhancedClientDetail() {
       }
       return bundleDetails;
     },
-    enabled: expandedBundles.size > 0 && !!clientId,
+    enabled: allClientBundleIds.length > 0 && !!clientId,
   });
 
   // Helper functions to get dynamic names from custom fields
@@ -1591,13 +1599,13 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', 'all-client-bundles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
       setEditingBundleQuantities(null);
       setTempQuantities({});
       toast({
         title: "Bundle customized",
-        description: `Bundle quantities updated. New price: $${data.newPrice?.toFixed(2)}`,
+        description: `Bundle quantities updated. New cost: $${data.newCost?.toFixed(2)}`,
       });
     },
     onError: () => {
