@@ -6719,7 +6719,7 @@ export default function EnhancedClientDetail() {
                                   {clientProduct.name || clientProduct.productName}
                                 </h4>
                                 <span className="text-sm font-medium text-green-600">
-                                  ${clientProduct.price?.toFixed(2) || '0.00'}
+                                  ${clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00'}
                                 </span>
                               </div>
                               
