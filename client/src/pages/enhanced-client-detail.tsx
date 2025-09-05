@@ -1787,9 +1787,6 @@ export default function EnhancedClientDetail() {
   }, [ownerSearchTerm, staffData]);
 
   // Follower search filtering
-  const clientFollowers = client?.followers;
-  const clientContactOwner = client?.contactOwner;
-
   useEffect(() => {
     if (!followerSearchTerm || !staffData || !client) {
       setFilteredFollowers([]);
@@ -1797,7 +1794,8 @@ export default function EnhancedClientDetail() {
       return;
     }
 
-    const currentFollowers = clientFollowers || [];
+    const currentFollowers = client.followers || [];
+    const clientContactOwner = client.contactOwner;
     const filtered = staffData.filter((staff: any) => 
       !currentFollowers.includes(staff.id) && // Exclude already following staff
       staff.id !== clientContactOwner && // Exclude current owner
@@ -1806,21 +1804,14 @@ export default function EnhancedClientDetail() {
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData, clientFollowers, clientContactOwner]);
+  }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
 
   // Auto-populate email fields when user and client data are available
-  const currentUserId = currentUser?.id;
-  const currentUserFirstName = currentUser?.firstName;
-  const currentUserLastName = currentUser?.lastName;
-  const currentUserEmail = currentUser?.email;
-  const clientEmail = client?.email;
-  const clientPhone = client?.phone;
-
   useEffect(() => {
-    if (currentUserId && clientEmail) {
-      const fromName = `${currentUserFirstName || ''} ${currentUserLastName || ''}`.trim();
-      const fromEmail = currentUserEmail || '';
-      const to = clientEmail || '';
+    if (currentUser?.id && client?.email) {
+      const fromName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+      const fromEmail = currentUser.email || '';
+      const to = client.email || '';
       
       // Only update if values are different to prevent infinite re-renders
       setEmailData(prev => {
@@ -1835,7 +1826,7 @@ export default function EnhancedClientDetail() {
         return prev;
       });
     }
-  }, [currentUserId, currentUserFirstName, currentUserLastName, currentUserEmail, clientEmail]);
+  }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
@@ -1852,15 +1843,15 @@ export default function EnhancedClientDetail() {
 
   // Auto-populate SMS fields when client data is available
   useEffect(() => {
-    if (clientPhone) {
+    if (client?.phone) {
       setSmsData(prev => {
-        if (prev.to !== clientPhone) {
-          return { ...prev, to: clientPhone };
+        if (prev.to !== client.phone) {
+          return { ...prev, to: client.phone };
         }
         return prev;
       });
     }
-  }, [clientPhone]);
+  }, [client?.phone]);
 
   // Email utility functions (removed duplicate)
 
