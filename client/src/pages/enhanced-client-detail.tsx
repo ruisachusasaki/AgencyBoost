@@ -2412,13 +2412,20 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b">
-            <TabsList className="grid w-full grid-cols-4 bg-transparent border-0 rounded-none h-auto">
+            <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 rounded-none h-auto">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
               >
                 <User className="h-4 w-4" />
                 Contact
+              </TabsTrigger>
+              <TabsTrigger 
+                value="products" 
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Products & Services
               </TabsTrigger>
               <TabsTrigger 
                 value="activity" 
@@ -5596,6 +5603,279 @@ export default function EnhancedClientDetail() {
 
           </TabsContent>
 
+          {/* Products & Services Tab */}
+          <TabsContent value="products" className="space-y-6 mt-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Products & Services</h3>
+                  {/* Bundle Spend Calculation */}
+                  {clientProductsData.length > 0 && (() => {
+                    const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
+                      if (clientProduct.itemType === 'bundle') {
+                        const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                        const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
+                          return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                        }, 0);
+                        return total + bundleCost;
+                      } else {
+                        return total + Number(clientProduct.price || 0);
+                      }
+                    }, 0);
+                    return (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
+                      </p>
+                    );
+                  })()}
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    onClick={() => setShowAddProductModal(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                  {userPermissions?.settings?.canAccess && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.location.href = '/settings/products'}
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Manage Products
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {clientProductsLoading ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-sm">Loading products...</div>
+                  </div>
+                ) : clientProductsData.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm">No products or services assigned</p>
+                    <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
+                  </div>
+                ) : (
+                  clientProductsData.map((clientProduct: any, index: number) => (
+                    <div key={index} className="space-y-2">
+                      {/* Main Product/Bundle Item */}
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded ${clientProduct.itemType === 'bundle' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {clientProduct.itemType === 'bundle' ? (
+                              <Archive className="h-4 w-4" />
+                            ) : (
+                              <Package className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              {clientProduct.itemType === 'bundle' ? (
+                                <button
+                                  onClick={() => {
+                                    const newExpanded = new Set(expandedBundles);
+                                    if (newExpanded.has(clientProduct.productId || clientProduct.id)) {
+                                      newExpanded.delete(clientProduct.productId || clientProduct.id);
+                                    } else {
+                                      newExpanded.add(clientProduct.productId || clientProduct.id);
+                                    }
+                                    setExpandedBundles(newExpanded);
+                                  }}
+                                  className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left"
+                                >
+                                  <h4 className="font-medium text-sm text-gray-900">
+                                    {clientProduct.name || clientProduct.productName}
+                                  </h4>
+                                  {expandedBundles.has(clientProduct.productId || clientProduct.id) ? (
+                                    <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                  )}
+                                </button>
+                              ) : (
+                                <h4 className="font-medium text-sm text-gray-900">
+                                  {clientProduct.name || clientProduct.productName}
+                                </h4>
+                              )}
+                              <div className="flex items-center gap-2">
+                                {/* Calculate bundle cost dynamically */}
+                                <span className="text-sm font-medium text-green-600">
+                                  ${(() => {
+                                    if (clientProduct.itemType === 'bundle') {
+                                      const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                      const totalCost = bundleProducts.reduce((sum: number, product: any) => {
+                                        return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                                      }, 0);
+                                      return totalCost.toFixed(2);
+                                    } else {
+                                      return (clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00');
+                                    }
+                                  })()}
+                                </span>
+                                {/* Add edit button for bundles */}
+                                {clientProduct.itemType === 'bundle' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => {
+                                      setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
+                                      // Initialize temp quantities
+                                      const currentBundle = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                      const initialQuantities: Record<string, number> = {};
+                                      currentBundle.forEach((product: any) => {
+                                        initialQuantities[product.productId] = product.quantity || 1;
+                                      });
+                                      setTempQuantities(initialQuantities);
+                                    }}
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {clientProduct.description && (
+                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clientProduct.description}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded Bundle Contents */}
+                        {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId || clientProduct.id) && (
+                          <div className="mt-3 border-t border-gray-200 pt-3">
+                            {bundleDetailsData[clientProduct.productId || clientProduct.id] ? (
+                              <div className="space-y-2">
+                                {bundleDetailsData[clientProduct.productId || clientProduct.id].map((product: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-3 p-2 bg-white rounded border border-gray-100">
+                                    <ShoppingCart className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-700">{product.productName}</p>
+                                      {product.productDescription && (
+                                        <p className="text-xs text-gray-500 line-clamp-1">{product.productDescription}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500">Qty: {product.quantity || 1}</span>
+                                      <div className="text-blue-600 font-medium">
+                                        ${Number(product.productCost || 0).toFixed(2)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                
+                                {/* Edit mode for bundle quantities */}
+                                {editingBundleQuantities === (clientProduct.productId || clientProduct.id) && (
+                                  <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h6 className="font-medium text-blue-900 text-sm">Edit Quantities</h6>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => {
+                                            // Save the updated quantities
+                                            updateBundleQuantitiesMutation.mutate({
+                                              bundleId: clientProduct.productId || clientProduct.id,
+                                              customQuantities: tempQuantities
+                                            });
+                                          }}
+                                          disabled={updateBundleQuantitiesMutation.isPending}
+                                          className="h-6 text-xs"
+                                        >
+                                          {updateBundleQuantitiesMutation.isPending ? 'Saving...' : 'Save'}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setEditingBundleQuantities(null);
+                                            setTempQuantities({});
+                                          }}
+                                          className="h-6 text-xs"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {bundleDetailsData[clientProduct.productId || clientProduct.id]?.map((product: any) => (
+                                        <div key={product.productId} className="flex items-center gap-2 p-2 bg-white rounded text-sm">
+                                          <ShoppingCart className="w-4 h-4 text-gray-500" />
+                                          <span className="flex-1 font-medium">{product.productName}</span>
+                                          <span className="text-xs text-gray-500 mr-2">Qty:</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            value={tempQuantities[product.productId] || product.quantity || 1}
+                                            onChange={(e) => {
+                                              setTempQuantities(prev => ({
+                                                ...prev,
+                                                [product.productId]: parseInt(e.target.value) || 0
+                                              }));
+                                            }}
+                                            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          />
+                                          <span className="text-blue-600 font-medium text-xs">
+                                            ${Number(product.productCost || 0).toFixed(2)} each
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-white rounded border border-gray-200 text-center text-gray-500 text-sm">
+                                Loading bundle details...
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Add Product Modal */}
+            <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Product or Service</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search products and bundles..."
+                      value={productSearchTerm}
+                      onChange={(e) => setProductSearchTerm(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                  
+                  <ProductSearchResults 
+                    searchTerm={productSearchTerm}
+                    clientId={clientId}
+                    onProductAdded={() => {
+                      setShowAddProductModal(false);
+                      setProductSearchTerm('');
+                      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/products`] });
+                    }}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
           {/* Recent Activity Tab */}
           <TabsContent value="activity" className="space-y-6 mt-6">
             {/* Recent Activity - Moved from Contact Tab */}
@@ -6687,32 +6967,6 @@ export default function EnhancedClientDetail() {
                 </div>
               </TabsContent>
 
-              {/* Products & Services Section */}
-              <TabsContent value="products" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Products & Services</h3>
-                      {/* Bundle Spend Calculation */}
-                      {clientProductsData.length > 0 && (() => {
-                        const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
-                          if (clientProduct.itemType === 'bundle') {
-                            const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
-                            const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
-                              return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
-                            }, 0);
-                            return total + bundleCost;
-                          } else {
-                            return total + Number(clientProduct.price || 0);
-                          }
-                        }, 0);
-                        return (
-                          <p className="text-sm text-gray-600 mt-1">
-                            Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
-                          </p>
-                        );
-                      })()}
-                    </div>
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
