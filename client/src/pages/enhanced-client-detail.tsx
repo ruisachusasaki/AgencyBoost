@@ -6302,8 +6302,8 @@ export default function EnhancedClientDetail() {
                             key={task.id} 
                             className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
                             onClick={() => {
-                              // Navigate to the main tasks page with this task selected/highlighted
-                              window.location.href = `/tasks?taskId=${task.id}`;
+                              // Navigate to the specific task details page
+                              window.location.href = `/tasks/${task.id}`;
                             }}
                           >
                             <div className="flex items-start gap-3">
