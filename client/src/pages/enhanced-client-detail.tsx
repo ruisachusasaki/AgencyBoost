@@ -6703,9 +6703,148 @@ export default function EnhancedClientDetail() {
                         <p className="text-xs text-gray-400">Upload a document to get started</p>
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-500 mb-2">
-                        Showing {clientDocuments.length} document{clientDocuments.length !== 1 ? 's' : ''}
-                      </div>
+                      clientDocuments
+                        .filter((doc: any) => {
+                          // Search filter
+                          const matchesSearch = !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase());
+                          
+                          // File type filter - only apply if not "all"
+                          if (documentFilterType === "all") {
+                            return matchesSearch; // Skip file type filtering for "all"
+                          }
+                          
+                          const fileType = doc.fileType?.toLowerCase() || "";
+                          let matchesType = false;
+                          
+                          switch (documentFilterType) {
+                            case "pdf":
+                              matchesType = fileType === "pdf";
+                              break;
+                            case "doc":
+                              matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
+                              break;
+                            case "excel":
+                              matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
+                              break;
+                            case "presentation":
+                              matchesType = ["ppt", "pptx", "key"].includes(fileType);
+                              break;
+                            case "image":
+                              matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
+                              break;
+                            case "text":
+                              matchesType = ["txt", "rtf"].includes(fileType);
+                              break;
+                            default:
+                              matchesType = true;
+                          }
+                          
+                          return matchesSearch && matchesType;
+                        })
+                        .sort((a: any, b: any) => {
+                          switch (documentSortBy) {
+                            case "newest":
+                              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                            case "oldest":
+                              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                            case "name":
+                              return a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase());
+                            case "name-desc":
+                              return b.fileName.toLowerCase().localeCompare(a.fileName.toLowerCase());
+                            case "size-large":
+                              return b.fileSize - a.fileSize;
+                            case "size-small":
+                              return a.fileSize - b.fileSize;
+                            default:
+                              return 0;
+                          }
+                        })
+                        .map((doc: any) => {
+                          const getFileIconColor = (fileType: string) => {
+                            switch (fileType.toLowerCase()) {
+                              case 'pdf':
+                                return 'bg-red-100 text-red-600';
+                              case 'docx':
+                              case 'doc':
+                                return 'bg-blue-100 text-blue-600';
+                              case 'xlsx':
+                              case 'xls':
+                                return 'bg-green-100 text-green-600';
+                              case 'pptx':
+                              case 'ppt':
+                                return 'bg-orange-100 text-orange-600';
+                              default:
+                                return 'bg-gray-100 text-gray-600';
+                            }
+                          };
+                          
+                          const formatFileSize = (bytes: number) => {
+                            if (bytes === 0) return '0 B';
+                            const k = 1024;
+                            const sizes = ['B', 'KB', 'MB', 'GB'];
+                            const i = Math.floor(Math.log(bytes) / Math.log(k));
+                            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                          };
+                          
+                          return (
+                            <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+                              <div className="flex items-start gap-3">
+                                <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
+                                  <FileText className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 break-words">{doc.fileName}</p>
+                                  <p className="text-xs text-gray-500">
+                                    Uploaded {new Date(doc.createdAt).toLocaleDateString()} • {formatFileSize(doc.fileSize)}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    by {doc.uploadedByUser?.firstName} {doc.uploadedByUser?.lastName}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                                          onClick={() => window.open(doc.downloadUrl, '_blank')}
+                                        >
+                                          <Download className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Download document</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  
+                                  {currentUser?.role === 'Admin' && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" 
+                                            onClick={() => {
+                                              if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                                                deleteDocumentMutation.mutate(doc.id);
+                                              }
+                                            }}
+                                            disabled={deleteDocumentMutation.isPending}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Delete document (Admin only)</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
                     )}
                   </div>
                 </div>
