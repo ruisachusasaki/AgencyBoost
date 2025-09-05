@@ -3996,40 +3996,50 @@ export default function EnhancedClientDetail() {
                           .map((note: any) => (
                             <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                               <div className="flex justify-between items-start mb-2">
-                                <span className="text-sm font-medium text-gray-900">Note</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500">
-                                    {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  {currentUser?.role === 'Admin' && (
-                                    <div className="flex gap-1">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
-                                        onClick={() => {
-                                          setEditingNote(note.id);
-                                          setEditNoteContent(note.content);
-                                        }}
-                                        title="Edit note"
-                                      >
-                                        <Edit2 className="h-3 w-3" />
-                                      </Button>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
-                                        onClick={() => {
-                                          if (confirm('Are you sure you want to delete this note?')) {
-                                            deleteNoteMutation.mutate(note.id);
-                                          }
-                                        }}
-                                        title="Delete note"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  )}
+                                <div className="flex-1">
+                                  <h4 className="text-sm font-medium text-gray-900 mb-1">
+                                    {note.title || "Note"}
+                                  </h4>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>By {note.authorName || note.createdBy || "Unknown"}</span>
+                                    <span>•</span>
+                                    <span>
+                                      {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {note.updatedAt && note.updatedAt !== note.createdAt && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="italic">Updated {new Date(note.updatedAt).toLocaleDateString()}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 ml-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                    onClick={() => {
+                                      setEditingNote(note.id);
+                                      setEditNoteContent(note.content);
+                                    }}
+                                    title="Edit note"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
+                                    onClick={() => {
+                                      if (confirm('Are you sure you want to delete this note?')) {
+                                        deleteNoteMutation.mutate(note.id);
+                                      }
+                                    }}
+                                    title="Delete note"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               </div>
                               
