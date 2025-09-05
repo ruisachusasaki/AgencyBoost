@@ -6064,7 +6064,7 @@ export default function EnhancedClientDetail() {
               <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
               
               <Tabs value={activeRightSection} onValueChange={(value) => setActiveRightSection(value as any)} className="space-y-6">
-                <TabsList className="grid w-auto grid-cols-6 justify-start">
+                <TabsList className="grid w-fit grid-cols-6">
                   <TabsTrigger value="notes" className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4" />
                     Notes
