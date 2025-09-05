@@ -24,11 +24,8 @@ export function ProductSearchResults({ searchTerm, clientId, onProductAdded }: P
 
   const addProductMutation = useMutation({
     mutationFn: async ({ productId }: { productId: string }) => {
-      const response = await apiRequest(`/api/clients/${clientId}/products`, {
-        method: 'POST',
-        body: JSON.stringify({ productId }),
-      });
-      return response;
+      const response = await apiRequest('POST', `/api/clients/${clientId}/products`, { productId });
+      return response.json();
     },
     onSuccess: () => {
       toast({
