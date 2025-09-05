@@ -3702,7 +3702,7 @@ export default function EnhancedClientDetail() {
                         clientNotes
                           .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
                           .map((note: any) => (
-                            <div key={note.id} className="p-3 bg-gray-50 rounded-lg border-2 border-gray-300">
+                            <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1">
                                   <h4 className="text-sm font-medium text-gray-900 mb-1">
@@ -4747,7 +4747,7 @@ export default function EnhancedClientDetail() {
                             };
                             
                             return (
-                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border-2 border-gray-300 hover:bg-gray-100 transition-colors">
+                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
                                 <div className="flex items-start gap-3">
                                   <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
                                     <FileText className="h-4 w-4" />
@@ -4850,7 +4850,7 @@ export default function EnhancedClientDetail() {
                           <span>3 days overdue</span>
                         </div>
                       </div>
-                      <div className="p-3 bg-gray-50 rounded-lg border-2 border-gray-300">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-300">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-sm font-medium text-gray-900">Upcoming Billing</span>
                           <span className="text-sm font-bold text-gray-700">$2,500.00</span>
@@ -6142,7 +6142,7 @@ export default function EnhancedClientDetail() {
                       clientNotes
                         .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
                         .map((note: any) => (
-                          <div key={note.id} className="p-3 bg-gray-50 rounded-lg border-2 border-gray-300">
+                          <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300">
                             <div className="flex justify-between items-start mb-2">
                               <div className="flex-1">
                                 <h4 className="text-sm font-medium text-gray-900 mb-1">
@@ -6608,7 +6608,7 @@ export default function EnhancedClientDetail() {
                           };
                           
                           return (
-                            <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border-2 border-gray-300 hover:bg-gray-100 transition-colors">
+                            <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
                               <div className="flex items-start gap-3">
                                 <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
                                   <FileText className="h-4 w-4" />
@@ -6734,7 +6734,7 @@ export default function EnhancedClientDetail() {
                       clientProductsData.map((clientProduct: any, index: number) => (
                         <div key={index} className="space-y-2">
                           {/* Main Product/Bundle Item */}
-                          <div className="p-3 bg-gray-50 rounded-lg border-2 border-gray-300 hover:bg-gray-100 transition-colors">
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
                             <div className="flex items-start gap-3">
                               <div className={`p-2 rounded ${clientProduct.itemType === 'bundle' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
                                 {clientProduct.itemType === 'bundle' ? (
