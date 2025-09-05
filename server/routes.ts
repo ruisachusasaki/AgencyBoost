@@ -5819,14 +5819,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { entityType, entityId } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const filter = req.query.filter as string || 'all';
       
-      // Get total count for pagination
+      // Build filter conditions
+      const baseConditions = and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId));
+      let filterConditions = baseConditions;
+      
+      if (filter !== 'all') {
+        let activityCondition;
+        
+        switch (filter) {
+          case 'general':
+            activityCondition = or(eq(auditLogs.action, 'updated'), eq(auditLogs.action, 'created'));
+            break;
+          case 'email':
+            activityCondition = like(auditLogs.details, '%email%');
+            break;
+          case 'call':
+            activityCondition = like(auditLogs.details, '%call%');
+            break;
+          case 'meeting':
+            activityCondition = like(auditLogs.details, '%meeting%');
+            break;
+          case 'task':
+            activityCondition = like(auditLogs.details, '%task%');
+            break;
+          case 'note':
+            activityCondition = like(auditLogs.details, '%note%');
+            break;
+          case 'campaign':
+            activityCondition = like(auditLogs.details, '%campaign%');
+            break;
+          case 'workflow':
+            activityCondition = like(auditLogs.details, '%workflow%');
+            break;
+          default:
+            activityCondition = undefined;
+        }
+        
+        if (activityCondition) {
+          filterConditions = and(baseConditions, activityCondition);
+        }
+      }
+      
+      // Get total count for pagination (with filter applied)
       const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs)
-        .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)));
+        .where(filterConditions);
       
-      // Get paginated logs
+      // Get paginated logs (with filter applied)
       const logs = await db.select().from(auditLogs)
-        .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
+        .where(filterConditions)
         .orderBy(desc(auditLogs.timestamp))
         .limit(limit)
         .offset(offset);
@@ -5836,7 +5878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: count,
         limit,
         offset,
-        hasMore: offset + limit < count
+        hasMore: offset + limit < count,
+        filter
       });
     } catch (error) {
       console.error('Error fetching entity audit logs:', error);

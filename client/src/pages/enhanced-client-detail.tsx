@@ -1699,12 +1699,13 @@ export default function EnhancedClientDetail() {
     },
   });
 
-  // Fetch audit logs for this client with pagination
+  // Fetch audit logs for this client with pagination and filtering
   const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery({
-    queryKey: ['/api/audit-logs/entity/contact', clientId, currentPage, itemsPerPage],
+    queryKey: ['/api/audit-logs/entity/contact', clientId, currentPage, itemsPerPage, activityFilter],
     queryFn: async () => {
       const offset = (currentPage - 1) * itemsPerPage;
-      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}`);
+      const filterParam = activityFilter !== 'all' ? `&filter=${encodeURIComponent(activityFilter)}` : '';
+      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}${filterParam}`);
       if (!response.ok) throw new Error('Failed to fetch audit logs');
       return response.json();
     },
@@ -5502,21 +5503,7 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {auditLogs
-                    .filter(log => {
-                      if (activityFilter === 'all') return true;
-                      const details = log.details?.toLowerCase() || '';
-                      if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
-                      if (activityFilter === 'email' && details.includes('email')) return true;
-                      if (activityFilter === 'call' && details.includes('call')) return true;
-                      if (activityFilter === 'meeting' && details.includes('meeting')) return true;
-                      if (activityFilter === 'task' && details.includes('task')) return true;
-                      if (activityFilter === 'note' && details.includes('note')) return true;
-                      if (activityFilter === 'campaign' && details.includes('campaign')) return true;
-                      if (activityFilter === 'workflow' && details.includes('workflow')) return true;
-                      return false;
-                    })
-                    .map((log) => (
+                  {auditLogs.map((log) => (
                     <div key={log.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
@@ -5548,19 +5535,7 @@ export default function EnhancedClientDetail() {
                   )}
 
                   {/* Empty State */}
-                  {!auditLogsLoading && auditLogs.filter(log => {
-                    if (activityFilter === 'all') return true;
-                    const details = log.details?.toLowerCase() || '';
-                    if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
-                    if (activityFilter === 'email' && details.includes('email')) return true;
-                    if (activityFilter === 'call' && details.includes('call')) return true;
-                    if (activityFilter === 'meeting' && details.includes('meeting')) return true;
-                    if (activityFilter === 'task' && details.includes('task')) return true;
-                    if (activityFilter === 'note' && details.includes('note')) return true;
-                    if (activityFilter === 'campaign' && details.includes('campaign')) return true;
-                    if (activityFilter === 'workflow' && details.includes('workflow')) return true;
-                    return false;
-                  }).length === 0 && (
+                  {!auditLogsLoading && auditLogs.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
