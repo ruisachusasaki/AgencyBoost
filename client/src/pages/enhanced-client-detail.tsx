@@ -926,8 +926,10 @@ export default function EnhancedClientDetail() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
   
-  // Activity filtering
+  // Activity filtering and pagination
   const [activityFilter, setActivityFilter] = useState<'all' | 'general' | 'email' | 'call' | 'meeting' | 'task' | 'note' | 'campaign' | 'workflow'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   
   // Tags state
   const [isAddingTag, setIsAddingTag] = useState(false);
@@ -1697,16 +1699,28 @@ export default function EnhancedClientDetail() {
     },
   });
 
-  // Fetch audit logs for this client
-  const { data: auditLogs = [] } = useQuery({
-    queryKey: ['/api/audit-logs/entity/contact', clientId],
+  // Fetch audit logs for this client with pagination
+  const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery({
+    queryKey: ['/api/audit-logs/entity/contact', clientId, currentPage, itemsPerPage],
     queryFn: async () => {
-      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}`);
+      const offset = (currentPage - 1) * itemsPerPage;
+      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}`);
       if (!response.ok) throw new Error('Failed to fetch audit logs');
       return response.json();
     },
     enabled: !!clientId,
   });
+
+  const auditLogs = auditLogsData?.logs || [];
+  const totalActivities = auditLogsData?.total || 0;
+  const hasMoreActivities = auditLogsData?.hasMore || false;
+  const totalPages = Math.ceil(totalActivities / itemsPerPage);
+
+  // Reset page when filter changes
+  const handleFilterChange = (newFilter: typeof activityFilter) => {
+    setActivityFilter(newFilter);
+    setCurrentPage(1);
+  };
 
   // Update DND settings mutation
   const updateDNDMutation = useMutation({
@@ -2665,7 +2679,7 @@ export default function EnhancedClientDetail() {
                   <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-gray-500" />
-                    <Select value={activityFilter} onValueChange={(value) => setActivityFilter(value as any)}>
+                    <Select value={activityFilter} onValueChange={handleFilterChange}>
                       <SelectTrigger className="w-40">
                         <SelectValue placeholder="Filter by type" />
                       </SelectTrigger>
@@ -2722,7 +2736,17 @@ export default function EnhancedClientDetail() {
                       <p className="text-gray-700 text-sm ml-10">{log.details}</p>
                     </div>
                   ))}
-                  {auditLogs.filter(log => {
+
+                  {/* Loading State */}
+                  {auditLogsLoading && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+                      <p className="text-sm">Loading activities...</p>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {!auditLogsLoading && auditLogs.filter(log => {
                     if (activityFilter === 'all') return true;
                     const details = log.details?.toLowerCase() || '';
                     if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
@@ -2739,6 +2763,40 @@ export default function EnhancedClientDetail() {
                       <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
                       <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
+                    </div>
+                  )}
+
+                  {/* Pagination Controls */}
+                  {!auditLogsLoading && totalActivities > 0 && (
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                      <div className="text-sm text-gray-600">
+                        Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalActivities)} of {totalActivities} activities
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-1"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={currentPage === totalPages || !hasMoreActivities}
+                          className="flex items-center gap-1"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

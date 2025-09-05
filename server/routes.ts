@@ -5817,10 +5817,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/audit-logs/entity/:entityType/:entityId", async (req, res) => {
     try {
       const { entityType, entityId } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      // Get total count for pagination
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs)
+        .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)));
+      
+      // Get paginated logs
       const logs = await db.select().from(auditLogs)
         .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
-        .orderBy(desc(auditLogs.timestamp));
-      res.json(logs);
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(limit)
+        .offset(offset);
+        
+      res.json({
+        logs,
+        total: count,
+        limit,
+        offset,
+        hasMore: offset + limit < count
+      });
     } catch (error) {
       console.error('Error fetching entity audit logs:', error);
       res.status(500).json({ message: "Failed to fetch audit logs" });
