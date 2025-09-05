@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments" | "team">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"tasks" | "appointments" | "documents" | "payments" | "team">("tasks");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -1112,7 +1112,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client notes');
       return response.json();
     },
-    enabled: !!clientId && activeRightSection === "notes",
+    enabled: false, // Notes moved to Client Hub tab
   });
 
   // Fetch client tasks data
@@ -3523,24 +3523,6 @@ export default function EnhancedClientDetail() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => setActiveRightSection("notes")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "notes"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <StickyNote className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Notes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
                           onClick={() => setActiveRightSection("tasks")}
                           className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
                             activeRightSection === "tasks"
@@ -3632,195 +3614,6 @@ export default function EnhancedClientDetail() {
                 </TooltipProvider>
               </CardHeader>
               <CardContent className="pt-6">
-                {/* Notes Section */}
-                {activeRightSection === "notes" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Notes</h3>
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Search notes..."
-                          value={searchNotes}
-                          onChange={(e) => setSearchNotes(e.target.value)}
-                          className="pl-10 text-sm"
-                        />
-                      </div>
-                      <Textarea
-                        placeholder="Add a note..."
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                        className="min-h-[80px] text-sm"
-                      />
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-primary hover:bg-primary/90"
-                        disabled={!newNote.trim() || createNoteMutation.isPending}
-                        onClick={() => createNoteMutation.mutate(newNote)}
-                      >
-                        {createNoteMutation.isPending ? "Adding..." : "Add Note"}
-                      </Button>
-                    </div>
-
-                    <div 
-                      className="space-y-3 overflow-y-auto"
-                      style={{ 
-                        maxHeight: calculateNotesMaxHeight(),
-                        ...(calculateNotesMaxHeight() && { paddingRight: '8px' })
-                      }}
-                    >
-                      {notesLoading ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <div className="text-sm">Loading notes...</div>
-                        </div>
-                      ) : clientNotes.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm">No notes yet</p>
-                          <p className="text-xs text-gray-400">Add a note to get started</p>
-                        </div>
-                      ) : (
-                        clientNotes
-                          .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
-                          .map((note: any) => (
-                            <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300">
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1">
-                                  <h4 className="text-sm font-medium text-gray-900 mb-1">
-                                    {note.title || "Note"}
-                                  </h4>
-                                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <span>By {
-                                      note.authorName || 
-                                      (note.createdBy && typeof note.createdBy === 'object' 
-                                        ? `${note.createdBy.firstName} ${note.createdBy.lastName}` 
-                                        : note.createdBy) || 
-                                      "Unknown"
-                                    }</span>
-                                    <span>•</span>
-                                    <span>
-                                      {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    {note.updatedAt && note.updatedAt !== note.createdAt && (
-                                      <>
-                                        <span>•</span>
-                                        <span className="italic">Updated {new Date(note.updatedAt).toLocaleDateString()}</span>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex gap-1 ml-2">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
-                                    onClick={() => {
-                                      setEditingNote(note.id);
-                                      setEditNoteContent(note.content);
-                                    }}
-                                    title="Edit note"
-                                  >
-                                    <Edit2 className="h-3 w-3" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
-                                    onClick={() => {
-                                      if (confirm('Are you sure you want to delete this note?')) {
-                                        deleteNoteMutation.mutate(note.id);
-                                      }
-                                    }}
-                                    title="Delete note"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                              
-                              {editingNote === note.id ? (
-                                <div className="space-y-2">
-                                  <Textarea
-                                    value={editNoteContent}
-                                    onChange={(e) => setEditNoteContent(e.target.value)}
-                                    className="min-h-[60px] text-sm"
-                                  />
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      onClick={() => {
-                                        editNoteMutation.mutate({ 
-                                          noteId: note.id, 
-                                          content: editNoteContent 
-                                        });
-                                        setEditingNote(null);
-                                        setEditNoteContent("");
-                                      }}
-                                      disabled={!editNoteContent.trim() || editNoteMutation.isPending}
-                                      className="h-7"
-                                    >
-                                      {editNoteMutation.isPending ? "Saving..." : "Save"}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setEditingNote(null);
-                                        setEditNoteContent("");
-                                      }}
-                                      className="h-7"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                (() => {
-                                  const { displayContent, shouldTruncate, isExpanded } = formatNoteContent(note.content, note.id);
-                                  return (
-                                    <div className="space-y-2">
-                                      <p 
-                                        className="text-sm text-gray-600 whitespace-pre-wrap"
-                                        style={{ wordBreak: 'break-word' }}
-                                      >
-                                        {displayContent}
-                                      </p>
-                                      {shouldTruncate && (
-                                        <button
-                                          onClick={() => toggleNoteExpansion(note.id)}
-                                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
-                                        >
-                                          {isExpanded ? 'Show less' : 'Show more'}
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                })()
-                              )}
-                              
-                              <div className="mt-2 flex justify-between items-center">
-                                <div className="text-xs text-gray-400">
-                                  by {note.createdBy?.firstName} {note.createdBy?.lastName}
-                                </div>
-                                {note.editedBy && (
-                                  <div className="text-xs text-gray-400">
-                                    edited by {note.editedBy?.firstName} {note.editedBy?.lastName}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Tasks Section */}
                 {activeRightSection === "tasks" && (
                   <div className="space-y-4">
