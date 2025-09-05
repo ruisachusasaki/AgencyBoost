@@ -2670,149 +2670,9 @@ export default function EnhancedClientDetail() {
 
           </div>
 
-          {/* Middle Column - Activity & Communication */}
+          {/* Middle Column - Communication */}
           <div className="lg:col-span-3">
-            {/* Recent Activity - Moved to Top */}
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-gray-500" />
-                    <Select value={activityFilter} onValueChange={handleFilterChange}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Activity</SelectItem>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="call">Calls</SelectItem>
-                        <SelectItem value="meeting">Meetings</SelectItem>
-                        <SelectItem value="task">Tasks</SelectItem>
-                        <SelectItem value="note">Notes</SelectItem>
-                        <SelectItem value="campaign">Campaigns</SelectItem>
-                        <SelectItem value="workflow">Workflows</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {auditLogs
-                    .filter(log => {
-                      if (activityFilter === 'all') return true;
-                      const details = log.details?.toLowerCase() || '';
-                      if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
-                      if (activityFilter === 'email' && details.includes('email')) return true;
-                      if (activityFilter === 'call' && details.includes('call')) return true;
-                      if (activityFilter === 'meeting' && details.includes('meeting')) return true;
-                      if (activityFilter === 'task' && details.includes('task')) return true;
-                      if (activityFilter === 'note' && details.includes('note')) return true;
-                      if (activityFilter === 'campaign' && details.includes('campaign')) return true;
-                      if (activityFilter === 'workflow' && details.includes('workflow')) return true;
-                      return false;
-                    })
-                    .map((log) => (
-                    <div key={log.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{log.action === 'created' ? 'Contact created' : log.action === 'updated' ? 'Contact updated' : log.action}</p>
-                            <p className="text-sm text-gray-500">by System User</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {log.action}
-                          </Badge>
-                          <span className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <p className="text-gray-700 text-sm ml-10">{log.details}</p>
-                    </div>
-                  ))}
-
-                  {/* Loading State */}
-                  {auditLogsLoading && (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
-                      <p className="text-sm">Loading activities...</p>
-                    </div>
-                  )}
-
-                  {/* Empty State */}
-                  {!auditLogsLoading && auditLogs.filter(log => {
-                    if (activityFilter === 'all') return true;
-                    const details = log.details?.toLowerCase() || '';
-                    if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
-                    if (activityFilter === 'email' && details.includes('email')) return true;
-                    if (activityFilter === 'call' && details.includes('call')) return true;
-                    if (activityFilter === 'meeting' && details.includes('meeting')) return true;
-                    if (activityFilter === 'task' && details.includes('task')) return true;
-                    if (activityFilter === 'note' && details.includes('note')) return true;
-                    if (activityFilter === 'campaign' && details.includes('campaign')) return true;
-                    if (activityFilter === 'workflow' && details.includes('workflow')) return true;
-                    return false;
-                  }).length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
-                      <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
-                    </div>
-                  )}
-
-                  {/* Activity Summary and Pagination Controls */}
-                  {!auditLogsLoading && totalActivities > 0 && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalActivities)} of {totalActivities} activities
-                        </div>
-                        {totalPages > 1 && (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCurrentPage(currentPage - 1)}
-                              disabled={currentPage === 1}
-                              className="flex items-center gap-1"
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                              Previous
-                            </Button>
-                            <span className="text-sm text-gray-600">
-                              Page {currentPage} of {totalPages}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCurrentPage(currentPage + 1)}
-                              disabled={currentPage === totalPages || !hasMoreActivities}
-                              className="flex items-center gap-1"
-                            >
-                              Next
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      {totalPages === 1 && (
-                        <div className="text-center mt-2">
-                          <span className="text-xs text-gray-500">All activities shown on this page</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Communication - Moved Below Activity */}
+            {/* Communication */}
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900">Communication</h2>
@@ -5621,20 +5481,20 @@ export default function EnhancedClientDetail() {
                   <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-gray-500" />
-                    <Select value={activityFilter} onValueChange={(value) => setActivityFilter(value as any)}>
+                    <Select value={activityFilter} onValueChange={handleFilterChange}>
                       <SelectTrigger className="w-40">
                         <SelectValue placeholder="Filter by type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Activities</SelectItem>
+                        <SelectItem value="all">All Activity</SelectItem>
                         <SelectItem value="general">General</SelectItem>
                         <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="call">Call</SelectItem>
-                        <SelectItem value="meeting">Meeting</SelectItem>
-                        <SelectItem value="task">Task</SelectItem>
-                        <SelectItem value="note">Note</SelectItem>
-                        <SelectItem value="campaign">Campaign</SelectItem>
-                        <SelectItem value="workflow">Workflow</SelectItem>
+                        <SelectItem value="call">Calls</SelectItem>
+                        <SelectItem value="meeting">Meetings</SelectItem>
+                        <SelectItem value="task">Tasks</SelectItem>
+                        <SelectItem value="note">Notes</SelectItem>
+                        <SelectItem value="campaign">Campaigns</SelectItem>
+                        <SelectItem value="workflow">Workflows</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -5678,7 +5538,17 @@ export default function EnhancedClientDetail() {
                       <p className="text-gray-700 text-sm ml-10">{log.details}</p>
                     </div>
                   ))}
-                  {auditLogs.filter(log => {
+
+                  {/* Loading State */}
+                  {auditLogsLoading && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+                      <p className="text-sm">Loading activities...</p>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {!auditLogsLoading && auditLogs.filter(log => {
                     if (activityFilter === 'all') return true;
                     const details = log.details?.toLowerCase() || '';
                     if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
@@ -5695,6 +5565,49 @@ export default function EnhancedClientDetail() {
                       <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
                       <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
+                    </div>
+                  )}
+
+                  {/* Activity Summary and Pagination Controls */}
+                  {!auditLogsLoading && totalActivities > 0 && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-600">
+                          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalActivities)} of {totalActivities} activities
+                        </div>
+                        {totalPages > 1 && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(currentPage - 1)}
+                              disabled={currentPage === 1}
+                              className="flex items-center gap-1"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              Previous
+                            </Button>
+                            <span className="text-sm text-gray-600">
+                              Page {currentPage} of {totalPages}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(currentPage + 1)}
+                              disabled={currentPage === totalPages || !hasMoreActivities}
+                              className="flex items-center gap-1"
+                            >
+                              Next
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      {totalPages === 1 && (
+                        <div className="text-center mt-2">
+                          <span className="text-xs text-gray-500">All activities shown on this page</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
