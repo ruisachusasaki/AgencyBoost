@@ -6271,33 +6271,449 @@ export default function EnhancedClientDetail() {
               {/* Tasks Section */}
               <TabsContent value="tasks" className="mt-6">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Tasks</h3>
-                  <p className="text-sm text-gray-500">Task management for this client will be displayed here.</p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Tasks</h3>
+                    <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Create New Task</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
+                            <Input
+                              value={newTask.title}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                              placeholder="Enter task title"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
+                            <Textarea
+                              value={newTask.description}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Enter task description"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
+                              <Input
+                                type="date"
+                                value={newTask.dueDate}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
+                              <Input
+                                type="time"
+                                value={newTask.dueTime}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
+                            <Input
+                              value={assigneeSearchTerm}
+                              onChange={(e) => {
+                                setAssigneeSearchTerm(e.target.value);
+                                if (e.target.value.trim() && staffData) {
+                                  const filtered = staffData.filter((staff: any) => 
+                                    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                                    staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
+                                  );
+                                  setFilteredAssignees(filtered);
+                                  setShowAssigneeSuggestions(filtered.length > 0);
+                                } else {
+                                  setFilteredAssignees([]);
+                                  setShowAssigneeSuggestions(false);
+                                }
+                              }}
+                              placeholder="Search staff members..."
+                              onFocus={() => {
+                                if (assigneeSearchTerm.trim() && staffData) {
+                                  const filtered = staffData.filter((staff: any) => 
+                                    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
+                                    staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
+                                  );
+                                  setFilteredAssignees(filtered);
+                                  setShowAssigneeSuggestions(filtered.length > 0);
+                                }
+                              }}
+                              onBlur={() => {
+                                setTimeout(() => setShowAssigneeSuggestions(false), 200);
+                              }}
+                            />
+                            
+                            {showAssigneeSuggestions && (
+                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                {filteredAssignees.map((staff: any) => (
+                                  <button
+                                    key={staff.id}
+                                    onClick={() => {
+                                      setNewTask(prev => ({ ...prev, assignee: staff.id }));
+                                      setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
+                                      setShowAssigneeSuggestions(false);
+                                    }}
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                                  >
+                                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                                      {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                                      <div className="text-xs text-gray-500">{staff.email}</div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                if (newTask.title.trim()) {
+                                  const taskData = {
+                                    title: newTask.title,
+                                    description: newTask.description,
+                                    dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
+                                    assignedTo: newTask.assignee || undefined,
+                                    isRecurring: newTask.recurring,
+                                    recurringConfig: newTask.recurring ? recurringConfig : undefined
+                                  };
+                                  createTaskMutation.mutate(taskData);
+                                }
+                              }}
+                              disabled={!newTask.title.trim() || createTaskMutation.isPending}
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {tasksLoading ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-sm">Loading tasks...</div>
+                      </div>
+                    ) : clientTasksData.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm">No tasks yet</p>
+                        <p className="text-xs text-gray-400">Create a task to get started</p>
+                      </div>
+                    ) : (
+                      clientTasksData.map((task: any) => {
+                        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
+                        return (
+                          <div key={task.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={task.status === 'completed'}
+                                onCheckedChange={(checked) => {
+                                  updateTaskStatusMutation.mutate({
+                                    taskId: task.id,
+                                    status: checked ? 'completed' : 'pending'
+                                  });
+                                }}
+                                className="mt-0.5"
+                              />
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className={`font-medium text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'} ${isOverdue ? 'text-red-600' : ''}`}>
+                                    {task.title}
+                                    {isOverdue && <span className="ml-2 text-red-500 text-xs">(Overdue)</span>}
+                                  </h4>
+                                  
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const expanded = new Set(expandedTasks);
+                                        if (expanded.has(task.id)) {
+                                          expanded.delete(task.id);
+                                        } else {
+                                          expanded.add(task.id);
+                                        }
+                                        setExpandedTasks(expanded);
+                                      }}
+                                      className="h-6 w-6 p-0"
+                                    >
+                                      <MessageCircle className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+                                      onClick={() => {
+                                        setEditingTaskId(task.id);
+                                        setEditTask({
+                                          title: task.title,
+                                          description: task.description || "",
+                                          dueDate: task.dueDate ? task.dueDate.split(' ')[0] : "",
+                                          dueTime: task.dueDate ? task.dueDate.split(' ')[1] || "" : "",
+                                          assignee: task.assignedTo || "",
+                                          recurring: task.isRecurring || false
+                                        });
+                                        setIsEditTaskDialogOpen(true);
+                                      }}
+                                      title="Edit task"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                                      onClick={() => {
+                                        if (confirm('Are you sure you want to delete this task?')) {
+                                          deleteTaskMutation.mutate(task.id);
+                                        }
+                                      }}
+                                      title="Delete task"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                {task.description && (
+                                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                                )}
+                                
+                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                  {task.dueDate && (
+                                    <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                                      Due: {format(new Date(task.dueDate), 'MMM d, yyyy h:mm a')}
+                                    </span>
+                                  )}
+                                  {task.assignedTo && (
+                                    <span>
+                                      Assigned to: {staffData.find((s: any) => s.id === task.assignedTo)?.firstName} {staffData.find((s: any) => s.id === task.assignedTo)?.lastName}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Comments Section */}
+                            {expandedTasks.has(task.id) && (
+                              <TaskComments taskId={task.id} />
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
               {/* Appointments Section */} 
               <TabsContent value="appointments" className="mt-6">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Calendar</h3>
-                  <p className="text-sm text-gray-500">Calendar and appointments for this client will be displayed here.</p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Meetings/Appointments</h3>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setShowAppointmentModal(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
+                      clientAppointmentsData.map((appointment: any) => (
+                        <div key={appointment.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium text-gray-900">{appointment.title}</h4>
+                                <Badge 
+                                  variant={
+                                    appointment.status === 'confirmed' ? 'default' :
+                                    appointment.status === 'showed' ? 'secondary' :
+                                    appointment.status === 'cancelled' ? 'destructive' :
+                                    'outline'
+                                  }
+                                  className="text-xs"
+                                >
+                                  {appointment.status}
+                                </Badge>
+                              </div>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    {format(new Date(appointment.startTime), 'MMM d, yyyy h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}
+                                  </span>
+                                </div>
+                                {appointment.location && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{appointment.location}</span>
+                                  </div>
+                                )}
+                                {appointment.assignedTo && (
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-3 w-3" />
+                                    <span>
+                                      {staffData.find((s: any) => s.id === appointment.assignedTo)?.firstName} {staffData.find((s: any) => s.id === appointment.assignedTo)?.lastName}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-1 ml-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  setEditingAppointment(appointment);
+                                  setShowAppointmentModal(true);
+                                }}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
+                                    fetch(`/api/calendar-appointments/${appointment.id}`, { method: 'DELETE' })
+                                      .then(() => {
+                                        queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+                                        toast({ title: "Appointment deleted", description: "Appointment has been deleted successfully" });
+                                      })
+                                      .catch(() => {
+                                        toast({ title: "Error", description: "Failed to delete appointment", variant: "destructive" });
+                                      });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm">No meetings for this client</p>
+                        <p className="text-xs text-gray-400">Click the + button to schedule a meeting</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
               {/* Documents Section */}
               <TabsContent value="documents" className="mt-6">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Documents</h3>
-                  <p className="text-sm text-gray-500">Document management for this client will be displayed here.</p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Documents</h3>
+                    <DocumentUploader
+                      clientId={clientId!}
+                      onUploadComplete={() => {
+                        queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
+                      }}
+                      maxNumberOfFiles={5}
+                      buttonClassName="text-sm"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Documents
+                    </DocumentUploader>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search documents..."
+                        value={searchDocuments}
+                        onChange={(e) => setSearchDocuments(e.target.value)}
+                        className="pl-10 text-sm"
+                      />
+                    </div>
+                    
+                    {/* Filter Controls */}
+                    <div className="flex gap-2 text-xs">
+                      <Select value={documentFilterType} onValueChange={setDocumentFilterType}>
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue placeholder="File Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="pdf">PDF</SelectItem>
+                          <SelectItem value="doc">Documents</SelectItem>
+                          <SelectItem value="excel">Spreadsheets</SelectItem>
+                          <SelectItem value="presentation">Presentations</SelectItem>
+                          <SelectItem value="image">Images</SelectItem>
+                          <SelectItem value="text">Text Files</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={documentSortBy} onValueChange={setDocumentSortBy}>
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue placeholder="Sort By" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="newest">Newest First</SelectItem>
+                          <SelectItem value="oldest">Oldest First</SelectItem>
+                          <SelectItem value="name">Name A-Z</SelectItem>
+                          <SelectItem value="name-desc">Name Z-A</SelectItem>
+                          <SelectItem value="size-large">Largest First</SelectItem>
+                          <SelectItem value="size-small">Smallest First</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {documentsLoading ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-sm">Loading documents...</div>
+                      </div>
+                    ) : clientDocuments.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm">No documents yet</p>
+                        <p className="text-xs text-gray-400">Upload a document to get started</p>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500 mb-2">
+                        Showing {clientDocuments.length} document{clientDocuments.length !== 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
               {/* Team Section */}
               <TabsContent value="team" className="mt-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Team</h3>
-                  <p className="text-sm text-gray-500">Team assignment for this client will be displayed here.</p>
-                </div>
+                <TeamAssignmentSection clientId={clientId} />
               </TabsContent>
             </Tabs>
           </div>
