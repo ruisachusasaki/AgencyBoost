@@ -5296,6 +5296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { clientId, bundleId } = req.params;
       const { customQuantities } = req.body;
 
+      // Validate input
+      if (!customQuantities || typeof customQuantities !== 'object') {
+        return res.status(400).json({ message: "Invalid customQuantities data" });
+      }
+
       // Get bundle products with their costs to recalculate total
       const bundleProductsList = await db
         .select({
@@ -5311,7 +5316,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalCost = 0;
 
       bundleProductsList.forEach(product => {
-        const quantity = customQuantities[product.productId] || product.baseQuantity || 0;
+        if (!product.productId) return; // Skip if productId is null/undefined
+        
+        const quantity = customQuantities[product.productId] || product.baseQuantity || 1;
         const cost = parseFloat(product.productCost || '0');
         
         totalCost += cost * quantity;

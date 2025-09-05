@@ -6874,7 +6874,7 @@ export default function EnhancedClientDetail() {
                                               // Save the updated quantities
                                               updateBundleQuantitiesMutation.mutate({
                                                 bundleId: clientProduct.productId || clientProduct.id,
-                                                quantities: tempQuantities
+                                                customQuantities: tempQuantities
                                               });
                                             }}
                                             disabled={updateBundleQuantitiesMutation.isPending}
