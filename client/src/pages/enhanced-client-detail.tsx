@@ -1697,6 +1697,17 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Fetch audit logs for this client
+  const { data: auditLogs = [] } = useQuery({
+    queryKey: ['/api/audit-logs/entity/contact', clientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}`);
+      if (!response.ok) throw new Error('Failed to fetch audit logs');
+      return response.json();
+    },
+    enabled: !!clientId,
+  });
+
   // Update DND settings mutation
   const updateDNDMutation = useMutation({
     mutationFn: async (dndSettings: { dndAll?: boolean; dndEmail?: boolean; dndSms?: boolean; dndCalls?: boolean }) => {
@@ -1718,6 +1729,7 @@ export default function EnhancedClientDetail() {
     onSuccess: (data) => {
       console.log('DND mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
       toast({
         title: "Communication preferences updated",
         description: "DND settings have been updated successfully",
@@ -2674,31 +2686,55 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockActivities
-                    .filter(activity => activityFilter === 'all' || activity.type === activityFilter)
-                    .map((activity) => (
-                    <div key={activity.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
+                  {auditLogs
+                    .filter(log => {
+                      if (activityFilter === 'all') return true;
+                      const details = log.details?.toLowerCase() || '';
+                      if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
+                      if (activityFilter === 'email' && details.includes('email')) return true;
+                      if (activityFilter === 'call' && details.includes('call')) return true;
+                      if (activityFilter === 'meeting' && details.includes('meeting')) return true;
+                      if (activityFilter === 'task' && details.includes('task')) return true;
+                      if (activityFilter === 'note' && details.includes('note')) return true;
+                      if (activityFilter === 'campaign' && details.includes('campaign')) return true;
+                      if (activityFilter === 'workflow' && details.includes('workflow')) return true;
+                      return false;
+                    })
+                    .map((log) => (
+                    <div key={log.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{activity.description}</p>
-                            <p className="text-sm text-gray-500">by {activity.user}</p>
+                            <p className="font-medium text-gray-900">{log.action === 'created' ? 'Contact created' : log.action === 'updated' ? 'Contact updated' : log.action}</p>
+                            <p className="text-sm text-gray-500">by System User</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs capitalize">
-                            {activity.type}
+                            {log.action}
                           </Badge>
-                          <span className="text-sm text-gray-500">{activity.timestamp}</span>
+                          <span className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <p className="text-gray-700 text-sm ml-10">{activity.content}</p>
+                      <p className="text-gray-700 text-sm ml-10">{log.details}</p>
                     </div>
                   ))}
-                  {mockActivities.filter(activity => activityFilter === 'all' || activity.type === activityFilter).length === 0 && (
+                  {auditLogs.filter(log => {
+                    if (activityFilter === 'all') return true;
+                    const details = log.details?.toLowerCase() || '';
+                    if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
+                    if (activityFilter === 'email' && details.includes('email')) return true;
+                    if (activityFilter === 'call' && details.includes('call')) return true;
+                    if (activityFilter === 'meeting' && details.includes('meeting')) return true;
+                    if (activityFilter === 'task' && details.includes('task')) return true;
+                    if (activityFilter === 'note' && details.includes('note')) return true;
+                    if (activityFilter === 'campaign' && details.includes('campaign')) return true;
+                    if (activityFilter === 'workflow' && details.includes('workflow')) return true;
+                    return false;
+                  }).length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
@@ -5539,31 +5575,55 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockActivities
-                    .filter(activity => activityFilter === 'all' || activity.type === activityFilter)
-                    .map((activity) => (
-                    <div key={activity.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
+                  {auditLogs
+                    .filter(log => {
+                      if (activityFilter === 'all') return true;
+                      const details = log.details?.toLowerCase() || '';
+                      if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
+                      if (activityFilter === 'email' && details.includes('email')) return true;
+                      if (activityFilter === 'call' && details.includes('call')) return true;
+                      if (activityFilter === 'meeting' && details.includes('meeting')) return true;
+                      if (activityFilter === 'task' && details.includes('task')) return true;
+                      if (activityFilter === 'note' && details.includes('note')) return true;
+                      if (activityFilter === 'campaign' && details.includes('campaign')) return true;
+                      if (activityFilter === 'workflow' && details.includes('workflow')) return true;
+                      return false;
+                    })
+                    .map((log) => (
+                    <div key={log.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{activity.description}</p>
-                            <p className="text-sm text-gray-500">by {activity.user}</p>
+                            <p className="font-medium text-gray-900">{log.action === 'created' ? 'Contact created' : log.action === 'updated' ? 'Contact updated' : log.action}</p>
+                            <p className="text-sm text-gray-500">by System User</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs capitalize">
-                            {activity.type}
+                            {log.action}
                           </Badge>
-                          <span className="text-sm text-gray-500">{activity.timestamp}</span>
+                          <span className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <p className="text-gray-700 text-sm ml-10">{activity.content}</p>
+                      <p className="text-gray-700 text-sm ml-10">{log.details}</p>
                     </div>
                   ))}
-                  {mockActivities.filter(activity => activityFilter === 'all' || activity.type === activityFilter).length === 0 && (
+                  {auditLogs.filter(log => {
+                    if (activityFilter === 'all') return true;
+                    const details = log.details?.toLowerCase() || '';
+                    if (activityFilter === 'general' && (log.action === 'updated' || log.action === 'created')) return true;
+                    if (activityFilter === 'email' && details.includes('email')) return true;
+                    if (activityFilter === 'call' && details.includes('call')) return true;
+                    if (activityFilter === 'meeting' && details.includes('meeting')) return true;
+                    if (activityFilter === 'task' && details.includes('task')) return true;
+                    if (activityFilter === 'note' && details.includes('note')) return true;
+                    if (activityFilter === 'campaign' && details.includes('campaign')) return true;
+                    if (activityFilter === 'workflow' && details.includes('workflow')) return true;
+                    return false;
+                  }).length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
@@ -5598,7 +5658,24 @@ export default function EnhancedClientDetail() {
                   <Checkbox
                     checked={client?.dndAll || false}
                     onCheckedChange={(checked) => {
-                      updateDNDMutation.mutate({ dndAll: !!checked });
+                      console.log('DND All Channels changed to:', checked);
+                      if (checked) {
+                        // When enabling DND All, enable all individual settings
+                        updateDNDMutation.mutate({ 
+                          dndAll: true,
+                          dndEmail: true,
+                          dndSms: true,
+                          dndCalls: true
+                        });
+                      } else {
+                        // When disabling DND All, disable all individual settings
+                        updateDNDMutation.mutate({ 
+                          dndAll: false,
+                          dndEmail: false,
+                          dndSms: false,
+                          dndCalls: false
+                        });
+                      }
                     }}
                     className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                   />
