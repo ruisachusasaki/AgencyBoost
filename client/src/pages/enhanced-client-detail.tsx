@@ -1617,6 +1617,14 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Save quantity changes function
+  const saveQuantityChanges = (bundleId: string) => {
+    updateBundleQuantitiesMutation.mutate({
+      bundleId,
+      customQuantities: tempQuantities
+    });
+  };
+
   // Update contact owner mutation
   const updateOwnerMutation = useMutation({
     mutationFn: async (ownerId: string) => {
