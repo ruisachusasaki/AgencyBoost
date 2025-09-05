@@ -6704,46 +6704,102 @@ export default function EnhancedClientDetail() {
                       </div>
                     ) : (
                       clientProductsData.map((clientProduct: any, index: number) => (
-                        <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded ${clientProduct.itemType === 'bundle' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                              {clientProduct.itemType === 'bundle' ? (
-                                <Archive className="h-4 w-4" />
-                              ) : (
-                                <Package className="h-4 w-4" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-medium text-sm text-gray-900">
-                                  {clientProduct.name || clientProduct.productName}
-                                </h4>
-                                <span className="text-sm font-medium text-green-600">
-                                  ${clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00'}
-                                </span>
+                        <div key={index} className="space-y-2">
+                          {/* Main Product/Bundle Item */}
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded ${clientProduct.itemType === 'bundle' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                                {clientProduct.itemType === 'bundle' ? (
+                                  <Archive className="h-4 w-4" />
+                                ) : (
+                                  <Package className="h-4 w-4" />
+                                )}
                               </div>
-                              
-                              {clientProduct.description && (
-                                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clientProduct.description}</p>
-                              )}
-                              
-                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  clientProduct.itemType === 'bundle' 
-                                    ? 'bg-purple-100 text-purple-700' 
-                                    : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                  {clientProduct.itemType === 'bundle' ? 'Bundle' : 'Product'}
-                                </span>
-                                {clientProduct.quantity && (
-                                  <span>Qty: {clientProduct.quantity}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  {clientProduct.itemType === 'bundle' ? (
+                                    <button
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedBundles);
+                                        if (newExpanded.has(clientProduct.productId || clientProduct.id)) {
+                                          newExpanded.delete(clientProduct.productId || clientProduct.id);
+                                        } else {
+                                          newExpanded.add(clientProduct.productId || clientProduct.id);
+                                        }
+                                        setExpandedBundles(newExpanded);
+                                      }}
+                                      className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left"
+                                    >
+                                      <h4 className="font-medium text-sm text-gray-900">
+                                        {clientProduct.name || clientProduct.productName}
+                                      </h4>
+                                      {expandedBundles.has(clientProduct.productId || clientProduct.id) ? (
+                                        <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <h4 className="font-medium text-sm text-gray-900">
+                                      {clientProduct.name || clientProduct.productName}
+                                    </h4>
+                                  )}
+                                  <span className="text-sm font-medium text-green-600">
+                                    ${clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00'}
+                                  </span>
+                                </div>
+                                
+                                {clientProduct.description && (
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clientProduct.description}</p>
                                 )}
-                                {clientProduct.isRecurring && (
-                                  <span className="text-green-600">Recurring</span>
-                                )}
+                                
+                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    clientProduct.itemType === 'bundle' 
+                                      ? 'bg-purple-100 text-purple-700' 
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {clientProduct.itemType === 'bundle' ? 'Bundle' : 'Product'}
+                                  </span>
+                                  {clientProduct.quantity && (
+                                    <span>Qty: {clientProduct.quantity}</span>
+                                  )}
+                                  {clientProduct.isRecurring && (
+                                    <span className="text-green-600">Recurring</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
+
+                          {/* Expanded Bundle Contents */}
+                          {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId || clientProduct.id) && (
+                            <div className="ml-6 space-y-1">
+                              {bundleDetailsData && bundleDetailsData[clientProduct.productId || clientProduct.id] ? (
+                                <div className="space-y-2 p-3 bg-white rounded border border-gray-200">
+                                  <h5 className="font-medium text-gray-900 text-sm">Included Products</h5>
+                                  {bundleDetailsData[clientProduct.productId || clientProduct.id].map((product: any) => (
+                                    <div key={product.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <ShoppingCart className="w-4 h-4 text-gray-500" />
+                                        <span className="font-medium">{product.productName}</span>
+                                        <span className="text-gray-500">
+                                          Qty: {product.quantity || 1}
+                                        </span>
+                                      </div>
+                                      <div className="text-blue-600 font-medium">
+                                        ${Number(product.productCost || 0).toFixed(2)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="p-3 bg-white rounded border border-gray-200 text-center text-gray-500 text-sm">
+                                  Loading bundle details...
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
