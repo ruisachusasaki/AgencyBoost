@@ -6691,7 +6691,7 @@ export default function EnhancedClientDetail() {
                     </Button>
                   </div>
                   
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-3">
                     {clientProductsLoading ? (
                       <div className="text-center py-8 text-gray-500">
                         <div className="text-sm">Loading products...</div>
