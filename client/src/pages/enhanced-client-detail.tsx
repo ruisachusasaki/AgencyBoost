@@ -6011,7 +6011,7 @@ export default function EnhancedClientDetail() {
                       </div>
                     ) : (
                       clientNotes
-                        .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
+                        .filter((note: any) => !searchNotes || (note.content && note.content.toLowerCase().includes(searchNotes.toLowerCase())))
                         .map((note: any) => (
                           <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300">
                             <div className="flex justify-between items-start mb-2">
@@ -6029,12 +6029,12 @@ export default function EnhancedClientDetail() {
                                   }</span>
                                   <span>•</span>
                                   <span>
-                                    {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Unknown date'} at {note.createdAt ? new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Unknown time'}
                                   </span>
                                   {note.updatedAt && note.updatedAt !== note.createdAt && (
                                     <>
                                       <span>•</span>
-                                      <span className="italic">Updated {new Date(note.updatedAt).toLocaleDateString()}</span>
+                                      <span className="italic">Updated {note.updatedAt ? new Date(note.updatedAt).toLocaleDateString() : 'Unknown date'}</span>
                                     </>
                                   )}
                                 </div>
@@ -6127,7 +6127,7 @@ export default function EnhancedClientDetail() {
                                     </button>
                                   </div>
                                 ) : (
-                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.content || "No content"}</p>
                                 )}
                               </div>
                             )}
