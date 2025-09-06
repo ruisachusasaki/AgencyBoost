@@ -5082,29 +5082,38 @@ export default function EnhancedClientDetail() {
 
         {/* Products & Services Tab */}
         <TabsContent value="products" className="space-y-6 mt-6" key="main-products-tab">
+          {clientProductsData !== undefined && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900">Products & Services</h3>
                 {/* Bundle Spend Calculation */}
-                {clientProductsData && clientProductsData.length > 0 && (() => {
-                  const totalSpend = (clientProductsData || []).reduce((total: number, clientProduct: any) => {
-                    if (!clientProduct) return total;
-                    if (clientProduct.itemType === 'bundle') {
-                      const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                      const bundleCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
-                        return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
-                      }, 0);
-                      return total + bundleCost;
-                    } else {
-                      return total + Number(clientProduct.price || 0);
+                {(() => {
+                  try {
+                    if (!clientProductsData || !Array.isArray(clientProductsData) || clientProductsData.length === 0) {
+                      return null;
                     }
-                  }, 0);
-                  return (
-                    <p className="text-sm text-gray-600 mt-1">
-                      Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
-                    </p>
-                  );
+                    const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
+                      if (!clientProduct) return total;
+                      if (clientProduct.itemType === 'bundle') {
+                        const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
+                        const bundleCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
+                          return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
+                        }, 0);
+                        return total + bundleCost;
+                      } else {
+                        return total + Number(clientProduct.price || 0);
+                      }
+                    }, 0);
+                    return (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
+                      </p>
+                    );
+                  } catch (error) {
+                    console.error('Error calculating total spend:', error);
+                    return null;
+                  }
                 })()}
               </div>
               <div className="flex gap-2">
@@ -5141,7 +5150,9 @@ export default function EnhancedClientDetail() {
                   <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
                 </div>
               ) : (
-                (clientProductsData || []).map((clientProduct: any) => (
+                (Array.isArray(clientProductsData) ? clientProductsData : []).map((clientProduct: any) => {
+                  if (!clientProduct || !clientProduct.id) return null;
+                  return (
                   <Card key={`main-product-${clientProduct.id}`} className="p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -5305,10 +5316,12 @@ export default function EnhancedClientDetail() {
                       )}
                     </div>
                   </Card>
-                ))
+                  );
+                }).filter(Boolean)
               )}
             </div>
           </div>
+          )}
         </TabsContent>
 
           {/* Add Product Modal */}
