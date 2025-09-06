@@ -2739,7 +2739,7 @@ export default function EnhancedClientDetail() {
           </div>
 
           {/* Middle Column - Communication */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-5">
             {/* Communication */}
             <Card>
               <CardHeader>
@@ -3517,34 +3517,11 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
 
-          {/* Right Column - Client Activity Hub */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="pb-4">
-                {/* Horizontal Icons Navigation */}
-                <div className="flex items-center justify-between mb-4">
-                </div>
-                <TooltipProvider>
-                  <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
-                    
-                    
-                  </div>
-                </TooltipProvider>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {/* Tasks Section - Removed */}
-                {false && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Tasks</h3>
-                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
+        {/* Add Tag Dialog */}
+        <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
+          <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Create New Task</DialogTitle>
                           </DialogHeader>
