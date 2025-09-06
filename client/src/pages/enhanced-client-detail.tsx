@@ -984,13 +984,6 @@ export default function EnhancedClientDetail() {
   const [isEditingBrief, setIsEditingBrief] = useState(false);
   const [briefContent, setBriefContent] = useState("");
 
-  // Initialize brief content from client data
-  useEffect(() => {
-    if (client) {
-      setBriefContent(client.notes || "");
-    }
-  }, [client]);
-
   // Update client brief mutation
   const updateClientBriefMutation = useMutation({
     mutationFn: async (briefData: { notes: string }) => {
@@ -1049,6 +1042,13 @@ export default function EnhancedClientDetail() {
     queryKey: [`/api/clients/${clientId}`],
     enabled: !!clientId,
   });
+
+  // Initialize brief content from client data
+  useEffect(() => {
+    if (client) {
+      setBriefContent(client.notes || "");
+    }
+  }, [client]);
 
   // Fetch custom field folders
   const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
@@ -2805,7 +2805,9 @@ export default function EnhancedClientDetail() {
                         size="sm"
                         onClick={() => {
                           setIsEditingBrief(false);
-                          setBriefContent(client?.notes || "");
+                          if (client) {
+                            setBriefContent(client.notes || "");
+                          }
                         }}
                       >
                         <X className="h-4 w-4 mr-2" />
