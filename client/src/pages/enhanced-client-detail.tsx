@@ -5995,8 +5995,8 @@ export default function EnhancedClientDetail() {
                   <div 
                     className="space-y-3 overflow-y-auto"
                     style={{ 
-                      maxHeight: calculateNotesMaxHeight(),
-                      ...(calculateNotesMaxHeight() && { paddingRight: '8px' })
+                      maxHeight: '600px',
+                      paddingRight: '8px'
                     }}
                   >
                     {notesLoading ? (
