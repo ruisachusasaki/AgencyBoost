@@ -1141,10 +1141,11 @@ export default function EnhancedClientDetail() {
 
   // Get all bundle IDs from client products
   const allClientBundleIds = useMemo(() => {
-    if (!clientProductsData) return [];
+    if (!clientProductsData || !Array.isArray(clientProductsData)) return [];
     return clientProductsData
-      .filter((item: any) => item.itemType === 'bundle')
-      .map((item: any) => item.productId || item.id);
+      .filter((item: any) => item && item.itemType === 'bundle')
+      .map((item: any) => item.productId || item.id)
+      .filter(Boolean);
   }, [clientProductsData]);
 
   // Fetch bundle details for ALL client bundles with client-specific quantities (not just expanded ones)
@@ -1164,7 +1165,7 @@ export default function EnhancedClientDetail() {
       }
       return bundleDetails;
     },
-    enabled: allClientBundleIds.length > 0 && !!clientId,
+    enabled: allClientBundleIds.length > 0 && !!clientId && !!clientProductsData,
   });
 
   // Helper functions to get dynamic names from custom fields
@@ -5316,7 +5317,7 @@ export default function EnhancedClientDetail() {
                   <Search className="h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search products and bundles..."
-                    value={productSearchTerm}
+                    value={productSearchTerm || ""}
                     onChange={(e) => setProductSearchTerm(e.target.value)}
                     className="flex-1"
                   />
@@ -6820,7 +6821,7 @@ export default function EnhancedClientDetail() {
                       <Search className="h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Search products and bundles..."
-                        value={productSearchTerm}
+                        value={productSearchTerm || ""}
                         onChange={(e) => setProductSearchTerm(e.target.value)}
                         className="flex-1"
                       />

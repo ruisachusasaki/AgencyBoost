@@ -43,12 +43,12 @@ export function ProductSearchResults({ searchTerm, clientId, onProductAdded }: P
     },
   });
 
-  const filteredProducts = productsData.filter((product: any) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = (productsData || []).filter((product: any) =>
+    product?.name?.toLowerCase().includes((searchTerm || "").toLowerCase())
   );
 
-  const filteredBundles = bundlesData.filter((bundle: any) =>
-    bundle.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredBundles = (bundlesData || []).filter((bundle: any) =>
+    bundle?.name?.toLowerCase().includes((searchTerm || "").toLowerCase())
   );
 
   const allResults = [
