@@ -6810,6 +6810,8 @@ export default function EnhancedClientDetail() {
           }}
           existingAppointment={editingAppointment}
           clientId={clientId}
+          clientName={client?.firstName && client?.lastName ? `${client.firstName} ${client.lastName}` : client?.companyName}
+          clientEmail={client?.email}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
             queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
