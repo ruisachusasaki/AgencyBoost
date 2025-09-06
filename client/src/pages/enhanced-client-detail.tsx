@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "documents" | "payments">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "payments">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -1139,7 +1139,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client documents');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "documents" || activeHubSection === "documents"),
+    enabled: !!clientId && activeHubSection === "documents",
   });
 
   // Get all bundle IDs from client products
@@ -3545,23 +3545,6 @@ export default function EnhancedClientDetail() {
                       </TooltipContent>
                     </Tooltip>
                     
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("documents")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "documents"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <Upload className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Files</p>
-                      </TooltipContent>
-                    </Tooltip>
                     
                     
                     <Tooltip>
@@ -4237,226 +4220,6 @@ export default function EnhancedClientDetail() {
                 )}
 
 
-                {/* Documents Section */}
-                {activeRightSection === "documents" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Documents</h3>
-                      <DocumentUploader
-                        clientId={clientId!}
-                        onUploadComplete={() => {
-                          queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
-                        }}
-                        maxNumberOfFiles={5}
-                        buttonClassName="text-sm"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Documents
-                      </DocumentUploader>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Search documents..."
-                          value={searchDocuments}
-                          onChange={(e) => setSearchDocuments(e.target.value)}
-                          className="pl-10 text-sm"
-                        />
-                      </div>
-                      
-                      {/* Filter Controls */}
-                      <div className="flex gap-2 text-xs">
-                        <Select value={documentFilterType} onValueChange={setDocumentFilterType}>
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue placeholder="File Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="pdf">PDF</SelectItem>
-                            <SelectItem value="doc">Documents</SelectItem>
-                            <SelectItem value="excel">Spreadsheets</SelectItem>
-                            <SelectItem value="presentation">Presentations</SelectItem>
-                            <SelectItem value="image">Images</SelectItem>
-                            <SelectItem value="text">Text Files</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        <Select value={documentSortBy} onValueChange={setDocumentSortBy}>
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue placeholder="Sort By" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="newest">Newest First</SelectItem>
-                            <SelectItem value="oldest">Oldest First</SelectItem>
-                            <SelectItem value="name">Name A-Z</SelectItem>
-                            <SelectItem value="name-desc">Name Z-A</SelectItem>
-                            <SelectItem value="size-large">Largest First</SelectItem>
-                            <SelectItem value="size-small">Smallest First</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {documentsLoading ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <div className="text-sm">Loading documents...</div>
-                        </div>
-                      ) : clientDocuments.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm">No documents yet</p>
-                          <p className="text-xs text-gray-400">Upload a document to get started</p>
-                        </div>
-                      ) : (
-                        clientDocuments
-                          .filter((doc: any) => {
-                            // Search filter
-                            const matchesSearch = !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase());
-                            
-                            // File type filter - only apply if not "all"
-                            if (documentFilterType === "all") {
-                              return matchesSearch; // Skip file type filtering for "all"
-                            }
-                            
-                            const fileType = doc.fileType?.toLowerCase() || "";
-                            let matchesType = false;
-                            
-                            switch (documentFilterType) {
-                              case "pdf":
-                                matchesType = fileType === "pdf";
-                                break;
-                              case "doc":
-                                matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
-                                break;
-                              case "excel":
-                                matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
-                                break;
-                              case "presentation":
-                                matchesType = ["ppt", "pptx", "key"].includes(fileType);
-                                break;
-                              case "image":
-                                matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
-                                break;
-                              case "text":
-                                matchesType = ["txt", "rtf"].includes(fileType);
-                                break;
-                              default:
-                                matchesType = true;
-                            }
-                            
-                            return matchesSearch && matchesType;
-                          })
-                          .sort((a: any, b: any) => {
-                            switch (documentSortBy) {
-                              case "newest":
-                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                              case "oldest":
-                                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                              case "name":
-                                return a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase());
-                              case "name-desc":
-                                return b.fileName.toLowerCase().localeCompare(a.fileName.toLowerCase());
-                              case "size-large":
-                                return b.fileSize - a.fileSize;
-                              case "size-small":
-                                return a.fileSize - b.fileSize;
-                              default:
-                                return 0;
-                            }
-                          })
-                          .map((doc: any) => {
-                            const getFileIconColor = (fileType: string) => {
-                              switch (fileType.toLowerCase()) {
-                                case 'pdf':
-                                  return 'bg-red-100 text-red-600';
-                                case 'docx':
-                                case 'doc':
-                                  return 'bg-blue-100 text-blue-600';
-                                case 'xlsx':
-                                case 'xls':
-                                  return 'bg-green-100 text-green-600';
-                                case 'pptx':
-                                case 'ppt':
-                                  return 'bg-orange-100 text-orange-600';
-                                default:
-                                  return 'bg-gray-100 text-gray-600';
-                              }
-                            };
-                            
-                            const formatFileSize = (bytes: number) => {
-                              if (bytes === 0) return '0 B';
-                              const k = 1024;
-                              const sizes = ['B', 'KB', 'MB', 'GB'];
-                              const i = Math.floor(Math.log(bytes) / Math.log(k));
-                              return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-                            };
-                            
-                            return (
-                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
-                                <div className="flex items-start gap-3">
-                                  <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
-                                    <FileText className="h-4 w-4" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 break-words">{doc.fileName}</p>
-                                    <p className="text-xs text-gray-500">
-                                      Uploaded {new Date(doc.createdAt).toLocaleDateString()} • {formatFileSize(doc.fileSize)}
-                                    </p>
-                                    <p className="text-xs text-gray-400">
-                                      by {doc.uploadedByUser?.firstName} {doc.uploadedByUser?.lastName}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
-                                            onClick={() => window.open(doc.downloadUrl, '_blank')}
-                                          >
-                                            <Download className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Download document</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                    
-                                    {currentUser?.role === 'Admin' && (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button 
-                                              variant="ghost" 
-                                              size="sm" 
-                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" 
-                                              onClick={() => {
-                                                if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-                                                  deleteDocumentMutation.mutate(doc.id);
-                                                }
-                                              }}
-                                              disabled={deleteDocumentMutation.isPending}
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Delete document (Admin only)</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                      )}
-                    </div>
-                  </div>
-                )}
 
 
                 {/* Payments Section */}
