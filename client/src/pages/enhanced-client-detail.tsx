@@ -3513,11 +3513,561 @@ export default function EnhancedClientDetail() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
+          </TabsContent>
 
+          {/* Client Hub Tab */}
+          <TabsContent value="hub" className="space-y-6 mt-6">
+            {clientId && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
+              
+              <Tabs value={activeHubSection} onValueChange={(value) => setActiveHubSection(value as any)} className="space-y-6">
+                <TabsList className="grid w-fit grid-cols-5">
+                  <TabsTrigger value="notes" className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </TabsTrigger>
+                  <TabsTrigger value="tasks" className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="appointments" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Calendar
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    Documents
+                  </TabsTrigger>
+                  <TabsTrigger value="team" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Team
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Hub Tab Content */}
+                <TabsContent value="notes" className="mt-6">
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Notes</h3>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (newNote.trim()) {
+                              addNoteMutation.mutate({ 
+                                clientId: client?.id || '', 
+                                content: newNote.trim(),
+                                type: 'general'
+                              });
+                            }
+                          }}
+                          disabled={!newNote.trim() || addNoteMutation.isPending}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {addNoteMutation.isPending ? "Adding..." : "Add Note"}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 mb-2 block">New Note</Label>
+                          <Textarea
+                            value={newNote}
+                            onChange={(e) => setNewNote(e.target.value)}
+                            placeholder="Write your note here..."
+                            className="min-h-[100px]"
+                          />
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {hubNotesData?.length > 0 ? (
+                            hubNotesData.map((note: any) => (
+                              <div key={note.id} className="p-3 bg-gray-50 rounded-lg border">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{note.content}</p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                      <span>By {note.author || 'System'}</span>
+                                      <span>•</span>
+                                      <span>{formatDistanceToNow ? formatDistanceToNow(new Date(note.createdAt), { addSuffix: true }) : new Date(note.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-6 text-gray-500">
+                              <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>No notes yet. Add your first note above.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="tasks" className="mt-6">
+                  <TasksSection clientId={clientId!} />
+                </TabsContent>
+
+                <TabsContent value="appointments" className="mt-6">
+                  <AppointmentsSection clientId={clientId!} />
+                </TabsContent>
+
+                <TabsContent value="documents" className="mt-6">
+                  <DocumentsSection clientId={clientId!} />
+                </TabsContent>
+
+                <TabsContent value="team" className="mt-6">
+                  <TeamAssignmentSection clientId={clientId!} />
+                </TabsContent>
+              </Tabs>
+            </div>
+            )}
+          </TabsContent>
+
+          {/* Products Tab */}
+          <TabsContent value="products" className="space-y-6 mt-6">
+            <ProductsContent clientId={clientId!} client={client} />
+          </TabsContent>
+
+          {/* Communication Tab */}
+          <TabsContent value="communication" className="space-y-6 mt-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* SMS Section */}
+                <Card>
+                  <CardHeader>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                      Send SMS
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Message</Label>
+                      <Textarea
+                        value={smsMessage}
+                        onChange={(e) => setSmsMessage(e.target.value)}
+                        placeholder="Type your message here..."
+                        className="min-h-[100px]"
+                        disabled={!!client?.dndAll || !!client?.dndSms}
+                      />
+                      {(!!client?.dndAll || !!client?.dndSms) && (
+                        <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          SMS notifications are disabled for this client
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      className="w-full"
+                      disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send SMS
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Email Section */}
+                <Card>
+                  <CardHeader>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Mail className="h-5 w-5 text-primary" />
+                      Send Email
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Subject</Label>
+                      <Input
+                        value={emailData.subject}
+                        onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                        placeholder="Enter email subject"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Message</Label>
+                      <Textarea
+                        value={emailData.message}
+                        onChange={(e) => setEmailData(prev => ({ ...prev, message: e.target.value }))}
+                        placeholder="Type your message here..."
+                        className="min-h-[100px]"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                      />
+                      {(!!client?.dndAll || !!client?.dndEmail) && (
+                        <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          Email notifications are disabled for this client
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      className="w-full"
+                      disabled={!emailData.subject.trim() || !emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Email
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Activity Tab */}
+          <TabsContent value="activity" className="space-y-6 mt-6">
+            <div className="max-w-4xl mx-auto">
+              <Card>
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" />
+                    Recent Activity
+                  </h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-gray-500">
+                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Activity tracking will be implemented here</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* All Dialog Components */}
+      {/* Add Tag Dialog */}
+      <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Tag</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Search or Create Tag</Label>
+              <Input
+                value={newTagName}
+                onChange={(e) => handleTagInputChange(e.target.value)}
+                placeholder="Type to search existing tags or create new..."
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (filteredTags.length > 0 && filteredTags[0].name.toLowerCase() === newTagName.toLowerCase()) {
+                      selectExistingTag(filteredTags[0].name);
+                    } else {
+                      createNewTag();
+                    }
+                  }
+                }}
+                onFocus={() => {
+                  if (newTagName.trim()) {
+                    setShowSuggestions(true);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+              />
+              
+              {showSuggestions && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {filteredTags.length > 0 ? (
+                    <>
+                      <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">Existing Tags</div>
+                      {filteredTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => selectExistingTag(tag.name)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 text-sm"
+                        >
+                          {tag.name}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-gray-500">No matching tags found</div>
+                  )}
+                  
+                  {newTagName.trim() && (
+                    <>
+                      <div className="px-3 py-1 text-xs text-gray-500 bg-gray-50 border-b border-t">Create New</div>
+                      <button
+                        onClick={createNewTag}
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-blue-600 font-medium"
+                      >
+                        + Create "{newTagName}"
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsAddingTag(false);
+                setNewTagName("");
+                setShowSuggestions(false);
+              }}>
+                Cancel
+              </Button>
+              {newTagName.trim() && (
+                <Button onClick={createNewTag} disabled={createTagMutation.isPending}>
+                  {createTagMutation.isPending ? "Creating..." : "Create Tag"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Communication Dialogs */}
+      <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select Email Template</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8 text-gray-500">
+            <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>Email template functionality will be implemented here</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select SMS Template</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8 text-gray-500">
+            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>SMS template functionality will be implemented here</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send SMS</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8 text-gray-500">
+            <Send className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>SMS send functionality will be implemented here</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS Templates Modal */}
+      {smsTemplatesOpen && (
+        <SmsTemplatesModal 
+          isOpen={smsTemplatesOpen}
+          onClose={() => setSmsTemplatesOpen(false)}
+          onSelectTemplate={(template) => {
+            handleSmsFieldChange('message', template.content);
+            setSmsTemplatesOpen(false);
+          }}
+        />
+      )}
+
+      {/* SMS Merge Tags Modal */}
+      {smsMergeTagsOpen && (
+        <SmsMergeTagsModal 
+          isOpen={smsMergeTagsOpen}
+          onClose={() => setSmsMergeTagsOpen(false)}
+          onSelectTag={(tag) => {
+            const currentMessage = smsData.message;
+            const cursorPosition = currentMessage.length;
+            const newMessage = currentMessage.slice(0, cursorPosition) + tag + currentMessage.slice(cursorPosition);
+            handleSmsFieldChange('message', newMessage);
+            setSmsMergeTagsOpen(false);
+          }}
+        />
+      )}
+
+      {/* Email Templates Modal */}
+      {emailTemplatesOpen && (
+        <EmailTemplatesModal 
+          isOpen={emailTemplatesOpen}
+          onClose={() => setEmailTemplatesOpen(false)}
+          onSelectTemplate={(template) => {
+            const htmlToPlainText = (html: string) => {
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = html;
+              const blockElements = tempDiv.querySelectorAll('p, div, br, h1, h2, h3, h4, h5, h6');
+              blockElements.forEach(el => {
+                if (el.tagName === 'BR') {
+                  el.replaceWith('\n');
+                } else {
+                  el.insertAdjacentText('afterend', '\n\n');
+                }
+              });
+              return tempDiv.textContent || tempDiv.innerText || '';
+            };
+            
+            const plainTextContent = htmlToPlainText(template.content);
+            handleEmailFieldChange('message', plainTextContent.trim());
+            handleEmailFieldChange('subject', template.name);
+            setEmailTemplatesOpen(false);
+          }}
+        />
+      )}
+
+      {/* Email Merge Tags Modal */}
+      {emailMergeTagsOpen && (
+        <EmailMergeTagsModal 
+          isOpen={emailMergeTagsOpen}
+          onClose={() => setEmailMergeTagsOpen(false)}
+          onSelectTag={(tag) => {
+            const currentMessage = emailData.message;
+            const newMessage = currentMessage + tag;
+            handleEmailFieldChange('message', newMessage);
+            setEmailMergeTagsOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Component sections for the Client Hub
+function TasksSection({ clientId }: { clientId: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Tasks functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+function AppointmentsSection({ clientId }: { clientId: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Appointments functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+function DocumentsSection({ clientId }: { clientId: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Documents functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+// Products Content Component
+function ProductsContent({ clientId, client }: { clientId: string; client: any }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Products functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+// Modal Components
+function SmsTemplatesModal({ isOpen, onClose, onSelectTemplate }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTemplate: (template: any) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>SMS Templates</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>SMS templates functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SmsMergeTagsModal({ isOpen, onClose, onSelectTag }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTag: (tag: string) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>SMS Merge Tags</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <TagIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>SMS merge tags functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailTemplatesModal({ isOpen, onClose, onSelectTemplate }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTemplate: (template: any) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Email Templates</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>Email templates functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTag: (tag: string) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Email Merge Tags</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <TagIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>Email merge tags functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
           {/* Client Hub Tab */}
           <TabsContent value="hub" className="space-y-6 mt-6">
@@ -4023,5 +4573,6 @@ function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: {
         </div>
       </DialogContent>
     </Dialog>
+    </div>
   );
 }
