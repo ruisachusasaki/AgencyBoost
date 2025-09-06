@@ -5140,7 +5140,7 @@ export default function EnhancedClientDetail() {
                         <div className="flex items-center justify-between mb-2">
                           {/* Product/Bundle name with expand functionality for bundles */}
                           {clientProduct.itemType === 'bundle' ? (
-                            <button
+                            <div
                               onClick={() => {
                                 const newExpanded = new Set(expandedBundles);
                                 if (newExpanded.has(clientProduct.productId || clientProduct.id)) {
@@ -5150,7 +5150,7 @@ export default function EnhancedClientDetail() {
                                 }
                                 setExpandedBundles(newExpanded);
                               }}
-                              className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left"
+                              className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left cursor-pointer"
                             >
                               <h4 className="font-medium text-sm text-gray-900">
                                 {clientProduct.name || clientProduct.productName}
@@ -5160,7 +5160,7 @@ export default function EnhancedClientDetail() {
                               ) : (
                                 <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
                               )}
-                            </button>
+                            </div>
                           ) : (
                             <h4 className="font-medium text-sm text-gray-900">
                               {clientProduct.name || clientProduct.productName}
