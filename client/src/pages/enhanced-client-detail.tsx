@@ -994,9 +994,13 @@ export default function EnhancedClientDetail() {
         body: JSON.stringify(briefData),
       });
       if (!response.ok) {
-        throw new Error('Failed to update client brief');
+        const error = await response.text();
+        throw new Error(`Failed to update client brief: ${error}`);
       }
-      return response.json();
+      
+      // Check if response has content before trying to parse JSON
+      const text = await response.text();
+      return text ? JSON.parse(text) : {};
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
@@ -1006,10 +1010,11 @@ export default function EnhancedClientDetail() {
       });
       setIsEditingBrief(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error('Client brief update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update client brief",
+        description: error.message || "Failed to update client brief",
         variant: "destructive",
       });
     },
