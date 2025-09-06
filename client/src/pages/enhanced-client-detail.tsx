@@ -1104,6 +1104,8 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!clientId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Fetch client notes data
@@ -1166,6 +1168,8 @@ export default function EnhancedClientDetail() {
       return bundleDetails;
     },
     enabled: allClientBundleIds.length > 0 && !!clientId && !!clientProductsData,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Helper functions to get dynamic names from custom fields
