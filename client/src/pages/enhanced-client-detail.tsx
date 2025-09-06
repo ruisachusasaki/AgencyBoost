@@ -5082,7 +5082,7 @@ export default function EnhancedClientDetail() {
               <div>
                 <h3 className="font-semibold text-gray-900">Products & Services</h3>
                 {/* Bundle Spend Calculation */}
-                {clientProductsData.length > 0 && (() => {
+                {clientProductsData && clientProductsData.length > 0 && (() => {
                   const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
                     if (clientProduct.itemType === 'bundle') {
                       const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
@@ -5128,14 +5128,14 @@ export default function EnhancedClientDetail() {
                 <div className="text-center py-8 text-gray-500">
                   <div className="text-sm">Loading products...</div>
                 </div>
-              ) : clientProductsData.length === 0 ? (
+              ) : !clientProductsData || clientProductsData.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-sm">No products or services assigned</p>
                   <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
                 </div>
               ) : (
-                clientProductsData.map((clientProduct: any) => (
+                (clientProductsData || []).map((clientProduct: any) => (
                   <Card key={`main-product-${clientProduct.id}`} className="p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -6559,7 +6559,7 @@ export default function EnhancedClientDetail() {
                     <div>
                       <h3 className="font-semibold text-gray-900">Products & Services</h3>
                       {/* Bundle Spend Calculation */}
-                      {clientProductsData.length > 0 && (() => {
+                      {clientProductsData && clientProductsData.length > 0 && (() => {
                         const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
                           if (clientProduct.itemType === 'bundle') {
                             const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
@@ -6605,7 +6605,7 @@ export default function EnhancedClientDetail() {
                       <div className="text-center py-8 text-gray-500">
                         <div className="text-sm">Loading products...</div>
                       </div>
-                    ) : clientProductsData.length === 0 ? (
+                    ) : !clientProductsData || clientProductsData.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-sm">No products or services assigned</p>
