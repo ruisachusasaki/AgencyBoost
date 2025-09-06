@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "documents" | "payments">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -3548,24 +3548,6 @@ export default function EnhancedClientDetail() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => setActiveRightSection("appointments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "appointments"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Meetings/Appointments</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
                           onClick={() => setActiveRightSection("documents")}
                           className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
                             activeRightSection === "documents"
@@ -4254,110 +4236,6 @@ export default function EnhancedClientDetail() {
                   </div>
                 )}
 
-                {/* Appointments Section */}
-                {activeRightSection === "appointments" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Meetings/Appointments</h3>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setShowAppointmentModal(true)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
-                        clientAppointmentsData.map((appointment: any) => (
-                          <div key={appointment.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-medium text-gray-900">{appointment.title}</h4>
-                                  <Badge 
-                                    variant={
-                                      appointment.status === 'confirmed' ? 'default' :
-                                      appointment.status === 'showed' ? 'secondary' :
-                                      appointment.status === 'cancelled' ? 'destructive' :
-                                      'outline'
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {appointment.status}
-                                  </Badge>
-                                </div>
-                                <div className="text-sm text-gray-600 space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-3 w-3" />
-                                    <span>
-                                      {format(new Date(appointment.startTime), 'MMM d, yyyy h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}
-                                    </span>
-                                  </div>
-                                  {appointment.location && (
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="h-3 w-3" />
-                                      <span>{appointment.location}</span>
-                                    </div>
-                                  )}
-                                  {appointment.assignedTo && (
-                                    <div className="flex items-center gap-2">
-                                      <User className="h-3 w-3" />
-                                      <span>
-                                        {staffData.find((s: any) => s.id === appointment.assignedTo)?.firstName} {staffData.find((s: any) => s.id === appointment.assignedTo)?.lastName}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Action buttons */}
-                              <div className="flex items-center gap-1 ml-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => {
-                                    setEditingAppointment(appointment);
-                                    setShowAppointmentModal(true);
-                                  }}
-                                >
-                                  <Edit2 className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
-                                      fetch(`/api/calendar-appointments/${appointment.id}`, { method: 'DELETE' })
-                                        .then(() => {
-                                          queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
-                                          toast({ title: "Appointment deleted", description: "Appointment has been deleted successfully" });
-                                        })
-                                        .catch(() => {
-                                          toast({ title: "Error", description: "Failed to delete appointment", variant: "destructive" });
-                                        });
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm">No meetings for this client</p>
-                          <p className="text-xs text-gray-400">Click the + button to schedule a meeting</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Documents Section */}
                 {activeRightSection === "documents" && (
