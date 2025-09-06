@@ -4171,8 +4171,6 @@ export default function EnhancedClientDetail() {
                         })
                       )}
                     </div>
-                  </div>
-                )}
 
 
 
