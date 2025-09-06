@@ -980,6 +980,47 @@ export default function EnhancedClientDetail() {
   // Communication tabs state
   const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
 
+  // Client Brief state
+  const [isEditingBrief, setIsEditingBrief] = useState(false);
+  const [briefContent, setBriefContent] = useState("");
+
+  // Initialize brief content from client data
+  useEffect(() => {
+    if (client) {
+      setBriefContent(client.notes || "");
+    }
+  }, [client]);
+
+  // Update client brief mutation
+  const updateClientBriefMutation = useMutation({
+    mutationFn: async (briefData: { notes: string }) => {
+      const response = await fetch(`/api/clients/${clientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(briefData),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update client brief');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+      toast({
+        title: "Success",
+        description: "Client brief updated successfully",
+      });
+      setIsEditingBrief(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update client brief",
+        variant: "destructive",
+      });
+    },
+  });
+
   // SMS composition state (removed duplicate)
   const [characterCount, setCharacterCount] = useState(0);
   const [showSmsTemplateModal, setShowSmsTemplateModal] = useState(false);
@@ -2738,8 +2779,72 @@ export default function EnhancedClientDetail() {
 
           </div>
 
-          {/* Middle Column - Communication */}
-          <div className="lg:col-span-5">
+          {/* Middle Column - Client Brief & Communication */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Client Brief */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Client Brief
+                  </h2>
+                  {!isEditingBrief ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingBrief(true)}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingBrief(false);
+                          setBriefContent(client?.notes || "");
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          updateClientBriefMutation.mutate({ notes: briefContent });
+                        }}
+                        disabled={updateClientBriefMutation.isPending}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {updateClientBriefMutation.isPending ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isEditingBrief ? (
+                  <Textarea
+                    value={briefContent}
+                    onChange={(e) => setBriefContent(e.target.value)}
+                    placeholder="Add client brief notes, project details, or important information..."
+                    className="min-h-[120px] resize-none"
+                  />
+                ) : (
+                  <div className="min-h-[120px]">
+                    {briefContent ? (
+                      <p className="text-gray-700 whitespace-pre-wrap">{briefContent}</p>
+                    ) : (
+                      <p className="text-gray-500 italic">No client brief added yet. Click Edit to add important client information, project details, or notes.</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Communication */}
             <Card>
               <CardHeader>
