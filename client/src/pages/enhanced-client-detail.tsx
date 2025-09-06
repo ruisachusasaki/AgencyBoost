@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, NotebookPen, CheckSquare } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -3561,74 +3561,78 @@ export default function EnhancedClientDetail() {
               </TabsList>
 
               <TabsContent value="notes" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Notes</h3>
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Note
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-3">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Notes ({clientNotes?.length || 0})</CardTitle>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Note
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
                     {clientNotes && clientNotes.length > 0 ? (
-                      clientNotes.map((note: any) => (
-                        <Card key={note.id}>
-                          <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {clientNotes.map((note: any) => (
+                          <div key={note.id} className="border rounded-lg p-4">
                             <div className="flex items-start justify-between mb-2">
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-slate-500">
                                 {note.staff?.firstName} {note.staff?.lastName} • {format(new Date(note.createdAt), 'MMM dd, yyyy')}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-700">{note.content}</p>
-                          </CardContent>
-                        </Card>
-                      ))
+                            <p className="text-sm text-slate-700">{note.content}</p>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-lg mb-2">📝</div>
-                        <p>No notes yet</p>
-                        <p className="text-sm">Add your first note to get started</p>
+                      <div className="text-center py-8 text-slate-500">
+                        <NotebookPen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <h3 className="font-medium mb-2">No Notes Yet</h3>
+                        <p className="text-sm mb-4">Add notes to track interactions and important information about this client.</p>
+                        <Button variant="outline">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add First Note
+                        </Button>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="tasks" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Tasks</h3>
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Task
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-3">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Tasks ({clientTasksData?.length || 0})</CardTitle>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Task
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
                     {clientTasksData && clientTasksData.length > 0 ? (
-                      clientTasksData.map((task: any) => (
-                        <Card key={task.id}>
-                          <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {clientTasksData.map((task: any) => (
+                          <div key={task.id} className="border rounded-lg p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-medium text-gray-900">{task.title}</h4>
+                                <h4 className="font-medium text-slate-900">{task.title}</h4>
                                 {task.description && (
-                                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                                  <p className="text-sm text-slate-600 mt-1">{task.description}</p>
                                 )}
-                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                  {task.dueDate && (
-                                    <span>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</span>
-                                  )}
-                                  {task.assignedStaff && (
-                                    <span>Assigned to: {task.assignedStaff.firstName} {task.assignedStaff.lastName}</span>
-                                  )}
+                                <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                                  <span>Status: {task.status}</span>
+                                  <span>Priority: {task.priority}</span>
+                                  {task.assignedTo && <span>Assigned to: {task.assignedTo}</span>}
+                                  {task.dueDate && <span>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</span>}
                                 </div>
                               </div>
                               <div className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -3639,84 +3643,100 @@ export default function EnhancedClientDetail() {
                                 {task.status}
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-lg mb-2">✅</div>
-                        <p>No tasks yet</p>
-                        <p className="text-sm">Create your first task to get started</p>
+                      <div className="text-center py-8 text-slate-500">
+                        <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <h3 className="font-medium mb-2">No Tasks Yet</h3>
+                        <p className="text-sm mb-4">Create tasks to track work and deadlines for this client.</p>
+                        <Button variant="outline">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create First Task
+                        </Button>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="appointments" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Appointments</h3>
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Schedule Appointment
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-3">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Appointments ({clientAppointmentsData?.length || 0})</CardTitle>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Schedule Appointment
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
                     {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
-                      clientAppointmentsData.map((appointment: any) => (
-                        <Card key={appointment.id}>
-                          <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {clientAppointmentsData.map((appointment: any) => (
+                          <div key={appointment.id} className="border rounded-lg p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-medium text-gray-900">{appointment.title}</h4>
+                                <h4 className="font-medium text-slate-900">{appointment.title}</h4>
                                 {appointment.description && (
-                                  <p className="text-sm text-gray-600 mt-1">{appointment.description}</p>
+                                  <p className="text-sm text-slate-600 mt-1">{appointment.description}</p>
                                 )}
-                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                  <span>📅 {format(new Date(appointment.startTime), 'MMM dd, yyyy')}</span>
-                                  <span>🕐 {format(new Date(appointment.startTime), 'h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}</span>
-                                  {appointment.location && <span>📍 {appointment.location}</span>}
+                                <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                                  <span>Date: {format(new Date(appointment.startTime), 'MMM dd, yyyy')}</span>
+                                  <span>Time: {format(new Date(appointment.startTime), 'h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}</span>
+                                  {appointment.location && <span>Location: {appointment.location}</span>}
                                 </div>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-lg mb-2">📅</div>
-                        <p>No appointments yet</p>
-                        <p className="text-sm">Schedule your first appointment to get started</p>
+                      <div className="text-center py-8 text-slate-500">
+                        <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <h3 className="font-medium mb-2">No Appointments Yet</h3>
+                        <p className="text-sm mb-4">Schedule meetings and appointments with this client.</p>
+                        <Button variant="outline">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Schedule First Appointment
+                        </Button>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="documents" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Documents</h3>
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Upload Document
-                    </Button>
-                  </div>
-                  
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-lg mb-2">📄</div>
-                    <p>No documents yet</p>
-                    <p className="text-sm">Upload your first document to get started</p>
-                  </div>
-                </div>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Documents (0)</CardTitle>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Upload Document
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8 text-slate-500">
+                      <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <h3 className="font-medium mb-2">No Documents Yet</h3>
+                      <p className="text-sm mb-4">Upload files and documents related to this client.</p>
+                      <Button variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Upload First Document
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="team" className="mt-6">
