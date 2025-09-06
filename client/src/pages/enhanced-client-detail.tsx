@@ -3513,6 +3513,7 @@ export default function EnhancedClientDetail() {
                 </div>
               </DialogContent>
             </Dialog>
+
                 </CardContent>
               </Card>
             </div>
