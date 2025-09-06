@@ -5083,7 +5083,7 @@ export default function EnhancedClientDetail() {
                 {clientProductsData.length > 0 && (() => {
                   const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
                     if (clientProduct.itemType === 'bundle') {
-                      const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                      const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
                       const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
                         return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
                       }, 0);
@@ -5169,17 +5169,16 @@ export default function EnhancedClientDetail() {
                           <div className="flex items-center gap-2">
                             {/* Calculate bundle cost dynamically */}
                             <span className="text-sm font-medium text-green-600">
-                              ${(() => {
-                                if (clientProduct.itemType === 'bundle') {
-                                  const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
-                                  const totalCost = bundleProducts.reduce((sum: number, product: any) => {
-                                    return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
-                                  }, 0);
-                                  return totalCost.toFixed(2);
-                                } else {
-                                  return (clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00');
-                                }
-                              })()}
+                              ${clientProduct.itemType === 'bundle' 
+                                ? (() => {
+                                    const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
+                                    const totalCost = bundleProducts.reduce((sum: number, product: any) => {
+                                      return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                                    }, 0);
+                                    return totalCost.toFixed(2);
+                                  })()
+                                : (clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00')
+                              }
                             </span>
                             {/* Add edit button for bundles */}
                             {clientProduct.itemType === 'bundle' && (
@@ -5190,7 +5189,7 @@ export default function EnhancedClientDetail() {
                                 onClick={() => {
                                   setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
                                   // Initialize temp quantities
-                                  const currentBundle = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                  const currentBundle = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
                                   const initialQuantities: Record<string, number> = {};
                                   currentBundle.forEach((product: any) => {
                                     initialQuantities[product.productId] = product.quantity || 1;
@@ -5232,7 +5231,7 @@ export default function EnhancedClientDetail() {
                             {editingBundleQuantities === (clientProduct.productId || clientProduct.id) ? (
                               <div className="space-y-2">
                                 <h5 className="text-xs font-semibold text-gray-700 mb-2">Edit Bundle Quantities:</h5>
-                                {(bundleDetailsData[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
+                                {(bundleDetailsData?.[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
                                   <div key={product.productId} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                                     <span className="text-xs font-medium">{product.productName}</span>
                                     <Input
@@ -5259,7 +5258,7 @@ export default function EnhancedClientDetail() {
                             ) : (
                               <div className="space-y-1">
                                 <h5 className="text-xs font-semibold text-gray-700 mb-2">Included Products:</h5>
-                                {(bundleDetailsData[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
+                                {(bundleDetailsData?.[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
                                   <div key={product.productId} className="flex items-center justify-between text-xs">
                                     <span className="text-gray-600">{product.productName}</span>
                                     <div className="flex items-center gap-2">
@@ -6552,7 +6551,7 @@ export default function EnhancedClientDetail() {
                       {clientProductsData.length > 0 && (() => {
                         const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
                           if (clientProduct.itemType === 'bundle') {
-                            const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                            const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
                             const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
                               return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
                             }, 0);
@@ -6648,7 +6647,7 @@ export default function EnhancedClientDetail() {
                                     <span className="text-sm font-medium text-green-600">
                                       ${(() => {
                                         if (clientProduct.itemType === 'bundle') {
-                                          const bundleProducts = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                          const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
                                           const totalCost = bundleProducts.reduce((sum: number, product: any) => {
                                             return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
                                           }, 0);
@@ -6667,7 +6666,7 @@ export default function EnhancedClientDetail() {
                                         onClick={() => {
                                           setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
                                           // Initialize temp quantities
-                                          const currentBundle = bundleDetailsData[clientProduct.productId || clientProduct.id] || [];
+                                          const currentBundle = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
                                           const initialQuantities: Record<string, number> = {};
                                           currentBundle.forEach((product: any) => {
                                             initialQuantities[product.productId] = product.quantity || 1;
@@ -6707,10 +6706,10 @@ export default function EnhancedClientDetail() {
                           {/* Expanded Bundle Contents */}
                           {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId || clientProduct.id) && (
                             <div className="ml-6 space-y-1">
-                              {bundleDetailsData && bundleDetailsData[clientProduct.productId || clientProduct.id] ? (
+                              {bundleDetailsData && bundleDetailsData?.[clientProduct.productId || clientProduct.id] ? (
                                 <div className="space-y-2 p-3 bg-white rounded border border-gray-200">
                                   <h5 className="font-medium text-gray-900 text-sm">Included Products</h5>
-                                  {bundleDetailsData[clientProduct.productId || clientProduct.id].map((product: any) => (
+                                  {bundleDetailsData?.[clientProduct.productId || clientProduct.id].map((product: any) => (
                                     <div key={product.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
                                       <div className="flex items-center gap-2">
                                         <ShoppingCart className="w-4 h-4 text-gray-500" />
@@ -6759,7 +6758,7 @@ export default function EnhancedClientDetail() {
                                         </div>
                                       </div>
                                       <div className="space-y-2">
-                                        {bundleDetailsData[clientProduct.productId || clientProduct.id]?.map((product: any) => (
+                                        {bundleDetailsData?.[clientProduct.productId || clientProduct.id]?.map((product: any) => (
                                           <div key={product.productId} className="flex items-center gap-2 p-2 bg-white rounded text-sm">
                                             <ShoppingCart className="w-4 h-4 text-gray-500" />
                                             <span className="flex-1 font-medium">{product.productName}</span>
