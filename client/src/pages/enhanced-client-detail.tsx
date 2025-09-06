@@ -3936,6 +3936,7 @@ export default function EnhancedClientDetail() {
           }}
         />
       )}
+    </>
     </div>
   );
 }
