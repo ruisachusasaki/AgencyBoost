@@ -3722,112 +3722,306 @@ export default function EnhancedClientDetail() {
           </TabsContent>
         </Tabs>
 
-        {/* Dialog Components */}
-        {/* Add Tag Dialog */}
-        <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                              <Input
-                                value={assigneeSearchTerm}
-                                onChange={(e) => {
-                                  setAssigneeSearchTerm(e.target.value);
-                                  if (e.target.value.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
-                                    );
-                                    setFilteredAssignees(filtered);
-                                    setShowAssigneeSuggestions(filtered.length > 0);
-                                  } else {
-                                    setFilteredAssignees([]);
-                                    setShowAssigneeSuggestions(false);
-                                  }
-                                }}
-                                placeholder="Search staff members..."
-                                onFocus={() => {
-                                  if (assigneeSearchTerm.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
-                                    );
-                                    setFilteredAssignees(filtered);
-                                    setShowAssigneeSuggestions(filtered.length > 0);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  setTimeout(() => setShowAssigneeSuggestions(false), 200);
-                                }}
-                              />
-                              
-                              {showAssigneeSuggestions && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                  {filteredAssignees.map((staff: any) => (
-                                    <button
-                                      key={staff.id}
-                                      onClick={() => {
-                                        setNewTask(prev => ({ ...prev, assignee: staff.id }));
-                                        setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
-                                        setShowAssigneeSuggestions(false);
-                                      }}
-                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
-                                    >
-                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
-                                      </div>
-                                      <div>
-                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
-                                        <div className="text-xs text-gray-500">{staff.email}</div>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-4">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="recurring"
-                                  checked={newTask.recurring}
-                                  onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, recurring: !!checked }))}
-                                />
-                                <Label htmlFor="recurring" className="text-sm font-medium text-gray-700">
-                                  Recurring Task
-                                </Label>
-                              </div>
+      </div>
 
-                              {newTask.recurring && (
-                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
-                                  <div className="flex items-center gap-2">
-                                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Repeats every</Label>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={recurringConfig.interval}
-                                      onChange={(e) => setRecurringConfig(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
-                                      className="w-20"
-                                    />
-                                    <Select
-                                      value={recurringConfig.unit}
-                                      onValueChange={(value: any) => setRecurringConfig(prev => ({ ...prev, unit: value }))}
-                                    >
-                                      <SelectTrigger className="w-32">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="hours">Hour(s)</SelectItem>
-                                        <SelectItem value="days">Day(s)</SelectItem>
-                                        <SelectItem value="weeks">Week(s)</SelectItem>
-                                        <SelectItem value="months">Month(s)</SelectItem>
-                                        <SelectItem value="years">Year(s)</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+      {/* All Dialog Components */}
+      {/* Add Tag Dialog */}
+      <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Tag</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Search or Create Tag</Label>
+              <Input
+                value={newTagName}
+                onChange={(e) => handleTagInputChange(e.target.value)}
+                placeholder="Type to search existing tags or create new..."
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (filteredTags.length > 0 && filteredTags[0].name.toLowerCase() === newTagName.toLowerCase()) {
+                      selectExistingTag(filteredTags[0].name);
+                    } else {
+                      createNewTag();
+                    }
+                  }
+                }}
+                onFocus={() => {
+                  if (newTagName.trim()) {
+                    setShowSuggestions(true);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+              />
+              
+              {showSuggestions && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {filteredTags.length > 0 ? (
+                    <>
+                      <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">Existing Tags</div>
+                      {filteredTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => selectExistingTag(tag.name)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 text-sm"
+                        >
+                          {tag.name}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-gray-500">No matching tags found</div>
+                  )}
+                  
+                  {newTagName.trim() && (
+                    <>
+                      <div className="px-3 py-1 text-xs text-gray-500 bg-gray-50 border-b border-t">Create New</div>
+                      <button
+                        onClick={createNewTag}
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-blue-600 font-medium"
+                      >
+                        + Create "{newTagName}"
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsAddingTag(false);
+                setNewTagName("");
+                setShowSuggestions(false);
+              }}>
+                Cancel
+              </Button>
+              {newTagName.trim() && (
+                <Button onClick={createNewTag} disabled={createTagMutation.isPending}>
+                  {createTagMutation.isPending ? "Creating..." : "Create Tag"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700">Ends On:</Label>
-                                    <div className="space-y-2">
+      {/* Owner Assignment Dialog */}
+      <Dialog open={isAssigningOwner} onOpenChange={setIsAssigningOwner}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Contact Owner</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Search Staff Members</Label>
+              <Input
+                value={ownerSearchTerm}
+                onChange={(e) => {
+                  setOwnerSearchTerm(e.target.value);
+                  if (e.target.value.trim() && staffData) {
+                    const filtered = staffData.filter((staff: any) => 
+                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
+                    );
+                    setFilteredOwners(filtered);
+                    setShowOwnerSuggestions(filtered.length > 0);
+                  } else {
+                    setFilteredOwners([]);
+                    setShowOwnerSuggestions(false);
+                  }
+                }}
+                placeholder="Search staff members..."
+                onFocus={() => {
+                  if (ownerSearchTerm.trim() && staffData) {
+                    const filtered = staffData.filter((staff: any) => 
+                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(ownerSearchTerm.toLowerCase()) ||
+                      staff.email?.toLowerCase().includes(ownerSearchTerm.toLowerCase())
+                    );
+                    setFilteredOwners(filtered);
+                    setShowOwnerSuggestions(filtered.length > 0);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setShowOwnerSuggestions(false), 200);
+                }}
+              />
+              
+              {showOwnerSuggestions && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {filteredOwners.map((staff: any) => (
+                    <button
+                      key={staff.id}
+                      onClick={() => {
+                        assignOwnerMutation.mutate(staff.id);
+                        setOwnerSearchTerm(`${staff.firstName} ${staff.lastName}`);
+                        setShowOwnerSuggestions(false);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                    >
+                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                        <div className="text-xs text-gray-500">{staff.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsAssigningOwner(false);
+                setOwnerSearchTerm("");
+                setShowOwnerSuggestions(false);
+              }}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Component sections for the Client Hub
+function TasksSection({ clientId }: { clientId: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Tasks functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+function AppointmentsSection({ clientId }: { clientId: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Appointments functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+function DocumentsSection({ clientId }: { clientId: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Documents functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+// Products Content Component
+function ProductsContent({ clientId, client }: { clientId: string; client: any }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-8 text-gray-500">
+        <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Products functionality will be implemented here</p>
+      </div>
+    </div>
+  );
+}
+
+// Modal Components
+function SmsTemplatesModal({ isOpen, onClose, onSelectTemplate }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTemplate: (template: any) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>SMS Templates</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>SMS templates functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SmsMergeTagsModal({ isOpen, onClose, onSelectTag }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTag: (tag: string) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>SMS Merge Tags</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <TagIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>SMS merge tags functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailTemplatesModal({ isOpen, onClose, onSelectTemplate }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTemplate: (template: any) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Email Templates</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>Email templates functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelectTag: (tag: string) => void; 
+}) {
+  if (!isOpen) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Email Merge Tags</DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-8 text-gray-500">
+          <TagIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>Email merge tags functionality will be implemented here</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
                                       <div className="flex items-center space-x-2">
                                         <Checkbox
                                           id="end-never"
