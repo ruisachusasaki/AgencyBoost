@@ -5134,7 +5134,7 @@ export default function EnhancedClientDetail() {
                 </div>
               ) : (
                 clientProductsData.map((clientProduct: any) => (
-                  <Card key={clientProduct.id} className="p-4 hover:shadow-md transition-shadow">
+                  <Card key={`main-product-${clientProduct.id}`} className="p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
@@ -6603,7 +6603,7 @@ export default function EnhancedClientDetail() {
                       </div>
                     ) : (
                       clientProductsData.map((clientProduct: any, index: number) => (
-                        <div key={`product-${clientProduct.id || clientProduct.productId || index}`} className="space-y-2">
+                        <div key={`hub-product-${clientProduct.id || clientProduct.productId || index}`} className="space-y-2">
                           {/* Main Product/Bundle Item */}
                           <div className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
                             <div className="flex items-start gap-3">
