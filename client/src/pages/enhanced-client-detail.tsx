@@ -5084,11 +5084,12 @@ export default function EnhancedClientDetail() {
                 <h3 className="font-semibold text-gray-900">Products & Services</h3>
                 {/* Bundle Spend Calculation */}
                 {clientProductsData && clientProductsData.length > 0 && (() => {
-                  const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
+                  const totalSpend = (clientProductsData || []).reduce((total: number, clientProduct: any) => {
+                    if (!clientProduct) return total;
                     if (clientProduct.itemType === 'bundle') {
                       const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                      const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
-                        return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                      const bundleCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
+                        return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
                       }, 0);
                       return total + bundleCost;
                     } else {
@@ -5178,8 +5179,8 @@ export default function EnhancedClientDetail() {
                               ${clientProduct.itemType === 'bundle' 
                                 ? (() => {
                                     const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                                    const totalCost = bundleProducts.reduce((sum: number, product: any) => {
-                                      return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                                    const totalCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
+                                      return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
                                     }, 0);
                                     return totalCost.toFixed(2);
                                   })()
@@ -6561,11 +6562,12 @@ export default function EnhancedClientDetail() {
                       <h3 className="font-semibold text-gray-900">Products & Services</h3>
                       {/* Bundle Spend Calculation */}
                       {clientProductsData && clientProductsData.length > 0 && (() => {
-                        const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
+                        const totalSpend = (clientProductsData || []).reduce((total: number, clientProduct: any) => {
+                          if (!clientProduct) return total;
                           if (clientProduct.itemType === 'bundle') {
                             const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                            const bundleCost = bundleProducts.reduce((sum: number, product: any) => {
-                              return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                            const bundleCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
+                              return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
                             }, 0);
                             return total + bundleCost;
                           } else {
@@ -6660,8 +6662,8 @@ export default function EnhancedClientDetail() {
                                       ${(() => {
                                         if (clientProduct.itemType === 'bundle') {
                                           const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                                          const totalCost = bundleProducts.reduce((sum: number, product: any) => {
-                                            return sum + (Number(product.productCost || 0) * Number(product.quantity || 1));
+                                          const totalCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
+                                            return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
                                           }, 0);
                                           return totalCost.toFixed(2);
                                         } else {
