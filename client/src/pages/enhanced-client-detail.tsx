@@ -531,7 +531,7 @@ const EditableField = ({
                 {fieldEditValue && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {fieldEditValue.split(',').map(v => v.trim()).filter(v => v).map((value, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs flex items-center gap-1">
+                      <Badge key={`${fieldId}-${value}-${index}`} variant="secondary" className="text-xs flex items-center gap-1">
                         {value}
                         <button
                           type="button"
@@ -683,7 +683,7 @@ const EditableField = ({
                 value.split(',').map((item: string, index: number) => {
                   const trimmedItem = item.trim();
                   return trimmedItem ? (
-                    <Badge key={index} variant="secondary" className="mr-1 mb-1 text-xs">
+                    <Badge key={`${trimmedItem}-${index}`} variant="secondary" className="mr-1 mb-1 text-xs">
                       {trimmedItem}
                     </Badge>
                   ) : null;
@@ -2648,7 +2648,7 @@ export default function EnhancedClientDetail() {
                             const tag = tagsData.find((t: Tag) => t.name === tagName);
                             return (
                               <Badge
-                                key={index}
+                                key={`tag-${tagName}-${index}`}
                                 variant="secondary"
                                 className="text-xs"
                                 style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined, borderColor: tag?.color }}
@@ -6603,7 +6603,7 @@ export default function EnhancedClientDetail() {
                       </div>
                     ) : (
                       clientProductsData.map((clientProduct: any, index: number) => (
-                        <div key={index} className="space-y-2">
+                        <div key={`product-${clientProduct.id || clientProduct.productId || index}`} className="space-y-2">
                           {/* Main Product/Bundle Item */}
                           <div className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
                             <div className="flex items-start gap-3">
