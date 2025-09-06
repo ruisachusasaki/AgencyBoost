@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -1128,7 +1128,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client tasks');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "tasks" || activeHubSection === "tasks"),
+    enabled: !!clientId && activeHubSection === "tasks",
   });
 
   // Fetch client documents data
@@ -3527,23 +3527,6 @@ export default function EnhancedClientDetail() {
                 </div>
                 <TooltipProvider>
                   <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("tasks")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "tasks"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Tasks</p>
-                      </TooltipContent>
-                    </Tooltip>
                     
                     
                   </div>
