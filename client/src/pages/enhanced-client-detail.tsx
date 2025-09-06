@@ -3519,12 +3519,27 @@ export default function EnhancedClientDetail() {
           </div>
         </div>
 
-        {/* Add Tag Dialog */}
-        <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
-          <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Task</DialogTitle>
-                          </DialogHeader>
+        {/* Tasks Section */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-primary" />
+              Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Create New Task Dialog */}
+            <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="mb-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Task
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Task</DialogTitle>
+                </DialogHeader>
                           <div className="space-y-4">
                             <div>
                               <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
@@ -4013,7 +4028,7 @@ export default function EnhancedClientDetail() {
                           </div>
                         </DialogContent>
                       </Dialog>
-                    </div>
+                    </Dialog>
 
                     <div className="space-y-3">
                       {tasksLoading ? (
