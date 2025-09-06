@@ -4028,8 +4028,7 @@ export default function EnhancedClientDetail() {
                           </div>
                         </DialogContent>
                       </Dialog>
-                    </Dialog>
-
+                    
                     <div className="space-y-3">
                       {tasksLoading ? (
                         <div className="text-center py-8 text-gray-500">
