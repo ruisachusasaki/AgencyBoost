@@ -3524,7 +3524,6 @@ export default function EnhancedClientDetail() {
               <CardHeader className="pb-4">
                 {/* Horizontal Icons Navigation */}
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Client Hub</h2>
                 </div>
                 <TooltipProvider>
                   <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
