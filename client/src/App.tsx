@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,7 +8,7 @@ import { TimerProvider } from "@/contexts/TimerContext";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
-import ClientBriefDemo from "@/pages/client-brief-demo";
+import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 import Projects from "@/pages/projects";
 import ProjectEdit from "@/pages/project-edit";
 
@@ -65,7 +66,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/clients" component={Clients} />
-      <Route path="/clients/:id" component={ClientBriefDemo} />
+      <Route path="/clients/:id" component={lazy(() => import("./pages/client-brief-demo"))} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:id/edit" component={ProjectEdit} />
 
