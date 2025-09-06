@@ -989,7 +989,7 @@ export default function EnhancedClientDetail() {
   const updateClientBriefMutation = useMutation({
     mutationFn: async (briefData: { notes: string }) => {
       const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(briefData),
       });
