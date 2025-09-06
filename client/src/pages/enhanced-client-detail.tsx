@@ -3510,169 +3510,31 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+          </TabsContent>
 
-          {/* Right Column - Client Activity Hub */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="pb-4">
-                {/* Horizontal Icons Navigation */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Client Hub</h2>
-                </div>
-                <TooltipProvider>
-                  <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("tasks")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "tasks"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Tasks</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("appointments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "appointments"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Meetings/Appointments</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("documents")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "documents"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <Upload className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Files</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("team")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "team"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <Users className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Team</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("payments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
-                            activeRightSection === "payments"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-400"
-                          }`}
-                          disabled
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Billing (Coming Soon)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TooltipProvider>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {/* Tasks Section */}
-                {activeRightSection === "tasks" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Tasks</h3>
-                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Task</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                              <Input
-                                value={newTask.title}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                placeholder="Enter task title"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                              <Textarea
-                                value={newTask.description}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Enter task description"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                                <Input
-                                  type="date"
-                                  value={newTask.dueDate}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                                <Input
-                                  type="time"
-                                  value={newTask.dueTime}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                                />
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                              <Input
-                                value={assigneeSearchTerm}
-                                onChange={(e) => {
-                                  setAssigneeSearchTerm(e.target.value);
-                                  if (e.target.value.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
+        {/* Products & Services Tab */}
+        <TabsContent value="products" className="space-y-6 mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Products & Services</h2>
+                <p className="text-sm text-gray-500">Manage client products and service bundles</p>
+              </div>
+              <ProductSearchResults 
+                clientId={clientId} 
+                onProductSelect={() => queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] })}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Recent Activity Tab */}
+        <TabsContent value="activity" className="space-y-6 mt-6">
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2> 
                                       `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
                                       staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
                                     );
