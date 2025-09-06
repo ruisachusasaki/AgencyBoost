@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -1128,7 +1128,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client tasks');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "tasks" || activeHubSection === "tasks"),
+    enabled: !!clientId && activeHubSection === "tasks",
   });
 
   // Fetch client documents data
@@ -3527,686 +3527,84 @@ export default function EnhancedClientDetail() {
                 </div>
                 <TooltipProvider>
                   <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("tasks")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "tasks"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Tasks</p>
-                      </TooltipContent>
-                    </Tooltip>
                     
                     
                   </div>
                 </TooltipProvider>
               </CardHeader>
               <CardContent className="pt-6">
-                {/* Tasks Section */}
-                {activeRightSection === "tasks" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Tasks</h3>
-                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Task</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                              <Input
-                                value={newTask.title}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                placeholder="Enter task title"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                              <Textarea
-                                value={newTask.description}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Enter task description"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                                <Input
-                                  type="date"
-                                  value={newTask.dueDate}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                                <Input
-                                  type="time"
-                                  value={newTask.dueTime}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                                />
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                              <Input
-                                value={assigneeSearchTerm}
-                                onChange={(e) => {
-                                  setAssigneeSearchTerm(e.target.value);
-                                  if (e.target.value.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
-                                    );
-                                    setFilteredAssignees(filtered);
-                                    setShowAssigneeSuggestions(filtered.length > 0);
-                                  } else {
-                                    setFilteredAssignees([]);
-                                    setShowAssigneeSuggestions(false);
-                                  }
-                                }}
-                                placeholder="Search staff members..."
-                                onFocus={() => {
-                                  if (assigneeSearchTerm.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
-                                    );
-                                    setFilteredAssignees(filtered);
-                                    setShowAssigneeSuggestions(filtered.length > 0);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  setTimeout(() => setShowAssigneeSuggestions(false), 200);
-                                }}
-                              />
-                              
-                              {showAssigneeSuggestions && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                  {filteredAssignees.map((staff: any) => (
-                                    <button
-                                      key={staff.id}
-                                      onClick={() => {
-                                        setNewTask(prev => ({ ...prev, assignee: staff.id }));
-                                        setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
-                                        setShowAssigneeSuggestions(false);
-                                      }}
-                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
-                                    >
-                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
-                                      </div>
-                                      <div>
-                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
-                                        <div className="text-xs text-gray-500">{staff.email}</div>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-4">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="recurring"
-                                  checked={newTask.recurring}
-                                  onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, recurring: !!checked }))}
-                                />
-                                <Label htmlFor="recurring" className="text-sm font-medium text-gray-700">
-                                  Recurring Task
-                                </Label>
-                              </div>
-
-                              {newTask.recurring && (
-                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
-                                  <div className="flex items-center gap-2">
-                                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Repeats every</Label>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={recurringConfig.interval}
-                                      onChange={(e) => setRecurringConfig(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
-                                      className="w-20"
-                                    />
-                                    <Select
-                                      value={recurringConfig.unit}
-                                      onValueChange={(value: any) => setRecurringConfig(prev => ({ ...prev, unit: value }))}
-                                    >
-                                      <SelectTrigger className="w-32">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="hours">Hour(s)</SelectItem>
-                                        <SelectItem value="days">Day(s)</SelectItem>
-                                        <SelectItem value="weeks">Week(s)</SelectItem>
-                                        <SelectItem value="months">Month(s)</SelectItem>
-                                        <SelectItem value="years">Year(s)</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700">Ends On:</Label>
-                                    <div className="space-y-2">
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id="end-never"
-                                          checked={recurringConfig.endType === "never"}
-                                          onCheckedChange={() => setRecurringConfig(prev => ({ ...prev, endType: "never" }))}
-                                        />
-                                        <Label htmlFor="end-never" className="text-sm">Never</Label>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id="end-on"
-                                          checked={recurringConfig.endType === "on"}
-                                          onCheckedChange={() => setRecurringConfig(prev => ({ ...prev, endType: "on" }))}
-                                        />
-                                        <Label htmlFor="end-on" className="text-sm">On</Label>
-                                        {recurringConfig.endType === "on" && (
-                                          <Input
-                                            type="date"
-                                            value={recurringConfig.endDate}
-                                            onChange={(e) => setRecurringConfig(prev => ({ ...prev, endDate: e.target.value }))}
-                                            className="ml-2"
-                                          />
-                                        )}
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id="end-after"
-                                          checked={recurringConfig.endType === "after"}
-                                          onCheckedChange={() => setRecurringConfig(prev => ({ ...prev, endType: "after" }))}
-                                        />
-                                        <Label htmlFor="end-after" className="text-sm">After</Label>
-                                        {recurringConfig.endType === "after" && (
-                                          <>
-                                            <Input
-                                              type="number"
-                                              min="1"
-                                              value={recurringConfig.endAfter}
-                                              onChange={(e) => setRecurringConfig(prev => ({ ...prev, endAfter: parseInt(e.target.value) || 1 }))}
-                                              className="w-20 ml-2"
-                                            />
-                                            <span className="text-sm text-gray-600">occurrences</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="create-if-overdue"
-                                      checked={recurringConfig.createIfOverdue}
-                                      onCheckedChange={(checked) => setRecurringConfig(prev => ({ ...prev, createIfOverdue: !!checked }))}
-                                    />
-                                    <Label htmlFor="create-if-overdue" className="text-sm text-gray-700">
-                                      Create a new task even if previous task is overdue
-                                    </Label>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" onClick={() => {
-                                setIsTaskDialogOpen(false);
-                                setNewTask({
-                                  title: "",
-                                  description: "",
-                                  dueDate: "",
-                                  dueTime: "",
-                                  assignee: "",
-                                  recurring: false
-                                });
-                                setRecurringConfig({
-                                  interval: 1,
-                                  unit: "days",
-                                  endType: "never",
-                                  endDate: "",
-                                  endAfter: 1,
-                                  createIfOverdue: false
-                                });
-                                setAssigneeSearchTerm("");
-                                setShowAssigneeSuggestions(false);
-                                setFilteredAssignees([]);
-                              }}>
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  if (newTask.title.trim()) {
-                                    const taskData = {
-                                      title: newTask.title,
-                                      description: newTask.description,
-                                      dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
-                                      assignedTo: newTask.assignee || undefined,
-                                      isRecurring: newTask.recurring,
-                                      recurringConfig: newTask.recurring ? recurringConfig : undefined
-                                    };
-                                    createTaskMutation.mutate(taskData);
-                                  }
-                                }}
-                                disabled={!newTask.title.trim() || createTaskMutation.isPending}
-                                className="bg-primary hover:bg-primary/90"
-                              >
-                                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* Edit Task Dialog */}
-                      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Task</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                              <Input
-                                value={editTask.title}
-                                onChange={(e) => setEditTask(prev => ({ ...prev, title: e.target.value }))}
-                                placeholder="Enter task title"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                              <Textarea
-                                value={editTask.description}
-                                onChange={(e) => setEditTask(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Enter task description"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                                <Input
-                                  type="date"
-                                  value={editTask.dueDate}
-                                  onChange={(e) => setEditTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                                <Input
-                                  type="time"
-                                  value={editTask.dueTime}
-                                  onChange={(e) => setEditTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                                />
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                              <Input
-                                value={editAssigneeSearchTerm}
-                                onChange={(e) => {
-                                  setEditAssigneeSearchTerm(e.target.value);
-                                  if (e.target.value.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
-                                    );
-                                    setEditFilteredAssignees(filtered);
-                                    setShowEditAssigneeSuggestions(filtered.length > 0);
-                                  } else {
-                                    setEditFilteredAssignees([]);
-                                    setShowEditAssigneeSuggestions(false);
-                                  }
-                                }}
-                                placeholder="Search staff members..."
-                                onFocus={() => {
-                                  if (editAssigneeSearchTerm.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(editAssigneeSearchTerm.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(editAssigneeSearchTerm.toLowerCase())
-                                    );
-                                    setEditFilteredAssignees(filtered);
-                                    setShowEditAssigneeSuggestions(filtered.length > 0);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  setTimeout(() => setShowEditAssigneeSuggestions(false), 200);
-                                }}
-                              />
-                              
-                              {showEditAssigneeSuggestions && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                  {editFilteredAssignees.map((staff: any) => (
-                                    <button
-                                      key={staff.id}
-                                      onClick={() => {
-                                        setEditTask(prev => ({ ...prev, assignee: staff.id }));
-                                        setEditAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
-                                        setShowEditAssigneeSuggestions(false);
-                                      }}
-                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
-                                    >
-                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
-                                      </div>
-                                      <div>
-                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
-                                        <div className="text-xs text-gray-500">{staff.email}</div>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-4">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="edit-recurring"
-                                  checked={editTask.recurring}
-                                  onCheckedChange={(checked) => setEditTask(prev => ({ ...prev, recurring: !!checked }))}
-                                />
-                                <Label htmlFor="edit-recurring" className="text-sm font-medium text-gray-700">
-                                  Recurring Task
-                                </Label>
-                              </div>
-
-                              {editTask.recurring && (
-                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
-                                  <div className="flex items-center gap-2">
-                                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Repeats every</Label>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={editRecurringConfig.interval}
-                                      onChange={(e) => setEditRecurringConfig(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
-                                      className="w-20"
-                                    />
-                                    <Select
-                                      value={editRecurringConfig.unit}
-                                      onValueChange={(value: any) => setEditRecurringConfig(prev => ({ ...prev, unit: value }))}
-                                    >
-                                      <SelectTrigger className="w-32">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="hours">Hours</SelectItem>
-                                        <SelectItem value="days">Days</SelectItem>
-                                        <SelectItem value="weeks">Weeks</SelectItem>
-                                        <SelectItem value="months">Months</SelectItem>
-                                        <SelectItem value="years">Years</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700">Ends</Label>
-                                    <RadioGroup
-                                      value={editRecurringConfig.endType}
-                                      onValueChange={(value: any) => setEditRecurringConfig(prev => ({ ...prev, endType: value }))}
-                                      className="space-y-2"
-                                    >
-                                      <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="never" id="edit-never" />
-                                        <Label htmlFor="edit-never" className="text-sm text-gray-700">Never</Label>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="on" id="edit-on" />
-                                        <Label htmlFor="edit-on" className="text-sm text-gray-700">On</Label>
-                                        {editRecurringConfig.endType === "on" && (
-                                          <Input
-                                            type="date"
-                                            value={editRecurringConfig.endDate}
-                                            onChange={(e) => setEditRecurringConfig(prev => ({ ...prev, endDate: e.target.value }))}
-                                            className="w-40 ml-2"
-                                          />
-                                        )}
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="after" id="edit-after" />
-                                        <Label htmlFor="edit-after" className="text-sm text-gray-700">After</Label>
-                                        {editRecurringConfig.endType === "after" && (
-                                          <>
-                                            <Input
-                                              type="number"
-                                              min="1"
-                                              value={editRecurringConfig.endAfter}
-                                              onChange={(e) => setEditRecurringConfig(prev => ({ ...prev, endAfter: parseInt(e.target.value) || 1 }))}
-                                              className="w-20 ml-2"
-                                            />
-                                            <span className="text-sm text-gray-600">occurrences</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    </RadioGroup>
-                                  </div>
-
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="edit-create-if-overdue"
-                                      checked={editRecurringConfig.createIfOverdue}
-                                      onCheckedChange={(checked) => setEditRecurringConfig(prev => ({ ...prev, createIfOverdue: !!checked }))}
-                                    />
-                                    <Label htmlFor="edit-create-if-overdue" className="text-sm text-gray-700">
-                                      Create a new task even if previous task is overdue
-                                    </Label>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" onClick={() => {
-                                setIsEditTaskDialogOpen(false);
-                                setEditingTaskId(null);
-                                setEditTask({
-                                  title: "",
-                                  description: "",
-                                  dueDate: "",
-                                  dueTime: "",
-                                  assignee: "",
-                                  recurring: false
-                                });
-                                setEditRecurringConfig({
-                                  interval: 1,
-                                  unit: "days",
-                                  endType: "never",
-                                  endDate: "",
-                                  endAfter: 1,
-                                  createIfOverdue: false
-                                });
-                                setEditAssigneeSearchTerm("");
-                                setShowEditAssigneeSuggestions(false);
-                                setEditFilteredAssignees([]);
-                              }}>
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  if (editTask.title.trim()) {
-                                    const taskData = {
-                                      title: editTask.title,
-                                      description: editTask.description,
-                                      dueDate: editTask.dueDate ? `${editTask.dueDate}${editTask.dueTime ? ` ${editTask.dueTime}` : ''}` : undefined,
-                                      assignedTo: editTask.assignee || undefined,
-                                      isRecurring: editTask.recurring,
-                                      recurringConfig: editTask.recurring ? editRecurringConfig : undefined
-                                    };
-                                    editTaskMutation.mutate(taskData);
-                                  }
-                                }}
-                                disabled={!editTask.title.trim() || editTaskMutation.isPending}
-                                className="bg-primary hover:bg-primary/90"
-                              >
-                                {editTaskMutation.isPending ? "Updating..." : "Update Task"}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-
-                    <div className="space-y-3">
-                      {tasksLoading ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <div className="text-sm">Loading tasks...</div>
-                        </div>
-                      ) : clientTasksData.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm">No tasks yet</p>
-                          <p className="text-xs text-gray-400">Create a task to get started</p>
-                        </div>
-                      ) : (
-                        clientTasksData.map((task: any) => {
-                          const isCompleted = task.status === 'completed';
-                          const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-                          const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
-                          const dueDateColor = isOverdue ? 'bg-red-100 text-red-700' : dueDate && dueDate <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
-                          
-                          return (
-                            <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-2 flex-1">
-                                  <Checkbox
-                                    checked={isCompleted}
-                                    onCheckedChange={(checked) => {
-                                      updateTaskStatusMutation.mutate({
-                                        taskId: task.id,
-                                        status: checked ? 'completed' : 'pending'
-                                      });
-                                    }}
-                                    className="mt-0.5"
-                                  />
-                                  <div className="flex-1">
-                                    <p className={`text-sm font-medium ${isCompleted ? "line-through text-gray-500" : "text-gray-900"}`}>
-                                      {task.title}
-                                    </p>
-                                    {task.description && (
-                                      <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                                    )}
-                                    {dueDate && (
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        Due: {dueDate.toLocaleDateString()} at {dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                      </p>
-                                    )}
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <p className="text-xs text-gray-400">
-                                        assigned to {task.assignedToUser?.firstName} {task.assignedToUser?.lastName}
-                                      </p>
-                                      {task.isRecurring && (
-                                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 border-blue-200">
-                                          <RefreshCw className="h-3 w-3 mr-1" />
-                                          Recurring
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {dueDate && (
-                                    <span className={`text-xs px-2 py-1 rounded ${dueDateColor}`}>
-                                      {isOverdue ? 'Overdue' : `Due ${dueDate.toLocaleDateString()}`}
-                                    </span>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      // Populate edit form with current task data
-                                      setEditingTaskId(task.id);
-                                      const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
-                                      setEditTask({
-                                        title: task.title,
-                                        description: task.description || "",
-                                        dueDate: taskDueDate ? taskDueDate.toISOString().split('T')[0] : "",
-                                        dueTime: taskDueDate ? taskDueDate.toTimeString().slice(0, 5) : "",
-                                        assignee: task.assignedTo || "",
-                                        recurring: task.isRecurring || false
-                                      });
-                                      if (task.isRecurring) {
-                                        setEditRecurringConfig({
-                                          interval: task.recurringInterval || 1,
-                                          unit: task.recurringUnit || "days",
-                                          endType: task.recurringEndType || "never",
-                                          endDate: task.recurringEndDate ? new Date(task.recurringEndDate).toISOString().split('T')[0] : "",
-                                          endAfter: task.recurringEndOccurrences || 1,
-                                          createIfOverdue: task.createIfOverdue || false
-                                        });
-                                      }
-                                      setEditAssigneeSearchTerm(task.assignedToUser ? `${task.assignedToUser.firstName} ${task.assignedToUser.lastName}` : "");
-                                      setIsEditTaskDialogOpen(true);
-                                    }}
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                    title="Edit task"
-                                  >
-                                    <Edit2 className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const newExpanded = new Set(expandedTasks);
-                                      if (expandedTasks.has(task.id)) {
-                                        newExpanded.delete(task.id);
-                                      } else {
-                                        newExpanded.add(task.id);
-                                      }
-                                      setExpandedTasks(newExpanded);
-                                    }}
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                    title={`${expandedTasks.has(task.id) ? 'Hide' : 'Show'} comments`}
-                                  >
-                                    <MessageSquare className="h-3 w-3" />
-                                  </Button>
-                                  {/* Delete button - Admin only */}
-                                  {userPermissions?.tasks?.canDelete && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-                                          deleteTaskMutation.mutate(task.id);
-                                        }
-                                      }}
-                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                                      disabled={deleteTaskMutation.isPending}
-                                      title="Delete task (Admin only)"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Comments Section */}
-                              {expandedTasks.has(task.id) && (
-                                <TaskComments taskId={task.id} />
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-
-
-
-
+                {/* Contact sidebar content area */}
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">Client activity and communication tools are available in the Client Hub tabs above.</p>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
+
+        {/* Client Hub Section */}
+        {activeHubSection && (
+          <div className="mt-6">
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {activeHubSection === "notes" && "Notes"}
+                  {activeHubSection === "tasks" && "Tasks"}
+                  {activeHubSection === "appointments" && "Appointments"} 
+                  {activeHubSection === "documents" && "Documents"}
+                  {activeHubSection === "team" && "Team"}
+                </h2>
+              </CardHeader>
+              <CardContent>
+                {activeHubSection === "notes" && (
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        placeholder="Add a new note..."
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={() => {
+                          if (newNote.trim()) {
+                            addNoteMutation.mutate({ content: newNote });
+                          }
+                        }}
+                        disabled={addNoteMutation.isPending}
+                      >
+                        Add Note
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {notesLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading notes...</div>
+                        </div>
+                      ) : clientNotesData.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No notes yet</p>
+                          <p className="text-xs text-gray-400">Add your first note to get started</p>
+                        </div>
+                      ) : (
+                        clientNotesData.map((note: any) => (
+                          <div key={note.id} className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-900">{note.content}</p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              by {note.createdByUser?.firstName} {note.createdByUser?.lastName} on {new Date(note.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        }
 
         {/* Add Tag Dialog */}
         <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
