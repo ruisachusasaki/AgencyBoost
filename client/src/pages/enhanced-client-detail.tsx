@@ -1117,7 +1117,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client notes');
       return response.json();
     },
-    enabled: !!clientId && activeRightSection === "notes",
+    enabled: !!clientId && (activeRightSection === "notes" || activeHubSection === "notes"),
   });
 
   // Fetch client tasks data
@@ -5940,6 +5940,7 @@ export default function EnhancedClientDetail() {
 
           {/* Client Hub Tab */}
           <TabsContent value="hub" className="space-y-6 mt-6">
+            {clientId && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
               
@@ -6844,6 +6845,7 @@ export default function EnhancedClientDetail() {
               </TabsContent>
             </Tabs>
           </div>
+            )}
         </TabsContent>
 
         {/* SMS Templates Modal */}
