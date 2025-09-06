@@ -3514,6 +3514,10 @@ export default function EnhancedClientDetail() {
                 </div>
               </DialogContent>
             </Dialog>
+          </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Client Hub Tab */}
