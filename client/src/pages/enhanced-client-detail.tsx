@@ -4178,7 +4178,7 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </TabsContent>
 
         {/* Add Tag Dialog */}
         <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
