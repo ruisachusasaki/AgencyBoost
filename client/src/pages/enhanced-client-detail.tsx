@@ -722,7 +722,6 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -1117,7 +1116,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client notes');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "notes" || activeHubSection === "notes"),
+    enabled: !!clientId && activeHubSection === "notes",
   });
 
   // Fetch client tasks data
@@ -1128,7 +1127,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client tasks');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "tasks" || activeHubSection === "tasks"),
+    enabled: !!clientId && activeHubSection === "tasks",
   });
 
   // Fetch client documents data
@@ -1139,7 +1138,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client documents');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "documents" || activeHubSection === "documents"),
+    enabled: !!clientId && activeHubSection === "documents",
   });
 
   // Get all bundle IDs from client products
@@ -3514,7 +3513,6 @@ export default function EnhancedClientDetail() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
                 </CardContent>
               </Card>
             </div>
