@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "payments">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -3546,25 +3546,6 @@ export default function EnhancedClientDetail() {
                     </Tooltip>
                     
                     
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("payments")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
-                            activeRightSection === "payments"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-400"
-                          }`}
-                          disabled
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Billing (Coming Soon)</p>
-                      </TooltipContent>
-                    </Tooltip>
                   </div>
                 </TooltipProvider>
               </CardHeader>
@@ -4222,56 +4203,6 @@ export default function EnhancedClientDetail() {
 
 
 
-                {/* Payments Section */}
-                {activeRightSection === "payments" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Billing & Payments</h3>
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-green-900">Payment Received</span>
-                          <span className="text-sm font-bold text-green-700">+$2,500.00</span>
-                        </div>
-                        <p className="text-sm text-green-700 mb-1">Invoice #INV-2024-0156 - Monthly retainer</p>
-                        <div className="flex items-center gap-4 text-xs text-green-600">
-                          <span>Aug 5, 2024</span>
-                          <span>•</span>
-                          <span>Credit Card ****4532</span>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-yellow-900">Pending Payment</span>
-                          <span className="text-sm font-bold text-yellow-700">$1,200.00</span>
-                        </div>
-                        <p className="text-sm text-yellow-700 mb-1">Invoice #INV-2024-0157 - Additional services</p>
-                        <div className="flex items-center gap-4 text-xs text-yellow-600">
-                          <span>Due: Aug 15, 2024</span>
-                          <span>•</span>
-                          <span>3 days overdue</span>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-300">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-gray-900">Upcoming Billing</span>
-                          <span className="text-sm font-bold text-gray-700">$2,500.00</span>
-                        </div>
-                        <p className="text-sm text-gray-700 mb-1">Monthly retainer renewal</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-600">
-                          <span>Due: Sep 1, 2024</span>
-                          <span>•</span>
-                          <span>Auto-pay enabled</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
