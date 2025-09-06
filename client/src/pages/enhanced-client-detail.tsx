@@ -3533,8 +3533,8 @@ export default function EnhancedClientDetail() {
                 </TooltipProvider>
               </CardHeader>
               <CardContent className="pt-6">
-                {/* Tasks Section */}
-                {activeRightSection === "tasks" && (
+                {/* Tasks Section - Removed */}
+                {false && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Tasks</h3>
