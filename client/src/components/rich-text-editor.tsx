@@ -25,7 +25,8 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   Highlighter,
-  CheckSquare
+  CheckSquare,
+  AlignJustify
 } from 'lucide-react';
 import { CalloutExtension, ToggleExtension, ToggleSummary, ToggleContent, ColumnsExtension, ColumnExtension } from './tiptap-extensions';
 
@@ -112,6 +113,26 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
+  };
+
+  const setLineHeight = (height: string) => {
+    const selection = editor.state.selection;
+    const { from, to } = selection;
+    
+    // Apply line height to selected content or current paragraph
+    editor.chain().focus().command(({ tr, dispatch }) => {
+      if (dispatch) {
+        tr.doc.nodesBetween(from, to, (node, pos) => {
+          if (node.type.name === 'paragraph' || node.type.name === 'heading') {
+            const attrs = { ...node.attrs };
+            attrs.style = attrs.style ? attrs.style.replace(/line-height:\s*[^;]+;?/g, '') : '';
+            attrs.style = attrs.style ? `${attrs.style} line-height: ${height};` : `line-height: ${height};`;
+            tr.setNodeMarkup(pos, undefined, attrs);
+          }
+        });
+      }
+      return true;
+    }).run();
   };
 
   return (
@@ -285,6 +306,68 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
         >
           <ImageIcon className="h-4 w-4" />
         </Button>
+
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+
+        {/* Line Spacing */}
+        <div className="relative group">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <AlignJustify className="h-4 w-4" />
+          </Button>
+          
+          {/* Line Spacing Dropdown */}
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-[120px]">
+            <div className="p-1">
+              <button
+                type="button"
+                onClick={() => setLineHeight('1.0')}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+              >
+                Single (1.0)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineHeight('1.15')}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+              >
+                Tight (1.15)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineHeight('1.3')}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+              >
+                Compact (1.3)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineHeight('1.5')}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+              >
+                Normal (1.5)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineHeight('1.7')}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+              >
+                Relaxed (1.7)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineHeight('2.0')}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+              >
+                Double (2.0)
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Editor Content */}
