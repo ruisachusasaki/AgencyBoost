@@ -3515,38 +3515,216 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
           </TabsContent>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                              <Input
-                                value={newTask.title}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                placeholder="Enter task title"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                              <Textarea
-                                value={newTask.description}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Enter task description"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                                <Input
-                                  type="date"
-                                  value={newTask.dueDate}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                                />
+
+          {/* Client Hub Tab */}
+          <TabsContent value="hub" className="space-y-6 mt-6">
+            {clientId && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
+              
+              <Tabs value={activeHubSection} onValueChange={(value) => setActiveHubSection(value as any)} className="space-y-6">
+                <TabsList className="grid w-fit grid-cols-5">
+                  <TabsTrigger value="notes" className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </TabsTrigger>
+                  <TabsTrigger value="tasks" className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="appointments" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Calendar
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    Documents
+                  </TabsTrigger>
+                  <TabsTrigger value="team" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Team
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Hub Tab Content */}
+                <TabsContent value="notes" className="mt-6">
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Notes</h3>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (newNote.trim()) {
+                              addNoteMutation.mutate({ 
+                                clientId: client?.id || '', 
+                                content: newNote.trim(),
+                                type: 'general'
+                              });
+                            }
+                          }}
+                          disabled={!newNote.trim() || addNoteMutation.isPending}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {addNoteMutation.isPending ? "Adding..." : "Add Note"}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 mb-2 block">New Note</Label>
+                          <Textarea
+                            value={newNote}
+                            onChange={(e) => setNewNote(e.target.value)}
+                            placeholder="Write your note here..."
+                            className="min-h-[100px]"
+                          />
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {hubNotesData?.length > 0 ? (
+                            hubNotesData.map((note: any) => (
+                              <div key={note.id} className="p-3 bg-gray-50 rounded-lg border">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{note.content}</p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                      <span>By {note.author || 'System'}</span>
+                                      <span>•</span>
+                                      <span>{formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}</span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                                <Input
-                                  type="time"
-                                  value={newTask.dueTime}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                                />
+                            ))
+                          ) : (
+                            <div className="text-center py-6 text-gray-500">
+                              <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>No notes yet. Add your first note above.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="tasks" className="mt-6">
+                  <TasksSection clientId={clientId!} />
+                </TabsContent>
+
+                <TabsContent value="appointments" className="mt-6">
+                  <AppointmentsSection clientId={clientId!} />
+                </TabsContent>
+
+                <TabsContent value="documents" className="mt-6">
+                  <DocumentsSection clientId={clientId!} />
+                </TabsContent>
+
+                <TabsContent value="team" className="mt-6">
+                  <TeamAssignmentSection clientId={clientId!} />
+                </TabsContent>
+              </Tabs>
+            </div>
+            )}
+          </TabsContent>
+
+          {/* Products Tab */}
+          <TabsContent value="products" className="space-y-6 mt-6">
+            <ProductsContent clientId={clientId!} client={client} />
+          </TabsContent>
+
+          {/* Communication Tab */}
+          <TabsContent value="communication" className="space-y-6 mt-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* SMS Section */}
+                <Card>
+                  <CardHeader>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                      Send SMS
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Message</Label>
+                      <Textarea
+                        value={smsMessage}
+                        onChange={(e) => setSmsMessage(e.target.value)}
+                        placeholder="Type your message here..."
+                        className="min-h-[100px]"
+                        disabled={!!client?.dndAll || !!client?.dndSms}
+                      />
+                      {(!!client?.dndAll || !!client?.dndSms) && (
+                        <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          SMS notifications are disabled for this client
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      className="w-full"
+                      disabled={!smsMessage.trim() || !!client?.dndAll || !!client?.dndSms}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send SMS
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Email Section */}
+                <Card>
+                  <CardHeader>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Mail className="h-5 w-5 text-primary" />
+                      Send Email
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Subject</Label>
+                      <Input
+                        value={emailData.subject}
+                        onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                        placeholder="Enter email subject"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Message</Label>
+                      <Textarea
+                        value={emailData.message}
+                        onChange={(e) => setEmailData(prev => ({ ...prev, message: e.target.value }))}
+                        placeholder="Type your message here..."
+                        className="min-h-[100px]"
+                        disabled={!!client?.dndAll || !!client?.dndEmail}
+                      />
+                      {(!!client?.dndAll || !!client?.dndEmail) && (
+                        <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          Email notifications are disabled for this client
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      className="w-full"
+                      disabled={!emailData.subject.trim() || !emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Email
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Dialog Components */}
+        {/* Add Tag Dialog */}
+        <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
                               </div>
                             </div>
                             <div className="relative">
