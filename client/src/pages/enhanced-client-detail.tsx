@@ -3544,6 +3544,187 @@ export default function EnhancedClientDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Client Hub Tab */}
+        <TabsContent value="hub" className="space-y-6 mt-6">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
+            
+            {/* Hub Sub-Navigation */}
+            <Tabs value={activeHubSection} onValueChange={(value: any) => setActiveHubSection(value)} className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="notes">Notes</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="appointments">Appointments</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="team">Team</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="notes" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Notes</h3>
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Note
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {clientNotes && clientNotes.length > 0 ? (
+                      clientNotes.map((note: any) => (
+                        <Card key={note.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="text-sm text-gray-500">
+                                {note.staff?.firstName} {note.staff?.lastName} • {format(new Date(note.createdAt), 'MMM dd, yyyy')}
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-700">{note.content}</p>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-lg mb-2">📝</div>
+                        <p>No notes yet</p>
+                        <p className="text-sm">Add your first note to get started</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="tasks" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Tasks</h3>
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Task
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {clientTasksData && clientTasksData.length > 0 ? (
+                      clientTasksData.map((task: any) => (
+                        <Card key={task.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{task.title}</h4>
+                                {task.description && (
+                                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                                )}
+                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                  {task.dueDate && (
+                                    <span>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</span>
+                                  )}
+                                  {task.assignedStaff && (
+                                    <span>Assigned to: {task.assignedStaff.firstName} {task.assignedStaff.lastName}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                task.status === 'completed' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {task.status}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-lg mb-2">✅</div>
+                        <p>No tasks yet</p>
+                        <p className="text-sm">Create your first task to get started</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="appointments" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Appointments</h3>
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Schedule Appointment
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
+                      clientAppointmentsData.map((appointment: any) => (
+                        <Card key={appointment.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{appointment.title}</h4>
+                                {appointment.description && (
+                                  <p className="text-sm text-gray-600 mt-1">{appointment.description}</p>
+                                )}
+                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                  <span>📅 {format(new Date(appointment.startTime), 'MMM dd, yyyy')}</span>
+                                  <span>🕐 {format(new Date(appointment.startTime), 'h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}</span>
+                                  {appointment.location && <span>📍 {appointment.location}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-lg mb-2">📅</div>
+                        <p>No appointments yet</p>
+                        <p className="text-sm">Schedule your first appointment to get started</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="documents" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Documents</h3>
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Upload Document
+                    </Button>
+                  </div>
+                  
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-lg mb-2">📄</div>
+                    <p>No documents yet</p>
+                    <p className="text-sm">Upload your first document to get started</p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="team" className="mt-6">
+                <TeamAssignmentSection clientId={clientId} />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
