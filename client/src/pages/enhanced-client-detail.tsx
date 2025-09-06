@@ -952,6 +952,7 @@ export default function EnhancedClientDetail() {
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
   const [hubExpandedBundles, setHubExpandedBundles] = useState<Set<string>>(new Set());
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
+  const [hubEditingBundleQuantities, setHubEditingBundleQuantities] = useState<string | null>(null);
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
@@ -6674,7 +6675,7 @@ export default function EnhancedClientDetail() {
                                         size="sm"
                                         className="h-6 w-6 p-0"
                                         onClick={() => {
-                                          setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
+                                          setHubEditingBundleQuantities(clientProduct.productId || clientProduct.id);
                                           // Initialize temp quantities
                                           const currentBundle = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
                                           const initialQuantities: Record<string, number> = {};
@@ -6716,7 +6717,7 @@ export default function EnhancedClientDetail() {
                           {/* Expanded Bundle Contents */}
                           {clientProduct.itemType === 'bundle' && hubExpandedBundles.has(clientProduct.productId || clientProduct.id) && (
                             <div className="ml-6 space-y-1">
-                              {bundleDetailsData && bundleDetailsData?.[clientProduct.productId || clientProduct.id] ? (
+                              {bundleDetailsData?.[clientProduct.productId || clientProduct.id] ? (
                                 <div className="space-y-2 p-3 bg-white rounded border border-gray-200">
                                   <h5 className="font-medium text-gray-900 text-sm">Included Products</h5>
                                   {bundleDetailsData?.[clientProduct.productId || clientProduct.id].map((product: any) => (
@@ -6735,7 +6736,7 @@ export default function EnhancedClientDetail() {
                                   ))}
                                   
                                   {/* Edit mode for bundle quantities */}
-                                  {editingBundleQuantities === (clientProduct.productId || clientProduct.id) && (
+                                  {hubEditingBundleQuantities === (clientProduct.productId || clientProduct.id) && (
                                     <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
                                       <div className="flex items-center justify-between mb-2">
                                         <h6 className="font-medium text-blue-900 text-sm">Edit Quantities</h6>
@@ -6758,7 +6759,7 @@ export default function EnhancedClientDetail() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => {
-                                              setEditingBundleQuantities(null);
+                                              setHubEditingBundleQuantities(null);
                                               setTempQuantities({});
                                             }}
                                             className="h-6 text-xs"
