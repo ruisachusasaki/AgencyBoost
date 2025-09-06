@@ -18,6 +18,7 @@ import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { ProductSearchResults } from "@/components/ProductSearchResults";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate } from "@shared/schema";
@@ -2829,16 +2830,21 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 {isEditingBrief ? (
-                  <Textarea
-                    value={briefContent}
-                    onChange={(e) => setBriefContent(e.target.value)}
-                    placeholder="Add client brief notes, project details, or important information..."
-                    className="min-h-[120px] resize-none"
-                  />
+                  <div className="border rounded-md">
+                    <RichTextEditor
+                      content={briefContent}
+                      onChange={(content) => setBriefContent(content)}
+                      placeholder="Add client brief notes, project details, or important information..."
+                      className="min-h-[200px]"
+                    />
+                  </div>
                 ) : (
                   <div className="min-h-[120px]">
                     {briefContent ? (
-                      <p className="text-gray-700 whitespace-pre-wrap">{briefContent}</p>
+                      <div 
+                        className="prose prose-sm max-w-none text-gray-700"
+                        dangerouslySetInnerHTML={{ __html: briefContent }}
+                      />
                     ) : (
                       <p className="text-gray-500 italic">No client brief added yet. Click Edit to add important client information, project details, or notes.</p>
                     )}
