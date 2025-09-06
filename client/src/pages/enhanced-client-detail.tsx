@@ -3743,7 +3743,8 @@ export default function EnhancedClientDetail() {
         </Tabs>
       </div>
 
-      <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
+      <div>
+        <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Tag</DialogTitle>
@@ -3827,7 +3828,6 @@ export default function EnhancedClientDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Communication Dialogs */}
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -3864,7 +3864,6 @@ export default function EnhancedClientDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* SMS Templates Modal */}
       {smsTemplatesOpen && (
         <SmsTemplatesModal 
           isOpen={smsTemplatesOpen}
@@ -3876,7 +3875,6 @@ export default function EnhancedClientDetail() {
         />
       )}
 
-      {/* SMS Merge Tags Modal */}
       {smsMergeTagsOpen && (
         <SmsMergeTagsModal 
           isOpen={smsMergeTagsOpen}
@@ -3891,7 +3889,6 @@ export default function EnhancedClientDetail() {
         />
       )}
 
-      {/* Email Templates Modal */}
       {emailTemplatesOpen && (
         <EmailTemplatesModal 
           isOpen={emailTemplatesOpen}
@@ -3919,7 +3916,6 @@ export default function EnhancedClientDetail() {
         />
       )}
 
-      {/* Email Merge Tags Modal */}
       {emailMergeTagsOpen && (
         <EmailMergeTagsModal 
           isOpen={emailMergeTagsOpen}
@@ -3932,6 +3928,7 @@ export default function EnhancedClientDetail() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
