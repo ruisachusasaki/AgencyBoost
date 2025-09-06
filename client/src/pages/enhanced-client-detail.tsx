@@ -6798,6 +6798,25 @@ export default function EnhancedClientDetail() {
             }}
           />
         )}
+
+        {/* Appointment Modal */}
+        {showAppointmentModal && (
+          <AppointmentModal
+            isOpen={showAppointmentModal}
+            onClose={() => {
+              setShowAppointmentModal(false);
+              setEditingAppointment(null);
+            }}
+            editingAppointment={editingAppointment}
+            clientId={clientId}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+              setShowAppointmentModal(false);
+              setEditingAppointment(null);
+            }}
+          />
+        )}
       </Tabs>
     </div>
   );
