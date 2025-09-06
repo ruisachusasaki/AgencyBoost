@@ -950,6 +950,7 @@ export default function EnhancedClientDetail() {
   const [filteredBundles, setFilteredBundles] = useState<any[]>([]);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
+  const [hubExpandedBundles, setHubExpandedBundles] = useState<Set<string>>(new Set());
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
   const [showAddProductModal, setShowAddProductModal] = useState(false);
@@ -6627,20 +6628,20 @@ export default function EnhancedClientDetail() {
                                   {clientProduct.itemType === 'bundle' ? (
                                     <div
                                       onClick={() => {
-                                        const newExpanded = new Set(expandedBundles);
+                                        const newExpanded = new Set(hubExpandedBundles);
                                         if (newExpanded.has(clientProduct.productId || clientProduct.id)) {
                                           newExpanded.delete(clientProduct.productId || clientProduct.id);
                                         } else {
                                           newExpanded.add(clientProduct.productId || clientProduct.id);
                                         }
-                                        setExpandedBundles(newExpanded);
+                                        setHubExpandedBundles(newExpanded);
                                       }}
                                       className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left cursor-pointer"
                                     >
                                       <h4 className="font-medium text-sm text-gray-900">
                                         {clientProduct.name || clientProduct.productName}
                                       </h4>
-                                      {expandedBundles.has(clientProduct.productId || clientProduct.id) ? (
+                                      {hubExpandedBundles.has(clientProduct.productId || clientProduct.id) ? (
                                         <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
                                       ) : (
                                         <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
@@ -6713,7 +6714,7 @@ export default function EnhancedClientDetail() {
                           </div>
 
                           {/* Expanded Bundle Contents */}
-                          {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId || clientProduct.id) && (
+                          {clientProduct.itemType === 'bundle' && hubExpandedBundles.has(clientProduct.productId || clientProduct.id) && (
                             <div className="ml-6 space-y-1">
                               {bundleDetailsData && bundleDetailsData?.[clientProduct.productId || clientProduct.id] ? (
                                 <div className="space-y-2 p-3 bg-white rounded border border-gray-200">
