@@ -2617,9 +2617,9 @@ export default function EnhancedClientDetail() {
               <CardContent className="space-y-4">
                 {/* Tags Accordion */}
                 <div className="border-b border-gray-200 pb-4">
-                  <button
+                  <div
                     onClick={() => setActionsExpanded(prev => ({ ...prev, tags: !prev.tags }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Hash className="h-4 w-4" />
@@ -2639,7 +2639,7 @@ export default function EnhancedClientDetail() {
                       </Button>
                       {actionsExpanded.tags ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </div>
-                  </button>
+                  </div>
                   {actionsExpanded.tags && (
                     <div className="mt-3 space-y-2">
                       {client.tags && client.tags.length > 0 ? (
@@ -2667,16 +2667,16 @@ export default function EnhancedClientDetail() {
 
                 {/* Campaigns Accordion */}
                 <div className="border-b border-gray-200 pb-4">
-                  <button
+                  <div
                     onClick={() => setActionsExpanded(prev => ({ ...prev, campaigns: !prev.campaigns }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
                       Campaigns
                     </h4>
                     {actionsExpanded.campaigns ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
+                  </div>
                   {actionsExpanded.campaigns && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No campaigns associated</p>
@@ -2687,16 +2687,16 @@ export default function EnhancedClientDetail() {
 
                 {/* Workflows Accordion */}
                 <div className="border-b border-gray-200 pb-4">
-                  <button
+                  <div
                     onClick={() => setActionsExpanded(prev => ({ ...prev, workflows: !prev.workflows }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Workflow className="h-4 w-4" />
                       Workflows
                     </h4>
                     {actionsExpanded.workflows ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
+                  </div>
                   {actionsExpanded.workflows && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No workflows active</p>
@@ -2707,16 +2707,16 @@ export default function EnhancedClientDetail() {
 
                 {/* Opportunities Accordion */}
                 <div className="pb-2">
-                  <button
+                  <div
                     onClick={() => setActionsExpanded(prev => ({ ...prev, opportunities: !prev.opportunities }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Target className="h-4 w-4" />
                       Opportunities
                     </h4>
                     {actionsExpanded.opportunities ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
+                  </div>
                   {actionsExpanded.opportunities && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No opportunities tracked</p>
@@ -5971,7 +5971,7 @@ export default function EnhancedClientDetail() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Search notes..."
-                        value={searchNotes}
+                        value={searchNotes || ""}
                         onChange={(e) => setSearchNotes(e.target.value)}
                         className="pl-10 text-sm"
                       />
