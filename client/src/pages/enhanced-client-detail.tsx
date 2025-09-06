@@ -1128,7 +1128,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client tasks');
       return response.json();
     },
-    enabled: !!clientId && activeRightSection === "tasks",
+    enabled: !!clientId && (activeRightSection === "tasks" || activeHubSection === "tasks"),
   });
 
   // Fetch client documents data
