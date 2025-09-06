@@ -998,9 +998,27 @@ export default function EnhancedClientDetail() {
         throw new Error(`Failed to update client brief: ${error}`);
       }
       
-      // Check if response has content before trying to parse JSON
+      // Get response text
       const text = await response.text();
-      return text ? JSON.parse(text) : {};
+      
+      // Check if response is empty or just return success for PATCH
+      if (!text || text.trim() === '') {
+        return { success: true };
+      }
+      
+      // Check if response is HTML (error page) instead of JSON
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        console.error('Server returned HTML instead of JSON:', text.substring(0, 200));
+        throw new Error('Server error: received HTML response instead of JSON');
+      }
+      
+      // Try to parse as JSON
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Response text:', text.substring(0, 200));
+        throw new Error('Invalid JSON response from server');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
