@@ -722,7 +722,7 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments" | "team">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -3581,23 +3581,6 @@ export default function EnhancedClientDetail() {
                       </TooltipContent>
                     </Tooltip>
                     
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setActiveRightSection("team")}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeRightSection === "team"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          <Users className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Team</p>
-                      </TooltipContent>
-                    </Tooltip>
                     
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -4597,10 +4580,6 @@ export default function EnhancedClientDetail() {
                   </div>
                 )}
 
-                {/* Team Section */}
-                {activeRightSection === "team" && (
-                  <TeamAssignmentSection clientId={clientId} />
-                )}
 
                 {/* Payments Section */}
                 {activeRightSection === "payments" && (
