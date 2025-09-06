@@ -113,6 +113,38 @@
   margin: 1rem 0;
 }
 
+/* Line height styles for text with custom spacing */
+.tiptap span[style*="line-height"] {
+  display: inline-block;
+  width: 100%;
+}
+
+.tiptap p[style*="line-height"] {
+  margin: 0.5rem 0;
+}
+
+.tiptap h1[style*="line-height"],
+.tiptap h2[style*="line-height"],
+.tiptap h3[style*="line-height"] {
+  margin: 1rem 0 0.5rem 0;
+}
+
+/* Ensure line-height styles are preserved in display mode */
+.prose span[style*="line-height"] {
+  display: inline-block;
+  width: 100%;
+}
+
+.prose p[style*="line-height"] {
+  margin: 0.5rem 0;
+}
+
+.prose h1[style*="line-height"],
+.prose h2[style*="line-height"],
+.prose h3[style*="line-height"] {
+  margin: 1rem 0 0.5rem 0;
+}
+
 /* Task List Styling - Ultimate fix */
 ul[data-type="taskList"],
 .ProseMirror ul[data-type="taskList"],

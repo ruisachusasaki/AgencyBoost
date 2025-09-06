@@ -116,21 +116,46 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   };
 
   const setLineHeight = (height: string) => {
-    const selection = editor.state.selection;
-    const { from, to } = selection;
-    
-    // Apply line height to selected content or current paragraph
-    editor.chain().focus().command(({ tr, dispatch }) => {
-      if (dispatch) {
-        tr.doc.nodesBetween(from, to, (node, pos) => {
-          if (node.type.name === 'paragraph' || node.type.name === 'heading') {
-            const attrs = { ...node.attrs };
-            attrs.style = attrs.style ? attrs.style.replace(/line-height:\s*[^;]+;?/g, '') : '';
-            attrs.style = attrs.style ? `${attrs.style} line-height: ${height};` : `line-height: ${height};`;
-            tr.setNodeMarkup(pos, undefined, attrs);
-          }
-        });
+    editor.chain().focus().command(({ state, dispatch }) => {
+      if (!dispatch) return false;
+      
+      const { selection } = state;
+      const { $from, $to } = selection;
+      
+      // Apply to all paragraphs and headings in the selection
+      const tr = state.tr;
+      let applied = false;
+      
+      state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => {
+        if (node.isBlock && (
+          node.type.name === 'paragraph' || 
+          node.type.name === 'heading'
+        )) {
+          const currentStyle = node.attrs.style || '';
+          const newStyle = currentStyle.replace(/line-height:\s*[^;]*(;|$)/g, '') + 
+                          (currentStyle && !currentStyle.endsWith(';') ? '; ' : '') + 
+                          `line-height: ${height};`;
+          
+          tr.setNodeMarkup(pos, undefined, {
+            ...node.attrs,
+            style: newStyle.replace(/;\s*;/g, ';').replace(/^;\s*/, '')
+          });
+          applied = true;
+        }
+        return true;
+      });
+      
+      if (applied) {
+        dispatch(tr);
+        return true;
       }
+      
+      // Fallback: if no block elements found, create a new paragraph with line height
+      const newParagraph = state.schema.nodes.paragraph.create(
+        { style: `line-height: ${height};` }
+      );
+      tr.replaceSelectionWith(newParagraph);
+      dispatch(tr);
       return true;
     }).run();
   };
