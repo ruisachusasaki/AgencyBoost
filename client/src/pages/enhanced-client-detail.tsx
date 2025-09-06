@@ -5082,7 +5082,6 @@ export default function EnhancedClientDetail() {
 
         {/* Products & Services Tab */}
         <TabsContent value="products" className="space-y-6 mt-6" key="main-products-tab">
-          {activeTab === "products" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -5310,7 +5309,6 @@ export default function EnhancedClientDetail() {
               )}
             </div>
           </div>
-          )}
         </TabsContent>
 
           {/* Add Product Modal */}
@@ -6562,7 +6560,6 @@ export default function EnhancedClientDetail() {
 
               {/* Products Section */}
               <TabsContent value="hub-products" className="mt-6" key="hub-products-tab">
-                {activeTab === "hub" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -6817,7 +6814,6 @@ export default function EnhancedClientDetail() {
                     )}
                   </div>
                 </div>
-                )}
               </TabsContent>
 
               {/* Add Product Modal */}
