@@ -2401,6 +2401,7 @@ export default function EnhancedClientDetail() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Back Button */}
       <div className="flex items-center space-x-2">
@@ -3744,6 +3745,7 @@ export default function EnhancedClientDetail() {
       </div>
 
       {/* All Dialog Components */}
+      <>
       {/* Add Tag Dialog */}
       <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
         <DialogContent>
@@ -4442,6 +4444,7 @@ function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
 
@@ -4573,6 +4576,5 @@ function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: {
         </div>
       </DialogContent>
     </Dialog>
-    </div>
   );
 }
