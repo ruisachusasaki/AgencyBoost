@@ -2401,7 +2401,6 @@ export default function EnhancedClientDetail() {
   }
 
   return (
-    <>
     <div className="space-y-6">
       {/* Back Button */}
       <div className="flex items-center space-x-2">
@@ -3744,9 +3743,6 @@ export default function EnhancedClientDetail() {
         </Tabs>
       </div>
 
-      {/* All Dialog Components */}
-      <>
-      {/* Add Tag Dialog */}
       <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
         <DialogContent>
           <DialogHeader>
@@ -3936,7 +3932,6 @@ export default function EnhancedClientDetail() {
           }}
         />
       )}
-    </>
     </div>
   );
 }
@@ -4446,52 +4441,6 @@ function EmailMergeTagsModal({ isOpen, onClose, onSelectTag }: {
       </Dialog>
     </div>
     </>
-  );
-}
-
-// Component sections for the Client Hub
-function TasksSection({ clientId }: { clientId: string }) {
-  return (
-    <div className="space-y-4">
-      <div className="text-center py-8 text-gray-500">
-        <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Tasks functionality will be implemented here</p>
-      </div>
-    </div>
-  );
-}
-
-function AppointmentsSection({ clientId }: { clientId: string }) {
-  return (
-    <div className="space-y-4">
-      <div className="text-center py-8 text-gray-500">
-        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Appointments functionality will be implemented here</p>
-      </div>
-    </div>
-  );
-}
-
-function DocumentsSection({ clientId }: { clientId: string }) {
-  return (
-    <div className="space-y-4">
-      <div className="text-center py-8 text-gray-500">
-        <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Documents functionality will be implemented here</p>
-      </div>
-    </div>
-  );
-}
-
-// Products Content Component
-function ProductsContent({ clientId, client }: { clientId: string; client: any }) {
-  return (
-    <div className="space-y-4">
-      <div className="text-center py-8 text-gray-500">
-        <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Products functionality will be implemented here</p>
-      </div>
-    </div>
   );
 }
 
