@@ -5142,13 +5142,16 @@ export default function EnhancedClientDetail() {
                           {clientProduct.itemType === 'bundle' ? (
                             <div
                               onClick={() => {
-                                const newExpanded = new Set(expandedBundles);
-                                if (newExpanded.has(clientProduct.productId || clientProduct.id)) {
-                                  newExpanded.delete(clientProduct.productId || clientProduct.id);
-                                } else {
-                                  newExpanded.add(clientProduct.productId || clientProduct.id);
+                                const bundleId = clientProduct.productId || clientProduct.id;
+                                if (bundleId) {
+                                  const newExpanded = new Set(expandedBundles);
+                                  if (newExpanded.has(bundleId)) {
+                                    newExpanded.delete(bundleId);
+                                  } else {
+                                    newExpanded.add(bundleId);
+                                  }
+                                  setExpandedBundles(newExpanded);
                                 }
-                                setExpandedBundles(newExpanded);
                               }}
                               className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left cursor-pointer"
                             >
@@ -5281,7 +5284,13 @@ export default function EnhancedClientDetail() {
                           variant="ghost"
                           size="sm"
                           className="ml-2 text-red-600 hover:text-red-700"
-                          onClick={() => deleteProductMutation.mutate(clientProduct.id)}
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to remove this product from the client?')) {
+                              if (clientProduct?.id) {
+                                deleteProductMutation.mutate(clientProduct.id);
+                              }
+                            }
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
