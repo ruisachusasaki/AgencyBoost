@@ -4177,7 +4177,6 @@ export default function EnhancedClientDetail() {
 
               </CardContent>
             </Card>
-          </div>
         </TabsContent>
 
         {/* Add Tag Dialog */}
@@ -4600,8 +4599,6 @@ export default function EnhancedClientDetail() {
             </div>
           </DialogContent>
         </Dialog>
-
-        </TabsContent>
 
         {/* Products & Services Tab */}
         <TabsContent value="products" className="space-y-6 mt-6" key="main-products-tab">
