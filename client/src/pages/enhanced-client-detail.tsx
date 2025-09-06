@@ -1139,7 +1139,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client documents');
       return response.json();
     },
-    enabled: !!clientId && activeRightSection === "documents",
+    enabled: !!clientId && (activeRightSection === "documents" || activeHubSection === "documents"),
   });
 
   // Get all bundle IDs from client products
