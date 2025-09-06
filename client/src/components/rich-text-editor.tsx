@@ -37,7 +37,17 @@ interface RichTextEditorProps {
   className?: string;
 }
 
+const lineHeightClasses = {
+  '1.0': 'line-height-1',
+  '1.15': 'line-height-1-15', 
+  '1.3': 'line-height-1-3',
+  '1.5': 'line-height-1-5',
+  '1.7': 'line-height-1-7',
+  '2.0': 'line-height-2'
+};
+
 export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className }: RichTextEditorProps) {
+  const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -116,48 +126,8 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   };
 
   const setLineHeight = (height: string) => {
-    editor.chain().focus().command(({ state, dispatch }) => {
-      if (!dispatch) return false;
-      
-      const { selection } = state;
-      const { $from, $to } = selection;
-      
-      // Apply to all paragraphs and headings in the selection
-      const tr = state.tr;
-      let applied = false;
-      
-      state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => {
-        if (node.isBlock && (
-          node.type.name === 'paragraph' || 
-          node.type.name === 'heading'
-        )) {
-          const currentStyle = node.attrs.style || '';
-          const newStyle = currentStyle.replace(/line-height:\s*[^;]*(;|$)/g, '') + 
-                          (currentStyle && !currentStyle.endsWith(';') ? '; ' : '') + 
-                          `line-height: ${height};`;
-          
-          tr.setNodeMarkup(pos, undefined, {
-            ...node.attrs,
-            style: newStyle.replace(/;\s*;/g, ';').replace(/^;\s*/, '')
-          });
-          applied = true;
-        }
-        return true;
-      });
-      
-      if (applied) {
-        dispatch(tr);
-        return true;
-      }
-      
-      // Fallback: if no block elements found, create a new paragraph with line height
-      const newParagraph = state.schema.nodes.paragraph.create(
-        { style: `line-height: ${height};` }
-      );
-      tr.replaceSelectionWith(newParagraph);
-      dispatch(tr);
-      return true;
-    }).run();
+    setCurrentLineHeight(height);
+    editor.chain().focus().run();
   };
 
   return (
@@ -396,7 +366,10 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       </div>
 
       {/* Editor Content */}
-      <EditorContent editor={editor} className="min-h-[200px]" />
+      <EditorContent 
+        editor={editor} 
+        className={`min-h-[200px] ${lineHeightClasses[currentLineHeight as keyof typeof lineHeightClasses] || ''}`} 
+      />
     </div>
   );
 }
