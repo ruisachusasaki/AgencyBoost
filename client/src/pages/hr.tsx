@@ -75,6 +75,7 @@ export default function HRPage() {
   
   // Filter state for time off requests
   const [requestStatusFilter, setRequestStatusFilter] = useState("all");
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   
   // Filter states for applications
   const [applicationPositionFilter, setApplicationPositionFilter] = useState("all");
@@ -795,7 +796,7 @@ export default function HRPage() {
                 <CardTitle>Time Off Requests</CardTitle>
                 <CardDescription>All time off requests and their status</CardDescription>
               </div>
-              <Popover>
+              <Popover open={isStatusFilterOpen} onOpenChange={setIsStatusFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="ml-auto" data-testid="filter-status">
                     <Filter className="h-4 w-4 mr-2" />
@@ -811,7 +812,10 @@ export default function HRPage() {
                       <CommandGroup>
                         <CommandItem
                           value="all"
-                          onSelect={() => setRequestStatusFilter("all")}
+                          onSelect={() => {
+                            setRequestStatusFilter("all");
+                            setIsStatusFilterOpen(false);
+                          }}
                           className="cursor-pointer"
                         >
                           <Check
@@ -823,7 +827,10 @@ export default function HRPage() {
                         </CommandItem>
                         <CommandItem
                           value="pending"
-                          onSelect={() => setRequestStatusFilter("pending")}
+                          onSelect={() => {
+                            setRequestStatusFilter("pending");
+                            setIsStatusFilterOpen(false);
+                          }}
                           className="cursor-pointer"
                         >
                           <Check
@@ -835,7 +842,10 @@ export default function HRPage() {
                         </CommandItem>
                         <CommandItem
                           value="approved"
-                          onSelect={() => setRequestStatusFilter("approved")}
+                          onSelect={() => {
+                            setRequestStatusFilter("approved");
+                            setIsStatusFilterOpen(false);
+                          }}
                           className="cursor-pointer"
                         >
                           <Check
@@ -847,7 +857,10 @@ export default function HRPage() {
                         </CommandItem>
                         <CommandItem
                           value="rejected"
-                          onSelect={() => setRequestStatusFilter("rejected")}
+                          onSelect={() => {
+                            setRequestStatusFilter("rejected");
+                            setIsStatusFilterOpen(false);
+                          }}
                           className="cursor-pointer"
                         >
                           <Check
