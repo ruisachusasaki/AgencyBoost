@@ -1373,11 +1373,14 @@ export default function HRPage() {
                       };
                     }
                     
-                    const days = request.totalDays || 0;
-                    if (request.type === 'vacation') acc[staffKey].usedVacation += days;
-                    if (request.type === 'sick') acc[staffKey].usedSick += days;
-                    if (request.type === 'personal') acc[staffKey].usedPersonal += days;
-                    acc[staffKey].totalUsed += days;
+                    // Convert hours to fractional days (assuming 8-hour workday)
+                    const hours = parseFloat(request.totalHours || "0");
+                    const fractionalDays = hours / 8;
+                    
+                    if (request.type === 'vacation') acc[staffKey].usedVacation += fractionalDays;
+                    if (request.type === 'sick') acc[staffKey].usedSick += fractionalDays;
+                    if (request.type === 'personal') acc[staffKey].usedPersonal += fractionalDays;
+                    acc[staffKey].totalUsed += fractionalDays;
                     return acc;
                   }, {} as Record<string, any>);
 
