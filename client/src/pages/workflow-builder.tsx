@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2, Globe } from "lucide-react";
+import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2, Globe, UserCircle } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 import WorkflowCanvas from "@/components/workflow-canvas";
 import TriggerConfigPanel from "@/components/trigger-config-panel";
