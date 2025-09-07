@@ -27,8 +27,27 @@ export default function CourseDetail() {
   });
   
 
-  // Use lessons from the main course data instead of separate query
-  const lessons = course?.lessons || [];
+  // Fetch modules and lessons separately for proper organization
+  const { data: modules } = useQuery({
+    queryKey: [`/api/training/courses/${courseId}/modules`],
+    enabled: !!courseId,
+  });
+
+  const { data: lessons } = useQuery({
+    queryKey: [`/api/training/courses/${courseId}/lessons`],
+    enabled: !!courseId,
+  });
+
+  // Group lessons by module
+  const moduleStructure = modules ? modules.map(module => ({
+    ...module,
+    lessons: lessons ? lessons.filter(lesson => lesson.moduleId === module.id).sort((a, b) => (a.order || 0) - (b.order || 0)) : []
+  })).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+
+  // Get lessons without modules (fallback)
+  const lessonsWithoutModule = lessons ? lessons.filter(lesson => !lesson.moduleId) : [];
+
+  const allLessons = lessons || [];
 
   // Enroll mutation
   const enrollMutation = useMutation({
@@ -60,7 +79,7 @@ export default function CourseDetail() {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !modules || !lessons) {
     return <div className="p-6">Loading course...</div>;
   }
 
@@ -97,12 +116,12 @@ export default function CourseDetail() {
     return progress?.status === "completed";
   };
 
-  const canAccessLesson = (lessonIndex: number) => {
+  const canAccessLesson = (lessonIndex: number, allLessons: any[]) => {
     if (!isEnrolled) return false;
     if (lessonIndex === 0) return true;
     
     // Check if previous lesson is completed
-    const previousLesson = course.lessons[lessonIndex - 1];
+    const previousLesson = allLessons[lessonIndex - 1];
     return isLessonCompleted(previousLesson.id);
   };
 
@@ -159,7 +178,7 @@ export default function CourseDetail() {
               <div className="flex items-center gap-6 text-sm text-gray-600 mt-4">
                 <div className="flex items-center gap-1">
                   <BookOpen className="h-4 w-4" />
-                  {course.lessons?.length || 0} lessons
+                  {allLessons.length} lessons
                 </div>
                 
                 {course.estimatedDuration && (
@@ -190,8 +209,8 @@ export default function CourseDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {lessons.length === 0 ? (
+              <div className="space-y-4">
+                {allLessons.length === 0 ? (
                   <div className="py-8 text-center">
                     <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No lessons yet</h3>
@@ -205,81 +224,199 @@ export default function CourseDetail() {
                       </Link>
                     </Button>
                   </div>
-                ) : lessons.map((lesson, index) => {
-                  const progress = progressMap.get(lesson.id);
-                  const isCompleted = isLessonCompleted(lesson.id);
-                  const canAccess = canAccessLesson(index);
+                ) : (
+                  <div className="space-y-6">
+                    {/* Display modules with their lessons */}
+                    {moduleStructure.map((module, moduleIndex) => {
+                      if (module.lessons.length === 0) return null;
+                      
+                      return (
+                        <div key={module.id} className="space-y-3">
+                          {/* Module Header */}
+                          <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-semibold text-primary">{moduleIndex + 1}</span>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-lg">{module.title}</h3>
+                                {module.description && (
+                                  <p className="text-sm text-gray-600">{module.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="ml-auto text-sm text-gray-500">
+                              {module.lessons.length} lesson{module.lessons.length !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          
+                          {/* Module Lessons */}
+                          <div className="space-y-3 pl-4">
+                            {module.lessons.map((lesson) => {
+                              const globalLessonIndex = allLessons.findIndex(l => l.id === lesson.id);
+                              const progress = progressMap.get(lesson.id);
+                              const isCompleted = isLessonCompleted(lesson.id);
+                              const canAccess = canAccessLesson(globalLessonIndex, allLessons);
 
-                  return (
-                    <div key={lesson.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`lesson-${lesson.id}`}>
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="flex items-center gap-2">
-                          {isCompleted ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : canAccess ? (
-                            getContentIcon(lesson.contentType)
-                          ) : (
-                            <Lock className="h-4 w-4 text-gray-400" />
-                          )}
-                          <span className="text-sm text-gray-600">
-                            {index + 1}.
-                          </span>
-                        </div>
-                        
-                        <div className="flex-1">
-                          <h4 className={`font-medium ${!canAccess ? "text-gray-400" : ""}`}>
-                            {lesson.title}
-                          </h4>
-                          {lesson.description && (
-                            <p className="text-sm text-gray-600">{lesson.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                            <span className="capitalize">{lesson.contentType}</span>
-                            {lesson.videoDuration && (
-                              <>
-                                <span>•</span>
-                                <span>{Math.round(lesson.videoDuration / 60)} min</span>
-                              </>
-                            )}
-                            {lesson.isRequired && (
-                              <>
-                                <span>•</span>
-                                <span>Required</span>
-                              </>
-                            )}
+                              return (
+                                <div key={lesson.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50" data-testid={`lesson-${lesson.id}`}>
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      {isCompleted ? (
+                                        <CheckCircle className="h-5 w-5 text-green-600" />
+                                      ) : canAccess ? (
+                                        getContentIcon(lesson.contentType)
+                                      ) : (
+                                        <Lock className="h-4 w-4 text-gray-400" />
+                                      )}
+                                      <span className="text-sm text-gray-600">
+                                        {globalLessonIndex + 1}.
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex-1">
+                                      <h4 className={`font-medium ${!canAccess ? "text-gray-400" : ""}`}>
+                                        {lesson.title}
+                                      </h4>
+                                      {lesson.description && (
+                                        <p className="text-sm text-gray-600">{lesson.description}</p>
+                                      )}
+                                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                                        <span className="capitalize">{lesson.contentType}</span>
+                                        {lesson.videoDuration && (
+                                          <>
+                                            <span>•</span>
+                                            <span>{Math.round(lesson.videoDuration / 60)} min</span>
+                                          </>
+                                        )}
+                                        {lesson.isRequired && (
+                                          <>
+                                            <span>•</span>
+                                            <span>Required</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    {isCompleted && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => completeLessonMutation.mutate(lesson.id)}
+                                        disabled={completeLessonMutation.isPending}
+                                        data-testid={`button-mark-incomplete-${lesson.id}`}
+                                      >
+                                        Mark Incomplete
+                                      </Button>
+                                    )}
+                                    
+                                    {canAccess ? (
+                                      <Button size="sm" asChild data-testid={`button-start-lesson-${lesson.id}`}>
+                                        <Link href={`/training/lessons/${lesson.id}`}>
+                                          {isCompleted ? "Review" : "Start"}
+                                        </Link>
+                                      </Button>
+                                    ) : (
+                                      <Button size="sm" disabled>
+                                        <Lock className="h-4 w-4 mr-1" />
+                                        Locked
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
+                      );
+                    })}
+                    
+                    {/* Display lessons without modules (fallback) */}
+                    {lessonsWithoutModule.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-lg text-gray-600">Other Lessons</h3>
+                        {lessonsWithoutModule.map((lesson) => {
+                          const globalLessonIndex = allLessons.findIndex(l => l.id === lesson.id);
+                          const progress = progressMap.get(lesson.id);
+                          const isCompleted = isLessonCompleted(lesson.id);
+                          const canAccess = canAccessLesson(globalLessonIndex, allLessons);
+
+                          return (
+                            <div key={lesson.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`lesson-${lesson.id}`}>
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="flex items-center gap-2">
+                                  {isCompleted ? (
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                  ) : canAccess ? (
+                                    getContentIcon(lesson.contentType)
+                                  ) : (
+                                    <Lock className="h-4 w-4 text-gray-400" />
+                                  )}
+                                  <span className="text-sm text-gray-600">
+                                    {globalLessonIndex + 1}.
+                                  </span>
+                                </div>
+                                
+                                <div className="flex-1">
+                                  <h4 className={`font-medium ${!canAccess ? "text-gray-400" : ""}`}>
+                                    {lesson.title}
+                                  </h4>
+                                  {lesson.description && (
+                                    <p className="text-sm text-gray-600">{lesson.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                                    <span className="capitalize">{lesson.contentType}</span>
+                                    {lesson.videoDuration && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{Math.round(lesson.videoDuration / 60)} min</span>
+                                      </>
+                                    )}
+                                    {lesson.isRequired && (
+                                      <>
+                                        <span>•</span>
+                                        <span>Required</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                {isCompleted && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => completeLessonMutation.mutate(lesson.id)}
+                                    disabled={completeLessonMutation.isPending}
+                                    data-testid={`button-mark-incomplete-${lesson.id}`}
+                                  >
+                                    Mark Incomplete
+                                  </Button>
+                                )}
+                                
+                                {canAccess ? (
+                                  <Button size="sm" asChild data-testid={`button-start-lesson-${lesson.id}`}>
+                                    <Link href={`/training/lessons/${lesson.id}`}>
+                                      {isCompleted ? "Review" : "Start"}
+                                    </Link>
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" disabled>
+                                    <Lock className="h-4 w-4 mr-1" />
+                                    Locked
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {isCompleted && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => completeLessonMutation.mutate(lesson.id)}
-                            disabled={completeLessonMutation.isPending}
-                            data-testid={`button-mark-incomplete-${lesson.id}`}
-                          >
-                            Mark Incomplete
-                          </Button>
-                        )}
-                        
-                        {canAccess ? (
-                          <Button size="sm" asChild data-testid={`button-start-lesson-${lesson.id}`}>
-                            <Link href={`/training/lessons/${lesson.id}`}>
-                              {isCompleted ? "Review" : "Start"}
-                            </Link>
-                          </Button>
-                        ) : (
-                          <Button size="sm" disabled>
-                            <Lock className="h-4 w-4 mr-1" />
-                            Locked
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -312,7 +449,7 @@ export default function CourseDetail() {
                     asChild
                     data-testid="button-continue-learning"
                   >
-                    <Link href={`/training/lessons/${lessons[0]?.id || ''}`}>
+                    <Link href={`/training/lessons/${allLessons[0]?.id || ''}`}>
                       <Play className="h-4 w-4 mr-2" />
                       Continue Learning
                     </Link>
@@ -330,7 +467,7 @@ export default function CourseDetail() {
                 
                 <div className="flex justify-between">
                   <span className="text-gray-600">Lessons:</span>
-                  <span className="font-medium">{course.lessons?.length || 0}</span>
+                  <span className="font-medium">{allLessons.length}</span>
                 </div>
                 
                 {course.estimatedDuration && (
