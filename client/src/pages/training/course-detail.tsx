@@ -22,14 +22,10 @@ export default function CourseDetail() {
 
   // Fetch course data
   const { data: course, isLoading, error } = useQuery({
-    queryKey: ["/api/training/courses", courseId],
+    queryKey: [`/api/training/courses/${courseId}`],
     enabled: !!courseId,
   });
   
-  // Debug logging
-  console.log('Course data:', course);
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
 
   // Use lessons from the main course data instead of separate query
   const lessons = course?.lessons || [];
@@ -42,7 +38,7 @@ export default function CourseDetail() {
         title: "Success",
         description: "Successfully enrolled in the course!",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/training/courses", courseId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/training/my-courses"] });
     },
     onError: () => {
@@ -59,7 +55,7 @@ export default function CourseDetail() {
     mutationFn: (lessonId: string) => 
       fetch(`/api/training/lessons/${lessonId}/complete`, { method: "POST" }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/training/courses", courseId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/training/my-courses"] });
     },
   });
@@ -123,17 +119,6 @@ export default function CourseDetail() {
         
         {/* Course Management Actions - Show for course creators/admins */}
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/training/courses", courseId] });
-              queryClient.refetchQueries({ queryKey: ["/api/training/courses", courseId] });
-              console.log('Force refreshing course data...');
-            }}
-            data-testid="button-refresh-course"
-          >
-            🔄 Refresh Data
-          </Button>
           <Button variant="outline" asChild data-testid="button-edit-course">
             <Link href={`/training/courses/${courseId}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
