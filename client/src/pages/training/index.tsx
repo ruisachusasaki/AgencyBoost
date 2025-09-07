@@ -169,26 +169,28 @@ export default function Training() {
                 {filteredCourses.map((course) => (
                   <Card key={course.id} className="hover:shadow-md transition-shadow overflow-hidden" data-testid={`course-card-${course.id}`}>
                     {/* Course Thumbnail */}
-                    {course.thumbnailUrl ? (
-                      <div className="aspect-video w-full overflow-hidden bg-gray-100">
-                        <img 
-                          src={course.thumbnailUrl} 
-                          alt={course.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling.style.display = 'flex';
-                          }}
-                        />
-                        <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
+                    <Link href={`/training/courses/${course.id}`} className="block cursor-pointer" data-testid={`image-link-course-${course.id}`}>
+                      {course.thumbnailUrl ? (
+                        <div className="aspect-video w-full overflow-hidden bg-gray-100 hover:opacity-90 transition-opacity">
+                          <img 
+                            src={course.thumbnailUrl} 
+                            alt={course.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
+                            <BookOpen className="h-12 w-12 text-gray-400" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="aspect-video w-full bg-gray-100 flex items-center justify-center hover:opacity-90 transition-opacity">
                           <BookOpen className="h-12 w-12 text-gray-400" />
                         </div>
-                      </div>
-                    ) : (
-                      <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
-                        <BookOpen className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
+                      )}
+                    </Link>
                     
                     <CardHeader>
                       <div className="flex justify-between items-start">
@@ -270,26 +272,28 @@ export default function Training() {
                 {myCourses.map((enrollment) => (
                   <Card key={enrollment.enrollmentId} className="hover:shadow-md transition-shadow overflow-hidden" data-testid={`my-course-card-${enrollment.courseId}`}>
                     {/* Course Thumbnail */}
-                    {enrollment.thumbnailUrl ? (
-                      <div className="aspect-video w-full overflow-hidden bg-gray-100">
-                        <img 
-                          src={enrollment.thumbnailUrl} 
-                          alt={enrollment.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling.style.display = 'flex';
-                          }}
-                        />
-                        <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
+                    <Link href={`/training/courses/${enrollment.courseId}`} className="block cursor-pointer" data-testid={`image-link-my-course-${enrollment.courseId}`}>
+                      {enrollment.thumbnailUrl ? (
+                        <div className="aspect-video w-full overflow-hidden bg-gray-100 hover:opacity-90 transition-opacity">
+                          <img 
+                            src={enrollment.thumbnailUrl} 
+                            alt={enrollment.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
+                            <BookOpen className="h-12 w-12 text-gray-400" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="aspect-video w-full bg-gray-100 flex items-center justify-center hover:opacity-90 transition-opacity">
                           <BookOpen className="h-12 w-12 text-gray-400" />
                         </div>
-                      </div>
-                    ) : (
-                      <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
-                        <BookOpen className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
+                      )}
+                    </Link>
                     
                     <CardHeader>
                       <div className="flex justify-between items-start">
