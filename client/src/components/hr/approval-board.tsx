@@ -49,6 +49,8 @@ export default function ApprovalBoard() {
       if (!response.ok) throw new Error('Failed to fetch pending approvals');
       return response.json();
     },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Approve/Reject mutation
@@ -65,6 +67,7 @@ export default function ApprovalBoard() {
     },
     onSuccess: (_, { action }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
       toast({
         title: "Success",
         description: `Time off request ${action === "approve" ? "approved" : "rejected"} successfully`,
