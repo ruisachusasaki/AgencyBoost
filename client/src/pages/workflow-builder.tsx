@@ -743,6 +743,38 @@ export default function WorkflowBuilderPage() {
               );
             })()}
 
+            {/* HR Management */}
+            {(() => {
+              const hrTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "hr_management") || [];
+              const filteredTriggers = filterItems(hrTriggers.map((t: any) => ({ type: t.type, name: t.name })), triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserCircle className="h-5 w-5 text-rose-600" />
+                      HR Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "hr_management" })}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
           </div>
         </SheetContent>
       </Sheet>
