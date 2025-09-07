@@ -11036,23 +11036,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get pending time off requests for manager's direct reports
+  // Get pending time off requests for manager's direct reports (or all for admins)
   app.get("/api/hr/time-off-requests/pending-for-approval", async (req, res) => {
     try {
       // Use the same mock authentication as other endpoints
       const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
 
-      // Get ONLY pending requests from direct reports
-      const pendingRequests = await db.select()
-        .from(timeOffRequests)
-        .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
-        .where(
-          and(
-            eq(timeOffRequests.status, "pending"),
-            eq(staff.managerId, currentUserId)
+      // Check if current user is admin
+      const isAdmin = await hasPermission(currentUserId, 'hr', 'canManage');
+      
+      let pendingRequests;
+      
+      if (isAdmin) {
+        // Admin: Get ALL pending requests from everyone
+        pendingRequests = await db.select()
+          .from(timeOffRequests)
+          .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+          .where(eq(timeOffRequests.status, "pending"))
+          .orderBy(desc(timeOffRequests.createdAt));
+      } else {
+        // Manager: Get ONLY pending requests from direct reports
+        pendingRequests = await db.select()
+          .from(timeOffRequests)
+          .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+          .where(
+            and(
+              eq(timeOffRequests.status, "pending"),
+              eq(staff.managerId, currentUserId)
+            )
           )
-        )
-        .orderBy(desc(timeOffRequests.createdAt));
+          .orderBy(desc(timeOffRequests.createdAt));
+      }
 
       // Format the response for the frontend
       const formattedRequests = pendingRequests.map(row => ({
