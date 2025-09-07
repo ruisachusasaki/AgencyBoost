@@ -11186,16 +11186,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
       }
 
-      // Verify that the request belongs to a direct report
-      const [requestWithStaff] = await db.select()
-        .from(timeOffRequests)
-        .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
-        .where(
-          and(
-            eq(timeOffRequests.id, requestId),
-            eq(staff.managerId, currentUserId)
-          )
-        );
+      // Check if current user is admin
+      const isAdmin = await hasPermission(currentUserId, 'hr', 'canManage');
+      
+      let requestWithStaff;
+      
+      if (isAdmin) {
+        // Admin: Can approve ANY request
+        [requestWithStaff] = await db.select()
+          .from(timeOffRequests)
+          .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+          .where(eq(timeOffRequests.id, requestId));
+      } else {
+        // Manager: Can only approve direct reports' requests
+        [requestWithStaff] = await db.select()
+          .from(timeOffRequests)
+          .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+          .where(
+            and(
+              eq(timeOffRequests.id, requestId),
+              eq(staff.managerId, currentUserId)
+            )
+          );
+      }
 
       if (!requestWithStaff) {
         return res.status(404).json({ error: "Time off request not found or you don't have permission to approve it" });
