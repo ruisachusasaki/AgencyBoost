@@ -27,6 +27,17 @@ export default function LessonDetail() {
     enabled: !!lesson?.courseId,
   });
 
+  // Fetch all lessons in the course for navigation
+  const { data: courseLessons } = useQuery({
+    queryKey: [`/api/training/courses/${lesson?.courseId}/lessons`],
+    enabled: !!lesson?.courseId,
+  });
+
+  // Find current lesson index and navigation
+  const currentLessonIndex = courseLessons?.findIndex(l => l.id === lessonId) ?? -1;
+  const previousLesson = currentLessonIndex > 0 ? courseLessons[currentLessonIndex - 1] : null;
+  const nextLesson = currentLessonIndex >= 0 && currentLessonIndex < (courseLessons?.length - 1) ? courseLessons[currentLessonIndex + 1] : null;
+
   // Mark lesson as completed
   const completeLessonMutation = useMutation({
     mutationFn: () => 
@@ -62,109 +73,89 @@ export default function LessonDetail() {
   const renderLessonContent = () => {
     if (!lesson) return null;
 
-    switch (lesson.contentType) {
-      case "video":
-        if (lesson.videoEmbedId) {
-          return (
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <iframe
-                src={`https://www.youtube.com/embed/${lesson.videoEmbedId}`}
-                title={lesson.title}
-                className="w-full h-full"
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              />
-            </div>
-          );
-        } else if (lesson.videoUrl) {
-          return (
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <video
-                src={lesson.videoUrl}
-                controls
-                className="w-full h-full"
-                poster={lesson.thumbnailUrl}
-              >
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          );
-        } else {
-          return (
-            <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <PlayCircle className="h-12 w-12 mx-auto mb-2" />
-                <p>Video content will be available soon</p>
-              </div>
-            </div>
-          );
-        }
+    const contentComponents = [];
 
-      case "pdf":
-        if (lesson.pdfUrl) {
-          return (
-            <div className="space-y-4">
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex items-center gap-3 mb-3">
-                  <FileIcon className="h-8 w-8 text-red-600" />
-                  <div>
-                    <h3 className="font-semibold">PDF Document</h3>
-                    <p className="text-sm text-gray-600">{lesson.title}</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button asChild>
-                    <a href={lesson.pdfUrl} target="_blank" rel="noopener noreferrer">
-                      <FileIcon className="h-4 w-4 mr-2" />
-                      View PDF
-                    </a>
-                  </Button>
-                  {lesson.canDownload && (
-                    <Button variant="outline" asChild>
-                      <a href={lesson.pdfUrl} download>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {lesson.content && (
-                <div className="prose max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
-                </div>
-              )}
-            </div>
-          );
-        }
-        break;
-
-      case "article":
-      case "assignment":
-      case "quiz":
-      default:
-        if (lesson.content) {
-          return (
-            <div className="prose max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
-            </div>
-          );
-        } else {
-          return (
-            <div className="text-center text-gray-500 py-8">
-              <FileText className="h-12 w-12 mx-auto mb-2" />
-              <p>Content will be available soon</p>
-            </div>
-          );
-        }
+    // Handle video content first (if available)
+    if (lesson.contentType === "video") {
+      if (lesson.videoEmbedId) {
+        contentComponents.push(
+          <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
+            <iframe
+              src={`https://www.youtube.com/embed/${lesson.videoEmbedId}`}
+              title={lesson.title}
+              className="w-full h-full"
+              allowFullScreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          </div>
+        );
+      } else if (lesson.videoUrl) {
+        contentComponents.push(
+          <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
+            <video
+              src={lesson.videoUrl}
+              controls
+              className="w-full h-full"
+              poster={lesson.thumbnailUrl}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        );
+      }
     }
 
-    return (
-      <div className="text-center text-gray-500 py-8">
-        <FileText className="h-12 w-12 mx-auto mb-2" />
-        <p>Content not available</p>
-      </div>
-    );
+    // Handle PDF content
+    if (lesson.contentType === "pdf" && lesson.pdfUrl) {
+      contentComponents.push(
+        <div key="pdf" className="border rounded-lg p-4 bg-gray-50 mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <FileIcon className="h-8 w-8 text-red-600" />
+            <div>
+              <h3 className="font-semibold">PDF Document</h3>
+              <p className="text-sm text-gray-600">{lesson.title}</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button asChild>
+              <a href={lesson.pdfUrl} target="_blank" rel="noopener noreferrer">
+                <FileIcon className="h-4 w-4 mr-2" />
+                View PDF
+              </a>
+            </Button>
+            {lesson.canDownload && (
+              <Button variant="outline" asChild>
+                <a href={lesson.pdfUrl} download>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </a>
+              </Button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Always show text content if available (regardless of contentType)
+    if (lesson.content) {
+      contentComponents.push(
+        <div key="content" className="prose max-w-none">
+          <div dangerouslySetInnerHTML={{ __html: lesson.content.replace(/\n/g, '<br/>') }} />
+        </div>
+      );
+    }
+
+    // If no content components, show placeholder
+    if (contentComponents.length === 0) {
+      return (
+        <div className="text-center text-gray-500 py-8">
+          <FileText className="h-12 w-12 mx-auto mb-2" />
+          <p>Content not available</p>
+        </div>
+      );
+    }
+
+    return <div className="space-y-6">{contentComponents}</div>;
   };
 
   if (isLoading) {
@@ -212,37 +203,31 @@ export default function LessonDetail() {
           data-testid="button-mark-complete"
         >
           <CheckCircle className="h-4 w-4 mr-2" />
-          {completeLessonMutation.isPending ? "Marking Complete..." : "Mark Complete"}
+          {completeLessonMutation.isPending ? "Completing..." : "Mark Complete"}
         </Button>
       </div>
 
       {/* Lesson Header */}
       <div className="space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
-            {getContentIcon(lesson.contentType)}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <Badge variant="secondary" className="capitalize">
-                {lesson.contentType}
-              </Badge>
-              {lesson.isRequired && (
-                <Badge variant="outline">Required</Badge>
-              )}
-              {lesson.videoDuration && (
-                <Badge variant="outline">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {Math.round(lesson.videoDuration / 60)} min
-                </Badge>
-              )}
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{lesson.title}</h1>
-            {lesson.description && (
-              <p className="text-lg text-gray-600">{lesson.description}</p>
-            )}
-          </div>
+        <div className="flex items-center gap-3 mb-2">
+          {getContentIcon(lesson.contentType)}
+          <Badge variant="secondary" className="capitalize">
+            {lesson.contentType}
+          </Badge>
+          {lesson.isRequired && (
+            <Badge variant="outline">Required</Badge>
+          )}
+          {lesson.videoDuration && (
+            <Badge variant="outline">
+              <Clock className="h-3 w-3 mr-1" />
+              {Math.round(lesson.videoDuration / 60)} min
+            </Badge>
+          )}
         </div>
+        <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
+        {lesson.description && (
+          <p className="text-lg text-gray-600">{lesson.description}</p>
+        )}
       </div>
 
       {/* Lesson Content */}
@@ -257,20 +242,43 @@ export default function LessonDetail() {
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6 border-t">
-        <Button variant="outline" asChild>
-          <Link href={`/training/courses/${lesson.courseId}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Course
-          </Link>
-        </Button>
+        <div className="flex gap-3">
+          {previousLesson ? (
+            <Button variant="outline" asChild>
+              <Link href={`/training/lessons/${previousLesson.id}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Previous: {previousLesson.title}
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="outline" asChild>
+              <Link href={`/training/courses/${lesson.courseId}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Course
+              </Link>
+            </Button>
+          )}
+        </div>
         
-        <Button 
-          onClick={() => completeLessonMutation.mutate()}
-          disabled={completeLessonMutation.isPending}
-        >
-          <CheckCircle className="h-4 w-4 mr-2" />
-          {completeLessonMutation.isPending ? "Marking Complete..." : "Complete Lesson"}
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => completeLessonMutation.mutate()}
+            disabled={completeLessonMutation.isPending}
+            variant="outline"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            {completeLessonMutation.isPending ? "Completing..." : "Mark Complete"}
+          </Button>
+          
+          {nextLesson && (
+            <Button asChild>
+              <Link href={`/training/lessons/${nextLesson.id}`}>
+                Next: {nextLesson.title}
+                <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
