@@ -177,39 +177,6 @@ export default function CourseDetail() {
             </CardHeader>
           </Card>
 
-          {/* Enrollment Progress */}
-          {isEnrolled && course.enrollment && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  Your Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Course Progress</span>
-                      <span>{course.enrollment.progress || 0}%</span>
-                    </div>
-                    <Progress value={course.enrollment.progress || 0} className="h-3" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Completed Lessons:</span>
-                      <p className="font-medium">{course.enrollment.completedLessons || 0} of {course.enrollment.totalLessons || 0}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Status:</span>
-                      <p className="font-medium capitalize">{course.enrollment.status?.replace("_", " ")}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Course Content */}
           <Card>
@@ -380,6 +347,40 @@ export default function CourseDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Your Progress */}
+          {isEnrolled && course.enrollment && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  Your Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Course Progress</span>
+                      <span>{course.enrollment.progress || 0}%</span>
+                    </div>
+                    <Progress value={course.enrollment.progress || 0} className="h-3" />
+                  </div>
+                  
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Completed Lessons:</span>
+                      <span className="font-medium">{course.enrollment.completedLessons || 0} of {course.enrollment.totalLessons || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className="font-medium capitalize">{course.enrollment.status?.replace("_", " ")}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Course Stats */}
           <Card>
