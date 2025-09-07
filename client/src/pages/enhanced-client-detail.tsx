@@ -6507,6 +6507,12 @@ export default function EnhancedClientDetail() {
                         </div>
                       ))
                     )}
+                  </div>
+                  
+                  <TeamAssignmentSection clientId={clientId} />
+                </div>
+              )}
+
               {/* Add Product Modal */}
               <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -6536,10 +6542,7 @@ export default function EnhancedClientDetail() {
                   </div>
                 </DialogContent>
               </Dialog>
-
-                <TeamAssignmentSection clientId={clientId} />
-              )}
-          </div>
+            </div>
             )}
         </TabsContent>
 
