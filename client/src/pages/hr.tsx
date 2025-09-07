@@ -1343,8 +1343,11 @@ export default function HRPage() {
                     personal: currentPolicy?.personalDaysDefault ?? 3
                   };
 
-                  // Calculate usage and remaining statistics
+                  // Calculate usage and remaining statistics - ONLY COUNT APPROVED REQUESTS
                   const usageByStaff = relevantRequests.reduce((acc, request) => {
+                    // Only count approved requests toward time off usage
+                    if (request.status !== "approved") return acc;
+                    
                     const staff = staffData.find(s => s.id === request.staffId);
                     if (!staff) return acc;
                     
