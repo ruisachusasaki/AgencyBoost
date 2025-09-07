@@ -328,12 +328,12 @@ export default function ApplicantDetailPage() {
                     </div>
                   </div>
                   
-                  {application.experience && (
+                  {application?.experience && (
                     <div className="flex items-center gap-3">
                       <FileText className="h-4 w-4 text-gray-500" />
                       <div>
                         <p className="text-sm text-gray-500">Experience Level</p>
-                        <p className="font-medium capitalize">{application.experience}</p>
+                        <p className="font-medium capitalize">{application?.experience}</p>
                       </div>
                     </div>
                   )}
@@ -350,11 +350,11 @@ export default function ApplicantDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {application.resumeUrl && (
+                {application?.resumeUrl && (
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Resume</p>
                     <a 
-                      href={application.resumeUrl} 
+                      href={application?.resumeUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
@@ -365,11 +365,11 @@ export default function ApplicantDetailPage() {
                   </div>
                 )}
                 
-                {application.coverLetterUrl && (
+                {application?.coverLetterUrl && (
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Cover Letter</p>
                     <a 
-                      href={application.coverLetterUrl} 
+                      href={application?.coverLetterUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
@@ -380,11 +380,11 @@ export default function ApplicantDetailPage() {
                   </div>
                 )}
                 
-                {application.portfolioUrl && (
+                {application?.portfolioUrl && (
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Portfolio</p>
                     <a 
-                      href={application.portfolioUrl} 
+                      href={application?.portfolioUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
@@ -395,17 +395,17 @@ export default function ApplicantDetailPage() {
                   </div>
                 )}
 
-                {application.salaryExpectation && (
+                {application?.salaryExpectation && (
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Salary Expectation</p>
-                    <p className="font-medium">${Number(application.salaryExpectation).toLocaleString()}</p>
+                    <p className="font-medium">${Number(application?.salaryExpectation || 0).toLocaleString()}</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Custom Fields */}
-            {application.customFieldData && Object.keys(application.customFieldData).length > 0 && (
+            {application?.customFieldData && Object.keys(application.customFieldData).length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -414,7 +414,7 @@ export default function ApplicantDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {Object.entries(application.customFieldData).map(([key, value]) => {
+                  {Object.entries(application?.customFieldData || {}).map(([key, value]) => {
                     // Find the field label from form config using the field ID
                     const field = formConfig?.fields?.find((f: any) => f.id === key);
                     const fieldLabel = field?.label || key.replace(/^field_\d+$/, 'Custom Field').replace(/_/g, ' ');
@@ -445,7 +445,7 @@ export default function ApplicantDetailPage() {
             )}
 
             {/* Notes */}
-            {application.notes && (
+            {application?.notes && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -454,7 +454,7 @@ export default function ApplicantDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 whitespace-pre-wrap">{application.notes}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{application?.notes}</p>
                 </CardContent>
               </Card>
             )}
