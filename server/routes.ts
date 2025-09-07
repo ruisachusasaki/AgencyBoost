@@ -13570,12 +13570,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(trainingProgress.status, "completed")
         ));
       
-      const progress = Math.round((completedCount.count / enrollment.totalLessons) * 100);
+      // Get actual total lessons in the course (not from enrollment record which may be outdated)
+      const [totalLessonsCount] = await db.select({ count: sql<number>`count(*)` })
+        .from(trainingLessons)
+        .where(eq(trainingLessons.courseId, lesson.courseId));
+      
+      const progress = Math.round((completedCount.count / totalLessonsCount.count) * 100);
       const status = progress === 100 ? "completed" : "in_progress";
       
       await db.update(trainingEnrollments)
         .set({
           completedLessons: completedCount.count,
+          totalLessons: totalLessonsCount.count, // Update with actual lesson count
           progress,
           status,
           completedAt: progress === 100 ? new Date() : null,
