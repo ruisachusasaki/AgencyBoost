@@ -578,12 +578,15 @@ export default function ApplicantDetailPage() {
                       <div key={comment.id} className="flex space-x-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">
-                            {comment.authorName.split(' ').map(n => n[0]).join('')}
+                            {comment.authorName ? 
+                              comment.authorName.split(' ').map(n => n[0]).join('') : 
+                              '?'
+                            }
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium">{comment.authorName}</p>
+                            <p className="text-sm font-medium">{comment.authorName || 'Unknown User'}</p>
                             <p className="text-xs text-gray-500">
                               {comment.createdAt && new Date(comment.createdAt).toLocaleDateString()}
                             </p>
