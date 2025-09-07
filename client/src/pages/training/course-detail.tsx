@@ -50,7 +50,19 @@ export default function CourseDetail() {
   // Get lessons without modules (fallback)
   const lessonsWithoutModule = lessons ? lessons.filter(lesson => !lesson.moduleId) : [];
 
-  const allLessons = lessons || [];
+  const allLessons = lessons ? [...lessons].sort((a, b) => {
+    // First sort by module order, then by lesson order
+    const moduleA = modules?.find(m => m.id === a.moduleId);
+    const moduleB = modules?.find(m => m.id === b.moduleId);
+    const moduleOrderA = moduleA?.order || 0;
+    const moduleOrderB = moduleB?.order || 0;
+    
+    if (moduleOrderA !== moduleOrderB) {
+      return moduleOrderA - moduleOrderB;
+    }
+    
+    return (a.order || 0) - (b.order || 0);
+  }) : [];
 
   // Toggle module expansion
   const toggleModuleExpansion = (moduleId: string) => {
