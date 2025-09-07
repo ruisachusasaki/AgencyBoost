@@ -54,7 +54,17 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const [htmlContent, setHtmlContent] = useState(content);
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        listItem: {
+          HTMLAttributes: {},
+        },
+        bulletList: {
+          HTMLAttributes: {},
+        },
+        orderedList: {
+          HTMLAttributes: {},
+        },
+      }),
       Highlight,
       TextStyle,
       Color,
@@ -83,7 +93,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     ],
     content,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const rawHTML = editor.getHTML();
+      const cleanedHTML = cleanListHTML(rawHTML);
+      onChange(cleanedHTML);
     },
     editorProps: {
       attributes: {
@@ -139,12 +151,15 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       // Switching from HTML to visual mode
       if (editor) {
         editor.commands.setContent(htmlContent);
-        onChange(htmlContent);
+        const cleanedHTML = cleanListHTML(htmlContent);
+        onChange(cleanedHTML);
       }
     } else {
       // Switching from visual to HTML mode
       if (editor) {
-        setHtmlContent(editor.getHTML());
+        const rawHTML = editor.getHTML();
+        const cleanedHTML = cleanListHTML(rawHTML);
+        setHtmlContent(cleanedHTML);
       }
     }
     setIsHtmlMode(!isHtmlMode);
@@ -153,6 +168,13 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const handleHtmlChange = (value: string) => {
     setHtmlContent(value);
     onChange(value);
+  };
+
+  // Clean up HTML by removing unnecessary paragraph tags in list items
+  const cleanListHTML = (html: string) => {
+    return html
+      .replace(/<li><p>(.*?)<\/p><\/li>/g, '<li>$1</li>')
+      .replace(/<li>\s*<p>(.*?)<\/p>\s*<\/li>/g, '<li>$1</li>');
   };
 
   return (
