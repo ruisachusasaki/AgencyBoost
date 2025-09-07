@@ -14,7 +14,8 @@ import {
   Clock, 
   Eye,
   Calendar,
-  User
+  User,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -38,8 +39,28 @@ export default function ApprovalBoard() {
   const [selectedRequest, setSelectedRequest] = useState<TimeOffRequestWithStaff | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check if current user is admin
+  useQuery({
+    queryKey: ["/api/auth/current-user"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/current-user");
+      if (!response.ok) throw new Error('Failed to fetch user');
+      const user = await response.json();
+      
+      // Check permissions
+      const permResponse = await fetch(`/api/staff/${user.id}/permissions`);
+      if (permResponse.ok) {
+        const permissions = await permResponse.json();
+        setIsAdmin(permissions.hr?.canManage || false);
+      }
+      
+      return user;
+    },
+  });
 
   // Fetch pending time off requests for direct reports
   const { data: pendingRequests = [], isLoading } = useQuery<TimeOffRequestWithStaff[]>({
@@ -51,6 +72,28 @@ export default function ApprovalBoard() {
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,
+  });
+
+  // Delete mutation (ADMINS ONLY)
+  const deleteMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("DELETE", `/api/hr/time-off-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
+      toast({
+        title: "Success",
+        description: "Time off request deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete request",
+        variant: "destructive",
+      });
+    },
   });
 
   // Approve/Reject mutation
@@ -96,6 +139,12 @@ export default function ApprovalBoard() {
       requestId: request.id,
       action: "approve",
     });
+  };
+
+  const handleDeleteRequest = (requestId: string) => {
+    if (confirm("Are you sure you want to delete this time off request? This action cannot be undone.")) {
+      deleteMutation.mutate(requestId);
+    }
   };
 
   const handleConfirmRejection = () => {
@@ -252,6 +301,18 @@ export default function ApprovalBoard() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteRequest(request.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          data-testid={`button-delete-${request.id}`}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

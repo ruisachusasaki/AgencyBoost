@@ -11174,6 +11174,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete time off request (ADMINS ONLY)
+  app.delete("/api/hr/time-off-requests/:requestId", async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+
+      // Check if current user is admin - ONLY ADMINS can delete
+      const isAdmin = await hasPermission(currentUserId, 'hr', 'canManage');
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only administrators can delete time off requests" });
+      }
+
+      // Get the request to verify it exists and is pending
+      const [existingRequest] = await db.select()
+        .from(timeOffRequests)
+        .innerJoin(staff, eq(timeOffRequests.staffId, staff.id))
+        .where(eq(timeOffRequests.id, requestId));
+
+      if (!existingRequest) {
+        return res.status(404).json({ error: "Time off request not found" });
+      }
+
+      // Only allow deletion of pending requests
+      if (existingRequest.time_off_requests.status !== "pending") {
+        return res.status(400).json({ error: "Only pending requests can be deleted" });
+      }
+
+      // Delete the request
+      const [deletedRequest] = await db.delete(timeOffRequests)
+        .where(eq(timeOffRequests.id, requestId))
+        .returning();
+
+      // Create audit log
+      await createAuditLog(
+        "deleted",
+        "time_off_request",
+        requestId,
+        "Time off request deleted",
+        currentUserId,
+        `Deleted pending time off request for ${existingRequest.staff.firstName} ${existingRequest.staff.lastName}`,
+        existingRequest.time_off_requests,
+        null,
+        req
+      );
+
+      res.json({ message: "Time off request deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting time off request:", error);
+      res.status(500).json({ error: "Failed to delete request" });
+    }
+  });
+
   // Approve or reject time off request
   app.put("/api/hr/time-off-requests/:requestId/approval", async (req, res) => {
     try {
