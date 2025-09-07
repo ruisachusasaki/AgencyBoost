@@ -72,6 +72,11 @@ export default function WorkflowBuilderPage() {
   // Fetch existing workflow data when editing
   const { data: existingWorkflow, isLoading: isLoadingWorkflow } = useQuery({
     queryKey: ["/api/workflows", editingWorkflowId],
+    queryFn: async () => {
+      const response = await fetch(`/api/workflows/${editingWorkflowId}`);
+      if (!response.ok) throw new Error('Failed to fetch workflow');
+      return response.json();
+    },
     enabled: !!editingWorkflowId,
   });
 
