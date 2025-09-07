@@ -338,8 +338,20 @@ export default function CourseDetail() {
                   {enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
                 </Button>
               ) : (
-                <div className="text-center text-green-600 font-medium">
-                  ✓ You're enrolled in this course
+                <div className="space-y-3">
+                  <div className="text-center text-green-600 font-medium">
+                    ✓ You're enrolled in this course
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    asChild
+                    data-testid="button-continue-learning"
+                  >
+                    <Link href={`/training/lessons/${lessons[0]?.id || ''}`}>
+                      <Play className="h-4 w-4 mr-2" />
+                      Continue Learning
+                    </Link>
+                  </Button>
                 </div>
               )}
               
