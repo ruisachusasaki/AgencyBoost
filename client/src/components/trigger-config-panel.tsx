@@ -1666,6 +1666,31 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For time off status change triggers, show core fields in specific order */}
+            {triggerDefinition.type === 'time_off_status_changed' && (
+              <>
+                {/* To Status (required) */}
+                {triggerDefinition.configSchema.to_status && 
+                  renderConfigField("to_status", triggerDefinition.configSchema.to_status)
+                }
+                
+                {/* From Status (required) */}
+                {triggerDefinition.configSchema.from_status && 
+                  renderConfigField("from_status", triggerDefinition.configSchema.from_status)
+                }
+                
+                {/* Department (optional) */}
+                {triggerDefinition.configSchema.department && 
+                  renderConfigField("department", triggerDefinition.configSchema.department)
+                }
+                
+                {/* Request Type (optional) */}
+                {triggerDefinition.configSchema.request_type && 
+                  renderConfigField("request_type", triggerDefinition.configSchema.request_type)
+                }
+              </>
+            )}
+
             {/* For webhook triggers, show core fields first */}
             {triggerDefinition.type === 'inbound_webhook' && (
               <>
@@ -1706,6 +1731,7 @@ export default function TriggerConfigPanel({
              !triggerDefinition.type?.includes('invoice') && 
              triggerDefinition.type !== 'field_change' &&
              triggerDefinition.type !== 'note_added' &&
+             triggerDefinition.type !== 'time_off_status_changed' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
              triggerDefinition.type !== 'appointment_status_changed' &&
