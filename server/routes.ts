@@ -3807,6 +3807,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           },
           isActive: true
+        },
+        {
+          name: "New Job Application Submitted",
+          type: "job_application_submitted",
+          description: "Triggers when a new job application is submitted by an external candidate",
+          category: "hr_management",
+          configSchema: {
+            positionTitle: {
+              type: "string",
+              label: "Position Title",
+              placeholder: "e.g., Software Developer"
+            },
+            experienceLevel: {
+              type: "string",
+              options: ["entry", "mid", "senior", "lead"],
+              label: "Experience Level"
+            },
+            department: {
+              type: "string",
+              options: ["Sales", "Marketing", "Development", "Design", "Operations", "HR", "Finance", "Customer Success"],
+              label: "Department"
+            },
+            minSalaryExpectation: {
+              type: "number",
+              label: "Minimum Salary Expectation",
+              placeholder: "e.g., 50000",
+              min: 0
+            },
+            maxSalaryExpectation: {
+              type: "number",
+              label: "Maximum Salary Expectation", 
+              placeholder: "e.g., 100000",
+              min: 0
+            },
+            assignedTo: {
+              type: "staff_select",
+              label: "Assigned HR Staff Member"
+            },
+            notifyManager: {
+              type: "boolean",
+              label: "Notify Hiring Manager",
+              defaultValue: true
+            }
+          },
+          isActive: true
         }
       ];
 
