@@ -64,7 +64,7 @@ export default function EditLesson() {
         description: lesson.description || "",
         content: lesson.content || "",
         contentType: lesson.contentType || "video",
-        contentUrl: lesson.contentUrl || "",
+        contentUrl: lesson.videoUrl || "", // Map videoUrl from API to contentUrl for form
         duration: lesson.duration || 0,
         order: lesson.order || 0,
         isRequired: lesson.isRequired ?? true,

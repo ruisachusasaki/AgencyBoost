@@ -13471,8 +13471,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/training/lessons/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Map frontend contentUrl to database videoUrl field
+      const { contentUrl, ...otherData } = req.body;
       const updates = insertTrainingLessonSchema.partial().parse({
-        ...req.body,
+        ...otherData,
+        videoUrl: contentUrl || null, // Map contentUrl to videoUrl
         updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
       });
       
