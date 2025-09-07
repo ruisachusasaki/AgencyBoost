@@ -13079,11 +13079,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Get total enrollment count for this course
+      const enrollmentCountResult = await db.select({ count: sql<number>`COUNT(*)::int` })
+        .from(trainingEnrollments)
+        .where(eq(trainingEnrollments.courseId, id));
+      const enrollmentCount = Number(enrollmentCountResult[0]?.count) || 0;
+
       const result = {
         ...course,
         lessons,
         enrollment,
-        progress
+        progress,
+        enrollmentCount: enrollmentCount
       };
       
       

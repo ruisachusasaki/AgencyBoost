@@ -24,6 +24,8 @@ export default function CourseDetail() {
   const { data: course, isLoading } = useQuery({
     queryKey: ["/api/training/courses", courseId],
     enabled: !!courseId,
+    staleTime: 0, // Force fresh data
+    cacheTime: 0, // Don't cache
   });
 
   // Fetch course lessons
