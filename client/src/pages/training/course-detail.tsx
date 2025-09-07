@@ -24,15 +24,10 @@ export default function CourseDetail() {
   const { data: course, isLoading } = useQuery({
     queryKey: ["/api/training/courses", courseId],
     enabled: !!courseId,
-    staleTime: 0, // Force fresh data
-    cacheTime: 0, // Don't cache
   });
 
-  // Fetch course lessons
-  const { data: lessons = [] } = useQuery({
-    queryKey: ["/api/training/courses", courseId, "lessons"],
-    enabled: !!courseId,
-  });
+  // Use lessons from the main course data instead of separate query
+  const lessons = course?.lessons || [];
 
   // Enroll mutation
   const enrollMutation = useMutation({
