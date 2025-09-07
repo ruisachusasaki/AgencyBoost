@@ -97,6 +97,27 @@ export default function CourseDetail() {
     },
   });
 
+  // Mark lesson incomplete mutation
+  const incompleteLessonMutation = useMutation({
+    mutationFn: (lessonId: string) => 
+      fetch(`/api/training/lessons/${lessonId}/incomplete`, { method: "POST" }),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Lesson marked as incomplete",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/training/my-courses"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to mark lesson as incomplete",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading || !modules || !lessons) {
     return <div className="p-6">Loading course...</div>;
   }
@@ -332,8 +353,8 @@ export default function CourseDetail() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => completeLessonMutation.mutate(lesson.id)}
-                                        disabled={completeLessonMutation.isPending}
+                                        onClick={() => incompleteLessonMutation.mutate(lesson.id)}
+                                        disabled={incompleteLessonMutation.isPending}
                                         data-testid={`button-mark-incomplete-${lesson.id}`}
                                       >
                                         Mark Incomplete
@@ -418,8 +439,8 @@ export default function CourseDetail() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => completeLessonMutation.mutate(lesson.id)}
-                                    disabled={completeLessonMutation.isPending}
+                                    onClick={() => incompleteLessonMutation.mutate(lesson.id)}
+                                    disabled={incompleteLessonMutation.isPending}
                                     data-testid={`button-mark-incomplete-${lesson.id}`}
                                   >
                                     Mark Incomplete

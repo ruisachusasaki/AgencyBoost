@@ -13518,6 +13518,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark lesson as incomplete (reset)
+  app.post("/api/training/lessons/:id/incomplete", async (req, res) => {
+    try {
+      const { id: lessonId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      const [enrollment] = await db.select().from(trainingEnrollments)
+        .where(and(eq(trainingEnrollments.courseId, lesson.courseId), eq(trainingEnrollments.userId, userId)));
+      
+      if (!enrollment) {
+        return res.status(404).json({ error: "Not enrolled in this course" });
+      }
+      
+      // Reset lesson progress
+      const [existingProgress] = await db.select().from(trainingProgress)
+        .where(and(eq(trainingProgress.enrollmentId, enrollment.id), eq(trainingProgress.lessonId, lessonId)));
+      
+      if (existingProgress) {
+        await db.update(trainingProgress)
+          .set({ 
+            status: "not_started",
+            completionPercentage: 0,
+            completedAt: null,
+            lastAccessedAt: new Date()
+          })
+          .where(eq(trainingProgress.id, existingProgress.id));
+      } else {
+        // If no progress record exists, create one as not_started
+        await db.insert(trainingProgress).values({
+          enrollmentId: enrollment.id,
+          lessonId,
+          userId,
+          status: "not_started",
+          completionPercentage: 0,
+          firstStartedAt: null,
+          completedAt: null,
+          lastAccessedAt: new Date()
+        });
+      }
+      
+      // Recalculate enrollment progress
+      const [completedCount] = await db.select({ count: sql<number>`count(*)` })
+        .from(trainingProgress)
+        .where(and(
+          eq(trainingProgress.enrollmentId, enrollment.id),
+          eq(trainingProgress.status, "completed")
+        ));
+      
+      // Get actual total lessons in the course
+      const [totalLessonsCount] = await db.select({ count: sql<number>`count(*)` })
+        .from(trainingLessons)
+        .where(eq(trainingLessons.courseId, lesson.courseId));
+      
+      const progress = Math.round((completedCount.count / totalLessonsCount.count) * 100);
+      const status = progress === 100 ? "completed" : progress > 0 ? "in_progress" : "not_started";
+      
+      await db.update(trainingEnrollments)
+        .set({
+          completedLessons: completedCount.count,
+          totalLessons: totalLessonsCount.count,
+          progress,
+          status,
+          completedAt: progress === 100 ? new Date() : null,
+          lastAccessedAt: new Date()
+        })
+        .where(eq(trainingEnrollments.id, enrollment.id));
+      
+      res.json({ message: "Lesson marked as incomplete", progress });
+    } catch (error) {
+      console.error('Error marking lesson as incomplete:', error);
+      res.status(500).json({ error: "Failed to mark lesson as incomplete" });
+    }
+  });
+
   // Mark lesson as completed
   app.post("/api/training/lessons/:id/complete", async (req, res) => {
     try {
