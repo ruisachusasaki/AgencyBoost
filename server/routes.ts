@@ -3852,6 +3852,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           },
           isActive: true
+        },
+        {
+          name: "Time Off Status Changed",
+          type: "time_off_status_changed",
+          description: "Triggers when a time off request status changes (pending → approved, approved → rejected, etc.)",
+          category: "hr_management",
+          configSchema: {
+            to_status: {
+              type: "string",
+              label: "To Status",
+              options: ["pending", "approved", "rejected"],
+              required: true
+            },
+            from_status: {
+              type: "string", 
+              label: "From Status",
+              options: ["pending", "approved", "rejected"],
+              required: true
+            },
+            department: {
+              type: "string",
+              label: "Department (Optional)",
+              options: [
+                "Account Management",
+                "Accounting", 
+                "Creative",
+                "Data & Analytics",
+                "DevOps",
+                "Executive",
+                "Media Buying", 
+                "Project Management",
+                "SEO",
+                "Social Media",
+                "Venue Booking"
+              ]
+            },
+            request_type: {
+              type: "string",
+              label: "Request Type (Optional)",
+              options: ["vacation", "sick", "personal"]
+            }
+          },
+          isActive: true
         }
       ];
 
