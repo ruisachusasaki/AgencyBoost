@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Play, Clock, Users, BookOpen, CheckCircle, Lock, 
   ArrowLeft, Award, FileText, Video, FileIcon, Download,
-  Edit, Plus, Settings
+  Edit, Plus, Settings, ChevronDown, ChevronRight
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -19,6 +19,9 @@ export default function CourseDetail() {
   const courseId = params?.id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // State for collapsible modules
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   // Fetch course data
   const { data: course, isLoading, error } = useQuery({
@@ -48,6 +51,21 @@ export default function CourseDetail() {
   const lessonsWithoutModule = lessons ? lessons.filter(lesson => !lesson.moduleId) : [];
 
   const allLessons = lessons || [];
+
+  // Toggle module expansion
+  const toggleModuleExpansion = (moduleId: string) => {
+    setExpandedModules(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(moduleId)) {
+        newSet.delete(moduleId);
+      } else {
+        newSet.add(moduleId);
+      }
+      return newSet;
+    });
+  };
+
+  const isModuleExpanded = (moduleId: string) => expandedModules.has(moduleId);
 
   // Enroll mutation
   const enrollMutation = useMutation({
@@ -229,29 +247,39 @@ export default function CourseDetail() {
                     {/* Display modules with their lessons */}
                     {moduleStructure.map((module, moduleIndex) => {
                       if (module.lessons.length === 0) return null;
+                      const expanded = isModuleExpanded(module.id);
                       
                       return (
                         <div key={module.id} className="space-y-3">
                           {/* Module Header */}
-                          <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
-                            <div className="flex items-center gap-2">
+                          <div 
+                            className="flex items-center gap-3 pb-2 border-b border-gray-200 cursor-pointer hover:bg-gray-50 -mx-3 px-3 py-2 rounded-lg transition-colors"
+                            onClick={() => toggleModuleExpansion(module.id)}
+                          >
+                            <div className="flex items-center gap-2 flex-1">
                               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                 <span className="text-sm font-semibold text-primary">{moduleIndex + 1}</span>
                               </div>
-                              <div>
+                              <div className="flex-1">
                                 <h3 className="font-semibold text-lg">{module.title}</h3>
                                 {module.description && (
                                   <p className="text-sm text-gray-600">{module.description}</p>
                                 )}
                               </div>
                             </div>
-                            <div className="ml-auto text-sm text-gray-500">
-                              {module.lessons.length} lesson{module.lessons.length !== 1 ? 's' : ''}
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>{module.lessons.length} lesson{module.lessons.length !== 1 ? 's' : ''}</span>
+                              {expanded ? (
+                                <ChevronDown className="h-5 w-5 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                              )}
                             </div>
                           </div>
                           
-                          {/* Module Lessons */}
-                          <div className="space-y-3 pl-4">
+                          {/* Module Lessons - Only show when expanded */}
+                          {expanded && (
+                            <div className="space-y-3 pl-4">
                             {module.lessons.map((lesson) => {
                               const globalLessonIndex = allLessons.findIndex(l => l.id === lesson.id);
                               const progress = progressMap.get(lesson.id);
@@ -328,7 +356,8 @@ export default function CourseDetail() {
                                 </div>
                               );
                             })}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
