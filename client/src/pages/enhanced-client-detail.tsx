@@ -5621,32 +5621,57 @@ export default function EnhancedClientDetail() {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
               
-              <Tabs value={activeHubSection} onValueChange={(value) => setActiveHubSection(value as "notes" | "tasks" | "appointments" | "documents" | "team")} className="space-y-6">
-                <TabsList className="grid w-fit grid-cols-5">
-                  <TabsTrigger value="notes" className="flex items-center gap-2">
-                    <StickyNote className="h-4 w-4" />
-                    Notes
-                  </TabsTrigger>
-                  <TabsTrigger value="tasks" className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    Tasks
-                  </TabsTrigger>
-                  <TabsTrigger value="appointments" className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Calendar
-                  </TabsTrigger>
-                  <TabsTrigger value="documents" className="flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Documents
-                  </TabsTrigger>
-                  <TabsTrigger value="team" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Team
-                  </TabsTrigger>
-                </TabsList>
+              {/* Simple navigation buttons instead of nested tabs */}
+              <div className="flex flex-wrap gap-2 border-b pb-4">
+                <Button
+                  variant={activeHubSection === "notes" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveHubSection("notes")}
+                  className="flex items-center gap-2"
+                >
+                  <StickyNote className="h-4 w-4" />
+                  Notes
+                </Button>
+                <Button
+                  variant={activeHubSection === "tasks" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveHubSection("tasks")}
+                  className="flex items-center gap-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Tasks
+                </Button>
+                <Button
+                  variant={activeHubSection === "appointments" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveHubSection("appointments")}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Calendar
+                </Button>
+                <Button
+                  variant={activeHubSection === "documents" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveHubSection("documents")}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Documents
+                </Button>
+                <Button
+                  variant={activeHubSection === "team" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveHubSection("team")}
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Team
+                </Button>
+              </div>
 
               {/* Notes Section */}
-              <TabsContent value="notes" className="mt-6">
+              {activeHubSection === "notes" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Notes</h3>
@@ -5822,10 +5847,10 @@ export default function EnhancedClientDetail() {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+              )}
 
               {/* Tasks Section */}
-              <TabsContent value="tasks" className="mt-6">
+              {activeHubSection === "tasks" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Tasks</h3>
@@ -5900,10 +5925,10 @@ export default function EnhancedClientDetail() {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+              )}
 
               {/* Appointments Section */} 
-              <TabsContent value="appointments" className="mt-6">
+              {activeHubSection === "appointments" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Meetings/Appointments</h3>
@@ -6005,10 +6030,10 @@ export default function EnhancedClientDetail() {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+              )}
 
               {/* Documents Section */}
-              <TabsContent value="documents" className="mt-6">
+              {activeHubSection === "documents" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Documents</h3>
@@ -6226,10 +6251,10 @@ export default function EnhancedClientDetail() {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+              )}
 
-              {/* Products Section */}
-              <TabsContent value="hub-products" className="mt-6" key="hub-products-tab">
+              {/* Team Section */}
+              {activeHubSection === "team" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -6482,10 +6507,6 @@ export default function EnhancedClientDetail() {
                         </div>
                       ))
                     )}
-                  </div>
-                </div>
-              </TabsContent>
-
               {/* Add Product Modal */}
               <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -6516,11 +6537,8 @@ export default function EnhancedClientDetail() {
                 </DialogContent>
               </Dialog>
 
-              {/* Team Section */}
-              <TabsContent value="team" className="mt-6">
                 <TeamAssignmentSection clientId={clientId} />
-              </TabsContent>
-            </Tabs>
+              )}
           </div>
             )}
         </TabsContent>
