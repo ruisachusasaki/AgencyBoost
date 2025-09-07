@@ -3772,6 +3772,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           },
           isActive: true
+        },
+        {
+          name: "Time Off Request Submitted",
+          type: "time_off_request_submitted",
+          description: "Triggers when a new time off request is submitted by a staff member",
+          category: "hr_management",
+          configSchema: {
+            timeOffType: {
+              type: "string",
+              options: ["vacation", "sick", "personal"],
+              label: "Time Off Type"
+            },
+            minDays: {
+              type: "number",
+              label: "Minimum Days",
+              placeholder: "e.g., 3",
+              min: 0
+            },
+            maxDays: {
+              type: "number", 
+              label: "Maximum Days",
+              placeholder: "e.g., 14",
+              min: 0
+            },
+            department: {
+              type: "string",
+              options: ["Sales", "Marketing", "Development", "Design", "Operations", "HR", "Finance", "Customer Success"],
+              label: "Department"
+            },
+            assignedTo: {
+              type: "staff_select",
+              label: "Assigned Staff Member"
+            }
+          },
+          isActive: true
         }
       ];
 
