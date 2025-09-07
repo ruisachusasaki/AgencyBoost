@@ -21,10 +21,15 @@ export default function CourseDetail() {
   const queryClient = useQueryClient();
 
   // Fetch course data
-  const { data: course, isLoading } = useQuery({
+  const { data: course, isLoading, error } = useQuery({
     queryKey: ["/api/training/courses", courseId],
     enabled: !!courseId,
   });
+  
+  // Debug logging
+  console.log('Course data:', course);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
 
   // Use lessons from the main course data instead of separate query
   const lessons = course?.lessons || [];
@@ -118,6 +123,17 @@ export default function CourseDetail() {
         
         {/* Course Management Actions - Show for course creators/admins */}
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/training/courses", courseId] });
+              queryClient.refetchQueries({ queryKey: ["/api/training/courses", courseId] });
+              console.log('Force refreshing course data...');
+            }}
+            data-testid="button-refresh-course"
+          >
+            🔄 Refresh Data
+          </Button>
           <Button variant="outline" asChild data-testid="button-edit-course">
             <Link href={`/training/courses/${courseId}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
