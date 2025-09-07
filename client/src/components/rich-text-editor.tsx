@@ -27,7 +27,8 @@ import {
   Image as ImageIcon,
   Highlighter,
   CheckSquare,
-  AlignJustify
+  AlignJustify,
+  FileCode
 } from 'lucide-react';
 import { CalloutExtension, ToggleExtension, ToggleSummary, ToggleContent, ColumnsExtension, ColumnExtension } from './tiptap-extensions';
 
@@ -49,6 +50,8 @@ const lineHeightClasses = {
 
 export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className }: RichTextEditorProps) {
   const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
+  const [htmlContent, setHtmlContent] = useState(content);
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -129,6 +132,27 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const setLineHeight = (height: string) => {
     setCurrentLineHeight(height);
     editor.chain().focus().run();
+  };
+
+  const toggleHtmlMode = () => {
+    if (isHtmlMode) {
+      // Switching from HTML to visual mode
+      if (editor) {
+        editor.commands.setContent(htmlContent);
+        onChange(htmlContent);
+      }
+    } else {
+      // Switching from visual to HTML mode
+      if (editor) {
+        setHtmlContent(editor.getHTML());
+      }
+    }
+    setIsHtmlMode(!isHtmlMode);
+  };
+
+  const handleHtmlChange = (value: string) => {
+    setHtmlContent(value);
+    onChange(value);
   };
 
   return (
@@ -305,6 +329,20 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
 
         <div className="w-px h-6 bg-gray-300 mx-1" />
 
+        {/* HTML Mode Toggle */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={toggleHtmlMode}
+          className={`h-8 w-8 p-0 ${isHtmlMode ? 'bg-gray-200' : ''}`}
+          title="Toggle HTML Mode"
+        >
+          <FileCode className="h-4 w-4" />
+        </Button>
+
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+
         {/* Line Spacing */}
         <div className="relative group">
           <Button
@@ -367,10 +405,19 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       </div>
 
       {/* Editor Content */}
-      <EditorContent 
-        editor={editor} 
-        className={`min-h-[200px] ${lineHeightClasses[currentLineHeight as keyof typeof lineHeightClasses] || ''}`} 
-      />
+      {isHtmlMode ? (
+        <textarea
+          value={htmlContent}
+          onChange={(e) => handleHtmlChange(e.target.value)}
+          className="w-full min-h-[200px] p-4 font-mono text-sm border-0 resize-none focus:outline-none"
+          placeholder="Enter HTML content..."
+        />
+      ) : (
+        <EditorContent 
+          editor={editor} 
+          className={`min-h-[200px] ${lineHeightClasses[currentLineHeight as keyof typeof lineHeightClasses] || ''}`} 
+        />
+      )}
     </div>
   );
 }
