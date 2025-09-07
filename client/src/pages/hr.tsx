@@ -32,7 +32,8 @@ import {
   Star,
   Eye,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -42,6 +43,27 @@ import ApprovalBoard from "@/components/hr/approval-board";
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const queryClient = useQueryClient();
+  
+  // Admin permission state
+  const [isHRAdmin, setIsHRAdmin] = useState(false);
+  
+  // Check if current user has HR admin permissions
+  useQuery({
+    queryKey: ["/api/user-permissions"],
+    queryFn: async () => {
+      const response = await fetch("/api/user-permissions");
+      if (!response.ok) throw new Error('Failed to fetch permissions');
+      const permissions = await response.json();
+      
+      setIsHRAdmin(
+        permissions.tasks?.canDelete || 
+        permissions.settings?.canAccess || 
+        permissions.clients?.canDelete || false
+      );
+      
+      return permissions;
+    },
+  });
   
   // Filter states for staff directory
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -57,6 +79,31 @@ export default function HRPage() {
   
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
+
+  // Delete time off request mutation (ADMINS ONLY)
+  const deleteTimeOffMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await apiRequest("DELETE", `/api/hr/time-off-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
+      // Show success message
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete time off request:", error);
+    },
+  });
+
+  const handleDeleteTimeOffRequest = (requestId: string, status: string) => {
+    const message = status === 'approved' 
+      ? "Are you sure you want to delete this APPROVED time off request? This will restore their time off balance."
+      : "Are you sure you want to delete this time off request? This action cannot be undone.";
+      
+    if (confirm(message)) {
+      deleteTimeOffMutation.mutate(requestId);
+    }
+  };
   
   // Job opening modal state
   const [isJobOpeningModalOpen, setIsJobOpeningModalOpen] = useState(false);
@@ -775,17 +822,31 @@ export default function HRPage() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          {getStatusBadge(request.status)}
-                          {request.reason && (
-                            <p className="text-xs text-slate-600 mt-1 max-w-xs truncate">
-                              {request.reason}
-                            </p>
-                          )}
-                          {request.status === "rejected" && request.rejectionReason && (
-                            <p className="text-xs text-red-600 mt-1 max-w-xs truncate">
-                              Reason: {request.rejectionReason}
-                            </p>
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            {getStatusBadge(request.status)}
+                            {request.reason && (
+                              <p className="text-xs text-slate-600 mt-1 max-w-xs truncate">
+                                {request.reason}
+                              </p>
+                            )}
+                            {request.status === "rejected" && request.rejectionReason && (
+                              <p className="text-xs text-red-600 mt-1 max-w-xs truncate">
+                                Reason: {request.rejectionReason}
+                              </p>
+                            )}
+                          </div>
+                          {isHRAdmin && (request.status === "pending" || request.status === "approved") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteTimeOffRequest(request.id, request.status)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+                              disabled={deleteTimeOffMutation.isPending}
+                              data-testid={`button-delete-timeoff-${request.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </div>

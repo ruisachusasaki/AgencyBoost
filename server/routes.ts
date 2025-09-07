@@ -11196,9 +11196,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Time off request not found" });
       }
 
-      // Only allow deletion of pending requests
-      if (existingRequest.time_off_requests.status !== "pending") {
-        return res.status(400).json({ error: "Only pending requests can be deleted" });
+      // Allow deletion of both pending AND approved requests for admins
+      if (!["pending", "approved"].includes(existingRequest.time_off_requests.status)) {
+        return res.status(400).json({ error: "Only pending and approved requests can be deleted" });
       }
 
       // Delete the request
