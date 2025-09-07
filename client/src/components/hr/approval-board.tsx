@@ -43,7 +43,12 @@ export default function ApprovalBoard() {
 
   // Fetch pending time off requests for direct reports
   const { data: pendingRequests = [], isLoading } = useQuery<TimeOffRequestWithStaff[]>({
-    queryKey: ["/api/hr/time-off-requests", "pending-for-approval"],
+    queryKey: ["/api/hr/time-off-requests/pending-for-approval"],
+    queryFn: async () => {
+      const response = await fetch("/api/hr/time-off-requests/pending-for-approval");
+      if (!response.ok) throw new Error('Failed to fetch pending approvals');
+      return response.json();
+    },
   });
 
   // Approve/Reject mutation
@@ -184,10 +189,10 @@ export default function ApprovalBoard() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">
-                        {request.staff.firstName} {request.staff.lastName}
+                        {request.staff?.firstName || 'Unknown'} {request.staff?.lastName || 'User'}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {request.staff.position} • {request.staff.department}
+                        {request.staff?.position || 'N/A'} • {request.staff?.department || 'N/A'}
                       </span>
                     </div>
                   </TableCell>
