@@ -35,8 +35,13 @@ export default function ApplicantDetailPage() {
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
   // Fetch applicant details
-  const { data: application, isLoading } = useQuery<JobApplication>({
+  const { data: application, isLoading, error } = useQuery<JobApplication>({
     queryKey: ["/api/hr/job-applications", id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/job-applications/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch application');
+      return response.json();
+    },
     enabled: !!id,
   });
 
@@ -251,23 +256,24 @@ export default function ApplicantDetailPage() {
           
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{application.applicantName}</h1>
-              <p className="text-gray-600 mt-1">Applying for {application.positionTitle}</p>
+              <h1 className="text-3xl font-bold text-gray-900">{application?.applicantName || 'Unknown Applicant'}</h1>
+              <p className="text-gray-600 mt-1">Applying for {application?.positionTitle || 'Unknown Position'}</p>
             </div>
             
             <div className="flex items-center space-x-4">
-              <Badge className={getStatusBadgeColor(application.stage)}>
-                {formatStatusLabel(application.stage)}
+              <Badge className={getStatusBadgeColor(application?.stage || 'new')}>
+                {formatStatusLabel(application?.stage || 'new')}
               </Badge>
               <div className="flex items-center space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
-                    className={`h-5 w-5 ${
-                      star <= (application.rating || 0) 
+                    className={`h-5 w-5 cursor-pointer ${
+                      star <= (application?.rating || 0) 
                         ? 'text-yellow-400 fill-current' 
                         : 'text-gray-300'
                     }`}
+                    onClick={() => handleRatingUpdate(star)}
                   />
                 ))}
               </div>
@@ -292,7 +298,7 @@ export default function ApplicantDetailPage() {
                     <Mail className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{application.applicantEmail}</p>
+                      <p className="font-medium">{application?.applicantEmail || 'N/A'}</p>
                     </div>
                   </div>
                   
@@ -301,7 +307,7 @@ export default function ApplicantDetailPage() {
                       <Phone className="h-4 w-4 text-gray-500" />
                       <div>
                         <p className="text-sm text-gray-500">Phone</p>
-                        <p className="font-medium">{application.applicantPhone}</p>
+                        <p className="font-medium">{application?.applicantPhone || 'N/A'}</p>
                       </div>
                     </div>
                   )}
@@ -311,13 +317,13 @@ export default function ApplicantDetailPage() {
                     <div>
                       <p className="text-sm text-gray-500">Applied On</p>
                       <p className="font-medium">
-                        {application.appliedAt && new Date(application.appliedAt).toLocaleDateString('en-US', {
+                        {application?.appliedAt ? new Date(application.appliedAt).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit'
-                        })}
+                        }) : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -464,7 +470,7 @@ export default function ApplicantDetailPage() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
-                  <Select value={application.stage} onValueChange={handleStatusUpdate}>
+                  <Select value={application?.stage || 'new'} onValueChange={handleStatusUpdate}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
