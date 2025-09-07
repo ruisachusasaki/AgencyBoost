@@ -740,8 +740,7 @@ export default function HRPage() {
                       );
                     })}
                   </div>
-                );
-              })()} 
+                )}
             </CardContent>
             </Card>
 
