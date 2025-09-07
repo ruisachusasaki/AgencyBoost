@@ -157,9 +157,18 @@ export default function CourseDetail() {
 
   const canAccessLesson = (lessonIndex: number, allLessons: any[]) => {
     if (!isEnrolled) return false;
+    
+    const currentLesson = allLessons[lessonIndex];
+    
+    // Check manual lock first - if manually locked, deny access
+    if (currentLesson?.isLocked) {
+      return false;
+    }
+    
+    // For first lesson, allow access if not manually locked
     if (lessonIndex === 0) return true;
     
-    // Check if previous lesson is completed
+    // For other lessons, check if previous lesson is completed (sequential lock)
     const previousLesson = allLessons[lessonIndex - 1];
     return isLessonCompleted(previousLesson.id);
   };

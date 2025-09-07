@@ -13518,6 +13518,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update lesson lock status
+  app.put("/api/training/lessons/:id/lock", async (req, res) => {
+    try {
+      const { id: lessonId } = req.params;
+      const { isLocked } = req.body;
+      
+      if (typeof isLocked !== 'boolean') {
+        return res.status(400).json({ error: "isLocked must be a boolean" });
+      }
+      
+      const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      const [updatedLesson] = await db.update(trainingLessons)
+        .set({ 
+          isLocked,
+          updatedAt: new Date()
+        })
+        .where(eq(trainingLessons.id, lessonId))
+        .returning();
+      
+      res.json({ 
+        message: `Lesson ${isLocked ? 'locked' : 'unlocked'} successfully`,
+        lesson: updatedLesson
+      });
+    } catch (error) {
+      console.error('Error updating lesson lock status:', error);
+      res.status(500).json({ error: "Failed to update lesson lock status" });
+    }
+  });
+
   // Mark lesson as incomplete (reset)
   app.post("/api/training/lessons/:id/incomplete", async (req, res) => {
     try {

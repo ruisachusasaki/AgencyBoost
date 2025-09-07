@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +29,9 @@ import {
   FolderOpen,
   ChevronDown,
   ChevronRight,
-  MoreVertical
+  MoreVertical,
+  Lock,
+  Unlock
 } from "lucide-react";
 import { Link } from "wouter";
 import type { TrainingLesson, TrainingModule, InsertTrainingModule } from "@shared/schema";
@@ -116,6 +119,36 @@ export default function LessonManagement() {
     console.log('Creating module with data:', data);
     createModuleMutation.mutate(data);
   };
+
+  // Toggle lesson lock status mutation
+  const toggleLessonLockMutation = useMutation({
+    mutationFn: ({ lessonId, isLocked }: { lessonId: string; isLocked: boolean }) =>
+      fetch(`/api/training/lessons/${lessonId}/lock`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isLocked }),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to update lesson lock status");
+        return res.json();
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
+      toast({
+        title: "Lesson updated",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Lesson lock toggle error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update lesson lock status. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Update module mutation
   const updateModuleMutation = useMutation({
@@ -469,10 +502,33 @@ export default function LessonManagement() {
                                   {lesson.isRequired && (
                                     <Badge variant="secondary" className="text-xs">Required</Badge>
                                   )}
+                                  {lesson.isLocked && (
+                                    <Badge variant="outline" className="text-xs text-orange-600">
+                                      <Lock className="h-3 w-3 mr-1" />
+                                      Locked
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
+                              {/* Lock/Unlock Toggle */}
+                              <div className="flex items-center gap-2">
+                                <Unlock className={`h-4 w-4 ${lesson.isLocked ? 'text-gray-400' : 'text-green-600'}`} />
+                                <Switch
+                                  checked={lesson.isLocked}
+                                  onCheckedChange={(checked) => 
+                                    toggleLessonLockMutation.mutate({
+                                      lessonId: lesson.id,
+                                      isLocked: checked
+                                    })
+                                  }
+                                  disabled={toggleLessonLockMutation.isPending}
+                                  data-testid={`toggle-lock-${lesson.id}`}
+                                />
+                                <Lock className={`h-4 w-4 ${lesson.isLocked ? 'text-orange-600' : 'text-gray-400'}`} />
+                              </div>
+                              
                               <Button variant="ghost" size="sm" asChild>
                                 <Link href={`/training/courses/${courseId}/lessons/${lesson.id}/edit`}>
                                   <Edit className="h-4 w-4" />
@@ -532,10 +588,33 @@ export default function LessonManagement() {
                             {lesson.isRequired && (
                               <Badge variant="secondary" className="text-xs">Required</Badge>
                             )}
+                            {lesson.isLocked && (
+                              <Badge variant="outline" className="text-xs text-orange-600">
+                                <Lock className="h-3 w-3 mr-1" />
+                                Locked
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        {/* Lock/Unlock Toggle */}
+                        <div className="flex items-center gap-2">
+                          <Unlock className={`h-4 w-4 ${lesson.isLocked ? 'text-gray-400' : 'text-green-600'}`} />
+                          <Switch
+                            checked={lesson.isLocked}
+                            onCheckedChange={(checked) => 
+                              toggleLessonLockMutation.mutate({
+                                lessonId: lesson.id,
+                                isLocked: checked
+                              })
+                            }
+                            disabled={toggleLessonLockMutation.isPending}
+                            data-testid={`toggle-lock-${lesson.id}`}
+                          />
+                          <Lock className={`h-4 w-4 ${lesson.isLocked ? 'text-orange-600' : 'text-gray-400'}`} />
+                        </div>
+                        
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/training/courses/${courseId}/lessons/${lesson.id}/edit`}>
                             <Edit className="h-4 w-4" />

@@ -2660,6 +2660,7 @@ export const trainingLessons = pgTable("training_lessons", {
   pdfUrl: text("pdf_url"), // For PDF lessons
   order: integer("order").default(0),
   isRequired: boolean("is_required").default(true),
+  isLocked: boolean("is_locked").default(false), // Manual lock/unlock control
   canDownload: boolean("can_download").default(false), // For PDFs
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   updatedBy: uuid("updated_by").references(() => staff.id),
