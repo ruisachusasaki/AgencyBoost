@@ -45,20 +45,20 @@ export default function ApprovalBoard() {
 
   // Check if current user is admin
   useQuery({
-    queryKey: ["/api/auth/current-user"],
+    queryKey: ["/api/user-permissions"],
     queryFn: async () => {
-      const response = await fetch("/api/auth/current-user");
-      if (!response.ok) throw new Error('Failed to fetch user');
-      const user = await response.json();
+      const response = await fetch("/api/user-permissions");
+      if (!response.ok) throw new Error('Failed to fetch permissions');
+      const permissions = await response.json();
       
-      // Check permissions
-      const permResponse = await fetch(`/api/staff/${user.id}/permissions`);
-      if (permResponse.ok) {
-        const permissions = await permResponse.json();
-        setIsAdmin(permissions.hr?.canManage || false);
-      }
+      // Check if user has HR management permissions (admin-level access)
+      setIsAdmin(
+        permissions.tasks?.canDelete || 
+        permissions.settings?.canAccess || 
+        permissions.clients?.canDelete || false
+      );
       
-      return user;
+      return permissions;
     },
   });
 
