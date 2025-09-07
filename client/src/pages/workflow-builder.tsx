@@ -429,7 +429,7 @@ export default function WorkflowBuilderPage() {
 
       {/* Trigger Selection Pane */}
       <Sheet open={showTriggerPane} onOpenChange={setShowTriggerPane}>
-        <SheetContent side="right" className="w-[600px] overflow-y-auto">
+        <SheetContent side="right" className="w-[800px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Select a Trigger for Your Workflow</SheetTitle>
             {/* Search */}
@@ -781,7 +781,7 @@ export default function WorkflowBuilderPage() {
 
       {/* Action Selection Pane */}
       <Sheet open={showActionPane} onOpenChange={setShowActionPane}>
-        <SheetContent side="right" className="w-[600px] overflow-y-auto">
+        <SheetContent side="right" className="w-[800px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Select an Action for Your Workflow</SheetTitle>
             {/* Search */}
