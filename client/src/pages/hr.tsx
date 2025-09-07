@@ -73,6 +73,9 @@ export default function HRPage() {
   const [reportSearchTerm, setReportSearchTerm] = useState("");
   const [reportDepartmentFilter, setReportDepartmentFilter] = useState("all");
   
+  // Filter state for time off requests
+  const [requestStatusFilter, setRequestStatusFilter] = useState("all");
+  
   // Filter states for applications
   const [applicationPositionFilter, setApplicationPositionFilter] = useState("all");
   const [applicationStatusFilter, setApplicationStatusFilter] = useState("all");
@@ -102,6 +105,24 @@ export default function HRPage() {
       
     if (confirm(message)) {
       deleteTimeOffMutation.mutate(requestId);
+    }
+  };
+
+  // Helper function to format time off duration
+  const formatDuration = (totalHours: string, totalDays: number) => {
+    const hours = parseFloat(totalHours || "0");
+    const fullDays = Math.floor(hours / 8);
+    const remainingHours = hours % 8;
+    
+    if (hours < 8) {
+      // Less than a full day - show hours
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+    } else if (remainingHours === 0) {
+      // Full days only
+      return `${fullDays} ${fullDays === 1 ? 'day' : 'days'}`;
+    } else {
+      // Mixed days and hours
+      return `${fullDays} ${fullDays === 1 ? 'day' : 'days'}, ${remainingHours} ${remainingHours === 1 ? 'hour' : 'hours'}`;
     }
   };
   
@@ -719,8 +740,9 @@ export default function HRPage() {
                       );
                     })}
                   </div>
-                )}
-              </CardContent>
+                );
+              })()} 
+            </CardContent>
             </Card>
 
             <Card>
@@ -769,16 +791,94 @@ export default function HRPage() {
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Time Off Requests</CardTitle>
-              <CardDescription>All time off requests and their status</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Time Off Requests</CardTitle>
+                <CardDescription>All time off requests and their status</CardDescription>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="ml-auto" data-testid="filter-status">
+                    <Filter className="h-4 w-4 mr-2" />
+                    {requestStatusFilter === "all" ? "All Status" : 
+                     requestStatusFilter === "pending" ? "Pending" :
+                     requestStatusFilter === "approved" ? "Approved" : "Rejected"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => setRequestStatusFilter("all")}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              requestStatusFilter === "all" ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          All Status
+                        </CommandItem>
+                        <CommandItem
+                          value="pending"
+                          onSelect={() => setRequestStatusFilter("pending")}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              requestStatusFilter === "pending" ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          Pending
+                        </CommandItem>
+                        <CommandItem
+                          value="approved"
+                          onSelect={() => setRequestStatusFilter("approved")}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              requestStatusFilter === "approved" ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          Approved
+                        </CommandItem>
+                        <CommandItem
+                          value="rejected"
+                          onSelect={() => setRequestStatusFilter("rejected")}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              requestStatusFilter === "rejected" ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          Rejected
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </CardHeader>
             <CardContent>
-              {timeOffRequests.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No time off requests</p>
-              ) : (
-                <div className="space-y-4">
-                  {timeOffRequests.map((request) => {
+              {(() => {
+                const filteredRequests = requestStatusFilter === "all" 
+                  ? timeOffRequests 
+                  : timeOffRequests.filter(request => request.status === requestStatusFilter);
+                  
+                return filteredRequests.length === 0 ? (
+                  <p className="text-slate-500 text-center py-8">
+                    {requestStatusFilter === "all" 
+                      ? "No time off requests" 
+                      : `No ${requestStatusFilter} requests`}
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredRequests.map((request) => {
                     const staff = staffData.find(s => s.id === request.staffId);
                     const isProcessed = request.status !== "pending";
                     const cardClasses = isProcessed 
@@ -806,7 +906,7 @@ export default function HRPage() {
                               {request.type === 'vacation' ? 'Vacation (PTO)' : 
                                request.type === 'sick' ? 'Sick Leave' : 
                                request.type === 'personal' ? 'Personal Time Off' : 
-                               request.type.replace('_', ' ')} • {request.totalDays} days
+                               request.type.replace('_', ' ')} • {formatDuration(request.totalHours, request.totalDays)}
                             </p>
                             <p className="text-sm text-slate-600">
                               {request.startDate && request.endDate && 
@@ -851,9 +951,10 @@ export default function HRPage() {
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-              )}
+                    })}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
