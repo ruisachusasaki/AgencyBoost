@@ -290,18 +290,41 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     if (!editor) return;
     
     const sizeStyles = {
-      small: { width: '320px', maxWidth: '320px' },     // Small - 320px
-      medium: { width: '448px', maxWidth: '448px' },    // Medium - 448px  
-      large: { width: '512px', maxWidth: '512px' },     // Large - 512px
-      full: { width: '100%', maxWidth: '100%' }         // Full width
+      small: '320px',     // Small - 320px
+      medium: '448px',    // Medium - 448px  
+      large: '512px',     // Large - 512px
+      full: '100%'        // Full width
     };
     
-    const style = sizeStyles[size];
+    const width = sizeStyles[size];
     
-    // Update the image with inline styles instead of classes
-    editor.chain().focus().updateAttributes('image', {
-      style: `width: ${style.width}; max-width: ${style.maxWidth}; height: auto; border-radius: 0.5rem;`
-    }).run();
+    console.log('Setting image size to:', size, 'width:', width);
+    
+    // Try multiple approaches to ensure the image gets resized
+    try {
+      // Method 1: Update attributes with width and style
+      editor.chain().focus().updateAttributes('image', {
+        width: size === 'full' ? '100%' : width.replace('px', ''),
+        style: `width: ${width}; height: auto; border-radius: 0.5rem;`
+      }).run();
+      
+      // Method 2: Also try to set the style directly on the DOM element
+      setTimeout(() => {
+        const selectedImg = document.querySelector('.tiptap img[data-selected]') || 
+                           document.querySelector('.tiptap .ProseMirror-selectednode img') ||
+                           document.querySelector('.tiptap img:focus');
+        
+        if (selectedImg) {
+          console.log('Found selected image, applying style directly');
+          selectedImg.style.width = width;
+          selectedImg.style.height = 'auto';
+          selectedImg.style.borderRadius = '0.5rem';
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error setting image size:', error);
+    }
     
     setSelectedImageSize(size);
   };
