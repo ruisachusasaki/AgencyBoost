@@ -13,6 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Upload, FileText } from "lucide-react";
+import { QuizBuilder } from "@/components/quiz-builder";
 import { Link } from "wouter";
 
 const lessonSchema = z.object({
@@ -36,6 +37,8 @@ export default function CreateLesson() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [showQuizBuilder, setShowQuizBuilder] = useState(false);
+  const [quizData, setQuizData] = useState<any>(null);
 
   // Fetch course data
   const { data: course, isLoading } = useQuery({
@@ -193,7 +196,67 @@ export default function CreateLesson() {
     }
   };
 
+  const handleQuizSave = async (quiz: any) => {
+    // First create the lesson
+    const lessonData = {
+      title: form.getValues('title'),
+      description: form.getValues('description'),
+      content: form.getValues('content'),
+      contentType: 'quiz' as const,
+      contentUrl: '',
+      duration: form.getValues('duration'),
+      order: form.getValues('order'),
+      isRequired: form.getValues('isRequired'),
+      moduleId: form.getValues('moduleId') === "unorganized" ? undefined : form.getValues('moduleId'),
+    };
+
+    try {
+      // Create lesson first
+      const lessonResponse = await fetch(`/api/training/courses/${courseId}/lessons`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(lessonData),
+      });
+
+      if (!lessonResponse.ok) throw new Error("Failed to create lesson");
+      const lesson = await lessonResponse.json();
+
+      // Then create quiz for the lesson
+      const quizResponse = await fetch(`/api/training/lessons/${lesson.id}/quiz`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(quiz),
+      });
+
+      if (!quizResponse.ok) throw new Error("Failed to create quiz");
+
+      toast({
+        title: "Success!",
+        description: "Lesson and quiz created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
+      setLocation(`/training/courses/${courseId}/lessons`);
+    } catch (error) {
+      console.error('Error creating lesson with quiz:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create lesson and quiz. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSubmit = (data: LessonFormData) => {
+    if (data.contentType === 'quiz') {
+      // Show quiz builder instead of creating lesson directly
+      setShowQuizBuilder(true);
+      return;
+    }
+
     // Convert "unorganized" to undefined/null for backend
     const submitData = {
       ...data,
@@ -481,6 +544,25 @@ export default function CreateLesson() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Quiz Builder Modal/Section */}
+      {showQuizBuilder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-6">Create Quiz for "{form.getValues('title')}"</h2>
+              <QuizBuilder
+                initialQuiz={{
+                  title: `${form.getValues('title')} Quiz`,
+                  description: "Complete this quiz to test your understanding of the lesson content."
+                }}
+                onSave={handleQuizSave}
+                onCancel={() => setShowQuizBuilder(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

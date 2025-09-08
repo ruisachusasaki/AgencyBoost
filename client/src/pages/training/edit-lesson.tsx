@@ -13,6 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Upload, FileText } from "lucide-react";
+import { QuizBuilder } from "@/components/quiz-builder";
 import { Link } from "wouter";
 
 const lessonSchema = z.object({
@@ -36,11 +37,19 @@ export default function EditLesson() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [showQuizBuilder, setShowQuizBuilder] = useState(false);
+  const [quizData, setQuizData] = useState<any>(null);
 
   // Fetch lesson data
   const { data: lesson, isLoading } = useQuery({
     queryKey: [`/api/training/lessons/${lessonId}`],
     enabled: !!lessonId,
+  });
+
+  // Fetch quiz data if lesson is a quiz
+  const { data: quiz } = useQuery({
+    queryKey: [`/api/training/lessons/${lessonId}/quiz`],
+    enabled: !!lessonId && lesson?.contentType === 'quiz',
   });
 
   const form = useForm<LessonFormData>({
@@ -72,6 +81,13 @@ export default function EditLesson() {
       });
     }
   }, [lesson, form]);
+
+  // Update quiz data when quiz loads
+  useEffect(() => {
+    if (quiz) {
+      setQuizData(quiz);
+    }
+  }, [quiz]);
 
   const updateLessonMutation = useMutation({
     mutationFn: (data: LessonFormData) =>
@@ -197,7 +213,66 @@ export default function EditLesson() {
     }
   };
 
+  const handleQuizSave = async (quizDataToSave: any) => {
+    try {
+      // Update lesson first
+      const lessonData = {
+        title: form.getValues('title'),
+        description: form.getValues('description'),
+        content: form.getValues('content'),
+        contentType: 'quiz' as const,
+        contentUrl: '',
+        duration: form.getValues('duration'),
+        order: form.getValues('order'),
+        isRequired: form.getValues('isRequired'),
+      };
+
+      const lessonResponse = await fetch(`/api/training/lessons/${lessonId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(lessonData),
+      });
+
+      if (!lessonResponse.ok) throw new Error("Failed to update lesson");
+
+      // Then update quiz
+      const quizResponse = await fetch(`/api/training/lessons/${lessonId}/quiz`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(quizDataToSave),
+      });
+
+      if (!quizResponse.ok) throw new Error("Failed to update quiz");
+
+      toast({
+        title: "Success!",
+        description: "Lesson and quiz updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}/quiz`] });
+      setShowQuizBuilder(false);
+      setLocation(`/training/courses/${courseId}/lessons/${lessonId}`);
+    } catch (error) {
+      console.error('Error updating lesson with quiz:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update lesson and quiz. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSubmit = (data: LessonFormData) => {
+    if (data.contentType === 'quiz') {
+      // Show quiz builder instead of updating lesson directly
+      setShowQuizBuilder(true);
+      return;
+    }
+
     updateLessonMutation.mutate(data);
   };
 
@@ -451,6 +526,25 @@ export default function EditLesson() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Quiz Builder Modal/Section */}
+      {showQuizBuilder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-6">Edit Quiz for "{form.getValues('title')}"</h2>
+              <QuizBuilder
+                initialQuiz={quizData || {
+                  title: `${form.getValues('title')} Quiz`,
+                  description: "Complete this quiz to test your understanding of the lesson content."
+                }}
+                onSave={handleQuizSave}
+                onCancel={() => setShowQuizBuilder(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
