@@ -13802,5 +13802,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== TRAINING QUIZZES =====
+  
+  // Get quiz for a lesson
+  app.get("/api/training/lessons/:lessonId/quiz", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      
+      const [quiz] = await db.select().from(trainingQuizzes)
+        .where(eq(trainingQuizzes.lessonId, lessonId));
+      
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+      
+      // Get quiz questions
+      const questions = await db.select().from(trainingQuizQuestions)
+        .where(eq(trainingQuizQuestions.quizId, quiz.id))
+        .orderBy(asc(trainingQuizQuestions.order));
+      
+      res.json({ ...quiz, questions });
+    } catch (error) {
+      console.error('Error fetching quiz:', error);
+      res.status(500).json({ error: "Failed to fetch quiz" });
+    }
+  });
+
+  // Create or update quiz for a lesson
+  app.post("/api/training/lessons/:lessonId/quiz", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const { title, description, passingScore, maxAttempts, timeLimit, shuffleQuestions, showCorrectAnswers, isRequired, questions } = req.body;
+      
+      // Check if quiz already exists
+      const [existingQuiz] = await db.select().from(trainingQuizzes)
+        .where(eq(trainingQuizzes.lessonId, lessonId));
+      
+      let quiz;
+      if (existingQuiz) {
+        // Update existing quiz
+        [quiz] = await db.update(trainingQuizzes)
+          .set({
+            title,
+            description,
+            passingScore,
+            maxAttempts,
+            timeLimit,
+            shuffleQuestions,
+            showCorrectAnswers,
+            isRequired,
+            updatedAt: new Date()
+          })
+          .where(eq(trainingQuizzes.id, existingQuiz.id))
+          .returning();
+        
+        // Delete existing questions
+        await db.delete(trainingQuizQuestions).where(eq(trainingQuizQuestions.quizId, existingQuiz.id));
+      } else {
+        // Create new quiz
+        [quiz] = await db.insert(trainingQuizzes).values({
+          lessonId,
+          title,
+          description,
+          passingScore,
+          maxAttempts,
+          timeLimit,
+          shuffleQuestions,
+          showCorrectAnswers,
+          isRequired,
+          createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        }).returning();
+      }
+      
+      // Add questions
+      if (questions && questions.length > 0) {
+        const questionData = questions.map((q: any, index: number) => ({
+          quizId: quiz.id,
+          question: q.question,
+          questionType: q.questionType,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          points: q.points || 1,
+          order: index
+        }));
+        
+        await db.insert(trainingQuizQuestions).values(questionData);
+      }
+      
+      await createAuditLog(existingQuiz ? "updated" : "created", "training_quiz", quiz.id, quiz.title, req.session?.userId,
+        `Training quiz ${existingQuiz ? "updated" : "created"}`, existingQuiz || null, quiz, req);
+      
+      res.json(quiz);
+    } catch (error) {
+      console.error('Error creating/updating quiz:', error);
+      res.status(500).json({ error: "Failed to save quiz" });
+    }
+  });
+
+  // Delete quiz
+  app.delete("/api/training/quizzes/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [quiz] = await db.select().from(trainingQuizzes).where(eq(trainingQuizzes.id, id));
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+      
+      await db.delete(trainingQuizzes).where(eq(trainingQuizzes.id, id));
+      
+      await createAuditLog("deleted", "training_quiz", id, quiz.title, req.session?.userId,
+        "Training quiz deleted", quiz, null, req);
+      
+      res.json({ message: "Quiz deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      res.status(500).json({ error: "Failed to delete quiz" });
+    }
+  });
+
+  // Submit quiz attempt
+  app.post("/api/training/quizzes/:quizId/submit", async (req, res) => {
+    try {
+      const { quizId } = req.params;
+      const { answers } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [quiz] = await db.select().from(trainingQuizzes).where(eq(trainingQuizzes.id, quizId));
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+      
+      // Get enrollment for the lesson's course
+      const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, quiz.lessonId));
+      const [enrollment] = await db.select().from(trainingEnrollments)
+        .where(and(eq(trainingEnrollments.courseId, lesson.courseId), eq(trainingEnrollments.userId, userId)));
+      
+      if (!enrollment) {
+        return res.status(404).json({ error: "Not enrolled in this course" });
+      }
+      
+      // Check attempt limit
+      const previousAttempts = await db.select().from(trainingQuizAttempts)
+        .where(and(eq(trainingQuizAttempts.quizId, quizId), eq(trainingQuizAttempts.userId, userId)));
+      
+      if (quiz.maxAttempts > 0 && previousAttempts.length >= quiz.maxAttempts) {
+        return res.status(400).json({ error: "Maximum attempts exceeded" });
+      }
+      
+      // Get quiz questions for scoring
+      const questions = await db.select().from(trainingQuizQuestions)
+        .where(eq(trainingQuizQuestions.quizId, quizId))
+        .orderBy(asc(trainingQuizQuestions.order));
+      
+      // Calculate score
+      let earnedPoints = 0;
+      let totalPoints = 0;
+      
+      questions.forEach((question) => {
+        totalPoints += question.points;
+        const userAnswer = answers[question.id];
+        if (userAnswer === question.correctAnswer) {
+          earnedPoints += question.points;
+        }
+      });
+      
+      const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+      const isPassed = score >= quiz.passingScore;
+      
+      // Save attempt
+      const [attempt] = await db.insert(trainingQuizAttempts).values({
+        quizId,
+        userId,
+        enrollmentId: enrollment.id,
+        score,
+        totalPoints,
+        earnedPoints,
+        answers: answers,
+        isPassed,
+        attemptNumber: previousAttempts.length + 1,
+        submittedAt: new Date()
+      }).returning();
+      
+      res.json({
+        attempt,
+        score,
+        isPassed,
+        totalPoints,
+        earnedPoints,
+        passingScore: quiz.passingScore
+      });
+    } catch (error) {
+      console.error('Error submitting quiz attempt:', error);
+      res.status(500).json({ error: "Failed to submit quiz" });
+    }
+  });
+
+  // Get quiz attempts for a user
+  app.get("/api/training/quizzes/:quizId/attempts", async (req, res) => {
+    try {
+      const { quizId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const attempts = await db.select().from(trainingQuizAttempts)
+        .where(and(eq(trainingQuizAttempts.quizId, quizId), eq(trainingQuizAttempts.userId, userId)))
+        .orderBy(desc(trainingQuizAttempts.startedAt));
+      
+      res.json(attempts);
+    } catch (error) {
+      console.error('Error fetching quiz attempts:', error);
+      res.status(500).json({ error: "Failed to fetch quiz attempts" });
+    }
+  });
+
   return httpServer;
 }
