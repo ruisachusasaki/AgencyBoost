@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
@@ -48,10 +48,43 @@ const lineHeightClasses = {
   '2.0': 'line-height-2'
 };
 
+// Helper function to convert plain text to HTML
+const convertTextToHtml = (text: string): string => {
+  if (!text) return '';
+  
+  // If content already looks like HTML (contains tags), return as is
+  if (text.includes('<') && text.includes('>')) {
+    return text;
+  }
+  
+  // Convert plain text to HTML
+  return text
+    // Split into paragraphs on double newlines
+    .split('\n\n')
+    .map(paragraph => {
+      if (!paragraph.trim()) return '';
+      
+      // Convert single newlines within paragraphs to <br> tags
+      const formattedParagraph = paragraph
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line)
+        .join('<br>');
+      
+      return `<p>${formattedParagraph}</p>`;
+    })
+    .filter(p => p)
+    .join('');
+};
+
 export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className }: RichTextEditorProps) {
   const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
   const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [htmlContent, setHtmlContent] = useState(content);
+  
+  // Convert plain text content to HTML format
+  const htmlFormattedContent = convertTextToHtml(content);
+  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -91,7 +124,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       ColumnsExtension,
       ColumnExtension,
     ],
-    content,
+    content: htmlFormattedContent,
     onUpdate: ({ editor }) => {
       const rawHTML = editor.getHTML();
       const cleanedHTML = cleanListHTML(rawHTML);
@@ -104,6 +137,19 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       },
     },
   });
+
+  // Update editor content when content prop changes
+  React.useEffect(() => {
+    if (editor && content !== undefined) {
+      const newHtmlContent = convertTextToHtml(content);
+      const currentContent = editor.getHTML();
+      
+      // Only update if content is different to avoid cursor issues
+      if (currentContent !== newHtmlContent) {
+        editor.commands.setContent(newHtmlContent);
+      }
+    }
+  }, [content, editor]);
 
   if (!editor) {
     return null;
