@@ -86,6 +86,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
   const [selectedImageSize, setSelectedImageSize] = useState<'small' | 'medium' | 'large' | 'full'>('full');
   const [isHtmlMode, setIsHtmlMode] = useState(false);
+  const [editorSelection, setEditorSelection] = useState(0); // Force re-renders on selection changes
   const [htmlContent, setHtmlContent] = useState(content);
   
   // Convert plain text content to HTML format
@@ -137,6 +138,10 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       const rawHTML = editor.getHTML();
       const cleanedHTML = cleanListHTML(rawHTML);
       onChange(cleanedHTML);
+    },
+    onSelectionUpdate: ({ editor }) => {
+      // Force re-render when selection changes to show/hide image controls
+      setEditorSelection(prev => prev + 1);
     },
     editorProps: {
       attributes: {
@@ -301,7 +306,23 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   };
 
   const isImageSelected = () => {
-    return editor?.isActive('image') || false;
+    if (!editor) return false;
+    
+    try {
+      const { selection } = editor.state;
+      
+      // Check if NodeSelection and node is image
+      if (selection.constructor.name === 'NodeSelection') {
+        const node = (selection as any).node;
+        return node?.type.name === 'image';
+      }
+      
+      // Fallback to isActive check
+      return editor.isActive('image');
+    } catch (error) {
+      console.log('Image selection check error:', error);
+      return false;
+    }
   };
 
   const toggleHtmlMode = () => {
