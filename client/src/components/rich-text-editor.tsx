@@ -10,6 +10,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Bold, 
   Italic, 
@@ -181,10 +182,90 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   };
 
   const addImage = () => {
-    const url = window.prompt('Enter image URL:');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      try {
+        // Get upload URL from server
+        const uploadResponse = await fetch('/api/objects/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to get upload URL');
+        }
+
+        const { uploadURL } = await uploadResponse.json();
+
+        // Upload file directly to object storage
+        const uploadFileResponse = await fetch(uploadURL, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type,
+          },
+          body: file,
+        });
+
+        if (!uploadFileResponse.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        // Set object ACL policy and get final URL
+        const finalResponse = await fetch('/api/images', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageURL: uploadURL.split('?')[0], // Remove query parameters
+          }),
+        });
+
+        if (!finalResponse.ok) {
+          throw new Error('Failed to finalize image upload');
+        }
+
+        const { objectPath } = await finalResponse.json();
+        const imageUrl = `${window.location.origin}${objectPath}`;
+
+        // Insert image into editor
+        editor.chain().focus().setImage({ src: imageUrl }).run();
+
+        toast({
+          title: "Image uploaded",
+          description: "Image has been added to your content"
+        });
+
+      } catch (error) {
+        console.error('Image upload error:', error);
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload image. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    // Trigger file picker
+    input.click();
   };
 
   const setLineHeight = (height: string) => {

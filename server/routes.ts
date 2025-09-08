@@ -4821,6 +4821,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rich text editor image upload endpoint
+  app.put("/api/images", async (req, res) => {
+    if (!req.body.imageURL) {
+      return res.status(400).json({ error: "imageURL is required" });
+    }
+
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.imageURL,
+        {
+          owner: req.session?.userId || "system",
+          visibility: "public", // Images in rich text content should be publicly accessible
+        }
+      );
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting image ACL:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Business Profile API
   app.get("/api/business-profile", async (req, res) => {
     try {
