@@ -205,32 +205,21 @@ export default function LessonDetail() {
   return (
     <div className="space-y-6" data-testid="lesson-detail-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" asChild data-testid="button-back-to-course">
-            <Link href={`/training/courses/${lesson.courseId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Course
-            </Link>
-          </Button>
-          
-          {course && (
-            <div className="text-sm text-gray-600">
-              <Link href={`/training/courses/${lesson.courseId}`} className="hover:text-primary">
-                {course.title}
-              </Link>
-            </div>
-          )}
-        </div>
-
-        <Button 
-          onClick={() => completeLessonMutation.mutate()}
-          disabled={completeLessonMutation.isPending}
-          data-testid="button-mark-complete"
-        >
-          <CheckCircle className="h-4 w-4 mr-2" />
-          {completeLessonMutation.isPending ? "Completing..." : "Mark Complete"}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" asChild data-testid="button-back-to-course">
+          <Link href={`/training/courses/${lesson.courseId}`}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Course
+          </Link>
         </Button>
+        
+        {course && (
+          <div className="text-sm text-gray-600">
+            <Link href={`/training/courses/${lesson.courseId}`} className="hover:text-primary">
+              {course.title}
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Lesson Header */}
