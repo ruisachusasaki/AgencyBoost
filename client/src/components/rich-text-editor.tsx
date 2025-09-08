@@ -79,6 +79,7 @@ const convertTextToHtml = (text: string): string => {
 };
 
 export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className }: RichTextEditorProps) {
+  const { toast } = useToast();
   const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
   const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [htmlContent, setHtmlContent] = useState(content);
