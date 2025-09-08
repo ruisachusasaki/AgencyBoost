@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 const lessonSchema = z.object({
@@ -35,6 +35,7 @@ export default function CreateLesson() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
 
   // Fetch course data
   const { data: course, isLoading } = useQuery({
@@ -99,6 +100,98 @@ export default function CreateLesson() {
       });
     },
   });
+
+  // PDF upload function
+  const handlePdfUpload = async (file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a PDF file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select a PDF file smaller than 10MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploadingPdf(true);
+    
+    try {
+      // Get upload URL from server
+      const uploadResponse = await fetch('/api/objects/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const { uploadURL } = await uploadResponse.json();
+
+      // Upload file directly to object storage
+      const uploadFileResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+        },
+        body: file,
+      });
+
+      if (!uploadFileResponse.ok) {
+        throw new Error('Failed to upload PDF');
+      }
+
+      // Set object ACL policy and get final URL
+      const finalResponse = await fetch('/api/images', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageURL: uploadURL.split('?')[0], // Remove query parameters
+        }),
+      });
+
+      if (!finalResponse.ok) {
+        throw new Error('Failed to finalize PDF upload');
+      }
+
+      const { objectPath } = await finalResponse.json();
+      const pdfUrl = `${window.location.origin}${objectPath}`;
+
+      // Set the PDF URL in the form
+      form.setValue('contentUrl', pdfUrl);
+
+      toast({
+        title: "PDF uploaded",
+        description: "PDF file has been uploaded successfully"
+      });
+
+    } catch (error) {
+      console.error('PDF upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload PDF. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
 
   const onSubmit = (data: LessonFormData) => {
     // Convert "unorganized" to undefined/null for backend
@@ -250,22 +343,73 @@ export default function CreateLesson() {
                 <FormField
                   control={form.control}
                   name="contentUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Content URL</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="https://youtube.com/watch?v=..." 
-                          {...field} 
-                          data-testid="input-content-url"
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        URL for video, document, or external content
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const contentType = form.watch('contentType');
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>
+                          {contentType === 'pdf' ? 'PDF Document' : 'Content URL'}
+                        </FormLabel>
+                        <FormControl>
+                          {contentType === 'pdf' ? (
+                            <div className="space-y-3">
+                              {/* PDF Upload Button */}
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'application/pdf';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) handlePdfUpload(file);
+                                    };
+                                    input.click();
+                                  }}
+                                  disabled={isUploadingPdf}
+                                  className="flex-shrink-0"
+                                  data-testid="button-pdf-upload"
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  {isUploadingPdf ? 'Uploading...' : 'Upload PDF'}
+                                </Button>
+                                
+                                {field.value && (
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <FileText className="h-4 w-4" />
+                                    <span>PDF uploaded</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Hidden input to store PDF URL */}
+                              <Input 
+                                {...field} 
+                                className="sr-only" 
+                                data-testid="input-pdf-url" 
+                              />
+                            </div>
+                          ) : (
+                            <Input 
+                              placeholder="https://youtube.com/watch?v=..." 
+                              {...field} 
+                              data-testid="input-content-url"
+                            />
+                          )}
+                        </FormControl>
+                        <FormDescription>
+                          {contentType === 'pdf' ? 
+                            'Upload a PDF file (max 10MB)' : 
+                            'URL for video, document, or external content'
+                          }
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField
