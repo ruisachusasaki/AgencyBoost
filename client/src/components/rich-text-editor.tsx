@@ -289,17 +289,18 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const setImageSize = (size: 'small' | 'medium' | 'large' | 'full') => {
     if (!editor) return;
     
-    const sizeClasses = {
-      small: 'max-w-xs',   // ~20rem (320px)
-      medium: 'max-w-md',  // ~28rem (448px) 
-      large: 'max-w-lg',   // ~32rem (512px)
-      full: 'max-w-full'   // Full width
+    const sizeStyles = {
+      small: { width: '320px', maxWidth: '320px' },     // Small - 320px
+      medium: { width: '448px', maxWidth: '448px' },    // Medium - 448px  
+      large: { width: '512px', maxWidth: '512px' },     // Large - 512px
+      full: { width: '100%', maxWidth: '100%' }         // Full width
     };
     
-    const className = `${sizeClasses[size]} h-auto rounded-lg`;
+    const style = sizeStyles[size];
     
+    // Update the image with inline styles instead of classes
     editor.chain().focus().updateAttributes('image', {
-      class: className
+      style: `width: ${style.width}; max-width: ${style.maxWidth}; height: auto; border-radius: 0.5rem;`
     }).run();
     
     setSelectedImageSize(size);
@@ -541,9 +542,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
                 size="sm"
                 onClick={() => setImageSize('small')}
                 className="h-6 px-2 text-xs"
-                title="Small (320px)"
+                title="Small (320px width)"
               >
-                <Minimize className="h-3 w-3" />
+                S
               </Button>
               <Button
                 type="button"
@@ -551,9 +552,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
                 size="sm"
                 onClick={() => setImageSize('medium')}
                 className="h-6 px-2 text-xs"
-                title="Medium (448px)"
+                title="Medium (448px width)"
               >
-                <Square className="h-3 w-3" />
+                M
               </Button>
               <Button
                 type="button"
@@ -561,9 +562,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
                 size="sm"
                 onClick={() => setImageSize('large')}
                 className="h-6 px-2 text-xs"
-                title="Large (512px)"
+                title="Large (512px width)"
               >
-                <Maximize className="h-3 w-3" />
+                L
               </Button>
               <Button
                 type="button"
@@ -571,9 +572,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
                 size="sm"
                 onClick={() => setImageSize('full')}
                 className="h-6 px-2 text-xs"
-                title="Full Width"
+                title="Full Width (100%)"
               >
-                <div className="h-3 w-4 border border-current" />
+                XL
               </Button>
             </div>
             
