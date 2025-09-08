@@ -8,6 +8,7 @@ import {
   ArrowLeft, CheckCircle, Clock, Download, 
   FileText, Video, FileIcon, PlayCircle
 } from "lucide-react";
+import { QuizTaker } from "@/components/quiz-taker";
 
 export default function LessonDetail() {
   const [match, params] = useRoute("/training/lessons/:id");
@@ -31,6 +32,12 @@ export default function LessonDetail() {
   const { data: courseLessons } = useQuery({
     queryKey: [`/api/training/courses/${lesson?.courseId}/lessons`],
     enabled: !!lesson?.courseId,
+  });
+
+  // Fetch quiz data if lesson is a quiz
+  const { data: quiz } = useQuery({
+    queryKey: [`/api/training/lessons/${lessonId}/quiz`],
+    enabled: !!lessonId && lesson?.contentType === 'quiz',
   });
 
   // Find current lesson index and navigation
@@ -177,6 +184,28 @@ export default function LessonDetail() {
               </a>
             </Button>
           </div>
+        </div>
+      );
+    }
+
+    // Handle quiz content
+    if (lesson.contentType === "quiz" && quiz) {
+      contentComponents.push(
+        <div key="quiz">
+          <QuizTaker 
+            quiz={quiz} 
+            onComplete={() => {
+              // Optionally mark lesson as completed when quiz is passed
+              // completeLessonMutation.mutate();
+            }}
+          />
+        </div>
+      );
+    } else if (lesson.contentType === "quiz" && !quiz) {
+      contentComponents.push(
+        <div key="quiz-loading" className="text-center text-gray-500 py-8">
+          <CheckCircle className="h-12 w-12 mx-auto mb-2" />
+          <p>Loading quiz...</p>
         </div>
       );
     }
