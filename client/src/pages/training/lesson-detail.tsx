@@ -78,6 +78,14 @@ export default function LessonDetail() {
     return match ? match[1] : null;
   };
 
+  // Helper function to extract Loom video ID from URL
+  const extractLoomId = (url: string) => {
+    if (!url) return null;
+    const regex = /loom\.com\/share\/([a-f0-9]+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
   const renderLessonContent = () => {
     if (!lesson) return null;
 
@@ -101,6 +109,8 @@ export default function LessonDetail() {
       } else if (lesson.videoUrl) {
         // Try to extract YouTube ID from videoUrl
         const youtubeId = extractYouTubeId(lesson.videoUrl);
+        const loomId = extractLoomId(lesson.videoUrl);
+        
         if (youtubeId) {
           contentComponents.push(
             <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
@@ -113,8 +123,19 @@ export default function LessonDetail() {
               />
             </div>
           );
+        } else if (loomId) {
+          contentComponents.push(
+            <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
+              <iframe
+                src={`https://www.loom.com/embed/${loomId}`}
+                title={lesson.title}
+                className="w-full h-full"
+                allowFullScreen
+              />
+            </div>
+          );
         } else {
-          // Fallback to HTML5 video for non-YouTube URLs
+          // Fallback to HTML5 video for other URLs
           contentComponents.push(
             <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
               <video
