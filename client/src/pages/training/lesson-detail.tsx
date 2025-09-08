@@ -153,7 +153,7 @@ export default function LessonDetail() {
     }
 
     // Handle PDF content
-    if (lesson.contentType === "pdf" && lesson.pdfUrl) {
+    if (lesson.contentType === "pdf" && lesson.videoUrl) {
       contentComponents.push(
         <div key="pdf" className="border rounded-lg p-4 bg-gray-50 mb-6">
           <div className="flex items-center gap-3 mb-3">
@@ -165,19 +165,17 @@ export default function LessonDetail() {
           </div>
           <div className="flex gap-3">
             <Button asChild>
-              <a href={lesson.pdfUrl} target="_blank" rel="noopener noreferrer">
+              <a href={lesson.videoUrl} target="_blank" rel="noopener noreferrer">
                 <FileIcon className="h-4 w-4 mr-2" />
                 View PDF
               </a>
             </Button>
-            {lesson.canDownload && (
-              <Button variant="outline" asChild>
-                <a href={lesson.pdfUrl} download>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </a>
-              </Button>
-            )}
+            <Button variant="outline" asChild>
+              <a href={lesson.videoUrl} download>
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </a>
+            </Button>
           </div>
         </div>
       );
