@@ -29,7 +29,10 @@ import {
   Highlighter,
   CheckSquare,
   AlignJustify,
-  FileCode
+  FileCode,
+  Maximize,
+  Minimize,
+  Square
 } from 'lucide-react';
 import { CalloutExtension, ToggleExtension, ToggleSummary, ToggleContent, ColumnsExtension, ColumnExtension } from './tiptap-extensions';
 
@@ -81,6 +84,7 @@ const convertTextToHtml = (text: string): string => {
 export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className }: RichTextEditorProps) {
   const { toast } = useToast();
   const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
+  const [selectedImageSize, setSelectedImageSize] = useState<'small' | 'medium' | 'large' | 'full'>('full');
   const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [htmlContent, setHtmlContent] = useState(content);
   
@@ -114,6 +118,8 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
         HTMLAttributes: {
           class: 'max-w-full h-auto rounded-lg',
         },
+        inline: false,
+        allowBase64: true,
       }),
       TaskList,
       TaskItem.configure({
@@ -272,6 +278,30 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const setLineHeight = (height: string) => {
     setCurrentLineHeight(height);
     editor.chain().focus().run();
+  };
+
+  // Image sizing functions
+  const setImageSize = (size: 'small' | 'medium' | 'large' | 'full') => {
+    if (!editor) return;
+    
+    const sizeClasses = {
+      small: 'max-w-xs',   // ~20rem (320px)
+      medium: 'max-w-md',  // ~28rem (448px) 
+      large: 'max-w-lg',   // ~32rem (512px)
+      full: 'max-w-full'   // Full width
+    };
+    
+    const className = `${sizeClasses[size]} h-auto rounded-lg`;
+    
+    editor.chain().focus().updateAttributes('image', {
+      class: className
+    }).run();
+    
+    setSelectedImageSize(size);
+  };
+
+  const isImageSelected = () => {
+    return editor?.isActive('image') || false;
   };
 
   const toggleHtmlMode = () => {
@@ -478,6 +508,57 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
         </Button>
 
         <div className="w-px h-6 bg-gray-300 mx-1" />
+
+        {/* Image Size Controls - Only show when an image is selected */}
+        {isImageSelected() && (
+          <>
+            <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-md border border-blue-200">
+              <span className="text-xs text-blue-700 font-medium">Size:</span>
+              <Button
+                type="button"
+                variant={selectedImageSize === 'small' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setImageSize('small')}
+                className="h-6 px-2 text-xs"
+                title="Small (320px)"
+              >
+                <Minimize className="h-3 w-3" />
+              </Button>
+              <Button
+                type="button"
+                variant={selectedImageSize === 'medium' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setImageSize('medium')}
+                className="h-6 px-2 text-xs"
+                title="Medium (448px)"
+              >
+                <Square className="h-3 w-3" />
+              </Button>
+              <Button
+                type="button"
+                variant={selectedImageSize === 'large' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setImageSize('large')}
+                className="h-6 px-2 text-xs"
+                title="Large (512px)"
+              >
+                <Maximize className="h-3 w-3" />
+              </Button>
+              <Button
+                type="button"
+                variant={selectedImageSize === 'full' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setImageSize('full')}
+                className="h-6 px-2 text-xs"
+                title="Full Width"
+              >
+                <div className="h-3 w-4 border border-current" />
+              </Button>
+            </div>
+            
+            <div className="w-px h-6 bg-gray-300 mx-1" />
+          </>
+        )}
 
         {/* HTML Mode Toggle */}
         <Button
