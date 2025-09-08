@@ -298,8 +298,6 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     
     const width = sizeStyles[size];
     
-    console.log('Setting image size to:', size, 'width:', width);
-    
     // Try multiple approaches to ensure the image gets resized
     try {
       // Method 1: Update attributes with width and style
@@ -315,7 +313,6 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
                            document.querySelector('.tiptap img:focus');
         
         if (selectedImg) {
-          console.log('Found selected image, applying style directly');
           selectedImg.style.width = width;
           selectedImg.style.height = 'auto';
           selectedImg.style.borderRadius = '0.5rem';
