@@ -61,7 +61,14 @@ export default function CourseDetail() {
       return moduleOrderA - moduleOrderB;
     }
     
-    return (a.order || 0) - (b.order || 0);
+    // Then by lesson order within module
+    const lessonOrderDiff = (a.order || 0) - (b.order || 0);
+    if (lessonOrderDiff !== 0) {
+      return lessonOrderDiff;
+    }
+    
+    // If orders are equal, sort by creation date to ensure consistent ordering
+    return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
   }) : [];
 
   // Toggle module expansion
