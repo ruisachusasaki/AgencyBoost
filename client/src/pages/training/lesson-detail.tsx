@@ -70,6 +70,14 @@ export default function LessonDetail() {
     }
   };
 
+  // Helper function to extract YouTube video ID from URL
+  const extractYouTubeId = (url: string) => {
+    if (!url) return null;
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
   const renderLessonContent = () => {
     if (!lesson) return null;
 
@@ -77,6 +85,7 @@ export default function LessonDetail() {
 
     // Handle video content first (if available)
     if (lesson.contentType === "video") {
+      // First try to use videoEmbedId if available
       if (lesson.videoEmbedId) {
         contentComponents.push(
           <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
@@ -90,18 +99,35 @@ export default function LessonDetail() {
           </div>
         );
       } else if (lesson.videoUrl) {
-        contentComponents.push(
-          <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-            <video
-              src={lesson.videoUrl}
-              controls
-              className="w-full h-full"
-              poster={lesson.thumbnailUrl}
-            >
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        );
+        // Try to extract YouTube ID from videoUrl
+        const youtubeId = extractYouTubeId(lesson.videoUrl);
+        if (youtubeId) {
+          contentComponents.push(
+            <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
+              <iframe
+                src={`https://www.youtube.com/embed/${youtubeId}`}
+                title={lesson.title}
+                className="w-full h-full"
+                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            </div>
+          );
+        } else {
+          // Fallback to HTML5 video for non-YouTube URLs
+          contentComponents.push(
+            <div key="video" className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
+              <video
+                src={lesson.videoUrl}
+                controls
+                className="w-full h-full"
+                poster={lesson.thumbnailUrl}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          );
+        }
       }
     }
 

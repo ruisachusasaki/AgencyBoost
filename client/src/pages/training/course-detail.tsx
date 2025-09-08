@@ -172,18 +172,6 @@ export default function CourseDetail() {
     
     const currentLesson = allLessons[lessonIndex];
     
-    // Debug logging for What is CRO lesson
-    if (currentLesson?.id === "dd789b07-18c3-4e00-bc30-18f73964703a") {
-      console.log("What is CRO lesson debug:", {
-        lessonIndex,
-        isEnrolled,
-        isLocked: currentLesson?.isLocked,
-        lessonTitle: currentLesson?.title,
-        totalLessons: allLessons.length,
-        firstLessonId: allLessons[0]?.id
-      });
-    }
-    
     // Check manual lock first - if manually locked, deny access
     if (currentLesson?.isLocked) {
       return false;
