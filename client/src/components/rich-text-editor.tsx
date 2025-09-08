@@ -132,7 +132,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     },
     editorProps: {
       attributes: {
-        class: 'tiptap prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[200px] p-4',
+        class: 'tiptap focus:outline-none min-h-[200px] p-4 w-full max-w-none prose prose-sm',
         placeholder,
       },
     },
