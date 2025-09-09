@@ -1,20 +1,27 @@
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  ArrowLeft, CheckCircle, Clock, Download, 
+  ArrowLeft, CheckCircle, Clock, Download, Upload,
   FileText, Video, FileIcon, PlayCircle
 } from "lucide-react";
 import { QuizTaker } from "@/components/quiz-taker";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 export default function LessonDetail() {
   const [match, params] = useRoute("/training/lessons/:id");
   const lessonId = params?.id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Assignment submission state
+  const [submissionText, setSubmissionText] = useState("");
+  const [submittedFiles, setSubmittedFiles] = useState<any[]>([]);
 
   // Fetch lesson data
   const { data: lesson, isLoading } = useQuery({
@@ -38,6 +45,18 @@ export default function LessonDetail() {
   const { data: quiz } = useQuery({
     queryKey: [`/api/training/lessons/${lessonId}/quiz`],
     enabled: !!lessonId && lesson?.contentType === 'quiz',
+  });
+
+  // Fetch assignment data if lesson is an assignment
+  const { data: assignment } = useQuery({
+    queryKey: [`/api/training/lessons/${lessonId}/assignment`],
+    enabled: !!lessonId && lesson?.contentType === 'assignment',
+  });
+
+  // Fetch assignment submission for current user
+  const { data: submission, refetch: refetchSubmission } = useQuery({
+    queryKey: [`/api/training/assignments/${assignment?.id}/submission`],
+    enabled: !!assignment?.id,
   });
 
   // Find current lesson index and navigation
@@ -65,6 +84,49 @@ export default function LessonDetail() {
       });
     },
   });
+
+  // Submit assignment
+  const submitAssignmentMutation = useMutation({
+    mutationFn: async () => {
+      if (!assignment?.id) throw new Error("No assignment found");
+      
+      const response = await fetch(`/api/training/assignments/${assignment.id}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          submissionText,
+          files: submittedFiles,
+        }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to submit assignment");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success!",
+        description: "Assignment submitted successfully!",
+      });
+      refetchSubmission();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to submit assignment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Load existing submission data when available
+  useEffect(() => {
+    if (submission) {
+      setSubmissionText(submission.submissionText || "");
+      setSubmittedFiles(submission.files || []);
+    }
+  }, [submission]);
 
   const getContentIcon = (contentType: string) => {
     switch (contentType) {
@@ -206,6 +268,215 @@ export default function LessonDetail() {
         <div key="quiz-loading" className="text-center text-gray-500 py-8">
           <CheckCircle className="h-12 w-12 mx-auto mb-2" />
           <p>Loading quiz...</p>
+        </div>
+      );
+    }
+
+    // Handle assignment content
+    if (lesson.contentType === "assignment" && assignment) {
+      contentComponents.push(
+        <div key="assignment" className="space-y-6">
+          {/* Assignment Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-orange-600" />
+                Assignment Instructions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm max-w-none">
+                <div dangerouslySetInnerHTML={{ 
+                  __html: assignment.instructions?.replace(/\n/g, '<br/>') || 'No instructions provided.' 
+                }} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Submission Status */}
+          {submission && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Your Submission
+                  <Badge variant={submission.status === 'graded' ? 'default' : 'secondary'}>
+                    {submission.status}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {submission.submissionText && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Your Answer:</label>
+                    <div className="mt-1 p-3 bg-gray-50 rounded border text-sm">
+                      {submission.submissionText}
+                    </div>
+                  </div>
+                )}
+                
+                {submission.files && submission.files.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Submitted Files:</label>
+                    <div className="mt-1 space-y-2">
+                      {submission.files.map((file: any, index: number) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                          <FileIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">{file.name || `File ${index + 1}`}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {submission.grade && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Grade:</label>
+                    <div className="mt-1">
+                      <Badge variant="default" className="text-lg">
+                        {submission.grade}%
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
+                {submission.feedback && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Instructor Feedback:</label>
+                    <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+                      {submission.feedback}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-gray-500">
+                  Submitted: {new Date(submission.submittedAt).toLocaleDateString()}
+                  {submission.gradedAt && (
+                    <span> • Graded: {new Date(submission.gradedAt).toLocaleDateString()}</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assignment Submission Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-orange-600" />
+                Submit Assignment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Text Answer */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">Your Answer</label>
+                <Textarea
+                  placeholder="Type your answer here..."
+                  className="min-h-[120px] mt-2"
+                  value={submissionText}
+                  onChange={(e) => setSubmissionText(e.target.value)}
+                />
+                <div className="text-right text-xs text-gray-500 mt-1">
+                  {submissionText.length} / 2000 characters
+                </div>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">Upload Assignment Files</label>
+                <div className="mt-2">
+                  <ObjectUploader
+                    maxNumberOfFiles={assignment.maxFiles || 1}
+                    maxFileSize={(assignment.maxFileSize || 10) * 1024 * 1024} // Convert MB to bytes
+                    onGetUploadParameters={async () => {
+                      const response = await fetch("/api/objects/upload", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                      });
+                      const data = await response.json();
+                      return {
+                        method: "PUT" as const,
+                        url: data.uploadURL,
+                      };
+                    }}
+                    onComplete={(result) => {
+                      if (result.successful && result.successful.length > 0) {
+                        const newFiles = result.successful.map((file: any) => ({
+                          name: file.name,
+                          url: file.uploadURL,
+                        }));
+                        setSubmittedFiles(prev => [...prev, ...newFiles]);
+                      }
+                    }}
+                    buttonClassName="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Files
+                  </ObjectUploader>
+                </div>
+
+                {/* File Type Info */}
+                <div className="text-xs text-gray-500 mt-2">
+                  Allowed types: {assignment.allowedFileTypes?.join(', ') || 'All files'} • 
+                  Max {assignment.maxFiles || 1} file(s) • 
+                  Max {assignment.maxFileSize || 10}MB each
+                </div>
+
+                {/* Uploaded Files List */}
+                {submittedFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Ready to Submit:</label>
+                    {submittedFiles.map((file: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded">
+                        <div className="flex items-center gap-2">
+                          <FileIcon className="h-4 w-4 text-green-600" />
+                          <span className="text-sm">{file.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSubmittedFiles(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={() => submitAssignmentMutation.mutate()}
+                  disabled={submitAssignmentMutation.isPending || (!submissionText.trim() && submittedFiles.length === 0)}
+                  className="px-6"
+                >
+                  {submitAssignmentMutation.isPending ? (
+                    <>Submitting...</>
+                  ) : submission ? (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Update Submission
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Submit Assignment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    } else if (lesson.contentType === "assignment" && !assignment) {
+      contentComponents.push(
+        <div key="assignment-loading" className="text-center text-gray-500 py-8">
+          <FileText className="h-12 w-12 mx-auto mb-2" />
+          <p>Loading assignment...</p>
         </div>
       );
     }
