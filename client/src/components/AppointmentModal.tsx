@@ -386,7 +386,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                   </SelectTrigger>
                   <SelectContent>
                     {staff.length === 0 ? (
-                      <SelectItem value="" disabled>No team members found</SelectItem>
+                      <SelectItem value="none" disabled>No team members found</SelectItem>
                     ) : (
                       staff.map((member: any) => (
                         <SelectItem key={member.id} value={member.id}>

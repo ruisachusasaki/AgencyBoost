@@ -184,7 +184,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Not specified</SelectItem>
+                    <SelectItem value="none">Not specified</SelectItem>
                     <SelectItem value="website">Website</SelectItem>
                     <SelectItem value="referral">Referral</SelectItem>
                     <SelectItem value="social_media">Social Media</SelectItem>

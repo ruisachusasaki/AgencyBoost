@@ -5345,7 +5345,7 @@ export default function EnhancedClientDetail() {
                           </SelectItem>
                         ))}
                         {twilioNumbers.length === 0 && (
-                          <SelectItem value="" disabled>
+                          <SelectItem value="none" disabled>
                             No phone numbers available
                           </SelectItem>
                         )}

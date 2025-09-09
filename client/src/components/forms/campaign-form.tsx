@@ -182,7 +182,7 @@ export default function CampaignForm({ campaign, onSuccess }: CampaignFormProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Project</SelectItem>
+                    <SelectItem value="none">No Project</SelectItem>
                     {clientProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}

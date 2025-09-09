@@ -199,7 +199,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Project</SelectItem>
+                    <SelectItem value="none">No Project</SelectItem>
                     {clientProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
