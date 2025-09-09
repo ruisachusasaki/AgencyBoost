@@ -1043,14 +1043,6 @@ export default function EnhancedClientDetail() {
   const [showSmsTemplateModal, setShowSmsTemplateModal] = useState(false);
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
 
-  // Debug modal states
-  useEffect(() => {
-    console.log('SMS Template Modal State:', showSmsTemplateModal);
-  }, [showSmsTemplateModal]);
-  
-  useEffect(() => {
-    console.log('SMS Merge Tags Modal State:', showSmsMergeTagsModal);
-  }, [showSmsMergeTagsModal]);
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
 
   // Email composition state (removed duplicate)
