@@ -123,6 +123,16 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/training/courses"],
   });
 
+  // Fetch training categories for category selection filters  
+  const { data: trainingCategories = [] } = useQuery<any[]>({
+    queryKey: ["/api/training/categories"],
+  });
+
+  // Fetch training lessons for lesson selection filters
+  const { data: trainingLessons = [] } = useQuery<any[]>({
+    queryKey: ["/api/training/lessons"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -1108,6 +1118,90 @@ export default function TriggerConfigPanel({
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
                   No published courses available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "category_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">
+                <span className="text-muted-foreground">Any Category</span>
+              </SelectItem>
+              {trainingCategories.length > 0 ? (
+                trainingCategories.map((category: any) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: category.color }}
+                      />
+                      <span className="font-medium">{category.name}</span>
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No categories available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "lesson_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={fieldSchema.placeholder || `Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {fieldSchema.placeholder && (
+                <SelectItem value="any">
+                  <span className="text-muted-foreground">Any Lesson</span>
+                </SelectItem>
+              )}
+              {trainingLessons.length > 0 ? (
+                trainingLessons.map((lesson: any) => (
+                  <SelectItem key={lesson.id} value={lesson.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{lesson.title}</span>
+                      {lesson.description && (
+                        <span className="text-xs text-muted-foreground">{lesson.description}</span>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Lesson {lesson.order || 1}</span>
+                        <span>•</span>
+                        <span className="capitalize">{lesson.contentType}</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No lessons available
                 </div>
               )}
             </SelectContent>

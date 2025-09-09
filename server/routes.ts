@@ -3893,15 +3893,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "course_select",
               label: "Specific Course (Optional)"
             },
-            lessonNumber: {
-              type: "number",
-              label: "Lesson Number (Optional)",
-              placeholder: "e.g., 1",
-              min: 1
+            lessonId: {
+              type: "lesson_select",
+              label: "Specific Lesson (Optional)",
+              placeholder: "Leave blank for any lesson"
             },
             category: {
-              type: "string",
-              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              type: "category_select",
               label: "Course Category"
             }
           },
