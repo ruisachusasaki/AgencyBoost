@@ -229,10 +229,37 @@ export default function WorkflowBuilderPage() {
     }));
     
     setShowActionPane(false);
-    toast({ 
-      title: "Action Added", 
-      description: `${action.name} has been added to your workflow` 
-    });
+    
+    // Check if this action type needs configuration
+    const needsConfiguration = [
+      'send_email', 'send_sms', 'assign_contact_owner', 'assign_lead', 
+      'assign_task', 'update_lead_stage', 'create_task', 'add_tags',
+      'send_internal_notification'
+    ].includes(action.type);
+    
+    if (needsConfiguration) {
+      // Open configuration immediately after adding
+      const actionIndex = workflowData.actions.length; // New action will be at this index
+      const actionDefinition = (availableActions as any[])?.find((a: any) => a.type === action.type);
+      
+      setTimeout(() => {
+        setConfiguringAction({
+          action: newAction,
+          definition: actionDefinition,
+          index: actionIndex
+        });
+      }, 100); // Small delay to allow state update
+      
+      toast({ 
+        title: "Action Added", 
+        description: `${action.name} has been added. Please configure its settings.` 
+      });
+    } else {
+      toast({ 
+        title: "Action Added", 
+        description: `${action.name} has been added to your workflow` 
+      });
+    }
   };
 
   // Handler for configuring triggers
