@@ -67,12 +67,14 @@ export default function TrainingAnalytics() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" asChild className="mb-4">
+        <div className="mb-4">
           <Link href="/training">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Training
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Training</span>
+            </Button>
           </Link>
-        </Button>
+        </div>
         
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -99,12 +101,14 @@ export default function TrainingAnalytics() {
   if (!analytics) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" asChild className="mb-4">
+        <div className="mb-4">
           <Link href="/training">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Training
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Training</span>
+            </Button>
           </Link>
-        </Button>
+        </div>
         
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -154,12 +158,14 @@ export default function TrainingAnalytics() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" asChild className="mb-4">
+      <div className="mb-4">
         <Link href="/training">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Training
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Training</span>
+          </Button>
         </Link>
-      </Button>
+      </div>
       
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
