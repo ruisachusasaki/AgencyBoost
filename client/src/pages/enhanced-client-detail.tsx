@@ -2880,7 +2880,6 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
-
             {/* Template Selection Modal */}
             <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
               <DialogContent className="max-w-2xl">
@@ -3106,23 +3105,9 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
-            {/* SMS Template Selection Modal */}
-            <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
-              <DialogContent className="max-w-2xl z-50">
-                <DialogHeader>
-                  <DialogTitle>Select SMS Template</DialogTitle>
-                </DialogHeader>
-                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
-              </DialogContent>
-            </Dialog>
-
-            {/* SMS Merge Tags Modal */}
-            <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-              <DialogContent className="max-w-2xl z-50">
-                <DialogHeader>
-                  <DialogTitle>Insert Merge Tags</DialogTitle>
-                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
-                </DialogHeader>
+            {/* SMS Template Selection Modal - MOVED OUTSIDE */}
+            
+            {/* SMS Merge Tags Modal - MOVED OUTSIDE */}
                 <div className="space-y-6 max-h-96 overflow-y-auto">
                   <div className="space-y-6">
                     {/* Client Information */}
