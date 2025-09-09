@@ -111,6 +111,27 @@ export default function TrainingAnalytics() {
 
   const activeUsers = analytics.userStats.filter(user => (Number(user.avgProgress) || 0) > 0).length;
 
+  // Filter data based on search terms
+  const filteredUserStats = analytics.userStats.filter(user => {
+    const matchesUserSearch = userSearch === "" || 
+      user.userName.toLowerCase().includes(userSearch.toLowerCase());
+    return matchesUserSearch;
+  });
+
+  const filteredCourseStats = analytics.courseStats.filter(course => {
+    const matchesCourseFilter = selectedCourse === "all" || 
+      course.courseId === selectedCourse;
+    return matchesCourseFilter;
+  });
+
+  const filteredRecentActivity = analytics.recentActivity.filter(activity => {
+    const matchesUserSearch = userSearch === "" || 
+      (activity.userName && activity.userName.toLowerCase().includes(userSearch.toLowerCase()));
+    const matchesCourseFilter = selectedCourse === "all" || 
+      analytics.courseStats.find(course => course.courseId === selectedCourse)?.courseTitle === activity.courseTitle;
+    return matchesUserSearch && matchesCourseFilter;
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -216,7 +237,10 @@ export default function TrainingAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(analytics.courseStats || []).slice(0, 6).map((course) => {
+              {filteredCourseStats.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No courses found matching your filters.</p>
+              ) : (
+                filteredCourseStats.slice(0, 6).map((course) => {
                 const courseCompletionRate = (Number(course.totalEnrollments) || 0) > 0 
                   ? ((Number(course.completedEnrollments) || 0) / (Number(course.totalEnrollments) || 1) * 100) 
                   : 0;
@@ -239,7 +263,8 @@ export default function TrainingAnalytics() {
                     <Progress value={courseCompletionRate} className="h-2" />
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           </CardContent>
         </Card>
@@ -254,7 +279,10 @@ export default function TrainingAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(analytics.userStats || []).slice(0, 6).map((user) => (
+              {filteredUserStats.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No employees found matching your search.</p>
+              ) : (
+                filteredUserStats.slice(0, 6).map((user) => (
                 <div key={user.userId} className="space-y-2">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
@@ -271,7 +299,8 @@ export default function TrainingAnalytics() {
                   </div>
                   <Progress value={Number(user.avgProgress) || 0} className="h-2" />
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -287,7 +316,10 @@ export default function TrainingAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(analytics.recentActivity || []).slice(0, 8).map((activity) => (
+            {filteredRecentActivity.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No recent activity found matching your filters.</p>
+            ) : (
+              filteredRecentActivity.slice(0, 8).map((activity) => (
               <div key={activity.id} className="flex items-center space-x-4 py-2 border-b border-gray-100 last:border-0">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -306,7 +338,8 @@ export default function TrainingAnalytics() {
                   </p>
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </CardContent>
       </Card>
