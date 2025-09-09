@@ -1,0 +1,381 @@
+Uncaught (in promise) FrameDoesNotExistError: Frame 36 does not exist in tab 71778587
+    at DelayedMessageSender.<anonymous> (background.js:1:49079)Understand this error
+19Unchecked runtime.lastError: The message port closed before a response was received.Understand this error
+38Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.Understand this error
+background.js:1 Uncaught (in promise) FrameDoesNotExistError: Frame 0 does not exist in tab 71778634
+    at DelayedMessageSender.<anonymous> (background.js:1:49079)Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778722.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778728.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778665.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778710.Understand this error
+background.js:1 Uncaught (in promise) FrameDoesNotExistError: Frame 294 does not exist in tab 71778710
+    at DelayedMessageSender.<anonymous> (background.js:1:49079)Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id LastPass <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id separator <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Add Item <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Add Password <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Add Address <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Add Payment Card <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Add other item <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Save all entered data <URL>Understand this error
+40Unchecked runtime.lastError: Cannot create item with duplicate id Generate Secure Password <URL>Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 304 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 322 in tab 71778716 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 385 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 403 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 408 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 433 in tab 71778888 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 457 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 475 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 498 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 506 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 517 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778911.Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 550 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 566 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778942.Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 585 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 593 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 604 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 616 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 618 in tab 71778716 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 634 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 639 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 644 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 648 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 658 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 665 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 670 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 682 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 685 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 694 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 700 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 731 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1234 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1254 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1258 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1331 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1348 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1418 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1426 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1441 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1462 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1471 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1475 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1477 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1482 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1494 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1509 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1518 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1523 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1530 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1548 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+background.js:1 Uncaught (in promise) FrameIsBrowserFrameError: Frame 1557 in tab 71778692 is a browser frame.
+    at Frame.setUpContentScript (background.js:1:50367)
+    at Frame.readyToReceiveMessages (background.js:1:50931)
+    at Tab.frameIsReadyToReceiveMessages (background.js:1:52848)
+    at TabMonitor.frameIsReadyToReceiveMessages (background.js:1:55428)
+    at background.js:1:65257Understand this error
+chunk-RPCDYKBN.js?v=5927e7bc:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+clients.tsx:392 Current filter state: Object
+clients.tsx:393 Active Smart List: null
+clients.tsx:394 Search term: 
+clients.tsx:323 Applying filter with conditions: Array(0)
+clients.tsx:324 Filter logic: AND
+clients.tsx:327 No filter conditions, returning all clients
+clients.tsx:323 Applying filter with conditions: Array(1)
+clients.tsx:324 Filter logic: AND
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:392 Current filter state: Object
+clients.tsx:393 Active Smart List: null
+clients.tsx:394 Search term: 
+clients.tsx:323 Applying filter with conditions: Array(0)
+clients.tsx:324 Filter logic: AND
+clients.tsx:327 No filter conditions, returning all clients
+clients.tsx:323 Applying filter with conditions: Array(1)
+clients.tsx:324 Filter logic: AND
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): '' in client: Joe-Test Hupp-Test
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): '' in client: Jorge Abreu
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Jamie Smith
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Eddie Wilson
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Financial Lead Gen' in client: Greg Garrick
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "financial lead gen", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Brian Petersen
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+utils.js:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+heuristicsRedefinitions.js:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+extensionState.js:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
