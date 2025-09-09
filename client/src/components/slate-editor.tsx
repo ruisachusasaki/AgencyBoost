@@ -1165,20 +1165,11 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
           {children}
         </div>
       )}
-      {/* Add invisible placeholder to help with cursor positioning after closed toggle */}
+      {/* Add a visible "add content" area after closed toggle */}
       {!isOpen && (
         <div
-          className="toggle-placeholder"
-          contentEditable={true}
-          style={{ 
-            height: '1px', 
-            fontSize: '1px', 
-            lineHeight: '1px',
-            opacity: 0,
-            overflow: 'hidden'
-          }}
-          onFocus={(e) => {
-            // When this placeholder gets focus, insert a new paragraph after the toggle
+          className="toggle-add-content mt-2 p-2 text-gray-400 hover:text-gray-600 cursor-text border border-dashed border-gray-200 hover:border-gray-300 rounded"
+          onClick={() => {
             try {
               const togglePath = ReactEditor.findPath(editor, element);
               const nextPath = Path.next(togglePath);
@@ -1189,12 +1180,14 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
               );
               // Focus the new paragraph
               Transforms.select(editor, nextPath);
+              // Focus the editor
+              ReactEditor.focus(editor);
             } catch (error) {
               console.log('Toggle navigation skipped:', error);
             }
           }}
         >
-          &nbsp;
+          Click to add content after this toggle...
         </div>
       )}
     </div>
