@@ -428,16 +428,26 @@ export default function EditLesson() {
         const { objectPath } = await finalResponse.json();
         const downloadUrl = `${window.location.origin}${objectPath}`;
         
+        // Auto-populate title with filename (without extension) if title is empty
+        const titleFromFile = prev => {
+          if (!prev.title.trim()) {
+            const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+            return nameWithoutExt;
+          }
+          return prev.title;
+        };
+
         setResourceForm(prev => ({
           ...prev,
           url: downloadUrl,
           fileName: file.name,
-          fileSize: file.size
+          fileSize: file.size,
+          title: titleFromFile(prev)
         }));
         
         toast({
-          title: "File uploaded",
-          description: "File uploaded successfully. Fill in the title and save the resource."
+          title: "File uploaded successfully!",
+          description: "Title auto-filled from filename. You can edit it and click 'Add Resource' to save."
         });
       } catch (error) {
         console.error('Upload finalization error:', error);
@@ -1074,9 +1084,14 @@ export default function EditLesson() {
                                   Upload File
                                 </ObjectUploader>
                                 {resourceForm.fileName && (
-                                  <p className="text-sm text-green-600 mt-2">
-                                    ✓ File uploaded: {resourceForm.fileName}
-                                  </p>
+                                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-sm text-green-800 font-medium mb-1">
+                                      ✓ File uploaded successfully: {resourceForm.fileName}
+                                    </p>
+                                    <p className="text-xs text-green-700">
+                                      Title has been auto-filled. You can edit it above, then click "Add Resource" to save.
+                                    </p>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -1124,12 +1139,15 @@ export default function EditLesson() {
                                 createResourceMutation.isPending ||
                                 updateResourceMutation.isPending
                               }
+                              className={resourceForm.fileName ? "bg-green-600 hover:bg-green-700" : ""}
                             >
                               {createResourceMutation.isPending || updateResourceMutation.isPending 
                                 ? 'Saving...' 
                                 : editingResource 
                                   ? 'Update Resource' 
-                                  : 'Add Resource'
+                                  : resourceForm.fileName 
+                                    ? '✓ Save Resource' 
+                                    : 'Add Resource'
                               }
                             </Button>
                           </div>
