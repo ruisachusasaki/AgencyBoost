@@ -5993,16 +5993,6 @@ export default function EnhancedClientDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Test Modal - outside tabs structure */}
-      <Dialog open={showTestModal} onOpenChange={setShowTestModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Test Modal</DialogTitle>
-          </DialogHeader>
-          <p>This is a test modal to see if Dialog components work at all.</p>
-          <Button onClick={() => setShowTestModal(false)}>Close</Button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
