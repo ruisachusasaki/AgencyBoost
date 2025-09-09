@@ -656,7 +656,7 @@ export default function LessonDetail() {
                         <Badge variant="outline" className="text-xs">
                           {resource.type === 'download' ? 'Download' : 'Link'}
                         </Badge>
-                        {resource.fileSize && (
+                        {resource.fileSize > 0 && (
                           <span>Size: {Math.round(resource.fileSize / 1024)}KB</span>
                         )}
                       </div>
