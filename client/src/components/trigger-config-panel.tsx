@@ -118,6 +118,11 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/calendars"],
   });
 
+  // Fetch training courses for course selection filters
+  const { data: trainingCourses = [] } = useQuery<any[]>({
+    queryKey: ["/api/training/courses"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -1062,6 +1067,47 @@ export default function TriggerConfigPanel({
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
                   No calendars available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "course_select") {
+      const publishedCourses = trainingCourses.filter((course: any) => course.isPublished);
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={fieldSchema.placeholder || `Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {fieldSchema.placeholder && (
+                <SelectItem value="">
+                  <span className="text-muted-foreground">Any Course</span>
+                </SelectItem>
+              )}
+              {publishedCourses.length > 0 ? (
+                publishedCourses.map((course: any) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{course.title}</span>
+                      {course.shortDescription && (
+                        <span className="text-xs text-muted-foreground">{course.shortDescription}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No published courses available
                 </div>
               )}
             </SelectContent>
