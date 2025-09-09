@@ -1,0 +1,36 @@
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+chunk-RPCDYKBN.js?v=5927e7bc:521 Warning: Connect(Droppable): Support for defaultProps will be removed from memo components in a future major release. Use JavaScript default parameters instead.
+    at div
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=5927e7bc:1738:20)
+    at App (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=5927e7bc:8281:25)
+    at ErrorBoundary2 (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=5927e7bc:2778:35)
+    at DragDropContext (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=5927e7bc:8401:19)
+    at div
+    at LessonManagement (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/pages/training/lesson-management.tsx:57:27)
+    at Route (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=5927e7bc:191:16)
+    at Switch (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=5927e7bc:247:17)
+    at Router
+    at div
+    at main
+    at div
+    at MainLayout (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/components/layout/main-layout.tsx:22:38)
+    at Provider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=5927e7bc:38:15)
+    at TooltipProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=5927e7bc:64:5)
+    at TimerProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/src/contexts/TimerContext.tsx:31:33)
+    at QueryClientProvider (https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=5927e7bc:2805:3)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=5927e7bc:521Understand this error
+react-beautiful-dnd.js?v=5927e7bc:2730 react-beautiful-dndDroppable: unsupported nested scroll container detected.A Droppable can only have one scroll parent (which can be itself)Nested scroll containers are currently not supported.We hope to support nested scroll containers soon: https://github.com/atlassian/react-beautiful-dnd/issues/131👷‍ This is a development only message. It will be removed in production builds.
+log @ react-beautiful-dnd.js?v=5927e7bc:2730Understand this warning
+/api/training/lessons/reorder:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+lesson-management.tsx:317 Lesson reorder error: Error: Failed to reorder lessons
+    at lesson-management.tsx:306:28
+onError @ lesson-management.tsx:317Understand this error

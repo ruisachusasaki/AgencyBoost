@@ -13612,72 +13612,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reorder lessons
-  app.put("/api/training/lessons/reorder", async (req, res) => {
-    try {
-      const { lessonIds, moduleId } = req.body;
-      
-      console.log("Lesson reorder request:", { lessonIds, moduleId });
-      
-      if (!Array.isArray(lessonIds)) {
-        return res.status(400).json({ error: "lessonIds must be an array" });
-      }
-      
-      if (lessonIds.length === 0) {
-        return res.status(400).json({ error: "lessonIds cannot be empty" });
-      }
-      
-      // Update the order for each lesson sequentially
-      for (let i = 0; i < lessonIds.length; i++) {
-        const lessonId = lessonIds[i];
-        const newOrder = i + 1;
-        
-        console.log(`Checking lesson ${i + 1}/${lessonIds.length}: ${lessonId}`);
-        
-        // Check if lesson exists
-        const [existingLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
-        if (!existingLesson) {
-          console.log(`Lesson not found: ${lessonId}`);
-          return res.status(404).json({ error: `Lesson not found: ${lessonId}` });
-        }
-        
-        // Update lesson order and moduleId if provided
-        const updateData: any = { 
-          order: newOrder,
-          updatedAt: new Date(),
-          updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
-        };
-        
-        // If moduleId is provided (including null for unorganized), update it
-        if (moduleId !== undefined) {
-          updateData.moduleId = moduleId;
-        }
-        
-        await db.update(trainingLessons)
-          .set(updateData)
-          .where(eq(trainingLessons.id, lessonId));
-      }
-      
-      // Create audit log for the reorder operation
-      await createAuditLog(
-        "updated", 
-        "training_lesson", 
-        lessonIds[0], 
-        "Lessons reordered", 
-        req.session?.userId,
-        `Reordered ${lessonIds.length} lessons${moduleId !== undefined ? ` in module ${moduleId || 'unorganized'}` : ''}`,
-        null,
-        { lessonIds, moduleId },
-        req
-      );
-      
-      res.json({ message: "Lessons reordered successfully" });
-    } catch (error) {
-      console.error('Error reordering lessons:', error);
-      res.status(500).json({ error: "Failed to reorder lessons" });
-    }
-  });
-
   // Mark lesson as incomplete (reset)
   app.post("/api/training/lessons/:id/incomplete", async (req, res) => {
     try {
@@ -13840,14 +13774,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { lessonIds, moduleId } = req.body; // Array of lesson IDs in new order, optional moduleId
       
+      console.log("Lesson reorder request:", { lessonIds, moduleId });
+      
       if (!Array.isArray(lessonIds)) {
         return res.status(400).json({ error: "lessonIds must be an array" });
       }
       
-      // Update order for each lesson
-      await Promise.all(lessonIds.map((lessonId, index) => {
+      if (lessonIds.length === 0) {
+        return res.status(400).json({ error: "lessonIds cannot be empty" });
+      }
+      
+      // Validate that all lessons exist before updating any
+      for (let i = 0; i < lessonIds.length; i++) {
+        const lessonId = lessonIds[i];
+        console.log(`Validating lesson ${i + 1}/${lessonIds.length}: ${lessonId}`);
+        
+        const [existingLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
+        if (!existingLesson) {
+          console.log(`Lesson not found: ${lessonId}`);
+          return res.status(404).json({ error: `Lesson not found: ${lessonId}` });
+        }
+      }
+      
+      // Now update order for each lesson sequentially
+      for (let i = 0; i < lessonIds.length; i++) {
+        const lessonId = lessonIds[i];
         const updateData: any = {
-          order: index + 1,
+          order: i + 1,
           updatedAt: new Date(),
           updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
         };
@@ -13857,10 +13810,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updateData.moduleId = moduleId;
         }
         
-        return db.update(trainingLessons)
+        await db.update(trainingLessons)
           .set(updateData)
           .where(eq(trainingLessons.id, lessonId));
-      }));
+      }
       
       await createAuditLog("updated", "training_lesson", "bulk", "Lesson Order Updated", req.session?.userId,
         "Training lessons reordered", null, { lessonIds, moduleId }, req);
