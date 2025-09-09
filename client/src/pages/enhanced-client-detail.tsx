@@ -1045,18 +1045,7 @@ export default function EnhancedClientDetail() {
 
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
 
-  // Debug: Log SMS modal state changes
-  useEffect(() => {
-    console.log('SMS modal states:', { showSmsTemplateModal, showSmsMergeTagsModal });
-  }, [showSmsTemplateModal, showSmsMergeTagsModal]);
 
-  // Test modal to see if Dialog component works at all
-  const [showTestModal, setShowTestModal] = useState(false);
-
-  // Debug: Log test modal state changes
-  useEffect(() => {
-    console.log('TEST MODAL STATE:', showTestModal);
-  }, [showTestModal]);
 
   // Email composition state (removed duplicate)
   const [showWysiwyg, setShowWysiwyg] = useState(false);
@@ -4954,10 +4943,7 @@ export default function EnhancedClientDetail() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                console.log('SMS Template clicked - DND All:', client?.dndAll, 'DND SMS:', client?.dndSms);
-                                console.log('Before click - showSmsTemplateModal:', showSmsTemplateModal);
                                 setShowSmsTemplateModal(true);
-                                console.log('After click - showSmsTemplateModal should be true');
                               }}
                               disabled={client?.dndAll || client?.dndSms}
                             >
@@ -4967,23 +4953,6 @@ export default function EnhancedClientDetail() {
                           <TooltipContent>SMS Templates</TooltipContent>
                         </Tooltip>
 
-                        {/* TEST BUTTON */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                console.log('TEST MODAL BUTTON CLICKED');
-                                setShowTestModal(true);
-                                console.log('Test modal state set to true');
-                              }}
-                            >
-                              <span>TEST</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Test Modal</TooltipContent>
-                        </Tooltip>
 
                         {/* SMS Merge Tags */}
                         <Tooltip>
@@ -4992,10 +4961,7 @@ export default function EnhancedClientDetail() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                console.log('SMS Merge Tags clicked - DND All:', client?.dndAll, 'DND SMS:', client?.dndSms);
-                                console.log('Before click - showSmsMergeTagsModal:', showSmsMergeTagsModal);
                                 setShowSmsMergeTagsModal(true);
-                                console.log('After click - showSmsMergeTagsModal should be true');
                               }}
                               disabled={client?.dndAll || client?.dndSms}
                             >
@@ -5009,17 +4975,6 @@ export default function EnhancedClientDetail() {
 
                     {/* Right Side - Send Button */}
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          console.log('TEST MODAL BUTTON CLICKED');
-                          setShowTestModal(true);
-                          console.log('Test modal should be open');
-                        }}
-                      >
-                        TEST
-                      </Button>
                       <Button
                         size="sm"
                         disabled={!smsData.message.trim() || !smsData.fromNumber || !!client?.dndAll || !!client?.dndSms}
@@ -5222,30 +5177,135 @@ export default function EnhancedClientDetail() {
               </Card>
             </div>
 
-            {/* SMS Template Selection Modal - MOVED INSIDE COMMUNICATION TAB */}
+            {/* SMS Template Selection Modal */}
             <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>SMS Template Modal - TEST</DialogTitle>
+                  <DialogTitle>Select SMS Template</DialogTitle>
                 </DialogHeader>
-                <div className="p-4">
-                  <p>✅ This SMS Template modal is now INSIDE the Communication tab!</p>
-                  <p>The buttons and modals are in the same React component tree.</p>
-                  <Button onClick={() => setShowSmsTemplateModal(false)}>Close</Button>
-                </div>
+                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
               </DialogContent>
             </Dialog>
 
-            {/* SMS Merge Tags Modal - MOVED INSIDE COMMUNICATION TAB */}
+            {/* SMS Merge Tags Modal */}
             <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>SMS Merge Tags Modal - TEST</DialogTitle>
+                  <DialogTitle>Insert Merge Tags</DialogTitle>
+                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
                 </DialogHeader>
-                <div className="p-4">
-                  <p>✅ This SMS Merge Tags modal is now INSIDE the Communication tab!</p>
-                  <p>This should fix the rendering issue completely.</p>
-                  <Button onClick={() => setShowSmsMergeTagsModal(false)}>Close</Button>
+                <div className="space-y-6 max-h-96 overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Client Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Information</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('firstName')}
+                          className="justify-start"
+                        >
+                          {'{{firstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('lastName')}
+                          className="justify-start"
+                        >
+                          {'{{lastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('phone')}
+                          className="justify-start"
+                        >
+                          {'{{phone}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('companyName')}
+                          className="justify-start"
+                        >
+                          {'{{companyName}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Assigned User Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Assigned User</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserFirstName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserFirstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserLastName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserLastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserEmail')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserEmail}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserPhone')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserPhone}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Custom Fields */}
+                    {customFieldsData && customFieldsData.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Custom Fields</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {customFieldsData.map((field) => (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertSmsTag(field.name)}
+                              className="justify-start text-left overflow-hidden"
+                              title={field.name}
+                            >
+                              <span className="truncate">
+                                {'{{' + field.name + '}}'}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSmsMergeTagsModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
