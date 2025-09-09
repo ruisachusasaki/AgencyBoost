@@ -1044,6 +1044,22 @@ export default function EnhancedClientDetail() {
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
 
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
+
+  // Debug: Log SMS modal state changes
+  useEffect(() => {
+    console.log('SMS modal states:', { showSmsTemplateModal, showSmsMergeTagsModal });
+  }, [showSmsTemplateModal, showSmsMergeTagsModal]);
+
+  // Debug: Log client DND settings
+  useEffect(() => {
+    if (client) {
+      console.log('Client DND settings:', {
+        dndAll: client.dndAll,
+        dndEmail: client.dndEmail,
+        dndSms: client.dndSms
+      });
+    }
+  }, [client]);
   
   // Test modal to see if Dialog component works at all
   const [showTestModal, setShowTestModal] = useState(false);
@@ -1054,6 +1070,11 @@ export default function EnhancedClientDetail() {
   const [showMergeTagsModal, setShowMergeTagsModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [wordCount, setWordCount] = useState(0);
+
+  // Debug: Log modal state changes
+  useEffect(() => {
+    console.log('Email modal states:', { showTemplateModal, showMergeTagsModal });
+  }, [showTemplateModal, showMergeTagsModal]);
   
   // Scheduling state
   const [scheduledDate, setScheduledDate] = useState('');
