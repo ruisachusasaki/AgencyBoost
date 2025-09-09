@@ -39,6 +39,7 @@ export default function EditLesson() {
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [showQuizBuilder, setShowQuizBuilder] = useState(false);
   const [quizData, setQuizData] = useState<any>(null);
+  const [assignmentData, setAssignmentData] = useState<any>(null);
 
   // Fetch lesson data
   const { data: lesson, isLoading } = useQuery({
@@ -50,6 +51,12 @@ export default function EditLesson() {
   const { data: quiz } = useQuery({
     queryKey: [`/api/training/lessons/${lessonId}/quiz`],
     enabled: !!lessonId && lesson?.contentType === 'quiz',
+  });
+
+  // Fetch assignment data if lesson is an assignment
+  const { data: assignment } = useQuery({
+    queryKey: [`/api/training/lessons/${lessonId}/assignment`],
+    enabled: !!lessonId && lesson?.contentType === 'assignment',
   });
 
   const form = useForm<LessonFormData>({
@@ -88,6 +95,13 @@ export default function EditLesson() {
       setQuizData(quiz);
     }
   }, [quiz]);
+
+  // Update assignment data when assignment loads
+  useEffect(() => {
+    if (assignment) {
+      setAssignmentData(assignment);
+    }
+  }, [assignment]);
 
   // Don't automatically show quiz builder - we'll render it inline now
 
@@ -271,6 +285,11 @@ export default function EditLesson() {
   const onSubmit = (data: LessonFormData) => {
     // For quiz lessons, the quiz builder handles the saving
     if (data.contentType === 'quiz') {
+      return;
+    }
+
+    // For assignment lessons, the assignment builder handles the saving
+    if (data.contentType === 'assignment') {
       return;
     }
 
@@ -482,7 +501,7 @@ export default function EditLesson() {
                 />
               </div>
 
-              {form.watch('contentType') !== 'quiz' && (
+              {form.watch('contentType') !== 'quiz' && form.watch('contentType') !== 'assignment' && (
                 <FormField
                   control={form.control}
                   name="content"
@@ -526,8 +545,141 @@ export default function EditLesson() {
                 </div>
               )}
 
-              {/* Only show Update Lesson button for non-quiz lessons */}
-              {form.watch('contentType') !== 'quiz' && (
+              {/* Assignment Builder for assignment lessons */}
+              {form.watch('contentType') === 'assignment' && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Assignment Configuration</h3>
+                    <p className="text-gray-600">Configure your assignment instructions and file upload settings</p>
+                  </div>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Assignment Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Assignment Instructions */}
+                      <div>
+                        <label className="text-sm font-medium">Instructions</label>
+                        <Textarea
+                          placeholder="Enter detailed assignment instructions..."
+                          className="min-h-[120px] mt-2"
+                          value={assignmentData?.instructions || ''}
+                          onChange={(e) => setAssignmentData(prev => ({ ...prev, instructions: e.target.value }))}
+                        />
+                      </div>
+                      
+                      {/* File Upload Settings */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-sm font-medium">Max Files</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={assignmentData?.maxFiles || 1}
+                            onChange={(e) => setAssignmentData(prev => ({ ...prev, maxFiles: parseInt(e.target.value) || 1 }))}
+                            className="mt-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Max File Size (MB)</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={assignmentData?.maxFileSize || 10}
+                            onChange={(e) => setAssignmentData(prev => ({ ...prev, maxFileSize: parseInt(e.target.value) || 10 }))}
+                            className="mt-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Allowed File Types</label>
+                          <Input
+                            placeholder="pdf,doc,docx,txt"
+                            value={assignmentData?.allowedFileTypes?.join(',') || 'pdf,doc,docx,txt'}
+                            onChange={(e) => setAssignmentData(prev => ({ 
+                              ...prev, 
+                              allowedFileTypes: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
+                            }))}
+                            className="mt-2"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Save Assignment Button */}
+                      <div className="flex justify-end pt-4">
+                        <Button
+                          onClick={async () => {
+                            try {
+                              // First update lesson
+                              const lessonData = {
+                                title: form.getValues('title'),
+                                description: form.getValues('description'),
+                                contentType: 'assignment' as const,
+                                contentUrl: '',
+                                duration: form.getValues('duration'),
+                                order: form.getValues('order'),
+                                isRequired: form.getValues('isRequired'),
+                              };
+
+                              const lessonResponse = await fetch(`/api/training/lessons/${lessonId}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(lessonData),
+                              });
+
+                              if (!lessonResponse.ok) throw new Error("Failed to update lesson");
+
+                              // Then update assignment
+                              const assignmentDataToSave = {
+                                title: form.getValues('title'),
+                                description: form.getValues('description'),
+                                instructions: assignmentData?.instructions || '',
+                                allowedFileTypes: assignmentData?.allowedFileTypes || ['pdf', 'doc', 'docx', 'txt'],
+                                maxFileSize: assignmentData?.maxFileSize || 10,
+                                maxFiles: assignmentData?.maxFiles || 1,
+                                isRequired: form.getValues('isRequired'),
+                              };
+
+                              const assignmentResponse = await fetch(`/api/training/lessons/${lessonId}/assignment`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(assignmentDataToSave),
+                              });
+
+                              if (!assignmentResponse.ok) throw new Error("Failed to update assignment");
+
+                              toast({
+                                title: "Success!",
+                                description: "Assignment updated successfully.",
+                              });
+                              
+                              queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
+                              queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}/assignment`] });
+                              setLocation(`/training/courses/${courseId}/lessons`);
+                            } catch (error) {
+                              console.error('Error updating assignment:', error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to update assignment. Please try again.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          className="w-auto px-6"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Assignment
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Only show Update Lesson button for non-quiz and non-assignment lessons */}
+              {form.watch('contentType') !== 'quiz' && form.watch('contentType') !== 'assignment' && (
                 <div className="flex justify-end gap-4">
                   <Button type="button" variant="outline" asChild>
                     <Link href={`/training/courses/${lesson.courseId}/lessons`}>Cancel</Link>
@@ -556,7 +708,19 @@ export default function EditLesson() {
                     <Link href={`/training/courses/${lesson.courseId}/lessons`}>Cancel</Link>
                   </Button>
                   <p className="text-sm text-gray-600 flex items-center">
-                    Use the "Save Quiz" button below to save your changes
+                    Use the "Save Quiz" button above to save your changes
+                  </p>
+                </div>
+              )}
+
+              {/* For assignment lessons, show a note that the Assignment Builder handles saving */}
+              {form.watch('contentType') === 'assignment' && (
+                <div className="flex justify-end gap-4">
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`/training/courses/${lesson.courseId}/lessons`}>Cancel</Link>
+                  </Button>
+                  <p className="text-sm text-gray-600 flex items-center">
+                    Use the "Save Assignment" button above to save your changes
                   </p>
                 </div>
               )}
