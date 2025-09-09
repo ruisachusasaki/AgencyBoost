@@ -1123,44 +1123,22 @@ export default function EditLesson() {
                               <div className="mt-2">
                                 {!resourceForm.fileName ? (
                                   <div className="space-y-2">
-                                    <input
-                                      type="file"
-                                      onChange={handleFileSelect}
-                                      disabled={isUploadingResource}
-                                      className="hidden"
-                                      id="resource-file-input"
-                                      accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx,.png,.jpg,.jpeg,.gif"
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => {
-                                        console.log('Upload button clicked');
-                                        const input = document.getElementById('resource-file-input') as HTMLInputElement;
-                                        if (input) {
-                                          console.log('Input found, triggering click');
-                                          input.click();
-                                        } else {
-                                          console.error('File input not found');
-                                        }
-                                      }}
-                                      disabled={isUploadingResource}
-                                      className="w-full"
-                                    >
-                                      {isUploadingResource ? (
-                                        <>
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                                          Uploading...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Upload className="h-4 w-4 mr-2" />
-                                          Choose File to Upload
-                                        </>
-                                      )}
-                                    </Button>
-                                    <p className="text-xs text-gray-500">
-                                      Supported: PDF, Word, Excel, PowerPoint, Images (max 50MB)
-                                    </p>
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                                      <input
+                                        type="file"
+                                        onChange={(e) => {
+                                          console.log('File input onChange triggered', e.target.files?.length);
+                                          handleFileSelect(e);
+                                        }}
+                                        disabled={isUploadingResource}
+                                        className="w-full"
+                                        id="resource-file-input"
+                                        accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx,.png,.jpg,.jpeg,.gif"
+                                      />
+                                      <p className="text-xs text-gray-500 mt-2">
+                                        Supported: PDF, Word, Excel, PowerPoint, Images (max 50MB)
+                                      </p>
+                                    </div>
                                     {isUploadingResource && (
                                       <div className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
                                         📤 Uploading file, please wait...
