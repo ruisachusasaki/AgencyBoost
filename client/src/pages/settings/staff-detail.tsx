@@ -332,7 +332,7 @@ export default function StaffDetail() {
                     src={staffMember.profileImagePath ? `/objects${staffMember.profileImagePath}` : undefined} 
                   />
                   <AvatarFallback className="text-2xl">
-                    {staffMember.firstName.charAt(0)}{staffMember.lastName.charAt(0)}
+                    {(staffMember.firstName || '').charAt(0) || 'U'}{(staffMember.lastName || '').charAt(0) || 'S'}
                   </AvatarFallback>
                 </Avatar>
               </div>
