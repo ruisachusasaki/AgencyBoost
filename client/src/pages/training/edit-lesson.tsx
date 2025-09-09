@@ -414,78 +414,47 @@ export default function EditLesson() {
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      console.log('No file selected');
-      return;
-    }
-
-    console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
-    
-    // Show immediate feedback
-    toast({
-      title: "File selected!",
-      description: `Starting upload of ${file.name}...`
-    });
+    if (!file) return;
 
     setIsUploadingResource(true);
     
     try {
-      console.log('Starting upload process...');
-      
       // Get upload URL
-      console.log('Requesting upload URL...');
       const uploadResponse = await fetch("/api/objects/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
       
-      console.log('Upload URL response:', uploadResponse.status, uploadResponse.statusText);
-      
       if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error('Failed to get upload URL:', errorText);
-        throw new Error(`Failed to get upload URL: ${uploadResponse.status} ${errorText}`);
+        throw new Error(`Failed to get upload URL: ${uploadResponse.status}`);
       }
       
       const { uploadURL } = await uploadResponse.json();
-      console.log('Got upload URL:', uploadURL ? 'Yes' : 'No');
 
       // Upload file directly to object storage
-      console.log('Uploading file to object storage...');
       const uploadFileResponse = await fetch(uploadURL, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
         body: file,
       });
 
-      console.log('File upload response:', uploadFileResponse.status, uploadFileResponse.statusText);
-
       if (!uploadFileResponse.ok) {
-        const errorText = await uploadFileResponse.text();
-        console.error('Failed to upload file:', errorText);
-        throw new Error(`Failed to upload file: ${uploadFileResponse.status} ${errorText}`);
+        throw new Error(`Failed to upload file: ${uploadFileResponse.status}`);
       }
 
       // Set ACL policy for the uploaded file
-      console.log('Setting ACL policy...');
       const finalResponse = await fetch('/api/images', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageURL: uploadURL.split('?')[0] }),
       });
       
-      console.log('ACL policy response:', finalResponse.status, finalResponse.statusText);
-      
       if (!finalResponse.ok) {
-        const errorText = await finalResponse.text();
-        console.error('Failed to finalize upload:', errorText);
-        throw new Error(`Failed to finalize upload: ${finalResponse.status} ${errorText}`);
+        throw new Error(`Failed to finalize upload: ${finalResponse.status}`);
       }
       
       const { objectPath } = await finalResponse.json();
       const downloadUrl = `${window.location.origin}${objectPath}`;
-      
-      console.log('Upload completed successfully! Object path:', objectPath);
       
       // Auto-populate title with filename (without extension) if title is empty
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
@@ -500,14 +469,13 @@ export default function EditLesson() {
       
       toast({
         title: "File uploaded successfully!",
-        description: "Title auto-filled from filename. You can edit it and click 'Save Resource' to save."
+        description: "You can edit the title and click 'Save Resource' to save."
       });
       
       // Reset file input
       event.target.value = '';
       
     } catch (error) {
-      console.error('Upload error details:', error);
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",
@@ -1126,10 +1094,7 @@ export default function EditLesson() {
                                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
                                       <input
                                         type="file"
-                                        onChange={(e) => {
-                                          console.log('File input onChange triggered', e.target.files?.length);
-                                          handleFileSelect(e);
-                                        }}
+                                        onChange={handleFileSelect}
                                         disabled={isUploadingResource}
                                         className="w-full"
                                         id="resource-file-input"
