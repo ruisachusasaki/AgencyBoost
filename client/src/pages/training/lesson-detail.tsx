@@ -293,6 +293,49 @@ export default function LessonDetail() {
             </CardContent>
           </Card>
 
+          {/* Template Files for Download */}
+          {assignment.templateFiles && assignment.templateFiles.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Download className="h-5 w-5 text-blue-600" />
+                  Assignment Template Files
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Download these template files, complete them, and upload your finished work below.
+                </p>
+                <div className="grid gap-3">
+                  {assignment.templateFiles.map((file: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileIcon className="h-6 w-6 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-blue-900">{file.name}</p>
+                          <p className="text-sm text-blue-700">
+                            {file.size ? `${Math.round(file.size / 1024)}KB` : 'Template file'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                      >
+                        <a href={file.url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Submission Status */}
           {submission && (
             <Card>

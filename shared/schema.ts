@@ -2757,6 +2757,7 @@ export const trainingAssignments = pgTable("training_assignments", {
   maxFileSize: integer("max_file_size").default(10), // MB
   maxFiles: integer("max_files").default(1),
   isRequired: boolean("is_required").default(true),
+  templateFiles: jsonb("template_files"), // Array of instructor-provided template files
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

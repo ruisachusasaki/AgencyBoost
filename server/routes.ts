@@ -12087,7 +12087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/training/lessons/:lessonId/assignment", async (req, res) => {
     try {
       const { lessonId } = req.params;
-      const { title, description, instructions, allowedFileTypes, maxFileSize, maxFiles, isRequired } = req.body;
+      const { title, description, instructions, allowedFileTypes, maxFileSize, maxFiles, isRequired, templateFiles } = req.body;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
       // Check if assignment already exists
@@ -12106,6 +12106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             maxFileSize,
             maxFiles,
             isRequired,
+            templateFiles,
             updatedAt: new Date()
           })
           .where(eq(trainingAssignments.id, existingAssignment.id))
@@ -12121,6 +12122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFileSize,
           maxFiles,
           isRequired,
+          templateFiles,
           createdBy: userId
         }).returning();
       }

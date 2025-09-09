@@ -12,8 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Upload, FileText } from "lucide-react";
+import { ArrowLeft, Save, Upload, FileText, FileIcon, X } from "lucide-react";
 import { QuizBuilder } from "@/components/quiz-builder";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { Link } from "wouter";
 
 const lessonSchema = z.object({
@@ -569,6 +570,83 @@ export default function EditLesson() {
                         />
                       </div>
                       
+                      {/* Instructor Template Files */}
+                      <div>
+                        <label className="text-sm font-medium">Template Files for Students</label>
+                        <p className="text-xs text-gray-500 mb-3">Upload documents that students can download, complete, and re-upload</p>
+                        
+                        <div className="border rounded-lg p-4 bg-gray-50">
+                          <ObjectUploader
+                            maxNumberOfFiles={5}
+                            maxFileSize={50 * 1024 * 1024} // 50MB
+                            onGetUploadParameters={async () => {
+                              const response = await fetch("/api/objects/upload", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                              });
+                              const data = await response.json();
+                              return {
+                                method: "PUT" as const,
+                                url: data.uploadURL,
+                              };
+                            }}
+                            onComplete={(result) => {
+                              if (result.successful && result.successful.length > 0) {
+                                const newFiles = result.successful.map((file: any) => ({
+                                  name: file.name,
+                                  url: file.uploadURL,
+                                  size: file.size,
+                                }));
+                                setAssignmentData(prev => ({ 
+                                  ...prev, 
+                                  templateFiles: [...(prev?.templateFiles || []), ...newFiles]
+                                }));
+                              }
+                            }}
+                            buttonClassName="w-full"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Template Files
+                          </ObjectUploader>
+                          
+                          {/* Show uploaded template files */}
+                          {assignmentData?.templateFiles && assignmentData.templateFiles.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                              <p className="text-sm font-medium">Uploaded Template Files:</p>
+                              {assignmentData.templateFiles.map((file: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                                  <div className="flex items-center gap-3">
+                                    <FileIcon className="h-5 w-5 text-blue-600" />
+                                    <div>
+                                      <p className="text-sm font-medium">{file.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {file.size ? `${Math.round(file.size / 1024)}KB` : 'Unknown size'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setAssignmentData(prev => ({
+                                        ...prev,
+                                        templateFiles: prev?.templateFiles?.filter((_, i) => i !== index) || []
+                                      }));
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <p className="text-xs text-gray-500 mt-2">
+                            Students will be able to download these files, complete them, and upload their completed work.
+                          </p>
+                        </div>
+                      </div>
+                      
                       {/* File Upload Settings */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -640,6 +718,7 @@ export default function EditLesson() {
                                 maxFileSize: assignmentData?.maxFileSize || 10,
                                 maxFiles: assignmentData?.maxFiles || 1,
                                 isRequired: form.getValues('isRequired'),
+                                templateFiles: assignmentData?.templateFiles || [],
                               };
 
                               const assignmentResponse = await fetch(`/api/training/lessons/${lessonId}/assignment`, {
