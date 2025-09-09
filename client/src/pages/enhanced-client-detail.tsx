@@ -11,21 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
-import { ProductSearchResults } from "@/components/ProductSearchResults";
-import { RichTextEditor } from "@/components/rich-text-editor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate } from "@shared/schema";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 // EmailTemplateSelector Component
 function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
@@ -532,7 +529,7 @@ const EditableField = ({
                 {fieldEditValue && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {fieldEditValue.split(',').map(v => v.trim()).filter(v => v).map((value, index) => (
-                      <Badge key={`${fieldId}-${value}-${index}`} variant="secondary" className="text-xs flex items-center gap-1">
+                      <Badge key={index} variant="secondary" className="text-xs flex items-center gap-1">
                         {value}
                         <button
                           type="button"
@@ -684,7 +681,7 @@ const EditableField = ({
                 value.split(',').map((item: string, index: number) => {
                   const trimmedItem = item.trim();
                   return trimmedItem ? (
-                    <Badge key={`${trimmedItem}-${index}`} variant="secondary" className="mr-1 mb-1 text-xs">
+                    <Badge key={index} variant="secondary" className="mr-1 mb-1 text-xs">
                       {trimmedItem}
                     </Badge>
                   ) : null;
@@ -723,105 +720,14 @@ export default function EnhancedClientDetail() {
   const [sections, setSections] = useState<Section[]>([
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
-  const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
-  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
+  const [activeRightSection, setActiveRightSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "payments" | "team">("notes");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [searchDocuments, setSearchDocuments] = useState("");
-  
-  // Modal state variables
-  const [smsTemplatesOpen, setSmsTemplatesOpen] = useState(false);
-  const [smsMergeTagsOpen, setSmsMergeTagsOpen] = useState(false);
-  const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
-  const [emailMergeTagsOpen, setEmailMergeTagsOpen] = useState(false);
-  const [showLogActivityModal, setShowLogActivityModal] = useState(false);
-  
-  // Manual activity logging state
-  const [logActivityType, setLogActivityType] = useState("general");
-  const [logActivityDescription, setLogActivityDescription] = useState("");
-  
-  // Communication form state
-  const [smsData, setSmsData] = useState({ fromNumber: "", message: "" });
-  const [emailData, setEmailData] = useState({ fromName: "", fromEmail: "", to: "", cc: "", bcc: "", subject: "", message: "" });
-  const [showCC, setShowCC] = useState(false);
-  const [showBCC, setShowBCC] = useState(false);
-  
-  // Handler functions for communication forms
-  const handleSmsFieldChange = (field: string, value: string) => {
-    setSmsData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleEmailFieldChange = (field: string, value: string) => {
-    setEmailData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // SMS sending functionality
-  const sendSmsMutation = useMutation({
-    mutationFn: async (smsPayload: { fromNumber: string; to: string; message: string }) => {
-      return await apiRequest("POST", "/api/integrations/twilio/send", smsPayload);
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: "SMS sent successfully!" });
-      setSmsData({ fromNumber: "", message: "" }); // Clear form
-    },
-    onError: (error: any) => {
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: error?.message || "Failed to send SMS" 
-      });
-    }
-  });
-
-  // Helper function to format phone number for Twilio
-  const formatPhoneNumber = (phone: string): string => {
-    // Remove all non-digit characters
-    const cleaned = phone.replace(/\D/g, '');
-    
-    // If it's 10 digits, assume US number and add +1
-    if (cleaned.length === 10) {
-      return `+1${cleaned}`;
-    }
-    
-    // If it's 11 digits starting with 1, add +
-    if (cleaned.length === 11 && cleaned.startsWith('1')) {
-      return `+${cleaned}`;
-    }
-    
-    // If it already starts with +, return as is
-    if (phone.startsWith('+')) {
-      return phone;
-    }
-    
-    // Otherwise, assume US and add +1
-    return `+1${cleaned}`;
-  };
-
-  const handleSendSms = () => {
-    if (!smsData.fromNumber || !smsData.message.trim() || !client?.phone) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please fill in all required fields"
-      });
-      return;
-    }
-
-    const formattedToNumber = formatPhoneNumber(client.phone);
-
-    sendSmsMutation.mutate({
-      fromNumber: smsData.fromNumber,
-      to: formattedToNumber,
-      message: smsData.message,
-      clientId: client?.id
-    });
-  };
-
   const [documentFilterType, setDocumentFilterType] = useState("all");
   const [documentSortBy, setDocumentSortBy] = useState("newest");
-  const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -933,10 +839,8 @@ export default function EnhancedClientDetail() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldEditValue, setFieldEditValue] = useState<string>("");
   
-  // Activity filtering and pagination
+  // Activity filtering
   const [activityFilter, setActivityFilter] = useState<'all' | 'general' | 'email' | 'call' | 'meeting' | 'task' | 'note' | 'campaign' | 'workflow'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
   
   // Tags state
   const [isAddingTag, setIsAddingTag] = useState(false);
@@ -952,12 +856,8 @@ export default function EnhancedClientDetail() {
   const [filteredBundles, setFilteredBundles] = useState<any[]>([]);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
-  const [hubExpandedBundles, setHubExpandedBundles] = useState<Set<string>>(new Set());
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
-  const [hubEditingBundleQuantities, setHubEditingBundleQuantities] = useState<string | null>(null);
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   // Owner and followers state
   const [isAssigningOwner, setIsAssigningOwner] = useState(false);
@@ -977,87 +877,42 @@ export default function EnhancedClientDetail() {
     opportunities: false
   });
   
+  // Services section accordion state
+  const [servicesExpanded, setServicesExpanded] = useState({
+    services: true
+  });
 
   // Communication tabs state
   const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
 
-  // Client Brief state
-  const [isEditingBrief, setIsEditingBrief] = useState(false);
-  const [briefContent, setBriefContent] = useState("");
-
-  // Update client brief mutation
-  const updateClientBriefMutation = useMutation({
-    mutationFn: async (briefData: { notes: string }) => {
-      const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(briefData),
-      });
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to update client brief: ${error}`);
-      }
-      
-      // Get response text
-      const text = await response.text();
-      
-      // Check if response is empty or just return success for PATCH
-      if (!text || text.trim() === '') {
-        return { success: true };
-      }
-      
-      // Check if response is HTML (error page) instead of JSON
-      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-        console.error('Server returned HTML instead of JSON:', text.substring(0, 200));
-        throw new Error('Server error: received HTML response instead of JSON');
-      }
-      
-      // Try to parse as JSON
-      try {
-        return JSON.parse(text);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError, 'Response text:', text.substring(0, 200));
-        throw new Error('Invalid JSON response from server');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
-      toast({
-        title: "Success",
-        description: "Client brief updated successfully",
-      });
-      setIsEditingBrief(false);
-    },
-    onError: (error: Error) => {
-      console.error('Client brief update error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update client brief",
-        variant: "destructive",
-      });
-    },
+  // SMS composition state
+  const [smsData, setSmsData] = useState({
+    fromNumber: '',
+    to: '',
+    message: ''
   });
-
-  // SMS composition state (removed duplicate)
   const [characterCount, setCharacterCount] = useState(0);
   const [showSmsTemplateModal, setShowSmsTemplateModal] = useState(false);
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
-
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
 
-
-
-  // Email composition state (removed duplicate)
+  // Email composition state
+  const [emailData, setEmailData] = useState({
+    fromName: '',
+    fromEmail: '',
+    to: '',
+    cc: '',
+    bcc: '',
+    subject: '',
+    message: ''
+  });
+  const [showCC, setShowCC] = useState(false);
+  const [showBCC, setShowBCC] = useState(false);
   const [showWysiwyg, setShowWysiwyg] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showMergeTagsModal, setShowMergeTagsModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [wordCount, setWordCount] = useState(0);
-
-  // Debug: Log modal state changes
-  useEffect(() => {
-    console.log('Email modal states:', { showTemplateModal, showMergeTagsModal });
-  }, [showTemplateModal, showMergeTagsModal]);
   
   // Scheduling state
   const [scheduledDate, setScheduledDate] = useState('');
@@ -1075,13 +930,6 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId,
   });
 
-  // Initialize brief content from client data
-  useEffect(() => {
-    if (client) {
-      setBriefContent(client.notes || "");
-    }
-  }, [client]);
-
   // Fetch custom field folders
   const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
     queryKey: ['/api/custom-field-folders'],
@@ -1091,12 +939,6 @@ export default function EnhancedClientDetail() {
   const { data: customFieldsData, isLoading: customFieldsLoading } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
     queryKey: ['/api/custom-fields'],
   });
-
-  // Fetch Twilio phone numbers for SMS dropdown
-  const { data: twilioResponse } = useQuery({
-    queryKey: ["/api/integrations/twilio/numbers"],
-  });
-  const twilioNumbers = twilioResponse?.phoneNumbers || [];
 
   // Fetch tags data
   const { data: tagsData = [], isLoading: tagsLoading } = useQuery({
@@ -1178,8 +1020,6 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!clientId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Fetch client notes data
@@ -1190,7 +1030,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client notes');
       return response.json();
     },
-    enabled: !!clientId && (activeRightSection === "notes" || activeHubSection === "notes"),
+    enabled: !!clientId && activeRightSection === "notes",
   });
 
   // Fetch client tasks data
@@ -1201,7 +1041,7 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client tasks');
       return response.json();
     },
-    enabled: !!clientId && activeHubSection === "tasks",
+    enabled: !!clientId && activeRightSection === "tasks",
   });
 
   // Fetch client documents data
@@ -1212,24 +1052,15 @@ export default function EnhancedClientDetail() {
       if (!response.ok) throw new Error('Failed to fetch client documents');
       return response.json();
     },
-    enabled: !!clientId && activeHubSection === "documents",
+    enabled: !!clientId && activeRightSection === "documents",
   });
 
-  // Get all bundle IDs from client products
-  const allClientBundleIds = useMemo(() => {
-    if (!clientProductsData || !Array.isArray(clientProductsData)) return [];
-    return clientProductsData
-      .filter((item: any) => item && item.itemType === 'bundle')
-      .map((item: any) => item.productId || item.id)
-      .filter(Boolean);
-  }, [clientProductsData]);
-
-  // Fetch bundle details for ALL client bundles with client-specific quantities (not just expanded ones)
+  // Fetch bundle details for expanded bundles with client-specific quantities
   const { data: bundleDetailsData = {} } = useQuery({
-    queryKey: ['/api/bundle-details', 'all-client-bundles', allClientBundleIds, clientId],
+    queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId],
     queryFn: async () => {
       const bundleDetails: Record<string, any> = {};
-      for (const bundleId of allClientBundleIds) {
+      for (const bundleId of Array.from(expandedBundles)) {
         try {
           const response = await fetch(`/api/product-bundles/${bundleId}/products?clientId=${clientId}`);
           if (response.ok) {
@@ -1241,9 +1072,7 @@ export default function EnhancedClientDetail() {
       }
       return bundleDetails;
     },
-    enabled: allClientBundleIds.length > 0 && !!clientId && !!clientProductsData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: expandedBundles.size > 0 && !!clientId,
   });
 
   // Helper functions to get dynamic names from custom fields
@@ -1683,13 +1512,13 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', 'all-client-bundles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', Array.from(expandedBundles), clientId] });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
       setEditingBundleQuantities(null);
       setTempQuantities({});
       toast({
         title: "Bundle customized",
-        description: `Bundle quantities updated. New cost: $${data.newCost?.toFixed(2)}`,
+        description: `Bundle quantities updated. New price: $${data.newPrice?.toFixed(2)}`,
       });
     },
     onError: () => {
@@ -1700,14 +1529,6 @@ export default function EnhancedClientDetail() {
       });
     },
   });
-
-  // Save quantity changes function
-  const saveQuantityChanges = (bundleId: string) => {
-    updateBundleQuantitiesMutation.mutate({
-      bundleId,
-      customQuantities: tempQuantities
-    });
-  };
 
   // Update contact owner mutation
   const updateOwnerMutation = useMutation({
@@ -1785,84 +1606,6 @@ export default function EnhancedClientDetail() {
     },
   });
 
-  // Fetch audit logs for this client with pagination and filtering
-  const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery({
-    queryKey: ['/api/audit-logs/entity/contact', clientId, currentPage, itemsPerPage, activityFilter],
-    queryFn: async () => {
-      const offset = (currentPage - 1) * itemsPerPage;
-      const filterParam = activityFilter !== 'all' ? `&filter=${encodeURIComponent(activityFilter)}` : '';
-      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}${filterParam}`);
-      if (!response.ok) throw new Error('Failed to fetch audit logs');
-      return response.json();
-    },
-    enabled: !!clientId,
-    staleTime: 1000 * 30, // Cache for 30 seconds
-  });
-
-  const auditLogs = auditLogsData?.logs || [];
-  const totalActivities = auditLogsData?.total || 0;
-  const hasMoreActivities = auditLogsData?.hasMore || false;
-  const totalPages = Math.ceil(totalActivities / itemsPerPage);
-
-  // Reset page when filter changes
-  const handleFilterChange = (newFilter: typeof activityFilter) => {
-    setActivityFilter(newFilter);
-    setCurrentPage(1);
-  };
-
-  // Manual activity logging mutation
-  const logActivityMutation = useMutation({
-    mutationFn: async ({ activityType, description }: { activityType: string; description: string }) => {
-      if (!currentUser?.id) {
-        throw new Error('User not authenticated');
-      }
-      
-      const activityDetails = activityType === 'general' 
-        ? description 
-        : `${activityType.charAt(0).toUpperCase() + activityType.slice(1)}: ${description}`;
-      
-      const payload = {
-        entityType: 'contact',
-        entityId: clientId,
-        entityName: client?.firstName && client?.lastName 
-          ? `${client.firstName} ${client.lastName}` 
-          : client?.companyName || 'Unknown Client',
-        action: 'manual_log',
-        details: activityDetails,
-        userId: currentUser.id
-      };
-      
-      const response = await fetch('/api/audit-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to log activity');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
-      setShowLogActivityModal(false);
-      setLogActivityDescription('');
-      setLogActivityType('general');
-      toast({
-        title: "Activity logged",
-        description: "Manual activity has been logged successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: `Failed to log activity: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-
   // Update DND settings mutation
   const updateDNDMutation = useMutation({
     mutationFn: async (dndSettings: { dndAll?: boolean; dndEmail?: boolean; dndSms?: boolean; dndCalls?: boolean }) => {
@@ -1883,8 +1626,7 @@ export default function EnhancedClientDetail() {
     },
     onSuccess: (data) => {
       console.log('DND mutation success, invalidating queries');
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
       toast({
         title: "Communication preferences updated",
         description: "DND settings have been updated successfully",
@@ -1954,6 +1696,9 @@ export default function EnhancedClientDetail() {
   }, [ownerSearchTerm, staffData]);
 
   // Follower search filtering
+  const clientFollowers = client?.followers;
+  const clientContactOwner = client?.contactOwner;
+
   useEffect(() => {
     if (!followerSearchTerm || !staffData || !client) {
       setFilteredFollowers([]);
@@ -1961,8 +1706,7 @@ export default function EnhancedClientDetail() {
       return;
     }
 
-    const currentFollowers = client.followers || [];
-    const clientContactOwner = client.contactOwner;
+    const currentFollowers = clientFollowers || [];
     const filtered = staffData.filter((staff: any) => 
       !currentFollowers.includes(staff.id) && // Exclude already following staff
       staff.id !== clientContactOwner && // Exclude current owner
@@ -1971,14 +1715,21 @@ export default function EnhancedClientDetail() {
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
+  }, [followerSearchTerm, staffData, clientFollowers, clientContactOwner]);
 
   // Auto-populate email fields when user and client data are available
+  const currentUserId = currentUser?.id;
+  const currentUserFirstName = currentUser?.firstName;
+  const currentUserLastName = currentUser?.lastName;
+  const currentUserEmail = currentUser?.email;
+  const clientEmail = client?.email;
+  const clientPhone = client?.phone;
+
   useEffect(() => {
-    if (currentUser?.id && client?.email) {
-      const fromName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-      const fromEmail = currentUser.email || '';
-      const to = client.email || '';
+    if (currentUserId && clientEmail) {
+      const fromName = `${currentUserFirstName || ''} ${currentUserLastName || ''}`.trim();
+      const fromEmail = currentUserEmail || '';
+      const to = clientEmail || '';
       
       // Only update if values are different to prevent infinite re-renders
       setEmailData(prev => {
@@ -1993,7 +1744,7 @@ export default function EnhancedClientDetail() {
         return prev;
       });
     }
-  }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
+  }, [currentUserId, currentUserFirstName, currentUserLastName, currentUserEmail, clientEmail]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
@@ -2010,17 +1761,20 @@ export default function EnhancedClientDetail() {
 
   // Auto-populate SMS fields when client data is available
   useEffect(() => {
-    if (client?.phone) {
+    if (clientPhone) {
       setSmsData(prev => {
-        if (prev.to !== client.phone) {
-          return { ...prev, to: client.phone };
+        if (prev.to !== clientPhone) {
+          return { ...prev, to: clientPhone };
         }
         return prev;
       });
     }
-  }, [client?.phone]);
+  }, [clientPhone]);
 
-  // Email utility functions (removed duplicate)
+  // Email utility functions
+  const handleEmailFieldChange = useCallback((field: string, value: string) => {
+    setEmailData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const clearEmailMessage = useCallback(() => {
     setEmailData(prev => ({ ...prev, message: '' }));
@@ -2030,7 +1784,10 @@ export default function EnhancedClientDetail() {
     handleEmailFieldChange('message', value);
   }, [handleEmailFieldChange]);
 
-  // SMS utility functions (removed duplicate)
+  // SMS utility functions
+  const handleSmsFieldChange = useCallback((field: string, value: string) => {
+    setSmsData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const clearSmsMessage = useCallback(() => {
     setSmsData(prev => ({ ...prev, message: '' }));
@@ -2039,7 +1796,6 @@ export default function EnhancedClientDetail() {
   const insertSmsTag = (tag: string) => {
     const newMessage = smsData.message + `{{${tag}}}`;
     setSmsData(prev => ({ ...prev, message: newMessage }));
-    setShowSmsMergeTagsModal(false);
   };
 
   const selectSmsTemplate = (content: string, templateName: string) => {
@@ -2047,7 +1803,9 @@ export default function EnhancedClientDetail() {
     setShowSmsTemplateModal(false);
   };
 
-  // Removed duplicate handleSendSms function
+  const handleSendSms = () => {
+    setShowSmsSendModal(true);
+  };
 
   const sendSmsNow = () => {
     console.log('Sending SMS now:', smsData);
@@ -2092,7 +1850,14 @@ export default function EnhancedClientDetail() {
     setShowSendModal(false);
   };
 
-  // Removed duplicate formatPhoneNumber function - using the one with Twilio formatting above
+  // Utility functions
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
 
   const toggleSection = (sectionId: string) => {
     setSections(prev => prev.map(section => 
@@ -2574,7 +2339,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b">
-            <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 rounded-none h-auto">
+            <TabsList className="grid w-full grid-cols-4 bg-transparent border-0 rounded-none h-auto">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
@@ -2583,18 +2348,11 @@ export default function EnhancedClientDetail() {
                 Contact
               </TabsTrigger>
               <TabsTrigger 
-                value="hub" 
+                value="activity" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
               >
-                <Zap className="h-4 w-4" />
-                Client Hub
-              </TabsTrigger>
-              <TabsTrigger 
-                value="products" 
-                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                Products
+                <Activity className="h-4 w-4" />
+                Recent Activity
               </TabsTrigger>
               <TabsTrigger 
                 value="communication" 
@@ -2604,11 +2362,11 @@ export default function EnhancedClientDetail() {
                 Communication
               </TabsTrigger>
               <TabsTrigger 
-                value="activity" 
+                value="hub" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3"
               >
-                <Activity className="h-4 w-4" />
-                Recent Activity
+                <Zap className="h-4 w-4" />
+                Client Hub
               </TabsTrigger>
             </TabsList>
           </div>
@@ -2698,9 +2456,9 @@ export default function EnhancedClientDetail() {
               <CardContent className="space-y-4">
                 {/* Tags Accordion */}
                 <div className="border-b border-gray-200 pb-4">
-                  <div
+                  <button
                     onClick={() => setActionsExpanded(prev => ({ ...prev, tags: !prev.tags }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Hash className="h-4 w-4" />
@@ -2720,7 +2478,7 @@ export default function EnhancedClientDetail() {
                       </Button>
                       {actionsExpanded.tags ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </div>
-                  </div>
+                  </button>
                   {actionsExpanded.tags && (
                     <div className="mt-3 space-y-2">
                       {client.tags && client.tags.length > 0 ? (
@@ -2729,7 +2487,7 @@ export default function EnhancedClientDetail() {
                             const tag = tagsData.find((t: Tag) => t.name === tagName);
                             return (
                               <Badge
-                                key={`tag-${tagName}-${index}`}
+                                key={index}
                                 variant="secondary"
                                 className="text-xs"
                                 style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined, borderColor: tag?.color }}
@@ -2748,16 +2506,16 @@ export default function EnhancedClientDetail() {
 
                 {/* Campaigns Accordion */}
                 <div className="border-b border-gray-200 pb-4">
-                  <div
+                  <button
                     onClick={() => setActionsExpanded(prev => ({ ...prev, campaigns: !prev.campaigns }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
                       Campaigns
                     </h4>
                     {actionsExpanded.campaigns ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </div>
+                  </button>
                   {actionsExpanded.campaigns && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No campaigns associated</p>
@@ -2768,16 +2526,16 @@ export default function EnhancedClientDetail() {
 
                 {/* Workflows Accordion */}
                 <div className="border-b border-gray-200 pb-4">
-                  <div
+                  <button
                     onClick={() => setActionsExpanded(prev => ({ ...prev, workflows: !prev.workflows }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Workflow className="h-4 w-4" />
                       Workflows
                     </h4>
                     {actionsExpanded.workflows ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </div>
+                  </button>
                   {actionsExpanded.workflows && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No workflows active</p>
@@ -2788,16 +2546,16 @@ export default function EnhancedClientDetail() {
 
                 {/* Opportunities Accordion */}
                 <div className="pb-2">
-                  <div
+                  <button
                     onClick={() => setActionsExpanded(prev => ({ ...prev, opportunities: !prev.opportunities }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
                   >
                     <h4 className="font-medium text-gray-900 flex items-center gap-2">
                       <Target className="h-4 w-4" />
                       Opportunities
                     </h4>
                     {actionsExpanded.opportunities ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </div>
+                  </button>
                   {actionsExpanded.opportunities && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No opportunities tracked</p>
@@ -2808,79 +2566,761 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
-
-          </div>
-
-          {/* Middle Column - Client Brief & Communication */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Client Brief */}
-            <Card>
+            {/* Services Section */}
+            <Card className="mt-6">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Client Brief
-                  </h2>
-                  {!isEditingBrief ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingBrief(true)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  ) : (
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                  Products
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Services Accordion */}
+                <div className="pb-2">
+                  <button
+                    onClick={() => setServicesExpanded(prev => ({ ...prev, services: !prev.services }))}
+                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded"
+                  >
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      Products
+                    </h4>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setIsEditingBrief(false);
-                          if (client) {
-                            setBriefContent(client.notes || "");
-                          }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsAddingService(true);
                         }}
+                        className="h-6 w-6 p-0"
                       >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel
+                        <Plus className="h-3 w-3" />
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          updateClientBriefMutation.mutate({ notes: briefContent });
-                        }}
-                        disabled={updateClientBriefMutation.isPending}
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {updateClientBriefMutation.isPending ? "Saving..." : "Save"}
-                      </Button>
+                      {servicesExpanded.services ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </button>
+                  {servicesExpanded.services && (
+                    <div className="mt-3 space-y-2">
+                      {clientProductsData && clientProductsData.length > 0 ? (
+                        <div className="space-y-2">
+                          {clientProductsData.map((clientProduct: any, index: number) => (
+                            <div key={index} className="space-y-2">
+                              {/* Main Product/Bundle Item */}
+                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                <div className="flex items-center gap-2 flex-1">
+                                  {clientProduct.itemType === 'bundle' ? (
+                                    <button
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedBundles);
+                                        if (newExpanded.has(clientProduct.productId)) {
+                                          newExpanded.delete(clientProduct.productId);
+                                        } else {
+                                          newExpanded.add(clientProduct.productId);
+                                        }
+                                        setExpandedBundles(newExpanded);
+                                      }}
+                                      className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors"
+                                    >
+                                      <Package className="h-4 w-4 text-teal-600" />
+                                      <span className="text-sm font-medium">{clientProduct.productName}</span>
+                                      <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
+                                        Bundle
+                                      </Badge>
+                                      {expandedBundles.has(clientProduct.productId) ? (
+                                        <ChevronDown className="h-3 w-3 text-gray-400" />
+                                      ) : (
+                                        <ChevronRight className="h-3 w-3 text-gray-400" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <ShoppingCart className="h-4 w-4 text-gray-500" />
+                                      <span className="text-sm font-medium">{clientProduct.productName}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {clientProduct.productCost && (
+                                    <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                      Cost: ${clientProduct.productCost}
+                                    </Badge>
+                                  )}
+                                  {clientProduct.itemType === 'bundle' && canDeleteProducts && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingBundleQuantities(clientProduct.productId);
+                                        // Initialize temp quantities with current bundle data
+                                        const currentBundle = bundleDetailsData[clientProduct.productId] || [];
+                                        const initialQuantities: Record<string, number> = {};
+                                        currentBundle.forEach((product: any) => {
+                                          initialQuantities[product.productId] = product.quantity;
+                                        });
+                                        setTempQuantities(initialQuantities);
+                                      }}
+                                      className="h-6 w-6 p-0 text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                                      title="Customize bundle quantities for this client"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {canDeleteProducts && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteProductMutation.mutate(clientProduct.productId)}
+                                      disabled={deleteProductMutation.isPending}
+                                      className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Expanded Bundle Contents */}
+                              {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId) && (
+                                <div className="ml-6 space-y-1">
+                                  {editingBundleQuantities === clientProduct.productId ? (
+                                    // Edit mode for bundle quantities
+                                    <div className="space-y-2 p-3 bg-blue-50 rounded border border-blue-200">
+                                      <div className="flex items-center justify-between text-sm font-medium text-blue-700">
+                                        <span>Customize Bundle Quantities</span>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              updateBundleQuantitiesMutation.mutate({
+                                                bundleId: clientProduct.productId,
+                                                customQuantities: tempQuantities
+                                              });
+                                            }}
+                                            disabled={updateBundleQuantitiesMutation.isPending}
+                                            className="h-6 text-xs"
+                                          >
+                                            {updateBundleQuantitiesMutation.isPending ? 'Saving...' : 'Save'}
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setEditingBundleQuantities(null);
+                                              setTempQuantities({});
+                                            }}
+                                            className="h-6 text-xs"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="text-xs text-blue-600 mb-2">
+                                        Costs will be automatically recalculated based on new quantities
+                                      </div>
+                                      <div className="text-xs text-amber-600 mb-2 bg-amber-50 p-2 rounded border border-amber-200">
+                                        ⚠️ Note: Base bundles include 1 unit of each product. Set custom quantities here for this specific client.
+                                      </div>
+                                      {(bundleDetailsData[clientProduct.productId] as any[])?.map((bundleProduct: any, bundleIndex: number) => (
+                                        <div
+                                          key={bundleIndex}
+                                          className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
+                                        >
+                                          <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+                                          <ShoppingCart className="h-3 w-3 text-gray-400" />
+                                          <span className="text-gray-600 flex-1">{bundleProduct.productName}</span>
+                                          <span className="text-xs text-gray-500 mr-2">Qty:</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            value={tempQuantities[bundleProduct.productId] || 0}
+                                            onChange={(e) => {
+                                              setTempQuantities(prev => ({
+                                                ...prev,
+                                                [bundleProduct.productId]: parseInt(e.target.value) || 0
+                                              }));
+                                            }}
+                                            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    // View mode for bundle contents
+                                    (bundleDetailsData[clientProduct.productId] as any[]) ? (
+                                      <>
+                                        {/* Check if this client has custom quantities */}
+                                        {(() => {
+                                          const hasCustomQuantities = (bundleDetailsData[clientProduct.productId] as any[])?.some((product: any) => 
+                                            product.quantity !== product.baseQuantity
+                                          );
+                                          return hasCustomQuantities && (
+                                            <div className="text-xs text-amber-600 mb-2 bg-amber-50 p-2 rounded border border-amber-200">
+                                              🎯 This client has custom quantities (different from base bundle)
+                                            </div>
+                                          );
+                                        })()}
+                                        
+                                        {(bundleDetailsData[clientProduct.productId] as any[]).map((bundleProduct: any, bundleIndex: number) => (
+                                          <div
+                                            key={bundleIndex}
+                                            className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm"
+                                          >
+                                            <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+                                            <ShoppingCart className="h-3 w-3 text-gray-400" />
+                                            <span className="text-gray-600 flex-1">{bundleProduct.productName}</span>
+                                            <Badge variant="secondary" className="text-xs bg-gray-50 text-gray-500">
+                                              Qty: {bundleProduct.quantity}
+                                            </Badge>
+                                            {bundleProduct.productCost && (
+                                              <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                                                ${bundleProduct.productCost} each
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm text-gray-500">
+                                        Loading bundle details...
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No products assigned</p>
+                      )}
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* DND (Do Not Disturb) Section */}
+            <Card className="mt-6">
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <ShieldOff className="h-5 w-5 text-red-500" />
+                  DND (Do Not Disturb)
+                </h2>
               </CardHeader>
-              <CardContent>
-                {isEditingBrief ? (
-                  <div className="border rounded-md">
-                    <RichTextEditor
-                      content={briefContent}
-                      onChange={(content) => setBriefContent(content)}
-                      placeholder="Add client brief notes, project details, or important information..."
-                      className="min-h-[200px]"
+              <CardContent className="space-y-4">
+                {/* DND All Channels */}
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div className="flex items-center gap-3">
+                    <ShieldOff className="h-5 w-5 text-red-500" />
+                    <div>
+                      <span className="font-medium text-gray-900">DND All Channels</span>
+                      <p className="text-sm text-gray-600">Block all communications (emails, texts, calls)</p>
+                    </div>
+                  </div>
+                  <Checkbox
+                    checked={client?.dndAll || false}
+                    onCheckedChange={(checked) => {
+                      updateDNDMutation.mutate({ dndAll: !!checked });
+                    }}
+                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                  />
+                </div>
+
+                {/* OR Separator */}
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-gray-200"></div>
+                  <span className="text-sm font-medium text-gray-500 px-3">OR</span>
+                  <div className="flex-1 h-px bg-gray-200"></div>
+                </div>
+
+                {/* Individual Channel Settings */}
+                <div className="space-y-3">
+                  {/* Emails */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-gray-900">Emails</span>
+                    </div>
+                    <Checkbox
+                      checked={client?.dndEmail || false}
+                      onCheckedChange={(checked) => {
+                        updateDNDMutation.mutate({ dndEmail: !!checked });
+                      }}
+                      disabled={client?.dndAll || false}
+                      className="disabled:opacity-50"
                     />
                   </div>
-                ) : (
-                  <div className="min-h-[120px]">
-                    {briefContent ? (
-                      <div 
-                        className="prose prose-sm max-w-none text-gray-700"
-                        dangerouslySetInnerHTML={{ __html: briefContent }}
-                      />
-                    ) : (
-                      <p className="text-gray-500 italic">No client brief added yet. Click Edit to add important client information, project details, or notes.</p>
-                    )}
+
+                  {/* Text Messages */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className="h-4 w-4 text-green-500" />
+                      <span className="font-medium text-gray-900">Text Messages</span>
+                    </div>
+                    <Checkbox
+                      checked={client?.dndSms || false}
+                      onCheckedChange={(checked) => {
+                        updateDNDMutation.mutate({ dndSms: !!checked });
+                      }}
+                      disabled={client?.dndAll || false}
+                      className="disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Calls & Voicemails */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-purple-500" />
+                      <span className="font-medium text-gray-900">Calls & Voicemails</span>
+                    </div>
+                    <Checkbox
+                      checked={client?.dndCalls || false}
+                      onCheckedChange={(checked) => {
+                        updateDNDMutation.mutate({ dndCalls: !!checked });
+                      }}
+                      disabled={client?.dndAll || false}
+                      className="disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Warning Message */}
+                {(client?.dndAll || client?.dndEmail || client?.dndSms || client?.dndCalls) && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <ShieldOff className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-amber-800">Communication Restrictions Active</p>
+                        <p className="text-amber-700 mt-1">
+                          {client?.dndAll 
+                            ? "All communications are blocked for this client."
+                            : `${[
+                                client?.dndEmail && "emails",
+                                client?.dndSms && "text messages", 
+                                client?.dndCalls && "calls"
+                              ].filter(Boolean).join(", ")} are blocked for this client.`
+                          }
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Middle Column - Activity & Communication */}
+          <div className="lg:col-span-3">
+            {/* Recent Activity - Moved to Top */}
+            <Card className="mb-6">
+              <CardHeader>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <Select value={activityFilter} onValueChange={(value) => setActivityFilter(value as any)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Activity</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="call">Calls</SelectItem>
+                        <SelectItem value="meeting">Meetings</SelectItem>
+                        <SelectItem value="task">Tasks</SelectItem>
+                        <SelectItem value="note">Notes</SelectItem>
+                        <SelectItem value="campaign">Campaigns</SelectItem>
+                        <SelectItem value="workflow">Workflows</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockActivities
+                    .filter(activity => activityFilter === 'all' || activity.type === activityFilter)
+                    .map((activity) => (
+                    <div key={activity.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{activity.description}</p>
+                            <p className="text-sm text-gray-500">by {activity.user}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {activity.type}
+                          </Badge>
+                          <span className="text-sm text-gray-500">{activity.timestamp}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 text-sm ml-10">{activity.content}</p>
+                    </div>
+                  ))}
+                  {mockActivities.filter(activity => activityFilter === 'all' || activity.type === activityFilter).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
+                      <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Communication - Moved Below Activity */}
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900">Communication</h2>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={communicationTab} onValueChange={(value) => setCommunicationTab(value as 'sms' | 'email')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="sms" className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      SMS
+                    </TabsTrigger>
+                    <TabsTrigger value="email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="sms" className="mt-0">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium text-gray-700">Send SMS</Label>
+                        {(client?.dndAll || client?.dndSms) && (
+                          <Badge variant="destructive" className="text-xs">
+                            <ShieldOff className="h-3 w-3 mr-1" />
+                            DND Active
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* First Row: From and To fields */}
+                      <div className="flex items-center gap-4">
+                        {/* From Field - Left Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">From</Label>
+                          <Select
+                            value={smsData.fromNumber}
+                            onValueChange={(value) => handleSmsFieldChange('fromNumber', value)}
+                            disabled={!!client?.dndAll || !!client?.dndSms}
+                          >
+                            <SelectTrigger className={`mt-1 ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600' : ''}`}>
+                              <SelectValue placeholder="Select phone number..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="+1234567890">+1 (234) 567-8900 - Main</SelectItem>
+                              <SelectItem value="+1234567891">+1 (234) 567-8901 - Sales</SelectItem>
+                              <SelectItem value="+1234567892">+1 (234) 567-8902 - Support</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* To Field - Right Aligned */}
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium text-gray-700">To</Label>
+                          <Input
+                            value={smsData.to}
+                            onChange={(e) => handleSmsFieldChange('to', e.target.value)}
+                            placeholder="Phone number..."
+                            disabled={!!client?.dndAll || !!client?.dndSms}
+                            className={`mt-1 ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Message Input Field */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Message</Label>
+                        <Textarea
+                          value={smsData.message}
+                          onChange={(e) => handleSmsFieldChange('message', e.target.value)}
+                          placeholder={
+                            (client?.dndAll || client?.dndSms) 
+                              ? "SMS blocked by DND settings..." 
+                              : "Type your SMS message here..."
+                          }
+                          disabled={!!client?.dndAll || !!client?.dndSms}
+                          className={`mt-1 min-h-[120px] resize-y ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
+                        />
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        {/* Left Side - Tools */}
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            {/* Insert Template */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsTemplateModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndSms}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Template</TooltipContent>
+                            </Tooltip>
+
+                            {/* Insert Merge Tags */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsMergeTagsModal(true)}
+                                  disabled={!!client?.dndAll || !!client?.dndSms}
+                                >
+                                  <TagIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Insert Merge Tags</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+
+                        {/* Right Side - Actions */}
+                        <div className="flex items-center gap-4">
+                          {/* Character Count */}
+                          <span className={`text-sm ${characterCount > 160 ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                            {characterCount} {characterCount > 160 ? '(Multiple messages)' : 'characters'}
+                          </span>
+                          
+                          {/* Clear Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearSmsMessage}
+                            disabled={!smsData.message.trim() || !!client?.dndAll || !!client?.dndSms}
+                          >
+                            Clear
+                          </Button>
+
+                          {/* Send Button */}
+                          <Button
+                            onClick={handleSendSms}
+                            disabled={!smsData.message.trim() || !smsData.to.trim() || !!client?.dndAll || !!client?.dndSms}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="email" className="mt-0">
+                    <div className="space-y-4">
+                      {/* DND Warning */}
+                      {(client?.dndAll || client?.dndEmail) && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <ShieldOff className="h-4 w-4 text-red-600" />
+                          <span className="text-sm text-red-600 font-medium">
+                            Email communication is blocked by DND settings
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Email Form */}
+                      <div className="space-y-3">
+                        {/* From Fields */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">From Name</Label>
+                            <Input
+                              value={emailData.fromName}
+                              onChange={(e) => handleEmailFieldChange('fromName', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">From Email</Label>
+                            <Input
+                              value={emailData.fromEmail}
+                              onChange={(e) => handleEmailFieldChange('fromEmail', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+
+                        {/* To Field with CC/BCC Toggle Buttons */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">To</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              value={emailData.to}
+                              onChange={(e) => handleEmailFieldChange('to', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="flex-1"
+                            />
+                            <div className="flex items-center gap-2">
+                              {/* Vertical Separator */}
+                              <div className="w-px h-6 bg-gray-300"></div>
+                              
+                              {/* CC Toggle Button */}
+                              <Button
+                                variant={showCC ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setShowCC(!showCC)}
+                                disabled={!!client?.dndAll || !!client?.dndEmail}
+                                className="text-xs px-3"
+                              >
+                                CC
+                              </Button>
+                              
+                              {/* BCC Toggle Button */}
+                              <Button
+                                variant={showBCC ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setShowBCC(!showBCC)}
+                                disabled={!!client?.dndAll || !!client?.dndEmail}
+                                className="text-xs px-3"
+                              >
+                                BCC
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* CC Field - conditionally shown */}
+                        {showCC && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">CC</Label>
+                            <Input
+                              placeholder="Additional email addresses (comma separated)"
+                              value={emailData.cc}
+                              onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {/* BCC Field - conditionally shown */}
+                        {showBCC && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">BCC</Label>
+                            <Input
+                              placeholder="Blind carbon copy (comma separated)"
+                              value={emailData.bcc}
+                              onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
+                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              className="mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {/* Subject Field */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Subject</Label>
+                          <Input
+                            placeholder="Email subject (supports merge tags like {{firstName}})"
+                            value={emailData.subject}
+                            onChange={(e) => handleEmailFieldChange('subject', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        {/* Message Field - WYSIWYG Editor */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Message</Label>
+                          <Textarea
+                            placeholder="Type your message here..."
+                            value={emailData.message}
+                            onChange={(e) => handleEmailFieldChange('message', e.target.value)}
+                            disabled={!!client?.dndAll || !!client?.dndEmail}
+                            className="mt-1 min-h-[120px] resize-none"
+                          />
+                        </div>
+
+                        {/* Action Bar */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          {/* Left Side - Tools */}
+                          <div className="flex items-center gap-2">
+                            <TooltipProvider>
+                              {/* Insert Template */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowTemplateModal(true)}
+                                    disabled={!!client?.dndAll || !!client?.dndEmail}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Insert Template</TooltipContent>
+                              </Tooltip>
+
+                              {/* Insert Merge Tags */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowMergeTagsModal(true)}
+                                    disabled={!!client?.dndAll || !!client?.dndEmail}
+                                  >
+                                    <TagIcon className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Insert Merge Tags</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+
+                          {/* Right Side - Actions */}
+                          <div className="flex items-center gap-4">
+                            {/* Word Count */}
+                            <span className="text-sm text-gray-500">
+                              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                            </span>
+                            
+                            {/* Clear Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={clearEmailMessage}
+                              disabled={!emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
+                            >
+                              Clear
+                            </Button>
+
+                            {/* Send Button */}
+                            <Button
+                              onClick={handleSendEmail}
+                              disabled={!emailData.message.trim() || !emailData.to.trim() || !!client?.dndAll || !!client?.dndEmail}
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send
+                            </Button>
+                          </div>
+                        </div>
+
+
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
@@ -3025,8 +3465,6 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
-
-
             {/* Send Options Modal */}
             <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
               <DialogContent className="max-w-md">
@@ -3111,6 +3549,121 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
+            {/* SMS Template Selection Modal */}
+            <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Select SMS Template</DialogTitle>
+                </DialogHeader>
+                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
+              </DialogContent>
+            </Dialog>
+
+            {/* SMS Merge Tags Modal */}
+            <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Insert Merge Tags</DialogTitle>
+                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
+                </DialogHeader>
+                <div className="space-y-6 max-h-96 overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Client Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Information</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('firstName')}
+                          className="justify-start"
+                        >
+                          {'{{firstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('lastName')}
+                          className="justify-start"
+                        >
+                          {'{{lastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('phone')}
+                          className="justify-start"
+                        >
+                          {'{{phone}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('companyName')}
+                          className="justify-start"
+                        >
+                          {'{{companyName}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Assigned User Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Assigned User</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserFirstName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserFirstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserLastName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserLastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserPhone')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserPhone}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* All Custom Fields */}
+                    {customFieldsData && customFieldsData.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Custom Fields</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {customFieldsData.map((field) => (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertSmsTag(field.name)}
+                              className="justify-start text-left overflow-hidden"
+                              title={field.name}
+                            >
+                              <span className="truncate">
+                                {'{{' + field.name + '}}'}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* SMS Send Options Modal */}
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
@@ -3199,29 +3752,317 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
 
-        {/* Tasks Section */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              Tasks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Create New Task Dialog */}
-            <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="mb-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Task
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Task</DialogTitle>
-                </DialogHeader>
+          {/* Right Column - Client Activity Hub */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader className="pb-4">
+                {/* Horizontal Icons Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Client Hub</h2>
+                </div>
+                <TooltipProvider>
+                  <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("notes")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "notes"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Notes</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("tasks")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "tasks"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Tasks</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("appointments")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "appointments"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Meetings/Appointments</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("documents")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "documents"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Upload className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Files</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("team")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeRightSection === "team"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Team</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveRightSection("payments")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all opacity-50 cursor-not-allowed ${
+                            activeRightSection === "payments"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-400"
+                          }`}
+                          disabled
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Billing (Coming Soon)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {/* Notes Section */}
+                {activeRightSection === "notes" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Notes</h3>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search notes..."
+                          value={searchNotes}
+                          onChange={(e) => setSearchNotes(e.target.value)}
+                          className="pl-10 text-sm"
+                        />
+                      </div>
+                      <Textarea
+                        placeholder="Add a note..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        className="min-h-[80px] text-sm"
+                      />
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-primary hover:bg-primary/90"
+                        disabled={!newNote.trim() || createNoteMutation.isPending}
+                        onClick={() => createNoteMutation.mutate(newNote)}
+                      >
+                        {createNoteMutation.isPending ? "Adding..." : "Add Note"}
+                      </Button>
+                    </div>
+
+                    <div 
+                      className="space-y-3 overflow-y-auto"
+                      style={{ 
+                        maxHeight: calculateNotesMaxHeight(),
+                        ...(calculateNotesMaxHeight() && { paddingRight: '8px' })
+                      }}
+                    >
+                      {notesLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading notes...</div>
+                        </div>
+                      ) : clientNotes.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No notes yet</p>
+                          <p className="text-xs text-gray-400">Add a note to get started</p>
+                        </div>
+                      ) : (
+                        clientNotes
+                          .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
+                          .map((note: any) => (
+                            <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-sm font-medium text-gray-900">Note</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  {currentUser?.role === 'Admin' && (
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                        onClick={() => {
+                                          setEditingNote(note.id);
+                                          setEditNoteContent(note.content);
+                                        }}
+                                        title="Edit note"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
+                                        onClick={() => {
+                                          if (confirm('Are you sure you want to delete this note?')) {
+                                            deleteNoteMutation.mutate(note.id);
+                                          }
+                                        }}
+                                        title="Delete note"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {editingNote === note.id ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    value={editNoteContent}
+                                    onChange={(e) => setEditNoteContent(e.target.value)}
+                                    className="min-h-[60px] text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        editNoteMutation.mutate({ 
+                                          noteId: note.id, 
+                                          content: editNoteContent 
+                                        });
+                                        setEditingNote(null);
+                                        setEditNoteContent("");
+                                      }}
+                                      disabled={!editNoteContent.trim() || editNoteMutation.isPending}
+                                      className="h-7"
+                                    >
+                                      {editNoteMutation.isPending ? "Saving..." : "Save"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingNote(null);
+                                        setEditNoteContent("");
+                                      }}
+                                      className="h-7"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                (() => {
+                                  const { displayContent, shouldTruncate, isExpanded } = formatNoteContent(note.content, note.id);
+                                  return (
+                                    <div className="space-y-2">
+                                      <p 
+                                        className="text-sm text-gray-600 whitespace-pre-wrap"
+                                        style={{ wordBreak: 'break-word' }}
+                                      >
+                                        {displayContent}
+                                      </p>
+                                      {shouldTruncate && (
+                                        <button
+                                          onClick={() => toggleNoteExpansion(note.id)}
+                                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+                                        >
+                                          {isExpanded ? 'Show less' : 'Show more'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })()
+                              )}
+                              
+                              <div className="mt-2 flex justify-between items-center">
+                                <div className="text-xs text-gray-400">
+                                  by {note.createdBy?.firstName} {note.createdBy?.lastName}
+                                </div>
+                                {note.editedBy && (
+                                  <div className="text-xs text-gray-400">
+                                    edited by {note.editedBy?.firstName} {note.editedBy?.lastName}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tasks Section */}
+                {activeRightSection === "tasks" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Tasks</h3>
+                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Task</DialogTitle>
+                          </DialogHeader>
                           <div className="space-y-4">
                             <div>
                               <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
@@ -3710,7 +4551,8 @@ export default function EnhancedClientDetail() {
                           </div>
                         </DialogContent>
                       </Dialog>
-                    
+                    </div>
+
                     <div className="space-y-3">
                       {tasksLoading ? (
                         <div className="text-center py-8 text-gray-500">
@@ -3853,13 +4695,394 @@ export default function EnhancedClientDetail() {
                         })
                       )}
                     </div>
+                  </div>
+                )}
 
+                {/* Appointments Section */}
+                {activeRightSection === "appointments" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Meetings/Appointments</h3>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setShowAppointmentModal(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
+                        clientAppointmentsData.map((appointment: any) => (
+                          <div key={appointment.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-gray-900">{appointment.title}</h4>
+                                  <Badge 
+                                    variant={
+                                      appointment.status === 'confirmed' ? 'default' :
+                                      appointment.status === 'showed' ? 'secondary' :
+                                      appointment.status === 'cancelled' ? 'destructive' :
+                                      'outline'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {appointment.status}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-3 w-3" />
+                                    <span>
+                                      {format(new Date(appointment.startTime), 'MMM d, yyyy h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}
+                                    </span>
+                                  </div>
+                                  {appointment.location && (
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-3 w-3" />
+                                      <span>{appointment.location}</span>
+                                    </div>
+                                  )}
+                                  {appointment.assignedTo && (
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-3 w-3" />
+                                      <span>
+                                        {staffData.find((s: any) => s.id === appointment.assignedTo)?.firstName} {staffData.find((s: any) => s.id === appointment.assignedTo)?.lastName}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Action buttons */}
+                              <div className="flex items-center gap-1 ml-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => {
+                                    setEditingAppointment(appointment);
+                                    setShowAppointmentModal(true);
+                                  }}
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
+                                      fetch(`/api/calendar-appointments/${appointment.id}`, { method: 'DELETE' })
+                                        .then(() => {
+                                          queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+                                          toast({ title: "Appointment deleted", description: "Appointment has been deleted successfully" });
+                                        })
+                                        .catch(() => {
+                                          toast({ title: "Error", description: "Failed to delete appointment", variant: "destructive" });
+                                        });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No meetings for this client</p>
+                          <p className="text-xs text-gray-400">Click the + button to schedule a meeting</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
+                {/* Documents Section */}
+                {activeRightSection === "documents" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Documents</h3>
+                      <DocumentUploader
+                        clientId={clientId!}
+                        onUploadComplete={() => {
+                          queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
+                        }}
+                        maxNumberOfFiles={5}
+                        buttonClassName="text-sm"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Documents
+                      </DocumentUploader>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search documents..."
+                          value={searchDocuments}
+                          onChange={(e) => setSearchDocuments(e.target.value)}
+                          className="pl-10 text-sm"
+                        />
+                      </div>
+                      
+                      {/* Filter Controls */}
+                      <div className="flex gap-2 text-xs">
+                        <Select value={documentFilterType} onValueChange={setDocumentFilterType}>
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue placeholder="File Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="pdf">PDF</SelectItem>
+                            <SelectItem value="doc">Documents</SelectItem>
+                            <SelectItem value="excel">Spreadsheets</SelectItem>
+                            <SelectItem value="presentation">Presentations</SelectItem>
+                            <SelectItem value="image">Images</SelectItem>
+                            <SelectItem value="text">Text Files</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select value={documentSortBy} onValueChange={setDocumentSortBy}>
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue placeholder="Sort By" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="newest">Newest First</SelectItem>
+                            <SelectItem value="oldest">Oldest First</SelectItem>
+                            <SelectItem value="name">Name A-Z</SelectItem>
+                            <SelectItem value="name-desc">Name Z-A</SelectItem>
+                            <SelectItem value="size-large">Largest First</SelectItem>
+                            <SelectItem value="size-small">Smallest First</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {documentsLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading documents...</div>
+                        </div>
+                      ) : clientDocuments.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No documents yet</p>
+                          <p className="text-xs text-gray-400">Upload a document to get started</p>
+                        </div>
+                      ) : (
+                        clientDocuments
+                          .filter((doc: any) => {
+                            // Search filter
+                            const matchesSearch = !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase());
+                            
+                            // File type filter - only apply if not "all"
+                            if (documentFilterType === "all") {
+                              return matchesSearch; // Skip file type filtering for "all"
+                            }
+                            
+                            const fileType = doc.fileType?.toLowerCase() || "";
+                            let matchesType = false;
+                            
+                            switch (documentFilterType) {
+                              case "pdf":
+                                matchesType = fileType === "pdf";
+                                break;
+                              case "doc":
+                                matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
+                                break;
+                              case "excel":
+                                matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
+                                break;
+                              case "presentation":
+                                matchesType = ["ppt", "pptx", "key"].includes(fileType);
+                                break;
+                              case "image":
+                                matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
+                                break;
+                              case "text":
+                                matchesType = ["txt", "rtf"].includes(fileType);
+                                break;
+                              default:
+                                matchesType = true;
+                            }
+                            
+                            return matchesSearch && matchesType;
+                          })
+                          .sort((a: any, b: any) => {
+                            switch (documentSortBy) {
+                              case "newest":
+                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                              case "oldest":
+                                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                              case "name":
+                                return a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase());
+                              case "name-desc":
+                                return b.fileName.toLowerCase().localeCompare(a.fileName.toLowerCase());
+                              case "size-large":
+                                return b.fileSize - a.fileSize;
+                              case "size-small":
+                                return a.fileSize - b.fileSize;
+                              default:
+                                return 0;
+                            }
+                          })
+                          .map((doc: any) => {
+                            const getFileIconColor = (fileType: string) => {
+                              switch (fileType.toLowerCase()) {
+                                case 'pdf':
+                                  return 'bg-red-100 text-red-600';
+                                case 'docx':
+                                case 'doc':
+                                  return 'bg-blue-100 text-blue-600';
+                                case 'xlsx':
+                                case 'xls':
+                                  return 'bg-green-100 text-green-600';
+                                case 'pptx':
+                                case 'ppt':
+                                  return 'bg-orange-100 text-orange-600';
+                                default:
+                                  return 'bg-gray-100 text-gray-600';
+                              }
+                            };
+                            
+                            const formatFileSize = (bytes: number) => {
+                              if (bytes === 0) return '0 B';
+                              const k = 1024;
+                              const sizes = ['B', 'KB', 'MB', 'GB'];
+                              const i = Math.floor(Math.log(bytes) / Math.log(k));
+                              return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                            };
+                            
+                            return (
+                              <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
+                                    <FileText className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 break-words">{doc.fileName}</p>
+                                    <p className="text-xs text-gray-500">
+                                      Uploaded {new Date(doc.createdAt).toLocaleDateString()} • {formatFileSize(doc.fileSize)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      by {doc.uploadedByUser?.firstName} {doc.uploadedByUser?.lastName}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                                            onClick={() => window.open(doc.downloadUrl, '_blank')}
+                                          >
+                                            <Download className="h-3 w-3" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Download document</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    
+                                    {currentUser?.role === 'Admin' && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" 
+                                              onClick={() => {
+                                                if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                                                  deleteDocumentMutation.mutate(doc.id);
+                                                }
+                                              }}
+                                              disabled={deleteDocumentMutation.isPending}
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete document (Admin only)</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+                  </div>
+                )}
 
+                {/* Team Section */}
+                {activeRightSection === "team" && (
+                  <TeamAssignmentSection clientId={clientId} />
+                )}
+
+                {/* Payments Section */}
+                {activeRightSection === "payments" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Billing & Payments</h3>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-green-900">Payment Received</span>
+                          <span className="text-sm font-bold text-green-700">+$2,500.00</span>
+                        </div>
+                        <p className="text-sm text-green-700 mb-1">Invoice #INV-2024-0156 - Monthly retainer</p>
+                        <div className="flex items-center gap-4 text-xs text-green-600">
+                          <span>Aug 5, 2024</span>
+                          <span>•</span>
+                          <span>Credit Card ****4532</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-yellow-900">Pending Payment</span>
+                          <span className="text-sm font-bold text-yellow-700">$1,200.00</span>
+                        </div>
+                        <p className="text-sm text-yellow-700 mb-1">Invoice #INV-2024-0157 - Additional services</p>
+                        <div className="flex items-center gap-4 text-xs text-yellow-600">
+                          <span>Due: Aug 15, 2024</span>
+                          <span>•</span>
+                          <span>3 days overdue</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium text-gray-900">Upcoming Billing</span>
+                          <span className="text-sm font-bold text-gray-700">$2,500.00</span>
+                        </div>
+                        <p className="text-sm text-gray-700 mb-1">Monthly retainer renewal</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                          <span>Due: Sep 1, 2024</span>
+                          <span>•</span>
+                          <span>Auto-pay enabled</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-        </TabsContent>
+          </div>
+        </div>
 
         {/* Add Tag Dialog */}
         <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
@@ -4282,1717 +5505,429 @@ export default function EnhancedClientDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* Products & Services Tab */}
-        <TabsContent value="products" className="space-y-6 mt-6" key="main-products-tab">
-          {clientProductsData !== undefined && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">Products & Services</h3>
-                {/* Bundle Spend Calculation */}
-                {(() => {
-                  try {
-                    if (!clientProductsData || !Array.isArray(clientProductsData) || clientProductsData.length === 0) {
-                      return null;
-                    }
-                    const totalSpend = clientProductsData.reduce((total: number, clientProduct: any) => {
-                      if (!clientProduct) return total;
-                      if (clientProduct.itemType === 'bundle') {
-                        const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                        const bundleCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
-                          return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
-                        }, 0);
-                        return total + bundleCost;
-                      } else {
-                        return total + Number(clientProduct.price || 0);
-                      }
-                    }, 0);
-                    return (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Total Bundle Spend: <span className="font-semibold text-green-600">${totalSpend.toFixed(2)}</span>
-                      </p>
-                    );
-                  } catch (error) {
-                    console.error('Error calculating total spend:', error);
-                    return null;
-                  }
-                })()}
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="default"
-                  onClick={() => setShowAddProductModal(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
-                {userPermissions?.settings?.canAccess && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => window.location.href = '/settings/products'}
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Manage Products
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              {clientProductsLoading ? (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-sm">Loading products...</div>
-                </div>
-              ) : !clientProductsData || clientProductsData.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm">No products or services assigned</p>
-                  <p className="text-xs text-gray-400">Products will appear here when assigned to this client</p>
-                </div>
-              ) : (
-                (Array.isArray(clientProductsData) ? clientProductsData : []).map((clientProduct: any) => {
-                  if (!clientProduct || !clientProduct.id) return null;
-                  return (
-                  <Card key={`main-product-${clientProduct.id}`} className="p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          {/* Product/Bundle name with expand functionality for bundles */}
-                          {clientProduct.itemType === 'bundle' ? (
-                            <div
-                              onClick={() => {
-                                const bundleId = clientProduct.productId || clientProduct.id;
-                                if (bundleId) {
-                                  const newExpanded = new Set(expandedBundles);
-                                  if (newExpanded.has(bundleId)) {
-                                    newExpanded.delete(bundleId);
-                                  } else {
-                                    newExpanded.add(bundleId);
-                                  }
-                                  setExpandedBundles(newExpanded);
-                                }
-                              }}
-                              className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors text-left cursor-pointer"
-                            >
-                              <h4 className="font-medium text-sm text-gray-900">
-                                {clientProduct.name || clientProduct.productName}
-                              </h4>
-                              {expandedBundles.has(clientProduct.productId || clientProduct.id) ? (
-                                <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                              )}
-                            </div>
-                          ) : (
-                            <h4 className="font-medium text-sm text-gray-900">
-                              {clientProduct.name || clientProduct.productName}
-                            </h4>
-                          )}
-                          <div className="flex items-center gap-2">
-                            {/* Calculate bundle cost dynamically */}
-                            <span className="text-sm font-medium text-green-600">
-                              ${clientProduct.itemType === 'bundle' 
-                                ? (() => {
-                                    const bundleProducts = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                                    const totalCost = (Array.isArray(bundleProducts) ? bundleProducts : []).reduce((sum: number, product: any) => {
-                                      return sum + (Number(product?.productCost || 0) * Number(product?.quantity || 1));
-                                    }, 0);
-                                    return totalCost.toFixed(2);
-                                  })()
-                                : (clientProduct.price ? Number(clientProduct.price).toFixed(2) : '0.00')
-                              }
-                            </span>
-                            {/* Add edit button for bundles */}
-                            {clientProduct.itemType === 'bundle' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => {
-                                  setEditingBundleQuantities(clientProduct.productId || clientProduct.id);
-                                  // Initialize temp quantities
-                                  const currentBundle = bundleDetailsData?.[clientProduct.productId || clientProduct.id] || [];
-                                  const initialQuantities: Record<string, number> = {};
-                                  currentBundle.forEach((product: any) => {
-                                    initialQuantities[product.productId] = product.quantity || 1;
-                                  });
-                                  setTempQuantities(initialQuantities);
-                                }}
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {clientProduct.description && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clientProduct.description}</p>
-                        )}
+        {/* Appointment Modal */}
+        <AppointmentModal
+          open={showAppointmentModal}
+          onOpenChange={(open) => {
+            setShowAppointmentModal(open);
+            if (!open) {
+              setEditingAppointment(null);
+            }
+          }}
+          existingAppointment={editingAppointment}
+          appointmentId={editingAppointment?.id}
+          clientId={clientId!}
+          clientName={client?.name || client?.company || 'Client'}
+          clientEmail={client?.email || ''}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
+            setEditingAppointment(null);
+          }}
+        />
+    </div>
+  );
+}
 
-                        {/* Bundle status and type badges */}
-                        <div className="flex items-center gap-2 mt-2">
-                          {clientProduct.itemType === 'bundle' ? (
-                            <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
-                              <Package className="h-3 w-3 mr-1" />
-                              Bundle
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                              <ShoppingCart className="h-3 w-3 mr-1" />
-                              Product
-                            </Badge>
-                          )}
-                          <Badge variant={clientProduct.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                            {clientProduct.status}
-                          </Badge>
-                        </div>
+// Task Comments Component
+function TaskComments({ taskId }: { taskId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [newComment, setNewComment] = useState("");
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editCommentContent, setEditCommentContent] = useState("");
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
 
-                        {/* Bundle products - show when expanded */}
-                        {clientProduct.itemType === 'bundle' && expandedBundles.has(clientProduct.productId || clientProduct.id) && (
-                          <div className="mt-3 pl-4 border-l-2 border-gray-200">
-                            {editingBundleQuantities === (clientProduct.productId || clientProduct.id) ? (
-                              <div className="space-y-2">
-                                <h5 className="text-xs font-semibold text-gray-700 mb-2">Edit Bundle Quantities:</h5>
-                                {(bundleDetailsData?.[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
-                                  <div key={product.productId} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                                    <span className="text-xs font-medium">{product.productName}</span>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={tempQuantities[product.productId] || 1}
-                                      onChange={(e) => setTempQuantities(prev => ({
-                                        ...prev,
-                                        [product.productId]: parseInt(e.target.value) || 1
-                                      }))}
-                                      className="w-16 h-6 text-xs"
-                                    />
-                                  </div>
-                                ))}
-                                <div className="flex gap-2 mt-3">
-                                  <Button size="sm" onClick={() => saveQuantityChanges(clientProduct.productId || clientProduct.id)}>
-                                    Save
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={() => setEditingBundleQuantities(null)}>
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <h5 className="text-xs font-semibold text-gray-700 mb-2">Included Products:</h5>
-                                {(bundleDetailsData?.[clientProduct.productId || clientProduct.id] || []).map((product: any) => (
-                                  <div key={product.productId} className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-600">{product.productName}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-500">Qty: {product.quantity || 1}</span>
-                                      <span className="text-green-600 font-medium">
-                                        ${(Number(product.productCost || 0) * Number(product.quantity || 1)).toFixed(2)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+  // Fetch comments for this task
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['/api/tasks', taskId, 'comments'],
+    queryFn: async () => {
+      const response = await fetch(`/api/tasks/${taskId}/comments`);
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      return response.json();
+    },
+  });
 
-                      {/* Delete button */}
-                      {canDeleteProducts && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-2 text-red-600 hover:text-red-700"
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to remove this product from the client?')) {
-                              if (clientProduct?.id) {
-                                deleteProductMutation.mutate(clientProduct.id);
-                              }
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                  );
-                }).filter(Boolean)
-              )}
-            </div>
-          </div>
-          )}
-        </TabsContent>
+  // Fetch staff for mentions
+  const { data: staffData = [] } = useQuery({
+    queryKey: ['/api/staff'],
+    queryFn: async () => {
+      const response = await fetch('/api/staff');
+      if (!response.ok) throw new Error('Failed to fetch staff');
+      return response.json();
+    },
+  });
 
-          {/* Add Product Modal */}
-          <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add Product or Service</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async ({ content, mentions }: { content: string; mentions: string[] }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, mentions }),
+      });
+      if (!response.ok) throw new Error('Failed to create comment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
+      setNewComment("");
+      toast({
+        title: "Success",
+        description: "Comment added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit comment mutation
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ commentId, content, mentions }: { commentId: string; content: string; mentions: string[] }) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, mentions }),
+      });
+      if (!response.ok) throw new Error('Failed to update comment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
+      setEditingComment(null);
+      setEditCommentContent("");
+      toast({
+        title: "Success",
+        description: "Comment updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete comment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
+      toast({
+        title: "Success",
+        description: "Comment deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle @mention logic
+  const handleInputChange = (value: string, isEdit = false) => {
+    if (isEdit) {
+      setEditCommentContent(value);
+    } else {
+      setNewComment(value);
+    }
+
+    // Check for @ mentions
+    const lastAtIndex = value.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const searchTerm = value.substring(lastAtIndex + 1);
+      if (searchTerm.length >= 0) {
+        setMentionSearch(searchTerm);
+        setShowMentions(true);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  // Filter staff for mentions
+  const filteredStaff = staffData.filter((staff: any) => 
+    `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(mentionSearch.toLowerCase()) ||
+    staff.email?.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
+  // Insert mention
+  const insertMention = (staff: any, isEdit = false) => {
+    const currentValue = isEdit ? editCommentContent : newComment;
+    const lastAtIndex = currentValue.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const beforeMention = currentValue.substring(0, lastAtIndex);
+      const afterMention = currentValue.substring(lastAtIndex + mentionSearch.length + 1);
+      const newValue = `${beforeMention}@${staff.firstName} ${staff.lastName} ${afterMention}`;
+      
+      if (isEdit) {
+        setEditCommentContent(newValue);
+      } else {
+        setNewComment(newValue);
+      }
+    }
+    
+    setShowMentions(false);
+    setMentionSearch("");
+  };
+
+  // Extract mentions from text
+  const extractMentions = (text: string) => {
+    const mentionRegex = /@(\w+\s+\w+)/g;
+    const mentions: string[] = [];
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionedName = match[1];
+      const staff = staffData.find((s: any) => 
+        `${s.firstName} ${s.lastName}` === mentionedName
+      );
+      if (staff) {
+        mentions.push(staff.id);
+      }
+    }
+    
+    return mentions;
+  };
+
+  // Submit comment
+  const submitComment = () => {
+    if (!newComment.trim()) return;
+    
+    const mentions = extractMentions(newComment);
+    createCommentMutation.mutate({
+      content: newComment,
+      mentions
+    });
+  };
+
+  // Submit edit
+  const submitEdit = (commentId: string) => {
+    if (!editCommentContent.trim()) return;
+    
+    const mentions = extractMentions(editCommentContent);
+    editCommentMutation.mutate({
+      commentId,
+      content: editCommentContent,
+      mentions
+    });
+  };
+
+  // Render mention and URLs in text
+  const renderCommentContent = (content: string) => {
+    // First handle mentions
+    const mentionRegex = /@(\w+\s+\w+)/g;
+    const parts = content.split(mentionRegex);
+    
+    const processedParts = parts.map((part, index) => {
+      if (index % 2 === 1) { // This is a mention
+        return (
+          <span key={index} className="bg-blue-100 text-blue-800 px-1 rounded">
+            @{part}
+          </span>
+        );
+      }
+      
+      // Handle URLs in non-mention parts
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urlParts = part.split(urlRegex);
+      
+      return urlParts.map((urlPart, urlIndex) => {
+        if (urlIndex % 2 === 1) { // This is a URL
+          const displayUrl = urlPart.length > 50 ? urlPart.substring(0, 47) + '...' : urlPart;
+          return (
+            <a
+              key={`${index}-${urlIndex}`}
+              href={urlPart}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline break-all cursor-pointer"
+              title={urlPart}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {displayUrl}
+            </a>
+          );
+        }
+        return <span key={`${index}-${urlIndex}`}>{urlPart}</span>;
+      });
+    });
+    
+    return processedParts;
+  };
+
+  return (
+    <div className="mt-3 border-t pt-3 space-y-3">
+      {commentsLoading ? (
+        <div className="text-center py-4 text-gray-500">
+          <div className="text-sm">Loading comments...</div>
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="text-center py-4 text-gray-500">
+          <MessageSquare className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm">No comments yet</p>
+          <p className="text-xs text-gray-400">Be the first to comment</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {comments.map((comment: any) => (
+            <div key={comment.id} className="bg-white p-3 rounded border border-gray-200">
+              <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search products and bundles..."
-                    value={productSearchTerm || ""}
-                    onChange={(e) => setProductSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-                
-                <ProductSearchResults 
-                  searchTerm={productSearchTerm}
-                  clientId={clientId}
-                  onProductAdded={() => {
-                    setShowAddProductModal(false);
-                    setProductSearchTerm('');
-                    queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/products`] });
-                  }}
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Recent Activity Tab */}
-          <TabsContent value="activity" className="space-y-6 mt-6">
-            {/* Recent Activity - Moved from Contact Tab */}
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => setShowLogActivityModal(true)}
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Log Activity
-                    </Button>
-                    <Filter className="h-4 w-4 text-gray-500" />
-                    <Select value={activityFilter} onValueChange={handleFilterChange}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Activity</SelectItem>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="call">Calls</SelectItem>
-                        <SelectItem value="meeting">Meetings</SelectItem>
-                        <SelectItem value="task">Tasks</SelectItem>
-                        <SelectItem value="note">Notes</SelectItem>
-                        <SelectItem value="campaign">Campaigns</SelectItem>
-                        <SelectItem value="workflow">Workflows</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                    {comment.author?.firstName?.charAt(0)}{comment.author?.lastName?.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">
+                      {comment.author?.firstName} {comment.author?.lastName}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </div>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {auditLogs.map((log) => (
-                    <div key={log.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{log.action === 'created' ? 'Contact created' : log.action === 'updated' ? 'Contact updated' : log.action}</p>
-                            <p className="text-sm text-gray-500">by System User</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {log.action}
-                          </Badge>
-                          <span className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <p className="text-gray-700 text-sm ml-10">{log.details}</p>
-                    </div>
-                  ))}
-
-                  {/* Loading State */}
-                  {auditLogsLoading && (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
-                      <p className="text-sm">Loading activities...</p>
-                    </div>
-                  )}
-
-                  {/* Empty State */}
-                  {!auditLogsLoading && auditLogs.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-sm">No {activityFilter === 'all' ? '' : activityFilter} activity found</p>
-                      <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
-                    </div>
-                  )}
-
-                  {/* Activity Summary and Pagination Controls */}
-                  {!auditLogsLoading && totalActivities > 0 && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalActivities)} of {totalActivities} activities
-                        </div>
-                        {totalPages > 1 && (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCurrentPage(currentPage - 1)}
-                              disabled={currentPage === 1}
-                              className="flex items-center gap-1"
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                              Previous
-                            </Button>
-                            <span className="text-sm text-gray-600">
-                              Page {currentPage} of {totalPages}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCurrentPage(currentPage + 1)}
-                              disabled={currentPage === totalPages || !hasMoreActivities}
-                              className="flex items-center gap-1"
-                            >
-                              Next
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      {totalPages === 1 && (
-                        <div className="text-center mt-2">
-                          <span className="text-xs text-gray-500">All activities shown on this page</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingComment(comment.id);
+                      setEditCommentContent(comment.content);
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteCommentMutation.mutate(comment.id)}
+                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Log Activity Modal */}
-            <Dialog open={showLogActivityModal} onOpenChange={setShowLogActivityModal}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Log Manual Activity</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Activity Type</Label>
-                    <Select value={logActivityType} onValueChange={setLogActivityType}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select activity type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="call">Call</SelectItem>
-                        <SelectItem value="meeting">Meeting</SelectItem>
-                        <SelectItem value="task">Task</SelectItem>
-                        <SelectItem value="note">Note</SelectItem>
-                        <SelectItem value="campaign">Campaign</SelectItem>
-                        <SelectItem value="workflow">Workflow</SelectItem>
-                      </SelectContent>
-                    </Select>
+              </div>
+              
+              {editingComment === comment.id ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Textarea
+                      value={editCommentContent}
+                      onChange={(e) => handleInputChange(e.target.value, true)}
+                      placeholder="Edit your comment..."
+                      className="text-sm"
+                      rows={2}
+                    />
+                    
+                    {showMentions && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-32 overflow-y-auto">
+                        {filteredStaff.map((staff: any) => (
+                          <button
+                            key={staff.id}
+                            onClick={() => insertMention(staff, true)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <AtSign className="h-3 w-3 text-blue-600" />
+                            <div>
+                              <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                              <div className="text-xs text-gray-500">{staff.email}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Description</Label>
-                    <textarea
-                      value={logActivityDescription}
-                      onChange={(e) => setLogActivityDescription(e.target.value)}
-                      placeholder="Describe what happened..."
-                      className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => setShowLogActivityModal(false)}
+                      size="sm"
+                      onClick={() => {
+                        setEditingComment(null);
+                        setEditCommentContent("");
+                      }}
                     >
                       Cancel
                     </Button>
                     <Button
-                      onClick={() => logActivityMutation.mutate({ 
-                        activityType: logActivityType, 
-                        description: logActivityDescription 
-                      })}
-                      disabled={!logActivityDescription.trim() || logActivityMutation.isPending}
-                    >
-                      {logActivityMutation.isPending ? "Logging..." : "Log Activity"}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-
-          {/* Communication Tab */}
-          <TabsContent value="communication" className="space-y-6 mt-6">
-            {/* DND (Do Not Disturb) Section - Moved from Contact Tab */}
-            <Card className="mb-6">
-              <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <ShieldOff className="h-5 w-5 text-red-500" />
-                  DND (Do Not Disturb)
-                </h2>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* DND All Channels */}
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex items-center gap-3">
-                    <ShieldOff className="h-5 w-5 text-red-500" />
-                    <div>
-                      <span className="font-medium text-gray-900">DND All Channels</span>
-                      <p className="text-sm text-gray-600">Block all communications (emails, texts, calls)</p>
-                    </div>
-                  </div>
-                  <Checkbox
-                    checked={client?.dndAll || false}
-                    onCheckedChange={(checked) => {
-                      console.log('DND All Channels changed to:', checked);
-                      if (checked) {
-                        // When enabling DND All, enable all individual settings
-                        updateDNDMutation.mutate({ 
-                          dndAll: true,
-                          dndEmail: true,
-                          dndSms: true,
-                          dndCalls: true
-                        });
-                      } else {
-                        // When disabling DND All, disable all individual settings
-                        updateDNDMutation.mutate({ 
-                          dndAll: false,
-                          dndEmail: false,
-                          dndSms: false,
-                          dndCalls: false
-                        });
-                      }
-                    }}
-                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
-                  />
-                </div>
-
-                {/* OR Separator */}
-                <div className="flex items-center gap-3 my-4">
-                  <div className="flex-1 h-px bg-gray-200"></div>
-                  <span className="text-sm font-medium text-gray-500 px-3">OR</span>
-                  <div className="flex-1 h-px bg-gray-200"></div>
-                </div>
-
-                {/* Individual Channel Settings */}
-                <div className="space-y-3">
-                  {/* Emails */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-blue-500" />
-                      <span className="font-medium text-gray-900">Emails</span>
-                    </div>
-                    <Checkbox
-                      checked={client?.dndEmail || false}
-                      onCheckedChange={(checked) => {
-                        updateDNDMutation.mutate({ dndEmail: !!checked });
-                      }}
-                      disabled={client?.dndAll || false}
-                      className="disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Text Messages */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="h-4 w-4 text-green-500" />
-                      <span className="font-medium text-gray-900">Text Messages</span>
-                    </div>
-                    <Checkbox
-                      checked={client?.dndSms || false}
-                      onCheckedChange={(checked) => {
-                        updateDNDMutation.mutate({ dndSms: !!checked });
-                      }}
-                      disabled={client?.dndAll || false}
-                      className="disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Calls & Voicemails */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-4 w-4 text-purple-500" />
-                      <span className="font-medium text-gray-900">Calls & Voicemails</span>
-                    </div>
-                    <Checkbox
-                      checked={client?.dndCalls || false}
-                      onCheckedChange={(checked) => {
-                        updateDNDMutation.mutate({ dndCalls: !!checked });
-                      }}
-                      disabled={client?.dndAll || false}
-                      className="disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-
-                {/* Warning Message */}
-                {(client?.dndAll || client?.dndEmail || client?.dndSms || client?.dndCalls) && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <ShieldOff className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="font-medium text-amber-800">Communication Restrictions Active</p>
-                        <p className="text-amber-700 mt-1">
-                          {client?.dndAll 
-                            ? "All communications are blocked for this client."
-                            : `${[
-                                client?.dndEmail && "emails",
-                                client?.dndSms && "text messages", 
-                                client?.dndCalls && "calls"
-                              ].filter(Boolean).join(", ")} are blocked for this client.`
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Email & SMS Communication Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* SMS Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-green-500" />
-                    Send SMS
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* From Field */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">From</Label>
-                    <Select value={smsData.fromNumber} onValueChange={(value) => handleSmsFieldChange('fromNumber', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select phone number" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {twilioNumbers.map((number: any) => (
-                          <SelectItem key={number.id} value={number.phoneNumber}>
-                            {number.friendlyName || number.phoneNumber}
-                          </SelectItem>
-                        ))}
-                        {twilioNumbers.length === 0 && (
-                          <SelectItem value="none" disabled>
-                            No phone numbers available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* To Field */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">To</Label>
-                    <Input
-                      value={client?.phone ? formatPhoneNumber(client.phone) : ""}
-                      disabled
-                      className="mt-1 bg-gray-50"
-                      placeholder="Phone number will be auto-formatted with +1"
-                    />
-                  </div>
-
-                  {/* SMS Message */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Message</Label>
-                    <div className="relative">
-                      <Textarea
-                        value={smsData.message}
-                        onChange={(e) => handleSmsFieldChange('message', e.target.value)}
-                        placeholder={
-                          (client?.dndAll || client?.dndSms) 
-                            ? "SMS blocked by DND settings..." 
-                            : "Type your SMS message here..."
-                        }
-                        disabled={!!client?.dndAll || !!client?.dndSms}
-                        className={`mt-1 min-h-[120px] resize-y ${(client?.dndAll || client?.dndSms) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                      />
-                      <div className="absolute bottom-2 right-2 text-xs text-gray-400">
-                        {smsData.message.length}/160
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SMS Action Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    {/* Left Side - Tools */}
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        {/* SMS Templates */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setShowSmsTemplateModal(true);
-                              }}
-                              disabled={client?.dndAll || client?.dndSms}
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>SMS Templates</TooltipContent>
-                        </Tooltip>
-
-
-                        {/* SMS Merge Tags */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setShowSmsMergeTagsModal(true);
-                              }}
-                              disabled={client?.dndAll || client?.dndSms}
-                            >
-                              <TagIcon className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Merge Tags</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-
-                    {/* Right Side - Send Button */}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={!smsData.message.trim() || !smsData.fromNumber || !!client?.dndAll || !!client?.dndSms}
-                        className="flex items-center gap-2"
-                        onClick={handleSendSms}
-                      >
-                        <Send className="h-4 w-4" />
-                        Send SMS
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Email Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5 text-blue-500" />
-                    Send Email
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* From Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">From Name</Label>
-                      <Input
-                        value={emailData.fromName || ""}
-                        onChange={(e) => handleEmailFieldChange('fromName', e.target.value)}
-                        placeholder="Your Name"
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">From Email</Label>
-                      <Input
-                        value={emailData.fromEmail || ""}
-                        onChange={(e) => handleEmailFieldChange('fromEmail', e.target.value)}
-                        placeholder="your@email.com"
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* To Field */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">To</Label>
-                    <Input
-                      value={emailData.to}
-                      onChange={(e) => handleEmailFieldChange('to', e.target.value)}
-                      placeholder={client?.email || "Enter email address..."}
-                      disabled={!!client?.dndAll || !!client?.dndEmail}
-                      className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                    />
-                  </div>
-
-                  {/* CC/BCC Links */}
-                  <div className="flex items-center gap-4 text-sm">
-                    {!showCC && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCC(true)}
-                        className="text-blue-600 hover:text-blue-800"
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                      >
-                        Add CC
-                      </button>
-                    )}
-                    {!showBCC && (
-                      <button
-                        type="button"
-                        onClick={() => setShowBCC(true)}
-                        className="text-blue-600 hover:text-blue-800"
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                      >
-                        Add BCC
-                      </button>
-                    )}
-                  </div>
-
-                  {/* CC Field */}
-                  {showCC && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">CC</Label>
-                      <Input
-                        value={emailData.cc}
-                        onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
-                        placeholder="CC email addresses..."
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                      />
-                    </div>
-                  )}
-
-                  {/* BCC Field */}
-                  {showBCC && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">BCC</Label>
-                      <Input
-                        value={emailData.bcc}
-                        onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
-                        placeholder="BCC email addresses..."
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                        className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                      />
-                    </div>
-                  )}
-
-                  {/* Subject Field */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Subject</Label>
-                    <Input
-                      value={emailData.subject}
-                      onChange={(e) => handleEmailFieldChange('subject', e.target.value)}
-                      placeholder="Email subject..."
-                      disabled={!!client?.dndAll || !!client?.dndEmail}
-                      className={`mt-1 ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                    />
-                  </div>
-
-                  {/* Message Input Field */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Message</Label>
-                    <div className="relative">
-                      <Textarea
-                        value={emailData.message}
-                        onChange={(e) => handleEmailFieldChange('message', e.target.value)}
-                        placeholder={
-                          (client?.dndAll || client?.dndEmail) 
-                            ? "Email blocked by DND settings..." 
-                            : "Type your email message here..."
-                        }
-                        disabled={!!client?.dndAll || !!client?.dndEmail}
-                        className={`mt-1 min-h-[200px] resize-y ${(client?.dndAll || client?.dndEmail) ? 'bg-red-50 border-red-200 text-red-600 placeholder:text-red-400' : ''}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email Action Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    {/* Left Side - Tools */}
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        {/* Email Templates */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                console.log('Email Template clicked - DND All:', client?.dndAll, 'DND Email:', client?.dndEmail);
-                                console.log('Before click - showTemplateModal:', showTemplateModal);
-                                setShowTemplateModal(true);
-                                console.log('After click - showTemplateModal should be true');
-                              }}
-                              disabled={client?.dndAll || client?.dndEmail}
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Email Templates</TooltipContent>
-                        </Tooltip>
-
-                        {/* Email Merge Tags */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                console.log('Email Merge Tags clicked - DND All:', client?.dndAll, 'DND Email:', client?.dndEmail);
-                                console.log('Before click - showMergeTagsModal:', showMergeTagsModal);
-                                setShowMergeTagsModal(true);
-                                console.log('After click - showMergeTagsModal should be true');
-                              }}
-                              disabled={client?.dndAll || client?.dndEmail}
-                            >
-                              <TagIcon className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Merge Tags</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-
-                    {/* Right Side - Send Button */}
-                    <Button
                       size="sm"
-                      disabled={!emailData.to.trim() || !emailData.subject.trim() || !emailData.message.trim() || !!client?.dndAll || !!client?.dndEmail}
-                      className="flex items-center gap-2"
+                      onClick={() => submitEdit(comment.id)}
+                      disabled={editCommentMutation.isPending}
                     >
-                      <Send className="h-4 w-4" />
-                      Send Email
+                      Save
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-700">
+                  {renderCommentContent(comment.content)}
+                </div>
+              )}
             </div>
+          ))}
+        </div>
+      )}
 
-            {/* SMS Template Selection Modal */}
-            <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Select SMS Template</DialogTitle>
-                </DialogHeader>
-                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
-              </DialogContent>
-            </Dialog>
-
-            {/* SMS Merge Tags Modal */}
-            <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Insert Merge Tags</DialogTitle>
-                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
-                </DialogHeader>
-                <div className="space-y-6 max-h-96 overflow-y-auto">
-                  <div className="space-y-6">
-                    {/* Client Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Client Information</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('firstName')}
-                          className="justify-start"
-                        >
-                          {'{{firstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('lastName')}
-                          className="justify-start"
-                        >
-                          {'{{lastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('phone')}
-                          className="justify-start"
-                        >
-                          {'{{phone}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('companyName')}
-                          className="justify-start"
-                        >
-                          {'{{companyName}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Assigned User Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Assigned User</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserFirstName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserFirstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserLastName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserLastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserEmail')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserEmail}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserPhone')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserPhone}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Custom Fields */}
-                    {customFieldsData && customFieldsData.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Custom Fields</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {customFieldsData.map((field) => (
-                            <Button
-                              key={field.id}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => insertSmsTag(field.name)}
-                              className="justify-start text-left overflow-hidden"
-                              title={field.name}
-                            >
-                              <span className="truncate">
-                                {'{{' + field.name + '}}'}
-                              </span>
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSmsMergeTagsModal(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-
-          {/* Client Hub Tab */}
-          <TabsContent value="hub" className="space-y-6 mt-6">
-            {clientId && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Client Hub</h2>
-              
-              {/* Simple navigation buttons instead of nested tabs */}
-              <div className="flex flex-wrap gap-2 border-b pb-4">
-                <Button
-                  variant={activeHubSection === "notes" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveHubSection("notes")}
-                  className="flex items-center gap-2"
+      {/* Add comment form */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Textarea
+            value={newComment}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="Add a comment... Use @ to mention someone"
+            className="text-sm"
+            rows={2}
+          />
+          
+          {showMentions && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-32 overflow-y-auto">
+              {filteredStaff.map((staff: any) => (
+                <button
+                  key={staff.id}
+                  onClick={() => insertMention(staff)}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
                 >
-                  <StickyNote className="h-4 w-4" />
-                  Notes
-                </Button>
-                <Button
-                  variant={activeHubSection === "tasks" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveHubSection("tasks")}
-                  className="flex items-center gap-2"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Tasks
-                </Button>
-                <Button
-                  variant={activeHubSection === "appointments" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveHubSection("appointments")}
-                  className="flex items-center gap-2"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Calendar
-                </Button>
-                <Button
-                  variant={activeHubSection === "documents" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveHubSection("documents")}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Documents
-                </Button>
-                <Button
-                  variant={activeHubSection === "team" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveHubSection("team")}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="h-4 w-4" />
-                  Team
-                </Button>
-              </div>
-
-              {/* Notes Section */}
-              {activeHubSection === "notes" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Notes</h3>
+                  <AtSign className="h-3 w-3 text-blue-600" />
+                  <div>
+                    <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                    <div className="text-xs text-gray-500">{staff.email}</div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search notes..."
-                        value={searchNotes || ""}
-                        onChange={(e) => setSearchNotes(e.target.value)}
-                        className="pl-10 text-sm"
-                      />
-                    </div>
-                    <Textarea
-                      placeholder="Add a note..."
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      className="min-h-[80px] text-sm"
-                    />
-                    <Button 
-                      size="sm" 
-                      className="w-full bg-primary hover:bg-primary/90"
-                      disabled={!newNote.trim() || createNoteMutation.isPending}
-                      onClick={() => createNoteMutation.mutate(newNote)}
-                    >
-                      {createNoteMutation.isPending ? "Adding..." : "Add Note"}
-                    </Button>
-                  </div>
-
-                  <div 
-                    className="space-y-3 overflow-y-auto"
-                    style={{ 
-                      maxHeight: '600px',
-                      paddingRight: '8px'
-                    }}
-                  >
-                    {notesLoading ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-sm">Loading notes...</div>
-                      </div>
-                    ) : clientNotes.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm">No notes yet</p>
-                        <p className="text-xs text-gray-400">Add a note to get started</p>
-                      </div>
-                    ) : (
-                      clientNotes
-                        .filter((note: any) => !searchNotes || (note.content && note.content.toLowerCase().includes(searchNotes.toLowerCase())))
-                        .map((note: any) => (
-                          <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex-1">
-                                <h4 className="text-sm font-medium text-gray-900 mb-1">
-                                  {note.title || "Note"}
-                                </h4>
-                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                  <span>By {
-                                    note.authorName || 
-                                    (note.createdBy && typeof note.createdBy === 'object' 
-                                      ? `${note.createdBy.firstName} ${note.createdBy.lastName}` 
-                                      : note.createdBy) || 
-                                    "Unknown"
-                                  }</span>
-                                  <span>•</span>
-                                  <span>
-                                    {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Unknown date'} at {note.createdAt ? new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Unknown time'}
-                                  </span>
-                                  {note.updatedAt && note.updatedAt !== note.createdAt && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="italic">Updated {note.updatedAt ? new Date(note.updatedAt).toLocaleDateString() : 'Unknown date'}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex gap-1 ml-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
-                                  onClick={() => {
-                                    setEditingNote(note.id);
-                                    setEditNoteContent(note.content);
-                                  }}
-                                  title="Edit note"
-                                >
-                                  <Edit2 className="h-3 w-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
-                                  onClick={() => {
-                                    if (confirm('Are you sure you want to delete this note?')) {
-                                      deleteNoteMutation.mutate(note.id);
-                                    }
-                                  }}
-                                  title="Delete note"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            {editingNote === note.id ? (
-                              <div className="space-y-2">
-                                <Textarea
-                                  value={editNoteContent}
-                                  onChange={(e) => setEditNoteContent(e.target.value)}
-                                  className="min-h-[60px] text-sm"
-                                />
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      editNoteMutation.mutate({ 
-                                        noteId: note.id, 
-                                        content: editNoteContent 
-                                      });
-                                      setEditingNote(null);
-                                      setEditNoteContent("");
-                                    }}
-                                    disabled={!editNoteContent.trim() || editNoteMutation.isPending}
-                                    className="h-7"
-                                  >
-                                    {editNoteMutation.isPending ? "Saving..." : "Save"}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setEditingNote(null);
-                                      setEditNoteContent("");
-                                    }}
-                                    className="h-7"
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="mt-2">
-                                {note.content && note.content.length > 200 ? (
-                                  <div>
-                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                      {expandedNotes.has(note.id) ? note.content : `${note.content.substring(0, 200)}...`}
-                                    </p>
-                                    <button
-                                      onClick={() => {
-                                        const newExpanded = new Set(expandedNotes);
-                                        if (newExpanded.has(note.id)) {
-                                          newExpanded.delete(note.id);
-                                        } else {
-                                          newExpanded.add(note.id);
-                                        }
-                                        setExpandedNotes(newExpanded);
-                                      }}
-                                      className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                                    >
-                                      {expandedNotes.has(note.id) ? "Show less" : "Show more"}
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.content || "No content"}</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tasks Section */}
-              {activeHubSection === "tasks" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Tasks</h3>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => window.location.href = '/tasks'}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Manage Tasks
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {tasksLoading ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-sm">Loading tasks...</div>
-                      </div>
-                    ) : clientTasksData.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm">No tasks assigned to this client</p>
-                        <p className="text-xs text-gray-400">Tasks will appear here when assigned to this client</p>
-                      </div>
-                    ) : (
-                      clientTasksData.map((task: any) => {
-                        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
-                        return (
-                          <div 
-                            key={task.id} 
-                            className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
-                            onClick={() => {
-                              // Navigate to the specific task details page
-                              window.location.href = `/tasks/${task.id}`;
-                            }}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className={`w-3 h-3 rounded-full mt-1 ${task.status === 'completed' ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-gray-300'}`} />
-                              
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <h4 className={`font-medium text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'} ${isOverdue ? 'text-red-600' : ''}`}>
-                                    {task.title}
-                                    {isOverdue && <span className="ml-2 text-red-500 text-xs">(Overdue)</span>}
-                                  </h4>
-                                  
-                                  <ExternalLink className="h-3 w-3 text-gray-400" />
-                                </div>
-                                
-                                {task.description && (
-                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{task.description}</p>
-                                )}
-                                
-                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                  {task.dueDate && (
-                                    <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
-                                      Due: {format(new Date(task.dueDate), 'MMM d, yyyy h:mm a')}
-                                    </span>
-                                  )}
-                                  {task.assignedTo && (
-                                    <span>
-                                      Assigned to: {staffData.find((s: any) => s.id === task.assignedTo)?.firstName} {staffData.find((s: any) => s.id === task.assignedTo)?.lastName}
-                                    </span>
-                                  )}
-                                  <span className="text-blue-600">Click to view task details →</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Appointments Section */} 
-              {activeHubSection === "appointments" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Meetings/Appointments</h3>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setShowAppointmentModal(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
-                      clientAppointmentsData.map((appointment: any) => (
-                        <div key={appointment.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium text-gray-900">{appointment.title}</h4>
-                                <Badge 
-                                  variant={
-                                    appointment.status === 'confirmed' ? 'default' :
-                                    appointment.status === 'showed' ? 'secondary' :
-                                    appointment.status === 'cancelled' ? 'destructive' :
-                                    'outline'
-                                  }
-                                  className="text-xs"
-                                >
-                                  {appointment.status}
-                                </Badge>
-                              </div>
-                              <div className="text-sm text-gray-600 space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-3 w-3" />
-                                  <span>
-                                    {format(new Date(appointment.startTime), 'MMM d, yyyy h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}
-                                  </span>
-                                </div>
-                                {appointment.location && (
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="h-3 w-3" />
-                                    <span>{appointment.location}</span>
-                                  </div>
-                                )}
-                                {appointment.assignedTo && (
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-3 w-3" />
-                                    <span>
-                                      {staffData.find((s: any) => s.id === appointment.assignedTo)?.firstName} {staffData.find((s: any) => s.id === appointment.assignedTo)?.lastName}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Action buttons */}
-                            <div className="flex items-center gap-1 ml-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={() => {
-                                  setEditingAppointment(appointment);
-                                  setShowAppointmentModal(true);
-                                }}
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
-                                    fetch(`/api/calendar-appointments/${appointment.id}`, { method: 'DELETE' })
-                                      .then(() => {
-                                        queryClient.invalidateQueries({ queryKey: ['/api/appointments', 'client', clientId] });
-                                        toast({ title: "Appointment deleted", description: "Appointment has been deleted successfully" });
-                                      })
-                                      .catch(() => {
-                                        toast({ title: "Error", description: "Failed to delete appointment", variant: "destructive" });
-                                      });
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm">No meetings for this client</p>
-                        <p className="text-xs text-gray-400">Click the + button to schedule a meeting</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Documents Section */}
-              {activeHubSection === "documents" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Documents</h3>
-                    <DocumentUploader
-                      clientId={clientId!}
-                      onUploadComplete={() => {
-                        queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
-                      }}
-                      maxNumberOfFiles={5}
-                      buttonClassName="text-sm"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Documents
-                    </DocumentUploader>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search documents..."
-                        value={searchDocuments}
-                        onChange={(e) => setSearchDocuments(e.target.value)}
-                        className="pl-10 text-sm"
-                      />
-                    </div>
-                    
-                    {/* Filter Controls */}
-                    <div className="flex gap-2 text-xs">
-                      <Select value={documentFilterType} onValueChange={setDocumentFilterType}>
-                        <SelectTrigger className="w-32 h-8">
-                          <SelectValue placeholder="File Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
-                          <SelectItem value="pdf">PDF</SelectItem>
-                          <SelectItem value="doc">Documents</SelectItem>
-                          <SelectItem value="excel">Spreadsheets</SelectItem>
-                          <SelectItem value="presentation">Presentations</SelectItem>
-                          <SelectItem value="image">Images</SelectItem>
-                          <SelectItem value="text">Text Files</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      <Select value={documentSortBy} onValueChange={setDocumentSortBy}>
-                        <SelectTrigger className="w-32 h-8">
-                          <SelectValue placeholder="Sort By" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="newest">Newest First</SelectItem>
-                          <SelectItem value="oldest">Oldest First</SelectItem>
-                          <SelectItem value="name">Name A-Z</SelectItem>
-                          <SelectItem value="name-desc">Name Z-A</SelectItem>
-                          <SelectItem value="size-large">Largest First</SelectItem>
-                          <SelectItem value="size-small">Smallest First</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {documentsLoading ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-sm">Loading documents...</div>
-                      </div>
-                    ) : clientDocuments.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm">No documents yet</p>
-                        <p className="text-xs text-gray-400">Upload a document to get started</p>
-                      </div>
-                    ) : (
-                      clientDocuments
-                        .filter((doc: any) => {
-                          // Search filter
-                          const matchesSearch = !searchDocuments || doc.fileName.toLowerCase().includes(searchDocuments.toLowerCase());
-                          
-                          // File type filter - only apply if not "all"
-                          if (documentFilterType === "all") {
-                            return matchesSearch; // Skip file type filtering for "all"
-                          }
-                          
-                          const fileType = doc.fileType?.toLowerCase() || "";
-                          let matchesType = false;
-                          
-                          switch (documentFilterType) {
-                            case "pdf":
-                              matchesType = fileType === "pdf";
-                              break;
-                            case "doc":
-                              matchesType = ["doc", "docx", "txt", "rtf", "pages"].includes(fileType);
-                              break;
-                            case "excel":
-                              matchesType = ["xls", "xlsx", "numbers"].includes(fileType);
-                              break;
-                            case "presentation":
-                              matchesType = ["ppt", "pptx", "key"].includes(fileType);
-                              break;
-                            case "image":
-                              matchesType = ["jpg", "jpeg", "png", "gif", "tiff"].includes(fileType);
-                              break;
-                            case "text":
-                              matchesType = ["txt", "rtf"].includes(fileType);
-                              break;
-                            default:
-                              matchesType = true;
-                          }
-                          
-                          return matchesSearch && matchesType;
-                        })
-                        .sort((a: any, b: any) => {
-                          switch (documentSortBy) {
-                            case "newest":
-                              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                            case "oldest":
-                              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                            case "name":
-                              return a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase());
-                            case "name-desc":
-                              return b.fileName.toLowerCase().localeCompare(a.fileName.toLowerCase());
-                            case "size-large":
-                              return b.fileSize - a.fileSize;
-                            case "size-small":
-                              return a.fileSize - b.fileSize;
-                            default:
-                              return 0;
-                          }
-                        })
-                        .map((doc: any) => {
-                          const getFileIconColor = (fileType: string) => {
-                            switch (fileType.toLowerCase()) {
-                              case 'pdf':
-                                return 'bg-red-100 text-red-600';
-                              case 'docx':
-                              case 'doc':
-                                return 'bg-blue-100 text-blue-600';
-                              case 'xlsx':
-                              case 'xls':
-                                return 'bg-green-100 text-green-600';
-                              case 'pptx':
-                              case 'ppt':
-                                return 'bg-orange-100 text-orange-600';
-                              default:
-                                return 'bg-gray-100 text-gray-600';
-                            }
-                          };
-                          
-                          const formatFileSize = (bytes: number) => {
-                            if (bytes === 0) return '0 B';
-                            const k = 1024;
-                            const sizes = ['B', 'KB', 'MB', 'GB'];
-                            const i = Math.floor(Math.log(bytes) / Math.log(k));
-                            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-                          };
-                          
-                          return (
-                            <div key={doc.id} className="p-3 bg-gray-50 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors">
-                              <div className="flex items-start gap-3">
-                                <div className={`p-2 rounded ${getFileIconColor(doc.fileType)}`}>
-                                  <FileText className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 break-words">{doc.fileName}</p>
-                                  <p className="text-xs text-gray-500">
-                                    Uploaded {new Date(doc.createdAt).toLocaleDateString()} • {formatFileSize(doc.fileSize)}
-                                  </p>
-                                  <p className="text-xs text-gray-400">
-                                    by {doc.uploadedByUser?.firstName} {doc.uploadedByUser?.lastName}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm" 
-                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
-                                          onClick={() => window.open(doc.downloadUrl, '_blank')}
-                                        >
-                                          <Download className="h-3 w-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Download document</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  
-                                  {currentUser?.role === 'Admin' && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" 
-                                            onClick={() => {
-                                              if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-                                                deleteDocumentMutation.mutate(doc.id);
-                                              }
-                                            }}
-                                            disabled={deleteDocumentMutation.isPending}
-                                          >
-                                            <Trash2 className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Delete document (Admin only)</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Team Section */}
-              {activeHubSection === "team" && (
-                <TeamAssignmentSection clientId={clientId} />
-              )}
-
-              {/* Add Product Modal */}
-              <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Add Product or Service</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search products and bundles..."
-                        value={productSearchTerm || ""}
-                        onChange={(e) => setProductSearchTerm(e.target.value)}
-                        className="flex-1"
-                      />
-                    </div>
-                    
-                    <ProductSearchResults 
-                      searchTerm={productSearchTerm}
-                      clientId={clientId}
-                      onProductAdded={() => {
-                        setShowAddProductModal(false);
-                        setProductSearchTerm('');
-                        queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/products`] });
-                      }}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
+                </button>
+              ))}
             </div>
-            )}
-        </TabsContent>
-
-        {/* Products Tab */}
-        <TabsContent value="products" className="space-y-6 mt-6">
-          {/* Products content is now handled in the main products section above */}
-        </TabsContent>
-      </Tabs>
-
+          )}
+        </div>
+        
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={submitComment}
+            disabled={!newComment.trim() || createCommentMutation.isPending}
+            className="flex items-center gap-1"
+          >
+            <Send className="h-3 w-3" />
+            {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
