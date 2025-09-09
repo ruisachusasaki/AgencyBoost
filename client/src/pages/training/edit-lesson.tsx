@@ -89,6 +89,13 @@ export default function EditLesson() {
     }
   }, [quiz]);
 
+  // Automatically show quiz builder for existing quiz lessons
+  useEffect(() => {
+    if (lesson && lesson.contentType === 'quiz' && quiz) {
+      setShowQuizBuilder(true);
+    }
+  }, [lesson, quiz]);
+
   const updateLessonMutation = useMutation({
     mutationFn: (data: LessonFormData) =>
       fetch(`/api/training/lessons/${lessonId}`, {
