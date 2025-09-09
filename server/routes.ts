@@ -13365,12 +13365,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create training course (Admin/Manager only)
   app.post("/api/training/courses", async (req, res) => {
     try {
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       const newCourse = insertTrainingCourseSchema.parse({
         ...req.body,
-        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        createdBy: userId
       });
       
       const [course] = await db.insert(trainingCourses).values(newCourse).returning();
+      
+      // Auto-enroll the course creator so they can access lessons in their own course
+      const enrollment = {
+        id: sql`gen_random_uuid()`,
+        courseId: course.id,
+        userId: userId,
+        status: "enrolled",
+        progress: 0,
+        completedLessons: 0,
+        totalLessons: 0,
+        enrolledAt: new Date(),
+        lastAccessedAt: new Date()
+      };
+      
+      await db.insert(trainingEnrollments).values(enrollment);
       
       await createAuditLog("created", "training_course", course.id, course.title, req.session?.userId,
         "Training course created", null, course, req);
