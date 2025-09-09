@@ -14088,6 +14088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/training/analytics", async (req, res) => {
     try {
       const { courseId, userId } = req.query;
+      const currentUserId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
       // Total courses and categories
       const [totalCourses] = await db.select({ count: sql<number>`count(*)` }).from(trainingCourses);
@@ -14106,11 +14107,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (courseId) {
         courseStatsQuery = courseStatsQuery.where(and(
-          eq(trainingCourses.isPublished, true),
+          or(
+            eq(trainingCourses.isPublished, true),
+            eq(trainingCourses.createdBy, currentUserId)  // Show own unpublished courses
+          ),
           eq(trainingCourses.id, courseId as string)
         ));
       } else {
-        courseStatsQuery = courseStatsQuery.where(eq(trainingCourses.isPublished, true));
+        courseStatsQuery = courseStatsQuery.where(or(
+          eq(trainingCourses.isPublished, true),
+          eq(trainingCourses.createdBy, currentUserId)  // Show own unpublished courses
+        ));
       }
       
       const courseStats = await courseStatsQuery.groupBy(trainingCourses.id, trainingCourses.title);
