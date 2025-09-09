@@ -1195,6 +1195,7 @@ export default function WorkflowBuilderPage() {
             <ActionConfigPanel
               action={configuringAction.action}
               actionDefinition={configuringAction.definition}
+              workflowTriggers={workflowData.triggers}
               onSave={handleSaveActionConfig}
               onClose={() => setConfiguringAction(null)}
             />

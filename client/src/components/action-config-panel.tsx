@@ -29,6 +29,7 @@ interface ActionConfigPanelProps {
     description: string;
     configSchema: any;
   } | null;
+  workflowTriggers?: Array<{ type: string; name?: string; conditions?: any }>;
   onSave: (updatedAction: any) => void;
   onClose: () => void;
 }
@@ -36,10 +37,18 @@ interface ActionConfigPanelProps {
 export default function ActionConfigPanel({ 
   action, 
   actionDefinition, 
+  workflowTriggers = [], 
   onSave, 
   onClose 
 }: ActionConfigPanelProps) {
   const [settings, setSettings] = useState(action.settings || {});
+
+  // Check if workflow has form submission triggers
+  const hasFormTrigger = workflowTriggers.some(trigger => 
+    trigger.type === 'form_submission' || 
+    trigger.type === 'form_filled' ||
+    trigger.name?.toLowerCase().includes('form')
+  );
 
   // Fetch data for different action types
   const { data: emailTemplates = [] } = useQuery<any[]>({
@@ -88,8 +97,15 @@ export default function ActionConfigPanel({
   });
 
   useEffect(() => {
-    setSettings(action.settings || {});
-  }, [action]);
+    const initialSettings = action.settings || {};
+    
+    // Auto-select form submitter for new email actions when form triggers exist
+    if (action.type === 'send_email' && hasFormTrigger && !initialSettings.recipient) {
+      initialSettings.recipient = 'form_submitter';
+    }
+    
+    setSettings(initialSettings);
+  }, [action, hasFormTrigger]);
 
   const handleSave = () => {
     onSave({
@@ -132,13 +148,22 @@ export default function ActionConfigPanel({
             <div>
               <Label htmlFor="email-to">Send To</Label>
               <Select 
-                value={settings.recipient || "contact"} 
+                value={settings.recipient || (hasFormTrigger ? "form_submitter" : "contact")} 
                 onValueChange={(value) => updateSetting("recipient", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select recipient" />
                 </SelectTrigger>
                 <SelectContent>
+                  {hasFormTrigger && (
+                    <SelectItem value="form_submitter">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <span>Form Submitter</span>
+                        <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                      </div>
+                    </SelectItem>
+                  )}
                   <SelectItem value="contact">Contact/Lead</SelectItem>
                   <SelectItem value="assigned_staff">Assigned Staff Member</SelectItem>
                   <SelectItem value="specific_staff">Specific Staff Member</SelectItem>
