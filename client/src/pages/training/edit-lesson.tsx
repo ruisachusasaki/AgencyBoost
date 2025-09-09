@@ -414,9 +414,18 @@ export default function EditLesson() {
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
 
     console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    // Show immediate feedback
+    toast({
+      title: "File selected!",
+      description: `Starting upload of ${file.name}...`
+    });
 
     setIsUploadingResource(true);
     
@@ -1124,7 +1133,16 @@ export default function EditLesson() {
                                     />
                                     <Button
                                       variant="outline"
-                                      onClick={() => document.getElementById('resource-file-input')?.click()}
+                                      onClick={() => {
+                                        console.log('Upload button clicked');
+                                        const input = document.getElementById('resource-file-input') as HTMLInputElement;
+                                        if (input) {
+                                          console.log('Input found, triggering click');
+                                          input.click();
+                                        } else {
+                                          console.error('File input not found');
+                                        }
+                                      }}
                                       disabled={isUploadingResource}
                                       className="w-full"
                                     >
@@ -1143,6 +1161,11 @@ export default function EditLesson() {
                                     <p className="text-xs text-gray-500">
                                       Supported: PDF, Word, Excel, PowerPoint, Images (max 50MB)
                                     </p>
+                                    {isUploadingResource && (
+                                      <div className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                                        📤 Uploading file, please wait...
+                                      </div>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="space-y-3">
