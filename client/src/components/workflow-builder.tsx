@@ -221,6 +221,7 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                     <SelectItem value="task_automation">Task Automation</SelectItem>
                     <SelectItem value="customer_onboarding">Customer Onboarding</SelectItem>
                     <SelectItem value="follow_up">Follow Up</SelectItem>
+                    <SelectItem value="training_management">Training Management</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

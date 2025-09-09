@@ -3854,6 +3854,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           isActive: true
         },
+        // Training System Triggers
+        {
+          name: "Course Enrollment",
+          type: "course_enrollment",
+          description: "Triggers when someone enrolls in a course",
+          category: "training_management",
+          configSchema: {
+            courseId: {
+              type: "course_select",
+              label: "Specific Course (Optional)",
+              placeholder: "Leave blank for any course"
+            },
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            },
+            enrollmentType: {
+              type: "string",
+              options: ["self_enrolled", "assigned"],
+              label: "Enrollment Type"
+            },
+            assignedBy: {
+              type: "staff_select",
+              label: "Assigned By (Staff Member)"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Lesson Completion",
+          type: "lesson_completion",
+          description: "Triggers when someone completes a lesson",
+          category: "training_management",
+          configSchema: {
+            courseId: {
+              type: "course_select",
+              label: "Specific Course (Optional)"
+            },
+            lessonNumber: {
+              type: "number",
+              label: "Lesson Number (Optional)",
+              placeholder: "e.g., 1",
+              min: 1
+            },
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Course Completion",
+          type: "course_completion",
+          description: "Triggers when someone completes all lessons in a course",
+          category: "training_management",
+          configSchema: {
+            courseId: {
+              type: "course_select",
+              label: "Specific Course (Optional)"
+            },
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            },
+            completionTime: {
+              type: "string",
+              options: ["under_1_week", "1_2_weeks", "2_4_weeks", "over_1_month"],
+              label: "Completion Time Range"
+            },
+            department: {
+              type: "string",
+              options: ["Sales", "Marketing", "Development", "Design", "Operations", "HR", "Finance", "Customer Success"],
+              label: "Employee Department"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Course Published",
+          type: "course_published",
+          description: "Triggers when a new course is published",
+          category: "training_management",
+          configSchema: {
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            },
+            publishedBy: {
+              type: "staff_select",
+              label: "Published By (Staff Member)"
+            },
+            minLessons: {
+              type: "number",
+              label: "Minimum Number of Lessons",
+              placeholder: "e.g., 5",
+              min: 1
+            },
+            notifyAllStaff: {
+              type: "boolean",
+              label: "Notify All Staff",
+              defaultValue: false
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Training Progress Milestone",
+          type: "training_progress_milestone",
+          description: "Triggers when someone reaches a specific completion percentage",
+          category: "training_management",
+          configSchema: {
+            progressPercentage: {
+              type: "number",
+              label: "Progress Percentage",
+              placeholder: "e.g., 50",
+              min: 1,
+              max: 100,
+              required: true
+            },
+            courseId: {
+              type: "course_select",
+              label: "Specific Course (Optional)"
+            },
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            },
+            notifyManager: {
+              type: "boolean",
+              label: "Notify Manager",
+              defaultValue: true
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Course Assignment",
+          type: "course_assignment",
+          description: "Triggers when someone is assigned to take a course",
+          category: "training_management",
+          configSchema: {
+            courseId: {
+              type: "course_select",
+              label: "Specific Course (Optional)"
+            },
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            },
+            assignedBy: {
+              type: "staff_select",
+              label: "Assigned By (Staff Member)"
+            },
+            department: {
+              type: "string",
+              options: ["Sales", "Marketing", "Development", "Design", "Operations", "HR", "Finance", "Customer Success"],
+              label: "Assignee Department"
+            },
+            dueDate: {
+              type: "date",
+              label: "Due Date (Optional)"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Training Overdue",
+          type: "training_overdue",
+          description: "Triggers when someone hasn't completed required training by deadline",
+          category: "training_management",
+          configSchema: {
+            courseId: {
+              type: "course_select",
+              label: "Specific Course (Optional)"
+            },
+            category: {
+              type: "string",
+              options: ["Technology", "Leadership", "Compliance", "Safety", "Sales", "Customer Service"],
+              label: "Course Category"
+            },
+            overdueBy: {
+              type: "string",
+              options: ["1_day", "3_days", "1_week", "2_weeks"],
+              label: "Overdue By",
+              required: true
+            },
+            department: {
+              type: "string",
+              options: ["Sales", "Marketing", "Development", "Design", "Operations", "HR", "Finance", "Customer Success"],
+              label: "Employee Department"
+            },
+            notifyManager: {
+              type: "boolean",
+              label: "Notify Manager",
+              defaultValue: true
+            }
+          },
+          isActive: true
+        },
         {
           name: "Time Off Status Changed",
           type: "time_off_status_changed",
