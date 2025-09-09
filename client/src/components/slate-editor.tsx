@@ -1056,9 +1056,10 @@ const Element = (props: any) => {
 const ToggleBlock = ({ attributes, children, element }: any) => {
   const editor = useSlateStatic();
   const path = ReactEditor.findPath(editor, element);
-  const [isOpen, setIsOpen] = useState(true); // Start open by default in editor mode
+  const [isOpen, setIsOpen] = useState(element.isOpen !== undefined ? element.isOpen : true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(element.title || 'Click to toggle');
+  const [showContentForEditing, setShowContentForEditing] = useState(false);
 
   const handleTitleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1085,15 +1086,24 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
     saveTitle();
   };
 
+  const handleToggle = () => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    // Save the toggle state to the element
+    Transforms.setNodes(editor, { isOpen: newIsOpen } as Partial<ToggleElement>, { at: path });
+  };
+
+  const shouldShowContent = isOpen || showContentForEditing;
+
   return (
     <div {...attributes} className="toggle-block my-4">
       <div
-        className="toggle-header bg-white rounded-md p-3 flex items-center gap-2"
+        className="toggle-header bg-gray-50 rounded-md p-3 flex items-center gap-2 border"
         contentEditable={false}
       >
         <ChevronRight 
           className={`h-4 w-4 transition-transform cursor-pointer ${isOpen ? 'rotate-90' : ''}`} 
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggle}
         />
         {isEditingTitle ? (
           <input
@@ -1113,17 +1123,42 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
             {title}
           </span>
         )}
-        <span 
-          className="text-xs text-gray-400 cursor-pointer"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? 'Hide' : 'Show'}
-        </span>
+        <div className="flex items-center gap-2">
+          {!isOpen && !showContentForEditing && (
+            <button
+              className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowContentForEditing(true);
+              }}
+            >
+              Edit Content
+            </button>
+          )}
+          <span 
+            className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
+            onClick={handleToggle}
+          >
+            {isOpen ? 'Hide' : 'Show'}
+          </span>
+        </div>
       </div>
-      {/* Always show content in editor mode, but with visual indication when "closed" */}
-      <div className={`toggle-content mt-2 pl-6 ${!isOpen ? 'opacity-50' : ''}`}>
-        {children}
-      </div>
+      {shouldShowContent && (
+        <div className={`toggle-content mt-2 pl-6 border-l-2 border-gray-200 ${!isOpen ? 'bg-gray-50 p-3 rounded-r' : ''}`}>
+          {!isOpen && showContentForEditing && (
+            <div className="mb-2 text-xs text-gray-500 flex items-center gap-2">
+              Editing collapsed content
+              <button
+                className="text-blue-600 hover:text-blue-800"
+                onClick={() => setShowContentForEditing(false)}
+              >
+                Done
+              </button>
+            </div>
+          )}
+          {children}
+        </div>
+      )}
     </div>
   );
 };
