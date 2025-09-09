@@ -101,6 +101,7 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
   });
 
 
+
   // Map trigger types to icons
   const getIconForTrigger = (type: string) => {
     const iconMap: { [key: string]: any } = {
