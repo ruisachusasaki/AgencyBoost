@@ -89,12 +89,7 @@ export default function EditLesson() {
     }
   }, [quiz]);
 
-  // Automatically show quiz builder for existing quiz lessons
-  useEffect(() => {
-    if (lesson && lesson.contentType === 'quiz' && quiz) {
-      setShowQuizBuilder(true);
-    }
-  }, [lesson, quiz]);
+  // Don't automatically show quiz builder - we'll render it inline now
 
   const updateLessonMutation = useMutation({
     mutationFn: (data: LessonFormData) =>
@@ -262,7 +257,7 @@ export default function EditLesson() {
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}/quiz`] });
       setShowQuizBuilder(false);
-      setLocation(`/training/courses/${courseId}/lessons/${lessonId}`);
+      setLocation(`/training/courses/${courseId}/lessons`);
     } catch (error) {
       console.error('Error updating lesson with quiz:', error);
       toast({
@@ -274,9 +269,8 @@ export default function EditLesson() {
   };
 
   const onSubmit = (data: LessonFormData) => {
+    // For quiz lessons, the quiz builder handles the saving
     if (data.contentType === 'quiz') {
-      // Show quiz builder instead of updating lesson directly
-      setShowQuizBuilder(true);
       return;
     }
 
@@ -488,70 +482,90 @@ export default function EditLesson() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Content</FormLabel>
-                    <FormControl>
-                      <RichTextEditor
-                        content={field.value || ""}
-                        onChange={field.onChange}
-                        placeholder="Enter lesson content..."
-                        className="w-full"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      The main content of the lesson (rich text with formatting)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end gap-4">
-                <Button type="button" variant="outline" asChild>
-                  <Link href={`/training/courses/${lesson.courseId}/lessons`}>Cancel</Link>
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={updateLessonMutation.isPending}
-                  data-testid="button-save"
-                >
-                  {updateLessonMutation.isPending ? (
-                    <>Updating...</>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Update Lesson
-                    </>
+              {form.watch('contentType') !== 'quiz' && (
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Content</FormLabel>
+                      <FormControl>
+                        <RichTextEditor
+                          content={field.value || ""}
+                          onChange={field.onChange}
+                          placeholder="Enter lesson content..."
+                          className="w-full"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The main content of the lesson (rich text with formatting)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </div>
+                />
+              )}
+
+              {/* Quiz Builder for quiz lessons */}
+              {form.watch('contentType') === 'quiz' && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Quiz Configuration</h3>
+                    <p className="text-gray-600">Configure your quiz questions and settings</p>
+                  </div>
+                  <QuizBuilder
+                    initialQuiz={quizData || {
+                      title: `${form.getValues('title')} Quiz`,
+                      description: "Complete this quiz to test your understanding of the lesson content."
+                    }}
+                    onSave={handleQuizSave}
+                    onCancel={() => {
+                      form.setValue('contentType', 'article');
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Only show Update Lesson button for non-quiz lessons */}
+              {form.watch('contentType') !== 'quiz' && (
+                <div className="flex justify-end gap-4">
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`/training/courses/${lesson.courseId}/lessons`}>Cancel</Link>
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateLessonMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    {updateLessonMutation.isPending ? (
+                      <>Updating...</>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Update Lesson
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* For quiz lessons, show a note that the QuizBuilder handles saving */}
+              {form.watch('contentType') === 'quiz' && (
+                <div className="flex justify-end gap-4">
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`/training/courses/${lesson.courseId}/lessons`}>Cancel</Link>
+                  </Button>
+                  <p className="text-sm text-gray-600 flex items-center">
+                    Use the "Save Quiz" button below to save your changes
+                  </p>
+                </div>
+              )}
             </form>
           </Form>
         </CardContent>
       </Card>
 
-      {/* Quiz Builder Modal/Section */}
-      {showQuizBuilder && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-6">Edit Quiz for "{form.getValues('title')}"</h2>
-              <QuizBuilder
-                initialQuiz={quizData || {
-                  title: `${form.getValues('title')} Quiz`,
-                  description: "Complete this quiz to test your understanding of the lesson content."
-                }}
-                onSave={handleQuizSave}
-                onCancel={() => setShowQuizBuilder(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Quiz Builder is now inline above, no modal needed */}
     </div>
   );
 }
