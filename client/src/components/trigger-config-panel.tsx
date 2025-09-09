@@ -1258,20 +1258,8 @@ export default function TriggerConfigPanel({
               )}
               {knowledgeBaseCategories.length > 0 ? (
                 knowledgeBaseCategories.map((category: any) => (
-                  <SelectItem key={category.id} value={category.id} className="h-auto py-2 max-w-full overflow-hidden">
-                    <div className="flex items-center gap-2 w-full min-w-0 overflow-hidden">
-                      {category.icon && (
-                        <span className="w-4 h-4 flex-shrink-0 text-center">{category.icon}</span>
-                      )}
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <div className="font-medium text-sm truncate">{category.name}</div>
-                        {category.description && (
-                          <div className="text-xs text-muted-foreground truncate mt-0.5">
-                            {category.description}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.icon ? `${category.icon} ${category.name}` : category.name}
                   </SelectItem>
                 ))
               ) : (
