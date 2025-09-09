@@ -2884,146 +2884,6 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
-            {/* Template Selection Modal */}
-            <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Select Email Template</DialogTitle>
-                </DialogHeader>
-                <EmailTemplateSelector onSelectTemplate={selectTemplate} />
-              </DialogContent>
-            </Dialog>
-
-            {/* Merge Tags Modal */}
-            <Dialog open={showMergeTagsModal} onOpenChange={setShowMergeTagsModal}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Insert Merge Tags</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input placeholder="Search merge tags..." />
-                  <div className="grid gap-2 max-h-96 overflow-y-auto">
-                    
-                    {/* Client Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Client Information</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('firstName')}
-                          className="justify-start"
-                        >
-                          {'{{firstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('lastName')}
-                          className="justify-start"
-                        >
-                          {'{{lastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('email')}
-                          className="justify-start"
-                        >
-                          {'{{email}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('phone')}
-                          className="justify-start"
-                        >
-                          {'{{phone}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('companyName')}
-                          className="justify-start"
-                        >
-                          {'{{companyName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('status')}
-                          className="justify-start"
-                        >
-                          {'{{status}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Assigned User Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Assigned User</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('assignedUserFirstName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserFirstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('assignedUserLastName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserLastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('assignedUserEmail')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserEmail}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMergeTag('assignedUserPhone')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserPhone}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* All Custom Fields */}
-                    {customFieldsData && customFieldsData.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Custom Fields</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {customFieldsData.map((field) => (
-                            <Button
-                              key={field.id}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => insertMergeTag(field.name)}
-                              className="justify-start text-left overflow-hidden"
-                              title={field.name}
-                            >
-                              <span className="truncate">
-                                {'{{' + field.name + '}}'}
-                              </span>
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
 
 
 
@@ -5306,6 +5166,147 @@ export default function EnhancedClientDetail() {
                   >
                     Cancel
                   </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Email Template Selection Modal - MOVED INSIDE COMMUNICATION TAB */}
+            <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Select Email Template</DialogTitle>
+                </DialogHeader>
+                <EmailTemplateSelector onSelectTemplate={selectTemplate} />
+              </DialogContent>
+            </Dialog>
+
+            {/* Email Merge Tags Modal - MOVED INSIDE COMMUNICATION TAB */}
+            <Dialog open={showMergeTagsModal} onOpenChange={setShowMergeTagsModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Insert Merge Tags</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="Search merge tags..." />
+                  <div className="grid gap-2 max-h-96 overflow-y-auto">
+                    
+                    {/* Client Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Information</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('firstName')}
+                          className="justify-start"
+                        >
+                          {'{{firstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('lastName')}
+                          className="justify-start"
+                        >
+                          {'{{lastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('email')}
+                          className="justify-start"
+                        >
+                          {'{{email}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('phone')}
+                          className="justify-start"
+                        >
+                          {'{{phone}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('companyName')}
+                          className="justify-start"
+                        >
+                          {'{{companyName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('status')}
+                          className="justify-start"
+                        >
+                          {'{{status}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Assigned User Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Assigned User</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserFirstName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserFirstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserLastName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserLastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserEmail')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserEmail}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertMergeTag('assignedUserPhone')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserPhone}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* All Custom Fields */}
+                    {customFieldsData && customFieldsData.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Custom Fields</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {customFieldsData.map((field) => (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertMergeTag(field.name)}
+                              className="justify-start text-left overflow-hidden"
+                              title={field.name}
+                            >
+                              <span className="truncate">
+                                {'{{' + field.name + '}}'}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
