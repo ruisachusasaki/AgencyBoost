@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, CheckCircle, Clock, Download, Upload,
-  FileText, Video, FileIcon, PlayCircle
+  FileText, Video, FileIcon, PlayCircle, Link2
 } from "lucide-react";
 import { QuizTaker } from "@/components/quiz-taker";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -57,6 +57,12 @@ export default function LessonDetail() {
   const { data: submission, refetch: refetchSubmission } = useQuery({
     queryKey: [`/api/training/assignments/${assignment?.id}/submission`],
     enabled: !!assignment?.id,
+  });
+
+  // Fetch lesson resources
+  const { data: resources = [] } = useQuery({
+    queryKey: [`/api/training/lessons/${lessonId}/resources`],
+    enabled: !!lessonId,
   });
 
   // Find current lesson index and navigation
@@ -616,6 +622,77 @@ export default function LessonDetail() {
           {renderLessonContent()}
         </CardContent>
       </Card>
+
+      {/* Lesson Resources */}
+      {resources.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileIcon className="h-5 w-5" />
+              Lesson Resources
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+              {resources.map((resource: any) => (
+                <div
+                  key={resource.id}
+                  className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {resource.type === 'download' ? (
+                        <Download className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <Link2 className="h-5 w-5 text-green-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 mb-1">{resource.title}</h4>
+                      {resource.description && (
+                        <p className="text-sm text-gray-600 mb-2">{resource.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                        <Badge variant="outline" className="text-xs">
+                          {resource.type === 'download' ? 'Download' : 'Link'}
+                        </Badge>
+                        {resource.fileName && (
+                          <span>File: {resource.fileName}</span>
+                        )}
+                        {resource.fileSize && (
+                          <span>Size: {Math.round(resource.fileSize / 1024)}KB</span>
+                        )}
+                      </div>
+                      {resource.url && (
+                        <Button size="sm" asChild>
+                          <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2"
+                          >
+                            {resource.type === 'download' ? (
+                              <>
+                                <Download className="h-4 w-4" />
+                                Download File
+                              </>
+                            ) : (
+                              <>
+                                <Link2 className="h-4 w-4" />
+                                Open Link
+                              </>
+                            )}
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6 border-t">
