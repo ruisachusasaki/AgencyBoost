@@ -313,6 +313,29 @@ export function QuizTaker({ quiz, onComplete }: QuizTakerProps) {
                               })}
                             </div>
                           )}
+                          {question.questionType === 'true_false' && (
+                            <div className="space-y-1">
+                              {question.options.map((option, optionIndex) => {
+                                const isUserAnswer = userAnswer === optionIndex.toString();
+                                const isCorrectAnswer = question.correctAnswer === optionIndex.toString();
+                                
+                                return (
+                                  <div
+                                    key={optionIndex}
+                                    className={cn(
+                                      "p-2 rounded text-sm",
+                                      isCorrectAnswer && "bg-green-100 text-green-800",
+                                      isUserAnswer && !isCorrectAnswer && "bg-red-100 text-red-800"
+                                    )}
+                                  >
+                                    {option}
+                                    {isCorrectAnswer && " ✓"}
+                                    {isUserAnswer && !isCorrectAnswer && " ✗"}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                           {question.explanation && (
                             <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
                               <strong>Explanation:</strong> {question.explanation}
