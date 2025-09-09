@@ -128,9 +128,17 @@ export default function TriggerConfigPanel({
     queryKey: ["/api/training/categories"],
   });
 
-  // Fetch training lessons for lesson selection filters
+  // Fetch training lessons for lesson selection filters - only if course is selected
+  const selectedCourseId = conditions.courseId;
   const { data: trainingLessons = [] } = useQuery<any[]>({
-    queryKey: ["/api/training/lessons"],
+    queryKey: ["/api/training/courses", selectedCourseId, "lessons"],
+    queryFn: async () => {
+      if (!selectedCourseId || selectedCourseId === "any") return [];
+      const response = await fetch(`/api/training/courses/${selectedCourseId}/lessons`);
+      if (!response.ok) throw new Error('Failed to fetch lessons');
+      return response.json();
+    },
+    enabled: !!selectedCourseId && selectedCourseId !== "any",
   });
 
   const queryClient = useQueryClient();
@@ -1167,23 +1175,35 @@ export default function TriggerConfigPanel({
     }
 
     if (fieldSchema.type === "lesson_select") {
+      const selectedCourseId = conditions.courseId;
+      const hasCourseSelected = selectedCourseId && selectedCourseId !== "any";
+      
       return (
         <div key={fieldName} className="space-y-2">
           <Label htmlFor={fieldName}>{label}</Label>
           <Select 
             value={value} 
             onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+            disabled={!hasCourseSelected}
           >
             <SelectTrigger>
-              <SelectValue placeholder={fieldSchema.placeholder || `Select ${label.toLowerCase()}`} />
+              <SelectValue placeholder={
+                !hasCourseSelected 
+                  ? "Select a course first" 
+                  : fieldSchema.placeholder || `Select ${label.toLowerCase()}`
+              } />
             </SelectTrigger>
             <SelectContent>
-              {fieldSchema.placeholder && (
+              {fieldSchema.placeholder && hasCourseSelected && (
                 <SelectItem value="any">
                   <span className="text-muted-foreground">Any Lesson</span>
                 </SelectItem>
               )}
-              {trainingLessons.length > 0 ? (
+              {!hasCourseSelected ? (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  Please select a course first
+                </div>
+              ) : trainingLessons.length > 0 ? (
                 trainingLessons.map((lesson: any) => (
                   <SelectItem key={lesson.id} value={lesson.id}>
                     <div className="flex flex-col">
@@ -1201,11 +1221,14 @@ export default function TriggerConfigPanel({
                 ))
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
-                  No lessons available
+                  No lessons available for this course
                 </div>
               )}
             </SelectContent>
           </Select>
+          {!hasCourseSelected && (
+            <p className="text-xs text-amber-600">Select a course above to see available lessons</p>
+          )}
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
         </div>
       );
