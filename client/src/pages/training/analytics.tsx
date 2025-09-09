@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { 
   BookOpen, 
   Users, 
@@ -14,7 +16,8 @@ import {
   Clock,
   UserCheck,
   Target,
-  BarChart3
+  BarChart3,
+  ArrowLeft
 } from "lucide-react";
 
 interface CourseStats {
@@ -64,6 +67,13 @@ export default function TrainingAnalytics() {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <Button variant="ghost" asChild className="mb-4">
+          <Link href="/training">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Training
+          </Link>
+        </Button>
+        
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-8 w-8 text-primary" />
@@ -89,6 +99,13 @@ export default function TrainingAnalytics() {
   if (!analytics) {
     return (
       <div className="space-y-6">
+        <Button variant="ghost" asChild className="mb-4">
+          <Link href="/training">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Training
+          </Link>
+        </Button>
+        
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-8 w-8 text-primary" />
@@ -137,6 +154,13 @@ export default function TrainingAnalytics() {
 
   return (
     <div className="space-y-6">
+      <Button variant="ghost" asChild className="mb-4">
+        <Link href="/training">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Training
+        </Link>
+      </Button>
+      
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <BarChart3 className="h-8 w-8 text-primary" />
