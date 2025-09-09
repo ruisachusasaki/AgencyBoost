@@ -1165,6 +1165,38 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
           {children}
         </div>
       )}
+      {/* Add invisible placeholder to help with cursor positioning after closed toggle */}
+      {!isOpen && (
+        <div
+          className="toggle-placeholder"
+          contentEditable={true}
+          style={{ 
+            height: '1px', 
+            fontSize: '1px', 
+            lineHeight: '1px',
+            opacity: 0,
+            overflow: 'hidden'
+          }}
+          onFocus={(e) => {
+            // When this placeholder gets focus, insert a new paragraph after the toggle
+            try {
+              const togglePath = ReactEditor.findPath(editor, element);
+              const nextPath = Path.next(togglePath);
+              Transforms.insertNodes(
+                editor,
+                { type: 'paragraph', children: [{ text: '' }] },
+                { at: nextPath }
+              );
+              // Focus the new paragraph
+              Transforms.select(editor, nextPath);
+            } catch (error) {
+              console.log('Toggle navigation skipped:', error);
+            }
+          }}
+        >
+          &nbsp;
+        </div>
+      )}
     </div>
   );
 };
