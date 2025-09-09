@@ -53,6 +53,7 @@ import CareersPage from "@/pages/careers";
 import KnowledgeBase from "@/pages/knowledge-base";
 import ArticleView from "@/pages/article-view";
 import Training from "@/pages/training";
+import TrainingAnalytics from "@/pages/training/analytics";
 import CourseDetail from "@/pages/training/course-detail";
 import LessonDetail from "@/pages/training/lesson-detail";
 import CreateCourse from "@/pages/training/create-course";
@@ -82,6 +83,7 @@ function Router() {
       <Route path="/hr" component={HRPage} />
       <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
       <Route path="/training" component={Training} />
+      <Route path="/training/analytics" component={TrainingAnalytics} />
       <Route path="/training/courses/:id" component={CourseDetail} />
       <Route path="/training/lessons/:id" component={LessonDetail} />
       <Route path="/training/courses/:id/edit" component={EditCourse} />
