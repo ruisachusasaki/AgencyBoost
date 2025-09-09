@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Ca
 import type { Workflow } from "@shared/schema";
 import WorkflowCanvas from "@/components/workflow-canvas";
 import TriggerConfigPanel from "@/components/trigger-config-panel";
+import ActionConfigPanel from "@/components/action-config-panel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,12 @@ export default function WorkflowBuilderPage() {
   const [actionSearch, setActionSearch] = useState("");
   const [configuringTrigger, setConfiguringTrigger] = useState<{
     trigger: any;
+    definition: any;
+    index: number;
+  } | null>(null);
+  
+  const [configuringAction, setConfiguringAction] = useState<{
+    action: any;
     definition: any;
     index: number;
   } | null>(null);
