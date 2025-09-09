@@ -3036,135 +3036,30 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
-            {/* SMS Template Selection Modal */}
+            {/* SMS Template Selection Modal - SIMPLIFIED FOR TESTING */}
             <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
-              <DialogContent className="max-w-2xl z-50">
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Select SMS Template</DialogTitle>
+                  <DialogTitle>SMS Template Modal - SIMPLIFIED TEST</DialogTitle>
                 </DialogHeader>
-                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
+                <div className="p-4">
+                  <p>This simplified SMS Template modal should appear when you click the Template button!</p>
+                  <p>If you can see this, then the issue is with the SmsTemplateSelector component.</p>
+                  <Button onClick={() => setShowSmsTemplateModal(false)}>Close</Button>
+                </div>
               </DialogContent>
             </Dialog>
 
-            {/* SMS Merge Tags Modal */}
+            {/* SMS Merge Tags Modal - SIMPLIFIED FOR TESTING */}
             <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-              <DialogContent className="max-w-2xl z-50">
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Insert Merge Tags</DialogTitle>
-                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
+                  <DialogTitle>SMS Merge Tags - SIMPLIFIED TEST</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-6 max-h-96 overflow-y-auto">
-                  <div className="space-y-6">
-                    {/* Client Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Client Information</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('firstName')}
-                          className="justify-start"
-                        >
-                          {'{{firstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('lastName')}
-                          className="justify-start"
-                        >
-                          {'{{lastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('phone')}
-                          className="justify-start"
-                        >
-                          {'{{phone}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('companyName')}
-                          className="justify-start"
-                        >
-                          {'{{companyName}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Assigned User Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Assigned User</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserFirstName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserFirstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserLastName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserLastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserEmail')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserEmail}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserPhone')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserPhone}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Custom Fields */}
-                    {customFieldsData && customFieldsData.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Custom Fields</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {customFieldsData.map((field) => (
-                            <Button
-                              key={field.id}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => insertSmsTag(field.name)}
-                              className="justify-start text-left overflow-hidden"
-                              title={field.name}
-                            >
-                              <span className="truncate">
-                                {'{{' + field.name + '}}'}
-                              </span>
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSmsMergeTagsModal(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
+                <div className="p-4">
+                  <p>This simplified SMS Merge Tags modal should appear when you click the Merge Tags button!</p>
+                  <p>If you can see this, then the issue was with the complex merge tags content.</p>
+                  <Button onClick={() => setShowSmsMergeTagsModal(false)}>Close</Button>
                 </div>
               </DialogContent>
             </Dialog>
