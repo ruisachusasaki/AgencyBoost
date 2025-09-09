@@ -51,6 +51,7 @@ export default function EditLesson() {
     fileName: '',
     fileSize: 0
   });
+  const [isUploadingResource, setIsUploadingResource] = useState(false);
 
   // Fetch lesson data
   const { data: lesson, isLoading } = useQuery({
@@ -411,52 +412,72 @@ export default function EditLesson() {
     setShowAddResource(true);
   };
 
-  const handleResourceUpload = async (result: any) => {
-    if (result.successful && result.successful.length > 0) {
-      const file = result.successful[0];
-      
-      // Set ACL policy for the uploaded file
-      try {
-        const finalResponse = await fetch('/api/images', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageURL: file.uploadURL }),
-        });
-        
-        if (!finalResponse.ok) throw new Error('Failed to finalize upload');
-        
-        const { objectPath } = await finalResponse.json();
-        const downloadUrl = `${window.location.origin}${objectPath}`;
-        
-        // Auto-populate title with filename (without extension) if title is empty
-        const titleFromFile = prev => {
-          if (!prev.title.trim()) {
-            const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-            return nameWithoutExt;
-          }
-          return prev.title;
-        };
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-        setResourceForm(prev => ({
-          ...prev,
-          url: downloadUrl,
-          fileName: file.name,
-          fileSize: file.size,
-          title: titleFromFile(prev)
-        }));
-        
-        toast({
-          title: "File uploaded successfully!",
-          description: "Title auto-filled from filename. You can edit it and click 'Add Resource' to save."
-        });
-      } catch (error) {
-        console.error('Upload finalization error:', error);
-        toast({
-          title: "Upload failed",
-          description: "Failed to finalize file upload. Please try again.",
-          variant: "destructive"
-        });
-      }
+    setIsUploadingResource(true);
+    
+    try {
+      // Get upload URL
+      const uploadResponse = await fetch("/api/objects/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!uploadResponse.ok) throw new Error('Failed to get upload URL');
+      
+      const { uploadURL } = await uploadResponse.json();
+
+      // Upload file directly to object storage
+      const uploadFileResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+
+      if (!uploadFileResponse.ok) throw new Error('Failed to upload file');
+
+      // Set ACL policy for the uploaded file
+      const finalResponse = await fetch('/api/images', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageURL: uploadURL.split('?')[0] }),
+      });
+      
+      if (!finalResponse.ok) throw new Error('Failed to finalize upload');
+      
+      const { objectPath } = await finalResponse.json();
+      const downloadUrl = `${window.location.origin}${objectPath}`;
+      
+      // Auto-populate title with filename (without extension) if title is empty
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+      
+      setResourceForm(prev => ({
+        ...prev,
+        url: downloadUrl,
+        fileName: file.name,
+        fileSize: file.size,
+        title: prev.title.trim() || nameWithoutExt
+      }));
+      
+      toast({
+        title: "File uploaded successfully!",
+        description: "Title auto-filled from filename. You can edit it and click 'Save Resource' to save."
+      });
+      
+      // Reset file input
+      event.target.value = '';
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingResource(false);
     }
   };
 
@@ -1064,26 +1085,37 @@ export default function EditLesson() {
                               <label className="text-sm font-medium">Upload File</label>
                               <div className="mt-2">
                                 {!resourceForm.fileName ? (
-                                  <ObjectUploader
-                                    maxNumberOfFiles={1}
-                                    maxFileSize={50 * 1024 * 1024} // 50MB
-                                    onGetUploadParameters={async () => {
-                                      const response = await fetch("/api/objects/upload", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                      });
-                                      const data = await response.json();
-                                      return {
-                                        method: "PUT" as const,
-                                        url: data.uploadURL,
-                                      };
-                                    }}
-                                    onComplete={handleResourceUpload}
-                                    buttonClassName="w-full"
-                                  >
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload File
-                                  </ObjectUploader>
+                                  <div className="space-y-2">
+                                    <input
+                                      type="file"
+                                      onChange={handleFileSelect}
+                                      disabled={isUploadingResource}
+                                      className="hidden"
+                                      id="resource-file-input"
+                                      accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx,.png,.jpg,.jpeg,.gif"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => document.getElementById('resource-file-input')?.click()}
+                                      disabled={isUploadingResource}
+                                      className="w-full"
+                                    >
+                                      {isUploadingResource ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                                          Uploading...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Upload className="h-4 w-4 mr-2" />
+                                          Choose File to Upload
+                                        </>
+                                      )}
+                                    </Button>
+                                    <p className="text-xs text-gray-500">
+                                      Supported: PDF, Word, Excel, PowerPoint, Images (max 50MB)
+                                    </p>
+                                  </div>
                                 ) : (
                                   <div className="space-y-3">
                                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
