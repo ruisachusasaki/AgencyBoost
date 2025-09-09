@@ -313,9 +313,6 @@ export default function CourseDetail() {
                             onClick={() => toggleModuleExpansion(module.id)}
                           >
                             <div className="flex items-center gap-2 flex-1">
-                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <span className="text-sm font-semibold text-primary">{moduleIndex + 1}</span>
-                              </div>
                               <div className="flex-1">
                                 <h3 className="font-semibold text-lg">{module.title}</h3>
                                 {module.description && (
@@ -353,9 +350,6 @@ export default function CourseDetail() {
                                       ) : (
                                         <Lock className="h-4 w-4 text-gray-400" />
                                       )}
-                                      <span className="text-sm text-gray-600">
-                                        {globalLessonIndex + 1}.
-                                      </span>
                                     </div>
                                     
                                     <div className="flex-1">
