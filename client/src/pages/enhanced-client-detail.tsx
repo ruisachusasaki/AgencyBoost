@@ -1044,6 +1044,9 @@ export default function EnhancedClientDetail() {
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
 
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
+  
+  // Test modal to see if Dialog component works at all
+  const [showTestModal, setShowTestModal] = useState(false);
 
   // Email composition state (removed duplicate)
   const [showWysiwyg, setShowWysiwyg] = useState(false);
@@ -5051,8 +5054,10 @@ export default function EnhancedClientDetail() {
                               size="sm"
                               onClick={() => {
                                 console.log('SMS Template button clicked');
+                                console.log('Before setting SMS Template modal:', showSmsTemplateModal);
                                 setShowSmsTemplateModal(true);
-                                console.log('SMS Template modal should be open');
+                                console.log('After setting SMS Template modal (sync):', showSmsTemplateModal);
+                                setTimeout(() => console.log('SMS Template modal state after timeout:', showSmsTemplateModal), 100);
                               }}
                               disabled={false}
                             >
@@ -5084,15 +5089,28 @@ export default function EnhancedClientDetail() {
                     </div>
 
                     {/* Right Side - Send Button */}
-                    <Button
-                      size="sm"
-                      disabled={!smsData.message.trim() || !smsData.fromNumber || !!client?.dndAll || !!client?.dndSms}
-                      className="flex items-center gap-2"
-                      onClick={handleSendSms}
-                    >
-                      <Send className="h-4 w-4" />
-                      Send SMS
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('TEST MODAL BUTTON CLICKED');
+                          setShowTestModal(true);
+                          console.log('Test modal should be open');
+                        }}
+                      >
+                        TEST
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={!smsData.message.trim() || !smsData.fromNumber || !!client?.dndAll || !!client?.dndSms}
+                        className="flex items-center gap-2"
+                        onClick={handleSendSms}
+                      >
+                        <Send className="h-4 w-4" />
+                        Send SMS
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -5965,6 +5983,17 @@ export default function EnhancedClientDetail() {
           {/* Products content is now handled in the main products section above */}
         </TabsContent>
       </Tabs>
+
+      {/* Test Modal - outside tabs structure */}
+      <Dialog open={showTestModal} onOpenChange={setShowTestModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Test Modal</DialogTitle>
+          </DialogHeader>
+          <p>This is a test modal to see if Dialog components work at all.</p>
+          <Button onClick={() => setShowTestModal(false)}>Close</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
