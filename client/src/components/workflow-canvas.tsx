@@ -203,6 +203,7 @@ interface WorkflowCanvasProps {
   onAddAction: () => void;
   onAddCondition: () => void;
   onConfigureTrigger?: (triggerIndex: number) => void;
+  onConfigureAction?: (actionIndex: number) => void;
   onDeleteTrigger?: (triggerIndex: number) => void;
   onDeleteAction?: (actionIndex: number) => void;
 }
@@ -213,6 +214,7 @@ export default function WorkflowCanvas({
   onAddAction, 
   onAddCondition,
   onConfigureTrigger,
+  onConfigureAction,
   onDeleteTrigger,
   onDeleteAction
 }: WorkflowCanvasProps) {
@@ -302,7 +304,7 @@ export default function WorkflowCanvas({
           position: { x: xPosition, y: yPosition },
           data: {
             label: action.name,
-            onConfigure: () => console.log('Configure action', index),
+            onConfigure: () => onConfigureAction?.(index),
             onDelete: () => onDeleteAction?.(index),
           },
         });
