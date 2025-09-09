@@ -1042,6 +1042,15 @@ export default function EnhancedClientDetail() {
   const [characterCount, setCharacterCount] = useState(0);
   const [showSmsTemplateModal, setShowSmsTemplateModal] = useState(false);
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
+
+  // Debug modal states
+  useEffect(() => {
+    console.log('SMS Template Modal State:', showSmsTemplateModal);
+  }, [showSmsTemplateModal]);
+  
+  useEffect(() => {
+    console.log('SMS Merge Tags Modal State:', showSmsMergeTagsModal);
+  }, [showSmsMergeTagsModal]);
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
 
   // Email composition state (removed duplicate)
@@ -5053,7 +5062,7 @@ export default function EnhancedClientDetail() {
                                 setShowSmsTemplateModal(true);
                                 console.log('SMS Template modal should be open');
                               }}
-                              disabled={!!client?.dndAll || !!client?.dndSms}
+                              disabled={false}
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
@@ -5072,7 +5081,7 @@ export default function EnhancedClientDetail() {
                                 setShowSmsMergeTagsModal(true);
                                 console.log('SMS Merge Tags modal should be open');
                               }}
-                              disabled={!!client?.dndAll || !!client?.dndSms}
+                              disabled={false}
                             >
                               <TagIcon className="h-4 w-4" />
                             </Button>
@@ -5239,7 +5248,7 @@ export default function EnhancedClientDetail() {
                                 setShowTemplateModal(true);
                                 console.log('Email Template modal should be open');
                               }}
-                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              disabled={false}
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
@@ -5258,7 +5267,7 @@ export default function EnhancedClientDetail() {
                                 setShowMergeTagsModal(true);
                                 console.log('Email Merge Tags modal should be open');
                               }}
-                              disabled={!!client?.dndAll || !!client?.dndEmail}
+                              disabled={false}
                             >
                               <TagIcon className="h-4 w-4" />
                             </Button>
