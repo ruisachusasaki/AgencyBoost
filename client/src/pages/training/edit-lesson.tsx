@@ -981,7 +981,6 @@ export default function EditLesson() {
                                   )}
                                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                                     <span className="capitalize">{resource.type}</span>
-                                    {resource.fileSize > 0 && <span>Size: {Math.round(resource.fileSize / 1024)}KB</span>}
                                   </div>
                                   {resource.url && (
                                     <a
