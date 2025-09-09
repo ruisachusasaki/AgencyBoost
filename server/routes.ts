@@ -13449,6 +13449,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder training lessons (must be BEFORE parameterized routes)
+  app.put("/api/training/lessons/reorder", async (req, res) => {
+    try {
+      const { lessonIds, moduleId } = req.body; // Array of lesson IDs in new order, optional moduleId
+      
+      console.log("Lesson reorder request:", { lessonIds, moduleId });
+      
+      if (!Array.isArray(lessonIds)) {
+        return res.status(400).json({ error: "lessonIds must be an array" });
+      }
+      
+      if (lessonIds.length === 0) {
+        return res.status(400).json({ error: "lessonIds cannot be empty" });
+      }
+      
+      // Validate that all lessons exist before updating any
+      for (let i = 0; i < lessonIds.length; i++) {
+        const lessonId = lessonIds[i];
+        console.log(`Validating lesson ${i + 1}/${lessonIds.length}: ${lessonId}`);
+        
+        const [existingLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
+        if (!existingLesson) {
+          console.log(`Lesson not found: ${lessonId}`);
+          return res.status(404).json({ error: `Lesson not found: ${lessonId}` });
+        }
+      }
+      
+      // Now update order for each lesson sequentially
+      for (let i = 0; i < lessonIds.length; i++) {
+        const lessonId = lessonIds[i];
+        const updateData: any = {
+          order: i + 1,
+          updatedAt: new Date(),
+          updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        };
+        
+        // If moduleId is provided, update the lesson's module
+        if (moduleId !== undefined) {
+          updateData.moduleId = moduleId;
+        }
+        
+        await db.update(trainingLessons)
+          .set(updateData)
+          .where(eq(trainingLessons.id, lessonId));
+      }
+      
+      await createAuditLog("updated", "training_lesson", "bulk", "Lesson Order Updated", req.session?.userId,
+        "Training lessons reordered", null, { lessonIds, moduleId }, req);
+      
+      res.json({ message: "Lessons reordered successfully" });
+    } catch (error) {
+      console.error('Error reordering lessons:', error);
+      res.status(500).json({ error: "Failed to reorder lessons" });
+    }
+  });
+
   // Get single lesson with content
   app.get("/api/training/lessons/:id", async (req, res) => {
     try {
@@ -13766,62 +13822,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error marking lesson as completed:', error);
       res.status(500).json({ error: "Failed to mark lesson as completed" });
-    }
-  });
-
-  // Reorder training lessons
-  app.put("/api/training/lessons/reorder", async (req, res) => {
-    try {
-      const { lessonIds, moduleId } = req.body; // Array of lesson IDs in new order, optional moduleId
-      
-      console.log("Lesson reorder request:", { lessonIds, moduleId });
-      
-      if (!Array.isArray(lessonIds)) {
-        return res.status(400).json({ error: "lessonIds must be an array" });
-      }
-      
-      if (lessonIds.length === 0) {
-        return res.status(400).json({ error: "lessonIds cannot be empty" });
-      }
-      
-      // Validate that all lessons exist before updating any
-      for (let i = 0; i < lessonIds.length; i++) {
-        const lessonId = lessonIds[i];
-        console.log(`Validating lesson ${i + 1}/${lessonIds.length}: ${lessonId}`);
-        
-        const [existingLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
-        if (!existingLesson) {
-          console.log(`Lesson not found: ${lessonId}`);
-          return res.status(404).json({ error: `Lesson not found: ${lessonId}` });
-        }
-      }
-      
-      // Now update order for each lesson sequentially
-      for (let i = 0; i < lessonIds.length; i++) {
-        const lessonId = lessonIds[i];
-        const updateData: any = {
-          order: i + 1,
-          updatedAt: new Date(),
-          updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
-        };
-        
-        // If moduleId is provided, update the lesson's module
-        if (moduleId !== undefined) {
-          updateData.moduleId = moduleId;
-        }
-        
-        await db.update(trainingLessons)
-          .set(updateData)
-          .where(eq(trainingLessons.id, lessonId));
-      }
-      
-      await createAuditLog("updated", "training_lesson", "bulk", "Lesson Order Updated", req.session?.userId,
-        "Training lessons reordered", null, { lessonIds, moduleId }, req);
-      
-      res.json({ message: "Lessons reordered successfully" });
-    } catch (error) {
-      console.error('Error reordering lessons:', error);
-      res.status(500).json({ error: "Failed to reorder lessons" });
     }
   });
 
