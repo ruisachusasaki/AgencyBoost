@@ -30,6 +30,7 @@ import {
   insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingQuizSchema,
   insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema,
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
+  insertTrainingLessonResourceSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions,
@@ -43,7 +44,7 @@ import {
   knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
-  trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes
+  trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
