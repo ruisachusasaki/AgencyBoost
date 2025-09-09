@@ -5048,7 +5048,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSmsTemplatesOpen(true)}
+                              onClick={() => setShowSmsTemplateModal(true)}
                               disabled={!!client?.dndAll || !!client?.dndSms}
                             >
                               <FileText className="h-4 w-4" />
@@ -5063,7 +5063,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSmsMergeTagsOpen(true)}
+                              onClick={() => setShowSmsMergeTagsModal(true)}
                               disabled={!!client?.dndAll || !!client?.dndSms}
                             >
                               <TagIcon className="h-4 w-4" />
@@ -5226,7 +5226,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setEmailTemplatesOpen(true)}
+                              onClick={() => setShowTemplateModal(true)}
                               disabled={!!client?.dndAll || !!client?.dndEmail}
                             >
                               <FileText className="h-4 w-4" />
@@ -5241,7 +5241,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setEmailMergeTagsOpen(true)}
+                              onClick={() => setShowMergeTagsModal(true)}
                               disabled={!!client?.dndAll || !!client?.dndEmail}
                             >
                               <TagIcon className="h-4 w-4" />
