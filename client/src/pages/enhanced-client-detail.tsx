@@ -3238,103 +3238,6 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
-                  <div className="space-y-6">
-                    {/* Client Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Client Information</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('firstName')}
-                          className="justify-start"
-                        >
-                          {'{{firstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('lastName')}
-                          className="justify-start"
-                        >
-                          {'{{lastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('phone')}
-                          className="justify-start"
-                        >
-                          {'{{phone}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('companyName')}
-                          className="justify-start"
-                        >
-                          {'{{companyName}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Assigned User Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Assigned User</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserFirstName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserFirstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserLastName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserLastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserPhone')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserPhone}}'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* All Custom Fields */}
-                    {customFieldsData && customFieldsData.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Custom Fields</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {customFieldsData.map((field) => (
-                            <Button
-                              key={field.id}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => insertSmsTag(field.name)}
-                              className="justify-start text-left overflow-hidden"
-                              title={field.name}
-                            >
-                              <span className="truncate">
-                                {'{{' + field.name + '}}'}
-                              </span>
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
 
             {/* SMS Send Options Modal */}
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
@@ -5166,14 +5069,8 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                console.log('SMS Template button clicked');
-                                console.log('Before setting SMS Template modal:', showSmsTemplateModal);
-                                setShowSmsTemplateModal(true);
-                                console.log('After setting SMS Template modal (sync):', showSmsTemplateModal);
-                                setTimeout(() => console.log('SMS Template modal state after timeout:', showSmsTemplateModal), 100);
-                              }}
-                              disabled={false}
+                              onClick={() => setShowSmsTemplateModal(true)}
+                              disabled={client?.dndAll || client?.dndSms}
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
@@ -5187,12 +5084,8 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                console.log('SMS Merge Tags button clicked');
-                                setShowSmsMergeTagsModal(true);
-                                console.log('SMS Merge Tags modal should be open');
-                              }}
-                              disabled={false}
+                              onClick={() => setShowSmsMergeTagsModal(true)}
+                              disabled={client?.dndAll || client?.dndSms}
                             >
                               <TagIcon className="h-4 w-4" />
                             </Button>
@@ -5367,12 +5260,8 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                console.log('Email Template button clicked');
-                                setShowTemplateModal(true);
-                                console.log('Email Template modal should be open');
-                              }}
-                              disabled={false}
+                              onClick={() => setShowTemplateModal(true)}
+                              disabled={client?.dndAll || client?.dndEmail}
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
@@ -5386,12 +5275,8 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                console.log('Email Merge Tags button clicked');
-                                setShowMergeTagsModal(true);
-                                console.log('Email Merge Tags modal should be open');
-                              }}
-                              disabled={false}
+                              onClick={() => setShowMergeTagsModal(true)}
+                              disabled={client?.dndAll || client?.dndEmail}
                             >
                               <TagIcon className="h-4 w-4" />
                             </Button>
