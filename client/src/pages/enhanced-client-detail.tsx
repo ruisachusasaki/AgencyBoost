@@ -730,6 +730,7 @@ export default function EnhancedClientDetail() {
   const [newNote, setNewNote] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [searchDocuments, setSearchDocuments] = useState("");
+  const [smsMergeTagsSearch, setSmsMergeTagsSearch] = useState("");
   
   // Modal state variables
   const [smsTemplatesOpen, setSmsTemplatesOpen] = useState(false);
@@ -5033,114 +5034,168 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
             {/* SMS Merge Tags Modal */}
-            <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
+            <Dialog open={showSmsMergeTagsModal} onOpenChange={(open) => {
+              setShowSmsMergeTagsModal(open);
+              if (!open) {
+                setSmsMergeTagsSearch(""); // Clear search when modal closes
+              }
+            }}>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Insert Merge Tags</DialogTitle>
                   <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
                 </DialogHeader>
+                
+                {/* Search Input */}
+                <div className="pb-4">
+                  <Input
+                    placeholder="Search merge tags..."
+                    value={smsMergeTagsSearch}
+                    onChange={(e) => setSmsMergeTagsSearch(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                
                 <div className="space-y-6 max-h-96 overflow-y-auto">
+                  {(() => {
+                    // Check if there are any matching tags
+                    const clientTags = [
+                      { key: 'firstName', label: '{{firstName}}' },
+                      { key: 'lastName', label: '{{lastName}}' },
+                      { key: 'phone', label: '{{phone}}' },
+                      { key: 'companyName', label: '{{companyName}}' }
+                    ].filter(tag => 
+                      tag.label.toLowerCase().includes(smsMergeTagsSearch.toLowerCase()) ||
+                      tag.key.toLowerCase().includes(smsMergeTagsSearch.toLowerCase())
+                    );
+                    
+                    const userTags = [
+                      { key: 'assignedUserFirstName', label: '{{assignedUserFirstName}}' },
+                      { key: 'assignedUserLastName', label: '{{assignedUserLastName}}' },
+                      { key: 'assignedUserEmail', label: '{{assignedUserEmail}}' },
+                      { key: 'assignedUserPhone', label: '{{assignedUserPhone}}' }
+                    ].filter(tag => 
+                      tag.label.toLowerCase().includes(smsMergeTagsSearch.toLowerCase()) ||
+                      tag.key.toLowerCase().includes(smsMergeTagsSearch.toLowerCase())
+                    );
+                    
+                    const filteredCustomFields = customFieldsData && customFieldsData.length > 0 
+                      ? customFieldsData.filter((field) => 
+                          field.name.toLowerCase().includes(smsMergeTagsSearch.toLowerCase()) ||
+                          `{{${field.name}}}`.toLowerCase().includes(smsMergeTagsSearch.toLowerCase())
+                        )
+                      : [];
+                    
+                    const hasResults = clientTags.length > 0 || userTags.length > 0 || filteredCustomFields.length > 0;
+                    
+                    return hasResults ? (
+                      <div className="space-y-6">
+                        {/* Content will be rendered below */}
+                      </div>
+                    ) : smsMergeTagsSearch ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-sm">No merge tags found matching "{smsMergeTagsSearch}"</p>
+                        <p className="text-xs mt-1">Try a different search term</p>
+                      </div>
+                    ) : null;
+                  })()
+                  }
                   <div className="space-y-6">
                     {/* Client Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Client Information</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('firstName')}
-                          className="justify-start"
-                        >
-                          {'{{firstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('lastName')}
-                          className="justify-start"
-                        >
-                          {'{{lastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('phone')}
-                          className="justify-start"
-                        >
-                          {'{{phone}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('companyName')}
-                          className="justify-start"
-                        >
-                          {'{{companyName}}'}
-                        </Button>
-                      </div>
-                    </div>
+                    {(() => {
+                      const clientTags = [
+                        { key: 'firstName', label: '{{firstName}}' },
+                        { key: 'lastName', label: '{{lastName}}' },
+                        { key: 'phone', label: '{{phone}}' },
+                        { key: 'companyName', label: '{{companyName}}' }
+                      ].filter(tag => 
+                        tag.label.toLowerCase().includes(smsMergeTagsSearch.toLowerCase()) ||
+                        tag.key.toLowerCase().includes(smsMergeTagsSearch.toLowerCase())
+                      );
+                      
+                      return clientTags.length > 0 ? (
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Client Information</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {clientTags.map((tag) => (
+                              <Button
+                                key={tag.key}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => insertSmsTag(tag.key)}
+                                className="justify-start"
+                              >
+                                {tag.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
 
                     {/* Assigned User Information */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Assigned User</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserFirstName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserFirstName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserLastName')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserLastName}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserEmail')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserEmail}}'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertSmsTag('assignedUserPhone')}
-                          className="justify-start"
-                        >
-                          {'{{assignedUserPhone}}'}
-                        </Button>
-                      </div>
-                    </div>
+                    {(() => {
+                      const userTags = [
+                        { key: 'assignedUserFirstName', label: '{{assignedUserFirstName}}' },
+                        { key: 'assignedUserLastName', label: '{{assignedUserLastName}}' },
+                        { key: 'assignedUserEmail', label: '{{assignedUserEmail}}' },
+                        { key: 'assignedUserPhone', label: '{{assignedUserPhone}}' }
+                      ].filter(tag => 
+                        tag.label.toLowerCase().includes(smsMergeTagsSearch.toLowerCase()) ||
+                        tag.key.toLowerCase().includes(smsMergeTagsSearch.toLowerCase())
+                      );
+                      
+                      return userTags.length > 0 ? (
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Assigned User</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {userTags.map((tag) => (
+                              <Button
+                                key={tag.key}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => insertSmsTag(tag.key)}
+                                className="justify-start"
+                              >
+                                {tag.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
 
                     {/* Custom Fields */}
-                    {customFieldsData && customFieldsData.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Custom Fields</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {customFieldsData.map((field) => (
-                            <Button
-                              key={field.id}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => insertSmsTag(field.name)}
-                              className="justify-start text-left overflow-hidden"
-                              title={field.name}
-                            >
-                              <span className="truncate">
-                                {'{{' + field.name + '}}'}
-                              </span>
-                            </Button>
-                          ))}
+                    {(() => {
+                      const filteredCustomFields = customFieldsData && customFieldsData.length > 0 
+                        ? customFieldsData.filter((field) => 
+                            field.name.toLowerCase().includes(smsMergeTagsSearch.toLowerCase()) ||
+                            `{{${field.name}}}`.toLowerCase().includes(smsMergeTagsSearch.toLowerCase())
+                          )
+                        : [];
+                      
+                      return filteredCustomFields.length > 0 ? (
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Custom Fields</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {filteredCustomFields.map((field) => (
+                              <Button
+                                key={field.id}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => insertSmsTag(field.name)}
+                                className="justify-start text-left overflow-hidden"
+                                title={field.name}
+                              >
+                                <span className="truncate">
+                                  {'{{' + field.name + '}}'}
+                                </span>
+                              </Button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : null;
+                    })()}
                   </div>
                 </div>
                 <div className="flex gap-2 pt-4">
