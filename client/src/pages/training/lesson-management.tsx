@@ -33,6 +33,7 @@ import {
   Lock,
   Unlock
 } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Link } from "wouter";
 import type { TrainingLesson, TrainingModule, InsertTrainingModule } from "@shared/schema";
 import { insertTrainingModuleSchema } from "@shared/schema";
@@ -262,6 +263,110 @@ export default function LessonManagement() {
     deleteLessonMutation.mutate(deleteLessonId);
   };
 
+  // Reorder modules mutation
+  const reorderModulesMutation = useMutation({
+    mutationFn: (moduleIds: string[]) =>
+      fetch(`/api/training/courses/${courseId}/modules/reorder`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ moduleIds }),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to reorder modules");
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/modules`] });
+      toast({
+        title: "Modules reordered",
+        description: "The modules have been reordered successfully.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Module reorder error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reorder modules. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reorder lessons mutation
+  const reorderLessonsMutation = useMutation({
+    mutationFn: ({ lessonIds, moduleId }: { lessonIds: string[]; moduleId?: string | null }) =>
+      fetch(`/api/training/lessons/reorder`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ lessonIds, moduleId }),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to reorder lessons");
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
+      toast({
+        title: "Lessons reordered",
+        description: "The lessons have been reordered successfully.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Lesson reorder error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reorder lessons. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle drag end for modules and lessons
+  const handleDragEnd = (result: any) => {
+    const { destination, source, type } = result;
+    
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    if (type === 'module') {
+      // Reorder modules
+      const newModules = Array.from(modules);
+      const [reorderedModule] = newModules.splice(source.index, 1);
+      newModules.splice(destination.index, 0, reorderedModule);
+      
+      const moduleIds = newModules.map(module => module.id);
+      reorderModulesMutation.mutate(moduleIds);
+    } else if (type === 'lesson') {
+      // Reorder lessons within a module or in unorganized
+      const sourceModuleId = source.droppableId === 'unorganized' ? null : source.droppableId;
+      const destModuleId = destination.droppableId === 'unorganized' ? null : destination.droppableId;
+      
+      if (sourceModuleId === destModuleId) {
+        // Reordering within the same module/unorganized
+        const sourceLessons = sourceModuleId ? lessonsByModule[sourceModuleId] || [] : unorganizedLessons;
+        const newLessons = Array.from(sourceLessons);
+        const [reorderedLesson] = newLessons.splice(source.index, 1);
+        newLessons.splice(destination.index, 0, reorderedLesson);
+        
+        const lessonIds = newLessons.map(lesson => lesson.id);
+        reorderLessonsMutation.mutate({ lessonIds, moduleId: destModuleId });
+      } else {
+        // Moving lesson between modules
+        const sourceLessons = sourceModuleId ? lessonsByModule[sourceModuleId] || [] : unorganizedLessons;
+        const destLessons = destModuleId ? lessonsByModule[destModuleId] || [] : unorganizedLessons;
+        
+        const [movedLesson] = sourceLessons.splice(source.index, 1);
+        destLessons.splice(destination.index, 0, movedLesson);
+        
+        // Update both source and destination lesson orders
+        const destLessonIds = destLessons.map(lesson => lesson.id);
+        reorderLessonsMutation.mutate({ lessonIds: destLessonIds, moduleId: destModuleId });
+      }
+    }
+  };
+
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
     if (newExpanded.has(moduleId)) {
@@ -411,35 +516,53 @@ export default function LessonManagement() {
       {lessonsLoading || modulesLoading ? (
         <div className="text-center py-8">Loading content...</div>
       ) : (
-        <div className="space-y-4">
-          {/* Modules */}
-          {modules.map((module: TrainingModule) => {
-            const moduleLessons = lessonsByModule[module.id] || [];
-            const isExpanded = expandedModules.has(module.id);
-            
-            return (
-              <Card key={module.id} className="overflow-hidden">
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="space-y-4">
+            {/* Modules */}
+            <Droppable droppableId="modules" type="module">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                  {modules.map((module: TrainingModule, index: number) => {
+                    const moduleLessons = lessonsByModule[module.id] || [];
+                    const isExpanded = expandedModules.has(module.id);
+                    
+                    return (
+                      <Draggable key={module.id} draggableId={module.id} index={index}>
+                        {(provided, snapshot) => (
+                          <Card 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`overflow-hidden ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                          >
                 <CardHeader className="hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div 
-                      className="flex items-center gap-3 cursor-pointer flex-1"
-                      onClick={() => toggleModule(module.id)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-500" />
-                      )}
-                      {isExpanded ? (
-                        <FolderOpen className="h-5 w-5 text-blue-600" />
-                      ) : (
-                        <Folder className="h-5 w-5 text-blue-600" />
-                      )}
-                      <div>
-                        <CardTitle className="text-lg">{module.title}</CardTitle>
-                        {module.description && (
-                          <CardDescription>{module.description}</CardDescription>
+                    <div className="flex items-center gap-3 flex-1">
+                      <div 
+                        {...provided.dragHandleProps}
+                        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded"
+                      >
+                        <GripVertical className="h-4 w-4 text-gray-500" />
+                      </div>
+                      <div 
+                        className="flex items-center gap-3 cursor-pointer flex-1"
+                        onClick={() => toggleModule(module.id)}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-500" />
                         )}
+                        {isExpanded ? (
+                          <FolderOpen className="h-5 w-5 text-blue-600" />
+                        ) : (
+                          <Folder className="h-5 w-5 text-blue-600" />
+                        )}
+                        <div>
+                          <CardTitle className="text-lg">{module.title}</CardTitle>
+                          {module.description && (
+                            <CardDescription>{module.description}</CardDescription>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -485,156 +608,200 @@ export default function LessonManagement() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        {moduleLessons.map((lesson: TrainingLesson, index: number) => (
-                          <div key={lesson.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-500 font-mono">
-                                {String(index + 1).padStart(2, '0')}
-                              </span>
-                              {getContentIcon(lesson.contentType)}
-                              <div>
-                                <h4 className="font-medium">{lesson.title}</h4>
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <Badge variant="outline" className="text-xs">
-                                    {lesson.contentType}
-                                  </Badge>
-                                  {lesson.isRequired && (
-                                    <Badge variant="secondary" className="text-xs">Required</Badge>
-                                  )}
-                                  {lesson.isLocked && (
-                                    <Badge variant="outline" className="text-xs text-orange-600">
-                                      <Lock className="h-3 w-3 mr-1" />
-                                      Locked
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {/* Lock/Unlock Toggle */}
-                              <div className="flex items-center gap-2">
-                                <Unlock className={`h-4 w-4 ${lesson.isLocked ? 'text-gray-400' : 'text-green-600'}`} />
-                                <Switch
-                                  checked={lesson.isLocked}
-                                  onCheckedChange={(checked) => 
-                                    toggleLessonLockMutation.mutate({
-                                      lessonId: lesson.id,
-                                      isLocked: checked
-                                    })
-                                  }
-                                  disabled={toggleLessonLockMutation.isPending}
-                                  data-testid={`toggle-lock-${lesson.id}`}
-                                />
-                                <Lock className={`h-4 w-4 ${lesson.isLocked ? 'text-orange-600' : 'text-gray-400'}`} />
-                              </div>
-                              
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link href={`/training/courses/${courseId}/lessons/${lesson.id}/edit`}>
-                                  <Edit className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => setDeleteLessonId(lesson.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                      <Droppable droppableId={module.id} type="lesson">
+                        {(provided) => (
+                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                            {moduleLessons.map((lesson: TrainingLesson, index: number) => (
+                              <Draggable key={lesson.id} draggableId={lesson.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <div 
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        {...provided.dragHandleProps}
+                                        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-300 rounded"
+                                      >
+                                        <GripVertical className="h-3 w-3 text-gray-500" />
+                                      </div>
+                                      <span className="text-sm text-gray-500 font-mono">
+                                        {String(index + 1).padStart(2, '0')}
+                                      </span>
+                                      {getContentIcon(lesson.contentType)}
+                                      <div>
+                                        <h4 className="font-medium">{lesson.title}</h4>
+                                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                                          <Badge variant="outline" className="text-xs">
+                                            {lesson.contentType}
+                                          </Badge>
+                                          {lesson.isRequired && (
+                                            <Badge variant="secondary" className="text-xs">Required</Badge>
+                                          )}
+                                          {lesson.isLocked && (
+                                            <Badge variant="outline" className="text-xs text-orange-600">
+                                              <Lock className="h-3 w-3 mr-1" />
+                                              Locked
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      {/* Lock/Unlock Toggle */}
+                                      <div className="flex items-center gap-2">
+                                        <Unlock className={`h-4 w-4 ${lesson.isLocked ? 'text-gray-400' : 'text-green-600'}`} />
+                                        <Switch
+                                          checked={lesson.isLocked}
+                                          onCheckedChange={(checked) => 
+                                            toggleLessonLockMutation.mutate({
+                                              lessonId: lesson.id,
+                                              isLocked: checked
+                                            })
+                                          }
+                                          disabled={toggleLessonLockMutation.isPending}
+                                          data-testid={`toggle-lock-${lesson.id}`}
+                                        />
+                                        <Lock className={`h-4 w-4 ${lesson.isLocked ? 'text-orange-600' : 'text-gray-400'}`} />
+                                      </div>
+                                      
+                                      <Button variant="ghost" size="sm" asChild>
+                                        <Link href={`/training/courses/${courseId}/lessons/${lesson.id}/edit`}>
+                                          <Edit className="h-4 w-4" />
+                                        </Link>
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        onClick={() => setDeleteLessonId(lesson.id)}
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
                           </div>
-                        ))}
-                      </div>
+                        )}
+                      </Droppable>
                     )}
                   </CardContent>
                 )}
-              </Card>
-            );
-          })}
+                          </Card>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
 
-          {/* Unorganized Lessons */}
-          {unorganizedLessons.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <CardTitle className="text-lg">Unorganized Lessons</CardTitle>
-                    <CardDescription>
-                      Lessons not assigned to any module
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline">
-                    {unorganizedLessons.length} lesson{unorganizedLessons.length !== 1 ? 's' : ''}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {unorganizedLessons.map((lesson: TrainingLesson, index: number) => (
-                    <div key={lesson.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-500 font-mono">
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-                        {getContentIcon(lesson.contentType)}
-                        <div>
-                          <h4 className="font-medium">{lesson.title}</h4>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Badge variant="outline" className="text-xs">
-                              {lesson.contentType}
-                            </Badge>
-                            {lesson.isRequired && (
-                              <Badge variant="secondary" className="text-xs">Required</Badge>
-                            )}
-                            {lesson.isLocked && (
-                              <Badge variant="outline" className="text-xs text-orange-600">
-                                <Lock className="h-3 w-3 mr-1" />
-                                Locked
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {/* Lock/Unlock Toggle */}
-                        <div className="flex items-center gap-2">
-                          <Unlock className={`h-4 w-4 ${lesson.isLocked ? 'text-gray-400' : 'text-green-600'}`} />
-                          <Switch
-                            checked={lesson.isLocked}
-                            onCheckedChange={(checked) => 
-                              toggleLessonLockMutation.mutate({
-                                lessonId: lesson.id,
-                                isLocked: checked
-                              })
-                            }
-                            disabled={toggleLessonLockMutation.isPending}
-                            data-testid={`toggle-lock-${lesson.id}`}
-                          />
-                          <Lock className={`h-4 w-4 ${lesson.isLocked ? 'text-orange-600' : 'text-gray-400'}`} />
-                        </div>
-                        
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/training/courses/${courseId}/lessons/${lesson.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setDeleteLessonId(lesson.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+            {/* Unorganized Lessons */}
+            {unorganizedLessons.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <CardTitle className="text-lg">Unorganized Lessons</CardTitle>
+                      <CardDescription>
+                        Lessons not assigned to any module
+                      </CardDescription>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <Badge variant="outline">
+                      {unorganizedLessons.length} lesson{unorganizedLessons.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Droppable droppableId="unorganized" type="lesson">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                        {unorganizedLessons.map((lesson: TrainingLesson, index: number) => (
+                          <Draggable key={lesson.id} draggableId={lesson.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div 
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    {...provided.dragHandleProps}
+                                    className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-300 rounded"
+                                  >
+                                    <GripVertical className="h-3 w-3 text-gray-500" />
+                                  </div>
+                                  <span className="text-sm text-gray-500 font-mono">
+                                    {String(index + 1).padStart(2, '0')}
+                                  </span>
+                                  {getContentIcon(lesson.contentType)}
+                                  <div>
+                                    <h4 className="font-medium">{lesson.title}</h4>
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                      <Badge variant="outline" className="text-xs">
+                                        {lesson.contentType}
+                                      </Badge>
+                                      {lesson.isRequired && (
+                                        <Badge variant="secondary" className="text-xs">Required</Badge>
+                                      )}
+                                      {lesson.isLocked && (
+                                        <Badge variant="outline" className="text-xs text-orange-600">
+                                          <Lock className="h-3 w-3 mr-1" />
+                                          Locked
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {/* Lock/Unlock Toggle */}
+                                  <div className="flex items-center gap-2">
+                                    <Unlock className={`h-4 w-4 ${lesson.isLocked ? 'text-gray-400' : 'text-green-600'}`} />
+                                    <Switch
+                                      checked={lesson.isLocked}
+                                      onCheckedChange={(checked) => 
+                                        toggleLessonLockMutation.mutate({
+                                          lessonId: lesson.id,
+                                          isLocked: checked
+                                        })
+                                      }
+                                      disabled={toggleLessonLockMutation.isPending}
+                                      data-testid={`toggle-lock-${lesson.id}`}
+                                    />
+                                    <Lock className={`h-4 w-4 ${lesson.isLocked ? 'text-orange-600' : 'text-gray-400'}`} />
+                                  </div>
+                                  
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/training/courses/${courseId}/lessons/${lesson.id}/edit`}>
+                                      <Edit className="h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => setDeleteLessonId(lesson.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </CardContent>
+              </Card>
+            )}
 
           {/* Empty State */}
           {modules.length === 0 && lessons.length === 0 && (
@@ -659,8 +826,9 @@ export default function LessonManagement() {
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+            )}
+          </div>
+        </DragDropContext>
       )}
 
       {/* Delete Module Confirmation */}
