@@ -24,26 +24,26 @@ interface CourseStats {
 interface UserStats {
   userId: string;
   userName: string;
-  email: string;
-  totalCourses: number;
+  totalEnrollments: number;
   completedCourses: number;
   avgProgress: number;
 }
 
 interface RecentActivity {
   id: string;
-  userId: string;
   userName: string;
-  courseId: string;
   courseTitle: string;
-  action: string;
-  createdAt: string;
+  enrolledAt: string;
+  status: string;
+  progress: number;
 }
 
 interface AnalyticsData {
-  totalCourses: number;
-  totalCategories: number;
-  totalEnrollments: number;
+  summary: {
+    totalCourses: number;
+    totalCategories: number;
+    totalEnrollments: number;
+  };
   courseStats: CourseStats[];
   userStats: UserStats[];
   recentActivity: RecentActivity[];
@@ -92,15 +92,15 @@ export default function TrainingAnalytics() {
     );
   }
 
-  const completionRate = analytics.totalEnrollments > 0 
-    ? (analytics.courseStats.reduce((sum, course) => sum + course.completedEnrollments, 0) / analytics.totalEnrollments * 100)
+  const completionRate = analytics.summary.totalEnrollments > 0 
+    ? (analytics.courseStats.reduce((sum, course) => sum + course.completedEnrollments, 0) / analytics.summary.totalEnrollments * 100)
     : 0;
 
   const avgUserProgress = analytics.userStats.length > 0 
-    ? analytics.userStats.reduce((sum, user) => sum + user.avgProgress, 0) / analytics.userStats.length
+    ? analytics.userStats.reduce((sum, user) => sum + (Number(user.avgProgress) || 0), 0) / analytics.userStats.length
     : 0;
 
-  const activeUsers = analytics.userStats.filter(user => user.avgProgress > 0).length;
+  const activeUsers = analytics.userStats.filter(user => (Number(user.avgProgress) || 0) > 0).length;
 
   return (
     <div className="space-y-6">
@@ -117,7 +117,7 @@ export default function TrainingAnalytics() {
               <BookOpen className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Courses</p>
-                <p className="text-2xl font-bold text-gray-900">{analytics.totalCourses}</p>
+                <p className="text-2xl font-bold text-gray-900">{analytics.summary.totalCourses}</p>
               </div>
             </div>
           </CardContent>
@@ -129,7 +129,7 @@ export default function TrainingAnalytics() {
               <Users className="h-8 w-8 text-green-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Enrollments</p>
-                <p className="text-2xl font-bold text-gray-900">{analytics.totalEnrollments}</p>
+                <p className="text-2xl font-bold text-gray-900">{analytics.summary.totalEnrollments}</p>
               </div>
             </div>
           </CardContent>
@@ -171,9 +171,9 @@ export default function TrainingAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.courseStats.slice(0, 6).map((course) => {
-                const courseCompletionRate = course.totalEnrollments > 0 
-                  ? (course.completedEnrollments / course.totalEnrollments * 100) 
+              {(analytics.courseStats || []).slice(0, 6).map((course) => {
+                const courseCompletionRate = (Number(course.totalEnrollments) || 0) > 0 
+                  ? ((Number(course.completedEnrollments) || 0) / (Number(course.totalEnrollments) || 1) * 100) 
                   : 0;
                 
                 return (
@@ -209,7 +209,7 @@ export default function TrainingAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.userStats.slice(0, 6).map((user) => (
+              {(analytics.userStats || []).slice(0, 6).map((user) => (
                 <div key={user.userId} className="space-y-2">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
@@ -217,14 +217,14 @@ export default function TrainingAnalytics() {
                         {user.userName}
                       </h4>
                       <p className="text-xs text-gray-500">
-                        {user.completedCourses}/{user.totalCourses} courses completed
+                        {user.completedCourses}/{user.totalEnrollments} courses completed
                       </p>
                     </div>
-                    <Badge variant={user.avgProgress >= 80 ? "default" : user.avgProgress >= 50 ? "secondary" : "destructive"} className="ml-2">
-                      {user.avgProgress.toFixed(0)}%
+                    <Badge variant={(Number(user.avgProgress) || 0) >= 80 ? "default" : (Number(user.avgProgress) || 0) >= 50 ? "secondary" : "destructive"} className="ml-2">
+                      {(Number(user.avgProgress) || 0).toFixed(0)}%
                     </Badge>
                   </div>
-                  <Progress value={user.avgProgress} className="h-2" />
+                  <Progress value={Number(user.avgProgress) || 0} className="h-2" />
                 </div>
               ))}
             </div>
@@ -242,7 +242,7 @@ export default function TrainingAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {analytics.recentActivity.slice(0, 8).map((activity) => (
+            {(analytics.recentActivity || []).slice(0, 8).map((activity) => (
               <div key={activity.id} className="flex items-center space-x-4 py-2 border-b border-gray-100 last:border-0">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -251,12 +251,13 @@ export default function TrainingAnalytics() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900">
-                    <span className="font-medium">{activity.userName}</span> {activity.action.toLowerCase()} {" "}
-                    <span className="font-medium">{activity.courseTitle}</span>
+                    <span className="font-medium">{activity.userName || "Unknown User"}</span> enrolled in {" "}
+                    <span className="font-medium">{activity.courseTitle || "Unknown Course"}</span>
+                    <span className="text-gray-500"> - {activity.progress || 0}% complete</span>
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(activity.createdAt).toLocaleDateString()} at{" "}
-                    {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(activity.enrolledAt).toLocaleDateString()} at{" "}
+                    {new Date(activity.enrolledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
