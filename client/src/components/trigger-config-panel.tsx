@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface TriggerConfigPanelProps {
@@ -1257,18 +1258,19 @@ export default function TriggerConfigPanel({
                 </SelectItem>
               )}
               {knowledgeBaseCategories.length > 0 ? (
-                knowledgeBaseCategories.map((category: any) => (
-                  <SelectItem key={category.id} value={category.id} className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 w-full">
-                      {category.icon && (
-                        <span className="text-base" role="img" aria-label="category icon">
-                          {category.icon}
-                        </span>
-                      )}
-                      <span className="truncate">{category.name}</span>
-                    </div>
-                  </SelectItem>
-                ))
+                knowledgeBaseCategories.map((category: any) => {
+                  const IconComponent = category.icon ? (LucideIcons as any)[category.icon] : null;
+                  return (
+                    <SelectItem key={category.id} value={category.id} className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full">
+                        {IconComponent && (
+                          <IconComponent className="w-4 h-4 flex-shrink-0" />
+                        )}
+                        <span className="truncate">{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
                   No categories available
