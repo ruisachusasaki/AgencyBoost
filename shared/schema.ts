@@ -2729,6 +2729,22 @@ export const trainingQuizQuestions = pgTable("training_quiz_questions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Training Lesson Resources
+export const trainingLessonResources = pgTable("training_lesson_resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id").notNull().references(() => trainingLessons.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "download" or "link"
+  title: text("title").notNull(),
+  description: text("description"),
+  url: text("url"), // For links: external URL, For downloads: object storage URL
+  fileName: text("file_name"), // Original filename for downloads
+  fileSize: integer("file_size"), // File size in bytes for downloads
+  order: integer("order").default(0),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Training Quiz Attempts
 export const trainingQuizAttempts = pgTable("training_quiz_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2880,6 +2896,12 @@ export const insertTrainingDiscussionLikeSchema = createInsertSchema(trainingDis
   createdAt: true,
 });
 
+export const insertTrainingLessonResourceSchema = createInsertSchema(trainingLessonResources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Training Types
 export type TrainingCategory = typeof trainingCategories.$inferSelect;
 export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema>;
@@ -2919,5 +2941,8 @@ export type InsertTrainingDiscussion = z.infer<typeof insertTrainingDiscussionSc
 
 export type TrainingDiscussionLike = typeof trainingDiscussionLikes.$inferSelect;
 export type InsertTrainingDiscussionLike = z.infer<typeof insertTrainingDiscussionLikeSchema>;
+
+export type TrainingLessonResource = typeof trainingLessonResources.$inferSelect;
+export type InsertTrainingLessonResource = z.infer<typeof insertTrainingLessonResourceSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one
