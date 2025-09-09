@@ -1054,11 +1054,6 @@ export default function EnhancedClientDetail() {
   const [showSendModal, setShowSendModal] = useState(false);
   const [wordCount, setWordCount] = useState(0);
 
-  // Debug: Log modal state changes
-  useEffect(() => {
-    console.log('Email modal states:', { showTemplateModal, showMergeTagsModal });
-  }, [showTemplateModal, showMergeTagsModal]);
-  
   // Scheduling state
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
@@ -4987,12 +4982,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                console.log('Email Template clicked - DND All:', client?.dndAll, 'DND Email:', client?.dndEmail);
-                                console.log('Before click - showTemplateModal:', showTemplateModal);
-                                setShowTemplateModal(true);
-                                console.log('After click - showTemplateModal should be true');
-                              }}
+                              onClick={() => setShowTemplateModal(true)}
                               disabled={client?.dndAll || client?.dndEmail}
                             >
                               <FileText className="h-4 w-4" />
@@ -5007,12 +4997,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                console.log('Email Merge Tags clicked - DND All:', client?.dndAll, 'DND Email:', client?.dndEmail);
-                                console.log('Before click - showMergeTagsModal:', showMergeTagsModal);
-                                setShowMergeTagsModal(true);
-                                console.log('After click - showMergeTagsModal should be true');
-                              }}
+                              onClick={() => setShowMergeTagsModal(true)}
                               disabled={client?.dndAll || client?.dndEmail}
                             >
                               <TagIcon className="h-4 w-4" />
