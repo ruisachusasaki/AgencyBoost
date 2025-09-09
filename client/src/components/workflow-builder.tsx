@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap, Users, Target, TrendingUp, DollarSign, FileText, Calendar, AlertCircle } from "lucide-react";
+import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap, Users, Target, TrendingUp, DollarSign, FileText, Calendar, AlertCircle, GraduationCap, BookOpen, Trophy, BellRing, BarChart3, UserCheck } from "lucide-react";
 
 interface WorkflowStep {
   id: string;
@@ -129,6 +129,14 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
       invoice_paid: DollarSign,
       invoice_overdue: AlertCircle,
       payment_received: DollarSign,
+      // Training System Triggers
+      course_enrollment: UserCheck,
+      lesson_completion: BookOpen,
+      course_completion: Trophy,
+      course_published: BellRing,
+      training_progress_milestone: BarChart3,
+      course_assignment: GraduationCap,
+      training_overdue: Calendar,
     };
     return iconMap[type] || Zap;
   };
