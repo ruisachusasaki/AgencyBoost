@@ -614,9 +614,6 @@ export default function ActionConfigPanel({
             <p className="text-sm text-gray-500">{action.name}</p>
           </div>
         </div>
-        <Button variant="outline" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Content */}
