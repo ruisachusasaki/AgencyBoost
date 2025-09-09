@@ -1056,7 +1056,7 @@ const Element = (props: any) => {
 const ToggleBlock = ({ attributes, children, element }: any) => {
   const editor = useSlateStatic();
   const path = ReactEditor.findPath(editor, element);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true); // Start open by default in editor mode
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(element.title || 'Click to toggle');
 
@@ -1120,11 +1120,10 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
           {isOpen ? 'Hide' : 'Show'}
         </span>
       </div>
-      {isOpen && (
-        <div className="toggle-content mt-2 pl-6">
-          {children}
-        </div>
-      )}
+      {/* Always show content in editor mode, but with visual indication when "closed" */}
+      <div className={`toggle-content mt-2 pl-6 ${!isOpen ? 'opacity-50' : ''}`}>
+        {children}
+      </div>
     </div>
   );
 };
