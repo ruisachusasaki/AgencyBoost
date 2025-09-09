@@ -61,7 +61,27 @@ export default function TrainingAnalytics() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
 
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
-    queryKey: ["/api/training/analytics"],
+    queryKey: [
+      "/api/training/analytics", 
+      { courseId: selectedCourse !== "all" ? selectedCourse : undefined, 
+        userId: selectedUser !== "all" ? selectedUser : undefined }
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedCourse !== "all") {
+        params.append("courseId", selectedCourse);
+      }
+      if (selectedUser !== "all") {
+        params.append("userId", selectedUser);
+      }
+      
+      const url = `/api/training/analytics${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch analytics");
+      }
+      return response.json();
+    },
   });
 
   if (isLoading) {
