@@ -12060,6 +12060,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================================================
+  // TRAINING ASSIGNMENT ENDPOINTS
+  // =============================================================================
+
+  // Get assignment for a lesson
+  app.get("/api/training/lessons/:lessonId/assignment", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      
+      const [assignment] = await db.select().from(trainingAssignments)
+        .where(eq(trainingAssignments.lessonId, lessonId));
+      
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+      
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error fetching assignment:', error);
+      res.status(500).json({ error: "Failed to fetch assignment" });
+    }
+  });
+
+  // Create or update assignment for a lesson
+  app.post("/api/training/lessons/:lessonId/assignment", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const { title, description, instructions, allowedFileTypes, maxFileSize, maxFiles, isRequired } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      // Check if assignment already exists
+      const [existingAssignment] = await db.select().from(trainingAssignments)
+        .where(eq(trainingAssignments.lessonId, lessonId));
+      
+      let assignment;
+      if (existingAssignment) {
+        // Update existing assignment
+        [assignment] = await db.update(trainingAssignments)
+          .set({
+            title,
+            description,
+            instructions,
+            allowedFileTypes,
+            maxFileSize,
+            maxFiles,
+            isRequired,
+            updatedAt: new Date()
+          })
+          .where(eq(trainingAssignments.id, existingAssignment.id))
+          .returning();
+      } else {
+        // Create new assignment
+        [assignment] = await db.insert(trainingAssignments).values({
+          lessonId,
+          title,
+          description,
+          instructions,
+          allowedFileTypes,
+          maxFileSize,
+          maxFiles,
+          isRequired,
+          createdBy: userId
+        }).returning();
+      }
+      
+      await createAuditLog("updated", "training_assignment", assignment.id, assignment.title, userId,
+        "Training assignment updated", null, assignment, req);
+      
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error creating/updating assignment:', error);
+      res.status(500).json({ error: "Failed to create/update assignment" });
+    }
+  });
+
+  // Get assignment submission for current user
+  app.get("/api/training/assignments/:assignmentId/submission", async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [submission] = await db.select().from(trainingAssignmentSubmissions)
+        .where(and(
+          eq(trainingAssignmentSubmissions.assignmentId, assignmentId),
+          eq(trainingAssignmentSubmissions.userId, userId)
+        ));
+      
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+      
+      res.json(submission);
+    } catch (error) {
+      console.error('Error fetching assignment submission:', error);
+      res.status(500).json({ error: "Failed to fetch submission" });
+    }
+  });
+
+  // Submit assignment
+  app.post("/api/training/assignments/:assignmentId/submit", async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const { submissionText, files } = req.body;
+      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      // Get assignment details to find lesson and course
+      const [assignment] = await db.select().from(trainingAssignments)
+        .where(eq(trainingAssignments.id, assignmentId));
+      
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+      
+      // Get enrollment for the lesson's course
+      const [lesson] = await db.select().from(trainingLessons)
+        .where(eq(trainingLessons.id, assignment.lessonId));
+      
+      const [enrollment] = await db.select().from(trainingEnrollments)
+        .where(and(
+          eq(trainingEnrollments.courseId, lesson.courseId),
+          eq(trainingEnrollments.userId, userId)
+        ));
+      
+      if (!enrollment) {
+        return res.status(404).json({ error: "Not enrolled in this course" });
+      }
+      
+      // Check if submission already exists
+      const [existingSubmission] = await db.select().from(trainingAssignmentSubmissions)
+        .where(and(
+          eq(trainingAssignmentSubmissions.assignmentId, assignmentId),
+          eq(trainingAssignmentSubmissions.userId, userId)
+        ));
+      
+      let submission;
+      if (existingSubmission) {
+        // Update existing submission
+        [submission] = await db.update(trainingAssignmentSubmissions)
+          .set({
+            submissionText,
+            files,
+            status: "submitted",
+            submittedAt: new Date()
+          })
+          .where(eq(trainingAssignmentSubmissions.id, existingSubmission.id))
+          .returning();
+      } else {
+        // Create new submission
+        [submission] = await db.insert(trainingAssignmentSubmissions).values({
+          assignmentId,
+          userId,
+          enrollmentId: enrollment.id,
+          submissionText,
+          files,
+          status: "submitted"
+        }).returning();
+      }
+      
+      await createAuditLog("created", "training_assignment_submission", submission.id, "Assignment Submitted", userId,
+        "Student submitted assignment", null, { assignmentId, submissionText: submissionText?.substring(0, 100) }, req);
+      
+      res.json(submission);
+    } catch (error) {
+      console.error('Error submitting assignment:', error);
+      res.status(500).json({ error: "Failed to submit assignment" });
+    }
+  });
+
+  // Get all submissions for an assignment (instructor view)
+  app.get("/api/training/assignments/:assignmentId/submissions", async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      
+      const submissions = await db.select({
+        id: trainingAssignmentSubmissions.id,
+        assignmentId: trainingAssignmentSubmissions.assignmentId,
+        userId: trainingAssignmentSubmissions.userId,
+        submissionText: trainingAssignmentSubmissions.submissionText,
+        files: trainingAssignmentSubmissions.files,
+        status: trainingAssignmentSubmissions.status,
+        grade: trainingAssignmentSubmissions.grade,
+        feedback: trainingAssignmentSubmissions.feedback,
+        gradedBy: trainingAssignmentSubmissions.gradedBy,
+        submittedAt: trainingAssignmentSubmissions.submittedAt,
+        gradedAt: trainingAssignmentSubmissions.gradedAt,
+        studentName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
+        studentEmail: staff.email
+      })
+      .from(trainingAssignmentSubmissions)
+      .leftJoin(staff, eq(trainingAssignmentSubmissions.userId, staff.id))
+      .where(eq(trainingAssignmentSubmissions.assignmentId, assignmentId))
+      .orderBy(desc(trainingAssignmentSubmissions.submittedAt));
+      
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching assignment submissions:', error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  // Grade assignment submission
+  app.put("/api/training/assignment-submissions/:submissionId/grade", async (req, res) => {
+    try {
+      const { submissionId } = req.params;
+      const { grade, feedback } = req.body;
+      const graderId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      
+      const [updatedSubmission] = await db.update(trainingAssignmentSubmissions)
+        .set({
+          grade,
+          feedback,
+          status: "graded",
+          gradedBy: graderId,
+          gradedAt: new Date()
+        })
+        .where(eq(trainingAssignmentSubmissions.id, submissionId))
+        .returning();
+      
+      if (!updatedSubmission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+      
+      await createAuditLog("updated", "training_assignment_submission", submissionId, "Assignment Graded", graderId,
+        "Instructor graded assignment submission", null, { grade, feedback }, req);
+      
+      res.json(updatedSubmission);
+    } catch (error) {
+      console.error('Error grading assignment:', error);
+      res.status(500).json({ error: "Failed to grade assignment" });
+    }
+  });
+
   const httpServer = createServer(app);
   // Public endpoint for job openings (no authentication required)
   app.get('/api/job-openings/public', async (req, res) => {
