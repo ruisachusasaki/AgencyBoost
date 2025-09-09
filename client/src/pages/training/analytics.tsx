@@ -14,7 +14,6 @@ import {
   Clock,
   UserCheck,
   Target,
-  Search,
   BarChart3
 } from "lucide-react";
 
@@ -55,8 +54,7 @@ interface AnalyticsData {
 }
 
 export default function TrainingAnalytics() {
-  const [userSearch, setUserSearch] = useState("");
-  const [courseSearch, setCourseSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
 
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
@@ -67,7 +65,10 @@ export default function TrainingAnalytics() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Training Analytics</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-8 w-8 text-primary" />
+            Training Analytics
+          </h1>
           <p className="text-gray-600 mt-1">Employee training progress and performance overview</p>
         </div>
         
@@ -89,7 +90,10 @@ export default function TrainingAnalytics() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Training Analytics</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-8 w-8 text-primary" />
+            Training Analytics
+          </h1>
           <p className="text-gray-600 mt-1">Employee training progress and performance overview</p>
         </div>
         <Card>
@@ -111,11 +115,10 @@ export default function TrainingAnalytics() {
 
   const activeUsers = analytics.userStats.filter(user => (Number(user.avgProgress) || 0) > 0).length;
 
-  // Filter data based on search terms
+  // Filter data based on selected filters
   const filteredUserStats = analytics.userStats.filter(user => {
-    const matchesUserSearch = userSearch === "" || 
-      user.userName.toLowerCase().includes(userSearch.toLowerCase());
-    return matchesUserSearch;
+    const matchesUserFilter = selectedUser === "all" || user.userId === selectedUser;
+    return matchesUserFilter;
   });
 
   const filteredCourseStats = analytics.courseStats.filter(course => {
@@ -125,11 +128,11 @@ export default function TrainingAnalytics() {
   });
 
   const filteredRecentActivity = analytics.recentActivity.filter(activity => {
-    const matchesUserSearch = userSearch === "" || 
-      (activity.userName && activity.userName.toLowerCase().includes(userSearch.toLowerCase()));
+    const matchesUserFilter = selectedUser === "all" || 
+      analytics.userStats.find(user => user.userId === selectedUser)?.userName === activity.userName;
     const matchesCourseFilter = selectedCourse === "all" || 
       analytics.courseStats.find(course => course.courseId === selectedCourse)?.courseTitle === activity.courseTitle;
-    return matchesUserSearch && matchesCourseFilter;
+    return matchesUserFilter && matchesCourseFilter;
   });
 
   return (
@@ -142,21 +145,23 @@ export default function TrainingAnalytics() {
         <p className="text-gray-600 mt-1">Employee training progress and performance overview</p>
       </div>
 
-      {/* Search and Filters */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search by employee name..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+            <Select value={selectedUser} onValueChange={setSelectedUser}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Filter by Employee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {(analytics?.userStats || []).map((user) => (
+                  <SelectItem key={user.userId} value={user.userId}>
+                    {user.userName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
             <Select value={selectedCourse} onValueChange={setSelectedCourse}>
               <SelectTrigger className="w-64">
@@ -280,7 +285,7 @@ export default function TrainingAnalytics() {
           <CardContent>
             <div className="space-y-4">
               {filteredUserStats.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No employees found matching your search.</p>
+                <p className="text-gray-500 text-center py-4">No employees found matching your filters.</p>
               ) : (
                 filteredUserStats.slice(0, 6).map((user) => (
                 <div key={user.userId} className="space-y-2">
