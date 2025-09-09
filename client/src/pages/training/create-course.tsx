@@ -25,7 +25,10 @@ const courseSchema = z.object({
   categoryId: z.string().optional(),
   difficulty: z.enum(["beginner", "intermediate", "advanced"]),
   estimatedDuration: z.number().min(1, "Duration must be at least 1 minute").optional(),
-  thumbnailUrl: z.string().url().optional().or(z.literal("")),
+  thumbnailUrl: z.string().optional().refine((val) => {
+    if (!val || val === "") return true; // Allow empty strings
+    return val.startsWith("/") || val.match(/^https?:\/\//); // Allow relative URLs or full URLs
+  }, "Invalid URL format"),
   isPublished: z.boolean(),
   tags: z.array(z.string()).default([]),
 });
