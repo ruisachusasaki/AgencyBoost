@@ -1052,14 +1052,14 @@ export default function EnhancedClientDetail() {
 
   // Debug: Log client DND settings
   useEffect(() => {
-    if (clientData && clientData.client) {
+    if (client) {
       console.log('Client DND settings:', {
-        dndAll: clientData.client.dndAll,
-        dndEmail: clientData.client.dndEmail,
-        dndSms: clientData.client.dndSms
+        dndAll: client.dndAll,
+        dndEmail: client.dndEmail,
+        dndSms: client.dndSms
       });
     }
-  }, [clientData]);
+  }, [client]);
   
   // Test modal to see if Dialog component works at all
   const [showTestModal, setShowTestModal] = useState(false);
