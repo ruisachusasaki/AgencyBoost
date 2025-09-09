@@ -141,6 +141,11 @@ export default function TriggerConfigPanel({
     enabled: !!selectedCourseId && selectedCourseId !== "any",
   });
 
+  // Fetch knowledge base categories for category selection filters
+  const { data: knowledgeBaseCategories = [] } = useQuery<any[]>({
+    queryKey: ["/api/knowledge-base/categories"],
+  });
+
   const queryClient = useQueryClient();
 
   // Mutation to create new tags
@@ -1229,6 +1234,51 @@ export default function TriggerConfigPanel({
           {!hasCourseSelected && (
             <p className="text-xs text-amber-600">Select a course above to see available lessons</p>
           )}
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    if (fieldSchema.type === "kb_category_select") {
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>{label}</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={fieldSchema.placeholder || `Select ${label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {fieldSchema.placeholder && (
+                <SelectItem value="any">
+                  <span className="text-muted-foreground">Any Category</span>
+                </SelectItem>
+              )}
+              {knowledgeBaseCategories.length > 0 ? (
+                knowledgeBaseCategories.map((category: any) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    <div className="flex items-center gap-2">
+                      {category.icon && (
+                        <span className="w-4 h-4">{category.icon}</span>
+                      )}
+                      <span className="font-medium">{category.name}</span>
+                      {category.description && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {category.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No categories available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
           {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
         </div>
       );

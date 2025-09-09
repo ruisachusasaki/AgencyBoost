@@ -615,6 +615,38 @@ export default function WorkflowBuilderPage() {
               );
             })()}
 
+            {/* Knowledge Management */}
+            {(() => {
+              const knowledgeTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "knowledge_management") || [];
+              const filteredTriggers = filterItems(knowledgeTriggers.map((t: any) => ({ type: t.type, name: t.name })), triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-green-600" />
+                      Knowledge Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "knowledge_management" })}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Lead Management */}
             {(() => {
               const leadTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "lead_management") || [];
