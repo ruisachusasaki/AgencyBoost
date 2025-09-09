@@ -1098,7 +1098,7 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
   return (
     <div {...attributes} className="toggle-block my-4">
       <div
-        className="toggle-header bg-gray-50 rounded-md p-3 flex items-center gap-2 border"
+        className="toggle-header p-2 flex items-center gap-2"
         contentEditable={false}
       >
         <ChevronRight 
@@ -1144,7 +1144,7 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
         </div>
       </div>
       {shouldShowContent && (
-        <div className={`toggle-content mt-2 pl-6 border-l-2 border-gray-200 ${!isOpen ? 'bg-gray-50 p-3 rounded-r' : ''}`}>
+        <div className={`toggle-content mt-2 pl-6 ${!isOpen ? 'p-3' : ''}`}>
           {!isOpen && showContentForEditing && (
             <div className="mb-2 text-xs text-gray-500 flex items-center gap-2">
               Editing collapsed content
