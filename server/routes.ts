@@ -14337,5 +14337,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================================================
+  // TRAINING LESSON RESOURCES ENDPOINTS
+  // =============================================================================
+
+  // Get lesson resources
+  app.get("/api/training/lessons/:lessonId/resources", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      
+      const resources = await db.select()
+        .from(trainingLessonResources)
+        .where(eq(trainingLessonResources.lessonId, lessonId))
+        .orderBy(trainingLessonResources.order, trainingLessonResources.createdAt);
+      
+      res.json(resources);
+    } catch (error) {
+      console.error('Error fetching lesson resources:', error);
+      res.status(500).json({ error: "Failed to fetch lesson resources" });
+    }
+  });
+
+  // Create lesson resource
+  app.post("/api/training/lessons/:lessonId/resources", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const { type, title, description, url, fileName, fileSize } = insertTrainingLessonResourceSchema.parse({
+        ...req.body,
+        lessonId,
+        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      });
+      
+      // Get existing resources count for order
+      const existingResources = await db.select()
+        .from(trainingLessonResources)
+        .where(eq(trainingLessonResources.lessonId, lessonId));
+      
+      const [resource] = await db.insert(trainingLessonResources).values({
+        lessonId,
+        type,
+        title,
+        description,
+        url,
+        fileName,
+        fileSize,
+        order: existingResources.length,
+        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+      }).returning();
+      
+      await createAuditLog("created", "training_lesson_resource", resource.id, resource.title, req.session?.userId,
+        `Resource "${resource.title}" added to lesson`, null, resource, req);
+      
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error('Error creating lesson resource:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create lesson resource" });
+    }
+  });
+
+  // Update lesson resource
+  app.put("/api/training/lessons/:lessonId/resources/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertTrainingLessonResourceSchema.partial().parse(req.body);
+      
+      const [existingResource] = await db.select()
+        .from(trainingLessonResources)
+        .where(eq(trainingLessonResources.id, id));
+      
+      if (!existingResource) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
+      
+      const [resource] = await db.update(trainingLessonResources)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(trainingLessonResources.id, id))
+        .returning();
+      
+      await createAuditLog("updated", "training_lesson_resource", resource.id, resource.title, req.session?.userId,
+        `Resource "${resource.title}" updated`, existingResource, resource, req);
+      
+      res.json(resource);
+    } catch (error) {
+      console.error('Error updating lesson resource:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update lesson resource" });
+    }
+  });
+
+  // Delete lesson resource
+  app.delete("/api/training/lessons/:lessonId/resources/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [resource] = await db.select()
+        .from(trainingLessonResources)
+        .where(eq(trainingLessonResources.id, id));
+      
+      if (!resource) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
+      
+      await db.delete(trainingLessonResources).where(eq(trainingLessonResources.id, id));
+      
+      await createAuditLog("deleted", "training_lesson_resource", id, resource.title, req.session?.userId,
+        `Resource "${resource.title}" deleted from lesson`, resource, null, req);
+      
+      res.json({ message: "Resource deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting lesson resource:', error);
+      res.status(500).json({ error: "Failed to delete lesson resource" });
+    }
+  });
+
+  // Reorder lesson resources
+  app.put("/api/training/lessons/:lessonId/resources/reorder", async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const { resourceIds } = req.body;
+      
+      if (!Array.isArray(resourceIds)) {
+        return res.status(400).json({ error: "resourceIds must be an array" });
+      }
+      
+      // Update order for each resource
+      for (let i = 0; i < resourceIds.length; i++) {
+        await db.update(trainingLessonResources)
+          .set({ order: i, updatedAt: new Date() })
+          .where(and(
+            eq(trainingLessonResources.id, resourceIds[i]),
+            eq(trainingLessonResources.lessonId, lessonId)
+          ));
+      }
+      
+      await createAuditLog("updated", "training_lesson", lessonId, "Lesson resources", req.session?.userId,
+        `Lesson resources reordered`, null, { resourceOrder: resourceIds }, req);
+      
+      res.json({ message: "Resources reordered successfully" });
+    } catch (error) {
+      console.error('Error reordering lesson resources:', error);
+      res.status(500).json({ error: "Failed to reorder lesson resources" });
+    }
+  });
+
   return httpServer;
 }
