@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Upload, FileText, FileIcon, X } from "lucide-react";
+import { ArrowLeft, Save, Upload, FileText, FileIcon, X, Plus, Link2, Download, Edit, Trash2, GripVertical } from "lucide-react";
 import { QuizBuilder } from "@/components/quiz-builder";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { Link } from "wouter";
@@ -41,6 +41,16 @@ export default function EditLesson() {
   const [showQuizBuilder, setShowQuizBuilder] = useState(false);
   const [quizData, setQuizData] = useState<any>(null);
   const [assignmentData, setAssignmentData] = useState<any>(null);
+  const [showAddResource, setShowAddResource] = useState(false);
+  const [editingResource, setEditingResource] = useState<any>(null);
+  const [resourceForm, setResourceForm] = useState({
+    type: 'download' as 'download' | 'link',
+    title: '',
+    description: '',
+    url: '',
+    fileName: '',
+    fileSize: 0
+  });
 
   // Fetch lesson data
   const { data: lesson, isLoading } = useQuery({
@@ -58,6 +68,12 @@ export default function EditLesson() {
   const { data: assignment } = useQuery({
     queryKey: [`/api/training/lessons/${lessonId}/assignment`],
     enabled: !!lessonId && lesson?.contentType === 'assignment',
+  });
+
+  // Fetch lesson resources (available for all lesson types)
+  const { data: resources = [], refetch: refetchResources } = useQuery({
+    queryKey: [`/api/training/lessons/${lessonId}/resources`],
+    enabled: !!lessonId,
   });
 
   const form = useForm<LessonFormData>({
@@ -295,6 +311,143 @@ export default function EditLesson() {
     }
 
     updateLessonMutation.mutate(data);
+  };
+
+  // Resource management functions
+  const createResourceMutation = useMutation({
+    mutationFn: (resourceData: any) =>
+      fetch(`/api/training/lessons/${lessonId}/resources`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resourceData),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to create resource");
+        return res.json();
+      }),
+    onSuccess: () => {
+      refetchResources();
+      setShowAddResource(false);
+      setResourceForm({
+        type: 'download',
+        title: '',
+        description: '',
+        url: '',
+        fileName: '',
+        fileSize: 0
+      });
+      toast({
+        title: "Success!",
+        description: "Resource added successfully.",
+      });
+    },
+  });
+
+  const updateResourceMutation = useMutation({
+    mutationFn: ({ id, ...resourceData }: any) =>
+      fetch(`/api/training/lessons/${lessonId}/resources/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resourceData),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to update resource");
+        return res.json();
+      }),
+    onSuccess: () => {
+      refetchResources();
+      setEditingResource(null);
+      setResourceForm({
+        type: 'download',
+        title: '',
+        description: '',
+        url: '',
+        fileName: '',
+        fileSize: 0
+      });
+      toast({
+        title: "Success!",
+        description: "Resource updated successfully.",
+      });
+    },
+  });
+
+  const deleteResourceMutation = useMutation({
+    mutationFn: (resourceId: string) =>
+      fetch(`/api/training/lessons/${lessonId}/resources/${resourceId}`, {
+        method: "DELETE",
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to delete resource");
+        return res.json();
+      }),
+    onSuccess: () => {
+      refetchResources();
+      toast({
+        title: "Success!",
+        description: "Resource deleted successfully.",
+      });
+    },
+  });
+
+  const handleResourceSave = () => {
+    if (editingResource) {
+      updateResourceMutation.mutate({
+        id: editingResource.id,
+        ...resourceForm
+      });
+    } else {
+      createResourceMutation.mutate(resourceForm);
+    }
+  };
+
+  const handleResourceEdit = (resource: any) => {
+    setEditingResource(resource);
+    setResourceForm({
+      type: resource.type,
+      title: resource.title,
+      description: resource.description || '',
+      url: resource.url || '',
+      fileName: resource.fileName || '',
+      fileSize: resource.fileSize || 0
+    });
+    setShowAddResource(true);
+  };
+
+  const handleResourceUpload = async (result: any) => {
+    if (result.successful && result.successful.length > 0) {
+      const file = result.successful[0];
+      
+      // Set ACL policy for the uploaded file
+      try {
+        const finalResponse = await fetch('/api/images', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageURL: file.uploadURL }),
+        });
+        
+        if (!finalResponse.ok) throw new Error('Failed to finalize upload');
+        
+        const { objectPath } = await finalResponse.json();
+        const downloadUrl = `${window.location.origin}${objectPath}`;
+        
+        setResourceForm(prev => ({
+          ...prev,
+          url: downloadUrl,
+          fileName: file.name,
+          fileSize: file.size
+        }));
+        
+        toast({
+          title: "File uploaded",
+          description: "File uploaded successfully. Fill in the title and save the resource."
+        });
+      } catch (error) {
+        console.error('Upload finalization error:', error);
+        toast({
+          title: "Upload failed",
+          description: "Failed to finalize file upload. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   if (isLoading) {
@@ -756,6 +909,236 @@ export default function EditLesson() {
                   </Card>
                 </div>
               )}
+
+              {/* Resources Section - Available for ALL lesson types */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileIcon className="h-5 w-5" />
+                    Lesson Resources
+                  </CardTitle>
+                  <CardDescription>
+                    Add downloadable files and helpful links for students to access with this lesson.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Existing Resources */}
+                    {resources.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium">Current Resources</h4>
+                        {resources.map((resource: any) => (
+                          <div key={resource.id} className="border rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="mt-1">
+                                  {resource.type === 'download' ? (
+                                    <Download className="h-5 w-5 text-blue-600" />
+                                  ) : (
+                                    <Link2 className="h-5 w-5 text-green-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <h5 className="font-medium">{resource.title}</h5>
+                                  {resource.description && (
+                                    <p className="text-sm text-gray-600 mt-1">{resource.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                    <span className="capitalize">{resource.type}</span>
+                                    {resource.fileName && <span>File: {resource.fileName}</span>}
+                                    {resource.fileSize && <span>Size: {Math.round(resource.fileSize / 1024)}KB</span>}
+                                  </div>
+                                  {resource.url && (
+                                    <a
+                                      href={resource.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:underline mt-1 inline-block"
+                                    >
+                                      {resource.type === 'download' ? 'Download File' : 'Open Link'}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleResourceEdit(resource)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this resource?')) {
+                                      deleteResourceMutation.mutate(resource.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add Resource Button */}
+                    {!showAddResource && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAddResource(true)}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Resource
+                      </Button>
+                    )}
+
+                    {/* Add/Edit Resource Form */}
+                    {showAddResource && (
+                      <div className="border rounded-lg p-4 bg-blue-50">
+                        <h4 className="font-medium mb-4">
+                          {editingResource ? 'Edit Resource' : 'Add New Resource'}
+                        </h4>
+                        
+                        <div className="space-y-4">
+                          {/* Resource Type Selection */}
+                          <div>
+                            <label className="text-sm font-medium">Resource Type</label>
+                            <Select
+                              value={resourceForm.type}
+                              onValueChange={(value: 'download' | 'link') => 
+                                setResourceForm(prev => ({ ...prev, type: value }))
+                              }
+                            >
+                              <SelectTrigger className="mt-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="download">Download (File Upload)</SelectItem>
+                                <SelectItem value="link">Link (External URL)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Title */}
+                          <div>
+                            <label className="text-sm font-medium">Title *</label>
+                            <Input
+                              value={resourceForm.title}
+                              onChange={(e) => setResourceForm(prev => ({ ...prev, title: e.target.value }))}
+                              placeholder="Enter resource title"
+                              className="mt-2"
+                            />
+                          </div>
+
+                          {/* Description */}
+                          <div>
+                            <label className="text-sm font-medium">Description</label>
+                            <Textarea
+                              value={resourceForm.description}
+                              onChange={(e) => setResourceForm(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Optional description"
+                              className="mt-2"
+                              rows={2}
+                            />
+                          </div>
+
+                          {/* Download Type - File Upload */}
+                          {resourceForm.type === 'download' && (
+                            <div>
+                              <label className="text-sm font-medium">Upload File</label>
+                              <div className="mt-2">
+                                <ObjectUploader
+                                  maxNumberOfFiles={1}
+                                  maxFileSize={50 * 1024 * 1024} // 50MB
+                                  onGetUploadParameters={async () => {
+                                    const response = await fetch("/api/objects/upload", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                    });
+                                    const data = await response.json();
+                                    return {
+                                      method: "PUT" as const,
+                                      url: data.uploadURL,
+                                    };
+                                  }}
+                                  onComplete={handleResourceUpload}
+                                  buttonClassName="w-full"
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload File
+                                </ObjectUploader>
+                                {resourceForm.fileName && (
+                                  <p className="text-sm text-green-600 mt-2">
+                                    ✓ File uploaded: {resourceForm.fileName}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Link Type - URL Input */}
+                          {resourceForm.type === 'link' && (
+                            <div>
+                              <label className="text-sm font-medium">URL *</label>
+                              <Input
+                                type="url"
+                                value={resourceForm.url}
+                                onChange={(e) => setResourceForm(prev => ({ ...prev, url: e.target.value }))}
+                                placeholder="https://example.com"
+                                className="mt-2"
+                              />
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setShowAddResource(false);
+                                setEditingResource(null);
+                                setResourceForm({
+                                  type: 'download',
+                                  title: '',
+                                  description: '',
+                                  url: '',
+                                  fileName: '',
+                                  fileSize: 0
+                                });
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={handleResourceSave}
+                              disabled={
+                                !resourceForm.title.trim() || 
+                                (resourceForm.type === 'link' && !resourceForm.url.trim()) ||
+                                (resourceForm.type === 'download' && !resourceForm.url.trim()) ||
+                                createResourceMutation.isPending ||
+                                updateResourceMutation.isPending
+                              }
+                            >
+                              {createResourceMutation.isPending || updateResourceMutation.isPending 
+                                ? 'Saving...' 
+                                : editingResource 
+                                  ? 'Update Resource' 
+                                  : 'Add Resource'
+                              }
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Only show Update Lesson button for non-quiz and non-assignment lessons */}
               {form.watch('contentType') !== 'quiz' && form.watch('contentType') !== 'assignment' && (
