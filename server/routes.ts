@@ -14065,37 +14065,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get training analytics dashboard
   app.get("/api/training/analytics", async (req, res) => {
     try {
+      const { courseId, userId } = req.query;
+      
       // Total courses and categories
       const [totalCourses] = await db.select({ count: sql<number>`count(*)` }).from(trainingCourses);
       const [totalCategories] = await db.select({ count: sql<number>`count(*)` }).from(trainingCategories);
       const [totalEnrollments] = await db.select({ count: sql<number>`count(*)` }).from(trainingEnrollments);
       
-      // Course completion rates
-      const courseStats = await db.select({
+      // Course completion rates - filter by courseId if provided
+      let courseStatsQuery = db.select({
         courseId: trainingCourses.id,
         courseTitle: trainingCourses.title,
         totalEnrollments: sql<number>`count(${trainingEnrollments.id})`,
         completedEnrollments: sql<number>`count(case when ${trainingEnrollments.status} = 'completed' then 1 end)`,
         avgProgress: sql<number>`avg(${trainingEnrollments.progress})`
       }).from(trainingCourses)
-        .leftJoin(trainingEnrollments, eq(trainingCourses.id, trainingEnrollments.courseId))
-        .where(eq(trainingCourses.isPublished, true))
-        .groupBy(trainingCourses.id, trainingCourses.title);
+        .leftJoin(trainingEnrollments, eq(trainingCourses.id, trainingEnrollments.courseId));
+
+      if (courseId) {
+        courseStatsQuery = courseStatsQuery.where(and(
+          eq(trainingCourses.isPublished, true),
+          eq(trainingCourses.id, courseId as string)
+        ));
+      } else {
+        courseStatsQuery = courseStatsQuery.where(eq(trainingCourses.isPublished, true));
+      }
       
-      // User progress overview
-      const userStats = await db.select({
+      const courseStats = await courseStatsQuery.groupBy(trainingCourses.id, trainingCourses.title);
+      
+      // User progress overview - modify based on filters
+      let userStatsQuery = db.select({
         userId: staff.id,
         userName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
         totalEnrollments: sql<number>`count(${trainingEnrollments.id})`,
         completedCourses: sql<number>`count(case when ${trainingEnrollments.status} = 'completed' then 1 end)`,
         avgProgress: sql<number>`avg(${trainingEnrollments.progress})`
       }).from(staff)
-        .leftJoin(trainingEnrollments, eq(staff.id, trainingEnrollments.userId))
+        .leftJoin(trainingEnrollments, eq(staff.id, trainingEnrollments.userId));
+
+      // Apply filters
+      if (courseId && userId) {
+        userStatsQuery = userStatsQuery
+          .leftJoin(trainingCourses, eq(trainingEnrollments.courseId, trainingCourses.id))
+          .where(and(
+            eq(trainingCourses.id, courseId as string),
+            eq(staff.id, userId as string)
+          ));
+      } else if (courseId) {
+        userStatsQuery = userStatsQuery
+          .leftJoin(trainingCourses, eq(trainingEnrollments.courseId, trainingCourses.id))
+          .where(eq(trainingCourses.id, courseId as string));
+      } else if (userId) {
+        userStatsQuery = userStatsQuery.where(eq(staff.id, userId as string));
+      }
+
+      const userStats = await userStatsQuery
         .groupBy(staff.id, staff.firstName, staff.lastName)
         .having(sql`count(${trainingEnrollments.id}) > 0`);
       
-      // Recent activity
-      const recentEnrollments = await db.select({
+      // Recent activity - filter by courseId and userId if provided
+      let recentEnrollmentsQuery = db.select({
         id: trainingEnrollments.id,
         courseTitle: trainingCourses.title,
         userName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
@@ -14104,7 +14133,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progress: trainingEnrollments.progress
       }).from(trainingEnrollments)
         .leftJoin(trainingCourses, eq(trainingEnrollments.courseId, trainingCourses.id))
-        .leftJoin(staff, eq(trainingEnrollments.userId, staff.id))
+        .leftJoin(staff, eq(trainingEnrollments.userId, staff.id));
+
+      // Apply filters to recent activity
+      if (courseId && userId) {
+        recentEnrollmentsQuery = recentEnrollmentsQuery.where(and(
+          eq(trainingCourses.id, courseId as string),
+          eq(staff.id, userId as string)
+        ));
+      } else if (courseId) {
+        recentEnrollmentsQuery = recentEnrollmentsQuery.where(eq(trainingCourses.id, courseId as string));
+      } else if (userId) {
+        recentEnrollmentsQuery = recentEnrollmentsQuery.where(eq(staff.id, userId as string));
+      }
+
+      const recentEnrollments = await recentEnrollmentsQuery
         .orderBy(desc(trainingEnrollments.enrolledAt))
         .limit(20);
       
