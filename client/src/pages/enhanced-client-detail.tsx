@@ -3021,6 +3021,139 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
+            {/* SMS Template Selection Modal */}
+            <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
+              <DialogContent className="max-w-2xl z-50">
+                <DialogHeader>
+                  <DialogTitle>Select SMS Template</DialogTitle>
+                </DialogHeader>
+                <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
+              </DialogContent>
+            </Dialog>
+
+            {/* SMS Merge Tags Modal */}
+            <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
+              <DialogContent className="max-w-2xl z-50">
+                <DialogHeader>
+                  <DialogTitle>Insert Merge Tags</DialogTitle>
+                  <p className="text-sm text-gray-600">Click any tag to insert it into your SMS message</p>
+                </DialogHeader>
+                <div className="space-y-6 max-h-96 overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Client Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Client Information</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('firstName')}
+                          className="justify-start"
+                        >
+                          {'{{firstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('lastName')}
+                          className="justify-start"
+                        >
+                          {'{{lastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('phone')}
+                          className="justify-start"
+                        >
+                          {'{{phone}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('companyName')}
+                          className="justify-start"
+                        >
+                          {'{{companyName}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Assigned User Information */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Assigned User</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserFirstName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserFirstName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserLastName')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserLastName}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserEmail')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserEmail}}'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertSmsTag('assignedUserPhone')}
+                          className="justify-start"
+                        >
+                          {'{{assignedUserPhone}}'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Custom Fields */}
+                    {customFieldsData && customFieldsData.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Custom Fields</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {customFieldsData.map((field) => (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertSmsTag(field.name)}
+                              className="justify-start text-left overflow-hidden"
+                              title={field.name}
+                            >
+                              <span className="truncate">
+                                {'{{' + field.name + '}}'}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSmsMergeTagsModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* Send Options Modal */}
             <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
               <DialogContent className="max-w-md">
@@ -3105,10 +3238,6 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
-            {/* SMS Template Selection Modal - MOVED OUTSIDE */}
-            
-            {/* SMS Merge Tags Modal - MOVED OUTSIDE */}
-                <div className="space-y-6 max-h-96 overflow-y-auto">
                   <div className="space-y-6">
                     {/* Client Information */}
                     <div className="space-y-2">
