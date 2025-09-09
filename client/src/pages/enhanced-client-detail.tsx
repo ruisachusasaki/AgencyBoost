@@ -2974,8 +2974,20 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+          </div>
+          </TabsContent>
 
-            {/* Communication - Moved Below Activity */}
+          <TabsContent value="activity" className="space-y-6 mt-6">
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm">Activity tracking coming soon</p>
+              <p className="text-xs text-gray-400">Activity will appear as actions are performed</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="communication" className="space-y-6 mt-6">
+            {/* Communication Content */}
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-gray-900">Communication</h2>
@@ -3751,9 +3763,10 @@ export default function EnhancedClientDetail() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
+          </TabsContent>
 
-          {/* Right Column - Client Activity Hub */}
+          <TabsContent value="hub" className="space-y-6 mt-6">
+            {/* Right Column - Client Activity Hub */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="pb-4">
@@ -5082,7 +5095,8 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
           </div>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Add Tag Dialog */}
         <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
