@@ -3036,30 +3036,30 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
-            {/* SMS Template Selection Modal - SIMPLIFIED FOR TESTING */}
+            {/* SMS Template Selection Modal - SUPER VISIBLE DEBUG */}
             <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl bg-red-500 border-8 border-yellow-500 z-[9999]">
                 <DialogHeader>
-                  <DialogTitle>SMS Template Modal - SIMPLIFIED TEST</DialogTitle>
+                  <DialogTitle className="text-white text-2xl font-bold">🔴 SMS TEMPLATE MODAL - CAN YOU SEE THIS? 🔴</DialogTitle>
                 </DialogHeader>
-                <div className="p-4">
-                  <p>This simplified SMS Template modal should appear when you click the Template button!</p>
-                  <p>If you can see this, then the issue is with the SmsTemplateSelector component.</p>
-                  <Button onClick={() => setShowSmsTemplateModal(false)}>Close</Button>
+                <div className="p-4 bg-green-400">
+                  <p className="text-black font-bold text-xl">This should be IMPOSSIBLE to miss!</p>
+                  <p className="text-black font-bold">Red background, yellow border, huge text!</p>
+                  <Button onClick={() => setShowSmsTemplateModal(false)} className="bg-blue-600">Close</Button>
                 </div>
               </DialogContent>
             </Dialog>
 
-            {/* SMS Merge Tags Modal - SIMPLIFIED FOR TESTING */}
+            {/* SMS Merge Tags Modal - SUPER VISIBLE DEBUG */}
             <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl bg-purple-500 border-8 border-orange-500 z-[9999]">
                 <DialogHeader>
-                  <DialogTitle>SMS Merge Tags - SIMPLIFIED TEST</DialogTitle>
+                  <DialogTitle className="text-white text-2xl font-bold">🟣 SMS MERGE TAGS MODAL - CAN YOU SEE THIS? 🟣</DialogTitle>
                 </DialogHeader>
-                <div className="p-4">
-                  <p>This simplified SMS Merge Tags modal should appear when you click the Merge Tags button!</p>
-                  <p>If you can see this, then the issue was with the complex merge tags content.</p>
-                  <Button onClick={() => setShowSmsMergeTagsModal(false)}>Close</Button>
+                <div className="p-4 bg-yellow-400">
+                  <p className="text-black font-bold text-xl">Purple modal with orange border!</p>
+                  <p className="text-black font-bold">If you can see this, the modals ARE rendering!</p>
+                  <Button onClick={() => setShowSmsMergeTagsModal(false)} className="bg-red-600">Close</Button>
                 </div>
               </DialogContent>
             </Dialog>

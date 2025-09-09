@@ -1,0 +1,93 @@
+Uncaught (in promise) Error: No tab with id: 71778722.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778728.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778665.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778710.Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id LastPass <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id separator <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Add Item <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Add Password <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Add Address <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Add Payment Card <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Add other item <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Save all entered data <URL>Understand this error
+43Unchecked runtime.lastError: Cannot create item with duplicate id Generate Secure Password <URL>Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778911.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71778942.Understand this error
+chunk-RPCDYKBN.js?v=5927e7bc:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+clients.tsx:392 Current filter state: Object
+clients.tsx:393 Active Smart List: null
+clients.tsx:394 Search term: 
+clients.tsx:323 Applying filter with conditions: Array(0)
+clients.tsx:324 Filter logic: AND
+clients.tsx:327 No filter conditions, returning all clients
+clients.tsx:323 Applying filter with conditions: Array(1)
+clients.tsx:324 Filter logic: AND
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): '' in client: Joe-Test Hupp-Test
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): '' in client: Jorge Abreu
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Jamie Smith
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Eddie Wilson
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Financial Lead Gen' in client: Greg Garrick
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "financial lead gen", Search value: "live events"
+clients.tsx:354 Custom field lookup for 'Client Vertical' (cac6e6ee-bdf9-48bd-81a7-48672d2453ae): 'Live Events' in client: Brian Petersen
+clients.tsx:367 Filter condition: Client Vertical equals Live Events
+clients.tsx:368 Field value: "live events", Search value: "live events"
+enhanced-client-detail.tsx:1050 SMS modal states: Object
+enhanced-client-detail.tsx:1058 TEST MODAL STATE: false
+enhanced-client-detail.tsx:1070 Email modal states: Object
+enhanced-client-detail.tsx:4996 SMS Template clicked - DND All: false DND SMS: false
+enhanced-client-detail.tsx:4997 Before click - showSmsTemplateModal: false
+enhanced-client-detail.tsx:4999 After click - showSmsTemplateModal should be true
+enhanced-client-detail.tsx:1050 SMS modal states: Object
+enhanced-client-detail.tsx:4996 SMS Template clicked - DND All: false DND SMS: false
+enhanced-client-detail.tsx:4997 Before click - showSmsTemplateModal: true
+enhanced-client-detail.tsx:4999 After click - showSmsTemplateModal should be true
+enhanced-client-detail.tsx:5034 SMS Merge Tags clicked - DND All: false DND SMS: false
+enhanced-client-detail.tsx:5035 Before click - showSmsMergeTagsModal: false
+enhanced-client-detail.tsx:5037 After click - showSmsMergeTagsModal should be true
+enhanced-client-detail.tsx:1050 SMS modal states: Object
+enhanced-client-detail.tsx:5034 SMS Merge Tags clicked - DND All: false DND SMS: false
+enhanced-client-detail.tsx:5035 Before click - showSmsMergeTagsModal: true
+enhanced-client-detail.tsx:5037 After click - showSmsMergeTagsModal should be true
+enhanced-client-detail.tsx:5034 SMS Merge Tags clicked - DND All: false DND SMS: false
+enhanced-client-detail.tsx:5035 Before click - showSmsMergeTagsModal: true
+enhanced-client-detail.tsx:5037 After click - showSmsMergeTagsModal should be true
+enhanced-client-detail.tsx:5055 TEST MODAL BUTTON CLICKED
+enhanced-client-detail.tsx:5057 Test modal should be open
+enhanced-client-detail.tsx:1058 TEST MODAL STATE: true
+chunk-MSOVU5HG.js?v=5927e7bc:339 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-MSOVU5HG.js?v=5927e7bc:339Understand this warning
+enhanced-client-detail.tsx:1058 TEST MODAL STATE: false
+enhanced-client-detail.tsx:5016 TEST MODAL BUTTON CLICKED
+enhanced-client-detail.tsx:5018 Test modal state set to true
+enhanced-client-detail.tsx:1058 TEST MODAL STATE: true
+chunk-MSOVU5HG.js?v=5927e7bc:339 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-MSOVU5HG.js?v=5927e7bc:339Understand this warning
+enhanced-client-detail.tsx:1058 TEST MODAL STATE: false
+enhanced-client-detail.tsx:5215 Email Template clicked - DND All: false DND Email: false
+enhanced-client-detail.tsx:5216 Before click - showTemplateModal: false
+enhanced-client-detail.tsx:5218 After click - showTemplateModal should be true
+enhanced-client-detail.tsx:1070 Email modal states: Object
+enhanced-client-detail.tsx:5235 Email Merge Tags clicked - DND All: false DND Email: false
+enhanced-client-detail.tsx:5236 Before click - showMergeTagsModal: false
+enhanced-client-detail.tsx:5238 After click - showMergeTagsModal should be true
+enhanced-client-detail.tsx:1070 Email modal states: Object
+enhanced-client-detail.tsx:5235 Email Merge Tags clicked - DND All: false DND Email: false
+enhanced-client-detail.tsx:5236 Before click - showMergeTagsModal: true
+enhanced-client-detail.tsx:5238 After click - showMergeTagsModal should be true
