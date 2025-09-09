@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   BookOpen, 
   Users, 
@@ -10,7 +13,9 @@ import {
   GraduationCap,
   Clock,
   UserCheck,
-  Target
+  Target,
+  Search,
+  BarChart3
 } from "lucide-react";
 
 interface CourseStats {
@@ -50,6 +55,10 @@ interface AnalyticsData {
 }
 
 export default function TrainingAnalytics() {
+  const [userSearch, setUserSearch] = useState("");
+  const [courseSearch, setCourseSearch] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState<string>("all");
+
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/training/analytics"],
   });
@@ -105,9 +114,45 @@ export default function TrainingAnalytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Training Analytics</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <BarChart3 className="h-8 w-8 text-primary" />
+          Training Analytics
+        </h1>
         <p className="text-gray-600 mt-1">Employee training progress and performance overview</p>
       </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by employee name..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Filter by Course" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {(analytics?.courseStats || []).map((course) => (
+                  <SelectItem key={course.courseId} value={course.courseId}>
+                    {course.courseTitle}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Overview Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
