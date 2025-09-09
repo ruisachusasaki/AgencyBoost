@@ -1090,7 +1090,7 @@ export default function TriggerConfigPanel({
             </SelectTrigger>
             <SelectContent>
               {fieldSchema.placeholder && (
-                <SelectItem value="">
+                <SelectItem value="any">
                   <span className="text-muted-foreground">Any Course</span>
                 </SelectItem>
               )}
