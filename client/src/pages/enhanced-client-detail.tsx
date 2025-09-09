@@ -1050,6 +1050,11 @@ export default function EnhancedClientDetail() {
     console.log('SMS modal states:', { showSmsTemplateModal, showSmsMergeTagsModal });
   }, [showSmsTemplateModal, showSmsMergeTagsModal]);
 
+  // Debug: Log test modal state changes
+  useEffect(() => {
+    console.log('TEST MODAL STATE:', showTestModal);
+  }, [showTestModal]);
+
   
   // Test modal to see if Dialog component works at all
   const [showTestModal, setShowTestModal] = useState(false);
@@ -3165,6 +3170,19 @@ export default function EnhancedClientDetail() {
               </DialogContent>
             </Dialog>
 
+            {/* TEST MODAL - Simple test to see if Dialog works */}
+            <Dialog open={showTestModal} onOpenChange={setShowTestModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>TEST MODAL WORKING!</DialogTitle>
+                </DialogHeader>
+                <div className="p-4">
+                  <p>If you can see this, the Dialog component is working!</p>
+                  <Button onClick={() => setShowTestModal(false)}>Close</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* Send Options Modal */}
             <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
               <DialogContent className="max-w-md">
@@ -5092,6 +5110,24 @@ export default function EnhancedClientDetail() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>SMS Templates</TooltipContent>
+                        </Tooltip>
+
+                        {/* TEST BUTTON */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                console.log('TEST MODAL BUTTON CLICKED');
+                                setShowTestModal(true);
+                                console.log('Test modal state set to true');
+                              }}
+                            >
+                              <span>TEST</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Test Modal</TooltipContent>
                         </Tooltip>
 
                         {/* SMS Merge Tags */}
