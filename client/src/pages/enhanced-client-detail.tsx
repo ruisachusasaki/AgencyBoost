@@ -1050,16 +1050,6 @@ export default function EnhancedClientDetail() {
     console.log('SMS modal states:', { showSmsTemplateModal, showSmsMergeTagsModal });
   }, [showSmsTemplateModal, showSmsMergeTagsModal]);
 
-  // Debug: Log client DND settings
-  useEffect(() => {
-    if (client) {
-      console.log('Client DND settings:', {
-        dndAll: client.dndAll,
-        dndEmail: client.dndEmail,
-        dndSms: client.dndSms
-      });
-    }
-  }, [client]);
   
   // Test modal to see if Dialog component works at all
   const [showTestModal, setShowTestModal] = useState(false);
