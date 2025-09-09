@@ -13464,10 +13464,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id: courseId } = req.params;
       const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
       
-      // Check if course exists and is published
+      // Check if course exists
       const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, courseId));
-      if (!course || !course.isPublished) {
-        return res.status(404).json({ error: "Course not found or not available" });
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      
+      // Allow enrollment if course is published OR user is the course creator
+      const isCreator = course.createdBy === userId;
+      if (!course.isPublished && !isCreator) {
+        return res.status(404).json({ error: "Course not available for enrollment" });
       }
       
       // Check if already enrolled
