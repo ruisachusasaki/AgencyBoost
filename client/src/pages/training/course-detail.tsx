@@ -184,7 +184,14 @@ export default function CourseDetail() {
       return false;
     }
     
-    // For first lesson, allow access if not manually locked
+    // If lesson is manually unlocked (isLocked = false), allow access regardless of previous lesson completion
+    // This means the lock toggle controls both manual lock AND sequential completion requirement
+    if (currentLesson?.isLocked === false) {
+      return true;
+    }
+    
+    // For lessons with undefined/null lock status, use default sequential behavior
+    // First lesson is always accessible
     if (lessonIndex === 0) return true;
     
     // For other lessons, check if previous lesson is completed (sequential lock)
