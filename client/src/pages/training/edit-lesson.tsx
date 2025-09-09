@@ -1063,34 +1063,54 @@ export default function EditLesson() {
                             <div>
                               <label className="text-sm font-medium">Upload File</label>
                               <div className="mt-2">
-                                <ObjectUploader
-                                  maxNumberOfFiles={1}
-                                  maxFileSize={50 * 1024 * 1024} // 50MB
-                                  onGetUploadParameters={async () => {
-                                    const response = await fetch("/api/objects/upload", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                    });
-                                    const data = await response.json();
-                                    return {
-                                      method: "PUT" as const,
-                                      url: data.uploadURL,
-                                    };
-                                  }}
-                                  onComplete={handleResourceUpload}
-                                  buttonClassName="w-full"
-                                >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Upload File
-                                </ObjectUploader>
-                                {resourceForm.fileName && (
-                                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                    <p className="text-sm text-green-800 font-medium mb-1">
-                                      ✓ File uploaded successfully: {resourceForm.fileName}
-                                    </p>
-                                    <p className="text-xs text-green-700">
-                                      Title has been auto-filled. You can edit it above, then click "Add Resource" to save.
-                                    </p>
+                                {!resourceForm.fileName ? (
+                                  <ObjectUploader
+                                    maxNumberOfFiles={1}
+                                    maxFileSize={50 * 1024 * 1024} // 50MB
+                                    onGetUploadParameters={async () => {
+                                      const response = await fetch("/api/objects/upload", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                      });
+                                      const data = await response.json();
+                                      return {
+                                        method: "PUT" as const,
+                                        url: data.uploadURL,
+                                      };
+                                    }}
+                                    onComplete={handleResourceUpload}
+                                    buttonClassName="w-full"
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload File
+                                  </ObjectUploader>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                      <p className="text-sm text-green-800 font-medium mb-1">
+                                        ✓ File uploaded successfully: {resourceForm.fileName}
+                                      </p>
+                                      <p className="text-xs text-green-700">
+                                        Title has been auto-filled from filename. You can edit it above if needed.
+                                      </p>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setResourceForm(prev => ({
+                                          ...prev,
+                                          url: '',
+                                          fileName: '',
+                                          fileSize: 0,
+                                          title: ''
+                                        }));
+                                      }}
+                                      className="w-full"
+                                    >
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Upload Different File
+                                    </Button>
                                   </div>
                                 )}
                               </div>
