@@ -99,9 +99,9 @@ export default function ActionConfigPanel({
   useEffect(() => {
     const initialSettings = action.settings || {};
     
-    // Auto-select form submitter for new email actions when form triggers exist
+    // Auto-select contact/lead for new email actions when form triggers exist
     if (action.type === 'send_email' && hasFormTrigger && !initialSettings.recipient) {
-      initialSettings.recipient = 'form_submitter';
+      initialSettings.recipient = 'contact';
     }
     
     setSettings(initialSettings);
@@ -148,23 +148,21 @@ export default function ActionConfigPanel({
             <div>
               <Label htmlFor="email-to">Send To</Label>
               <Select 
-                value={settings.recipient || (hasFormTrigger ? "form_submitter" : "contact")} 
+                value={settings.recipient || "contact"} 
                 onValueChange={(value) => updateSetting("recipient", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select recipient" />
                 </SelectTrigger>
                 <SelectContent>
-                  {hasFormTrigger && (
-                    <SelectItem value="form_submitter">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <span>Form Submitter</span>
+                  <SelectItem value="contact">
+                    <div className="flex items-center gap-2">
+                      <span>Contact/Lead</span>
+                      {hasFormTrigger && (
                         <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                      </div>
-                    </SelectItem>
-                  )}
-                  <SelectItem value="contact">Contact/Lead</SelectItem>
+                      )}
+                    </div>
+                  </SelectItem>
                   <SelectItem value="assigned_staff">Assigned Staff Member</SelectItem>
                   <SelectItem value="specific_staff">Specific Staff Member</SelectItem>
                   <SelectItem value="custom_email">Custom Email Address</SelectItem>
