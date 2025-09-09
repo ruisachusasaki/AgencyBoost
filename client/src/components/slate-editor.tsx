@@ -1165,10 +1165,10 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
           {children}
         </div>
       )}
-      {/* Add a visible "add content" area after closed toggle */}
+      {/* Add subtle clickable area after closed toggle */}
       {!isOpen && (
         <div
-          className="toggle-add-content mt-2 p-2 text-gray-400 hover:text-gray-600 cursor-text border border-dashed border-gray-200 hover:border-gray-300 rounded"
+          className="toggle-add-content mt-1 h-4 cursor-text hover:bg-gray-50 rounded"
           onClick={() => {
             try {
               const togglePath = ReactEditor.findPath(editor, element);
@@ -1186,9 +1186,7 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
               console.log('Toggle navigation skipped:', error);
             }
           }}
-        >
-          Click to add content after this toggle...
-        </div>
+        />
       )}
     </div>
   );
