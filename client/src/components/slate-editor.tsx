@@ -1089,8 +1089,14 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
   const handleToggle = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
-    // Save the toggle state to the element
-    Transforms.setNodes(editor, { isOpen: newIsOpen } as Partial<ToggleElement>, { at: path });
+    // Try to save the toggle state, but don't fail if path is invalid
+    try {
+      if (Editor.hasPath(editor, path)) {
+        Transforms.setNodes(editor, { isOpen: newIsOpen } as Partial<ToggleElement>, { at: path });
+      }
+    } catch (error) {
+      console.log('Toggle state update skipped:', error);
+    }
   };
 
   const shouldShowContent = isOpen || showContentForEditing;
