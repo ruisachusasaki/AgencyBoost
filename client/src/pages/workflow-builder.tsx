@@ -284,6 +284,44 @@ export default function WorkflowBuilderPage() {
     });
   };
 
+  // Handler for configuring actions
+  const handleConfigureAction = (actionIndex: number) => {
+    const action = workflowData.actions[actionIndex];
+    if (!action) {
+      console.error('No action found at index:', actionIndex);
+      return;
+    }
+
+    // Find the action definition to get the config schema
+    const actionDefinition = (availableActions as any[])?.find((a: any) => a.type === action.type);
+    
+    setConfiguringAction({
+      action,
+      definition: actionDefinition,
+      index: actionIndex
+    });
+  };
+
+  // Handler for saving action configuration
+  const handleSaveActionConfig = (updatedAction: any) => {
+    if (configuringAction === null) return;
+
+    setWorkflowData((prev: any) => {
+      const newActions = [...prev.actions];
+      newActions[configuringAction.index] = updatedAction;
+      return {
+        ...prev,
+        actions: newActions
+      };
+    });
+
+    setConfiguringAction(null);
+    toast({
+      title: "Configuration Saved",
+      description: "Action settings have been updated"
+    });
+  };
+
   // Handler for deleting triggers
   const handleDeleteTrigger = (triggerIndex: number) => {
     const trigger = workflowData.triggers[triggerIndex];
@@ -423,6 +461,7 @@ export default function WorkflowBuilderPage() {
                 onAddTrigger={handleAddTrigger}
                 onAddAction={handleAddAction}
                 onConfigureTrigger={handleConfigureTrigger}
+                onConfigureAction={handleConfigureAction}
                 onDeleteTrigger={handleDeleteTrigger}
                 onDeleteAction={handleDeleteAction}
                 onAddCondition={() => {
@@ -1118,6 +1157,20 @@ export default function WorkflowBuilderPage() {
                 />
               </div>
             </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Action Configuration Side Panel */}
+      <Sheet open={!!configuringAction} onOpenChange={() => setConfiguringAction(null)}>
+        <SheetContent side="right" className="w-[800px] sm:w-[800px] sm:max-w-none overflow-y-auto">
+          {configuringAction && (
+            <ActionConfigPanel
+              action={configuringAction.action}
+              actionDefinition={configuringAction.definition}
+              onSave={handleSaveActionConfig}
+              onClose={() => setConfiguringAction(null)}
+            />
           )}
         </SheetContent>
       </Sheet>
