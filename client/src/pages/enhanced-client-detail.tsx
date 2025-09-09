@@ -1050,14 +1050,13 @@ export default function EnhancedClientDetail() {
     console.log('SMS modal states:', { showSmsTemplateModal, showSmsMergeTagsModal });
   }, [showSmsTemplateModal, showSmsMergeTagsModal]);
 
+  // Test modal to see if Dialog component works at all
+  const [showTestModal, setShowTestModal] = useState(false);
+
   // Debug: Log test modal state changes
   useEffect(() => {
     console.log('TEST MODAL STATE:', showTestModal);
   }, [showTestModal]);
-
-  
-  // Test modal to see if Dialog component works at all
-  const [showTestModal, setShowTestModal] = useState(false);
 
   // Email composition state (removed duplicate)
   const [showWysiwyg, setShowWysiwyg] = useState(false);
