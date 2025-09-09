@@ -5048,7 +5048,11 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setShowSmsTemplateModal(true)}
+                              onClick={() => {
+                                console.log('SMS Template button clicked');
+                                setShowSmsTemplateModal(true);
+                                console.log('SMS Template modal should be open');
+                              }}
                               disabled={!!client?.dndAll || !!client?.dndSms}
                             >
                               <FileText className="h-4 w-4" />
@@ -5063,7 +5067,11 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setShowSmsMergeTagsModal(true)}
+                              onClick={() => {
+                                console.log('SMS Merge Tags button clicked');
+                                setShowSmsMergeTagsModal(true);
+                                console.log('SMS Merge Tags modal should be open');
+                              }}
                               disabled={!!client?.dndAll || !!client?.dndSms}
                             >
                               <TagIcon className="h-4 w-4" />
@@ -5226,7 +5234,11 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setShowTemplateModal(true)}
+                              onClick={() => {
+                                console.log('Email Template button clicked');
+                                setShowTemplateModal(true);
+                                console.log('Email Template modal should be open');
+                              }}
                               disabled={!!client?.dndAll || !!client?.dndEmail}
                             >
                               <FileText className="h-4 w-4" />
@@ -5241,7 +5253,11 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setShowMergeTagsModal(true)}
+                              onClick={() => {
+                                console.log('Email Merge Tags button clicked');
+                                setShowMergeTagsModal(true);
+                                console.log('Email Merge Tags modal should be open');
+                              }}
                               disabled={!!client?.dndAll || !!client?.dndEmail}
                             >
                               <TagIcon className="h-4 w-4" />
