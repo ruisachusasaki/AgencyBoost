@@ -13617,6 +13617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { lessonIds, moduleId } = req.body;
       
+      console.log("Lesson reorder request:", { lessonIds, moduleId });
+      
       if (!Array.isArray(lessonIds)) {
         return res.status(400).json({ error: "lessonIds must be an array" });
       }
@@ -13630,10 +13632,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const lessonId = lessonIds[i];
         const newOrder = i + 1;
         
+        console.log(`Checking lesson ${i + 1}/${lessonIds.length}: ${lessonId}`);
+        
         // Check if lesson exists
         const [existingLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
         if (!existingLesson) {
-          return res.status(404).json({ error: "Lesson not found" });
+          console.log(`Lesson not found: ${lessonId}`);
+          return res.status(404).json({ error: `Lesson not found: ${lessonId}` });
         }
         
         // Update lesson order and moduleId if provided
