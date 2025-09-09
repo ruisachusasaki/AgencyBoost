@@ -52,7 +52,7 @@ export default function StaffDetail() {
   const [isEditing, setIsEditing] = useState(false);
 
   const { data: staffMember, isLoading } = useQuery<Staff>({
-    queryKey: ["/api/staff", id],
+    queryKey: [`/api/staff/${id}`],
     enabled: !!id
   });
 
