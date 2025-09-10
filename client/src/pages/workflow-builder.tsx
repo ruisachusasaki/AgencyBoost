@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2, Globe, UserCircle, GraduationCap } from "lucide-react";
+import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2, Globe, UserCircle, GraduationCap, GitBranch, ArrowRight, Hash, MessageSquare, CheckSquare, Tag, Clock, Phone, BellRing, Plus, TrendingUp, AlertCircle, BookOpen, Trophy, BarChart3, UserCheck } from "lucide-react";
 import type { Workflow } from "@shared/schema";
 import WorkflowCanvas from "@/components/workflow-canvas";
 import TriggerConfigPanel from "@/components/trigger-config-panel";
@@ -96,6 +96,78 @@ export default function WorkflowBuilderPage() {
   const { data: availableActions } = useQuery({
     queryKey: ["/api/automation-actions"]
   });
+
+  // Group actions by category
+  const getIconForCategory = (category: string) => {
+    const iconMap: { [key: string]: any } = {
+      communication: Mail,
+      data_management: FileText,
+      assignment: Users,
+      status_progress: Target,
+      financial_billing: DollarSign,
+      calendar_scheduling: Calendar,
+      knowledge_training: GraduationCap,
+      notification_alert: Zap,
+      internal: Settings
+    };
+    return iconMap[category] || FileText;
+  };
+
+  const getCategoryDisplayName = (category: string) => {
+    const categoryNames: { [key: string]: string } = {
+      communication: 'Communication',
+      data_management: 'Data Management',
+      assignment: 'Assignment',
+      status_progress: 'Status & Progress',
+      financial_billing: 'Financial & Billing',
+      calendar_scheduling: 'Calendar & Scheduling',
+      knowledge_training: 'Knowledge & Training',
+      notification_alert: 'Notification & Alert',
+      internal: 'Internal Control',
+      calendar_time: 'Calendar & Time',
+      file_document: 'File & Document'
+    };
+    return categoryNames[category] || category;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colorMap: { [key: string]: string } = {
+      communication: 'text-blue-600',
+      data_management: 'text-green-600',
+      assignment: 'text-purple-600',
+      status_progress: 'text-orange-600',
+      financial_billing: 'text-emerald-600',
+      calendar_scheduling: 'text-red-600',
+      knowledge_training: 'text-indigo-600',
+      notification_alert: 'text-yellow-600',
+      internal: 'text-gray-600',
+      calendar_time: 'text-red-600',
+      file_document: 'text-indigo-600'
+    };
+    return colorMap[category] || 'text-gray-600';
+  };
+
+  // Group available actions by category
+  const groupedActions = (availableActions as any[])?.reduce((groups: any, action: any) => {
+    const category = action.category || 'other';
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(action);
+    return groups;
+  }, {}) || {};
+
+  // Filter actions based on search
+  const filteredGroupedActions = Object.entries(groupedActions).reduce((filtered: any, [category, actions]: [string, any[]]) => {
+    const filteredActions = actions.filter((action: any) => 
+      action.name.toLowerCase().includes(actionSearch.toLowerCase()) ||
+      action.description?.toLowerCase().includes(actionSearch.toLowerCase())
+    );
+    if (filteredActions.length > 0) {
+      filtered[category] = filteredActions;
+    }
+    return filtered;
+  }, {});
 
   // Populate form with existing data when editing
   useEffect(() => {
@@ -944,222 +1016,54 @@ export default function WorkflowBuilderPage() {
           </SheetHeader>
           
           <div className="grid grid-cols-1 gap-6">
-            {/* Communication Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                  Communication
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "send_email", name: "Send Email" },
-                  { type: "send_sms", name: "Send SMS" },
-                  { type: "send_internal_notification", name: "Send Internal Notification" },
-                  { type: "send_slack_message", name: "Send Slack Message" },
-                  { type: "log_communication", name: "Log Communication Activity" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "Communication" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Data Management Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-green-600" />
-                  Data Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "create_lead", name: "Create Lead" },
-                  { type: "create_task", name: "Create Task" },
-                  { type: "create_project", name: "Create Project" },
-                  { type: "update_client_fields", name: "Update Client Fields" },
-                  { type: "update_lead_stage", name: "Update Lead Stage" },
-                  { type: "update_project_status", name: "Update Project Status" },
-                  { type: "add_tags", name: "Add Tags" },
-                  { type: "update_custom_fields", name: "Update Custom Fields" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "Data Management" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Assignment Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  Assignment
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "assign_contact_owner", name: "Assign Contact Owner" },
-                  { type: "assign_task", name: "Assign Task" },
-                  { type: "assign_lead", name: "Assign Lead" },
-                  { type: "assign_team_role", name: "Assign Team Role" },
-                  { type: "assign_project_manager", name: "Assign Project Manager" },
-                  { type: "remove_assignment", name: "Remove Assignment" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "Assignment" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Status & Progress Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-orange-600" />
-                  Status & Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "mark_task_complete", name: "Mark Task Complete" },
-                  { type: "update_lead_score", name: "Update Lead Score" },
-                  { type: "change_client_status", name: "Change Client Status" },
-                  { type: "update_campaign_metrics", name: "Update Campaign Metrics" },
-                  { type: "set_project_priority", name: "Set Project Priority" },
-                  { type: "update_task_priority", name: "Update Task Priority" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "Status & Progress" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Calendar & Time Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-red-600" />
-                  Calendar & Time
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "create_appointment", name: "Create Appointment" },
-                  { type: "start_timer", name: "Start Timer" },
-                  { type: "stop_timer", name: "Stop Timer" },
-                  { type: "create_calendar_block", name: "Create Calendar Block" },
-                  { type: "send_meeting_reminder", name: "Send Meeting Reminder" },
-                  { type: "reschedule_appointment", name: "Reschedule Appointment" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "Calendar & Time" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* File & Document Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-indigo-600" />
-                  File & Document
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "upload_document", name: "Upload Document" },
-                  { type: "generate_invoice", name: "Generate Invoice" },
-                  { type: "create_folder", name: "Create Folder" },
-                  { type: "send_document", name: "Send Document" },
-                  { type: "archive_files", name: "Archive Files" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "File & Document" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Notification & Alert Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-yellow-600" />
-                  Notification & Alert
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { type: "send_followup_reminder", name: "Send Follow-up Reminder" },
-                  { type: "alert_manager", name: "Alert Manager" },
-                  { type: "log_activity", name: "Log Activity" },
-                  { type: "send_system_alert", name: "Send System Alert" },
-                  { type: "send_birthday_reminder", name: "Send Birthday Reminder" },
-                  { type: "overdue_task_alert", name: "Overdue Task Alert" }
-                ].map((action) => (
-                  <Button
-                    key={action.type}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-3"
-                    onClick={() => handleSelectAction({ ...action, category: "Notification & Alert" })}
-                  >
-                    <div>
-                      <div className="font-medium">{action.name}</div>
-                    </div>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
+            {Object.entries(filteredGroupedActions).map(([category, actions]: [string, any[]]) => {
+              const CategoryIcon = getIconForCategory(category);
+              const categoryColor = getCategoryColor(category);
+              const categoryName = getCategoryDisplayName(category);
+              
+              return (
+                <Card key={category}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CategoryIcon className={`h-5 w-5 ${categoryColor}`} />
+                      {categoryName}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {actions.map((action: any) => (
+                      <Button
+                        key={action.id}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectAction({ 
+                          type: action.type, 
+                          name: action.name, 
+                          category: categoryName 
+                        })}
+                      >
+                        <div className="flex-1">
+                          <div className="font-medium">{action.name}</div>
+                          {action.description && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              {action.description}
+                            </div>
+                          )}
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            
+            {/* Show message if no actions match search */}
+            {actionSearch && Object.keys(filteredGroupedActions).length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium mb-2">No actions found</p>
+                <p>Try adjusting your search terms</p>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
