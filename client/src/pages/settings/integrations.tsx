@@ -295,6 +295,13 @@ export default function Integrations() {
         openConfigDialog(twilioIntegration);
       }
       return;
+    } else if (integrationId === "slack") {
+      // Slack is already connected via environment variables
+      toast({
+        title: "Already Connected",
+        description: "Slack integration is configured via environment variables and ready to use!",
+      });
+      return;
     }
 
     toast({
@@ -421,6 +428,27 @@ export default function Integrations() {
         toast({
           title: "Error",
           description: "Failed to test connection. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    } else if (integrationId === "slack") {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('POST', '/api/integrations/slack/test');
+        const result = await response.json();
+        
+        toast({
+          title: "Success",
+          description: "Test message sent to Slack successfully!",
+        });
+      } catch (error) {
+        console.error('Slack test error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send test message to Slack. Please check your configuration.",
           variant: "destructive",
         });
       } finally {
