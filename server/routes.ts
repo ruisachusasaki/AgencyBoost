@@ -9480,6 +9480,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Slack Integration Routes
+  // Check Slack connection status
+  app.get("/api/integrations/slack/status", async (req, res) => {
+    try {
+      const slackBotToken = process.env.SLACK_BOT_TOKEN;
+      const slackChannelId = process.env.SLACK_CHANNEL_ID;
+      
+      if (!slackBotToken || !slackChannelId) {
+        return res.json({
+          connected: false,
+          error: "Slack credentials not configured"
+        });
+      }
+      
+      // Test connection by calling auth.test API
+      const testResponse = await fetch('https://slack.com/api/auth.test', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${slackBotToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const testData = await testResponse.json();
+      
+      if (testData.ok) {
+        res.json({
+          connected: true,
+          team: testData.team,
+          user: testData.user,
+          lastMessage: new Date().toISOString()
+        });
+      } else {
+        res.json({
+          connected: false,
+          error: testData.error || "Authentication failed"
+        });
+      }
+    } catch (error) {
+      console.error('Error checking Slack status:', error);
+      res.json({
+        connected: false,
+        error: (error as Error).message
+      });
+    }
+  });
+  
+  // Send test message to Slack
+  app.post("/api/integrations/slack/test", async (req, res) => {
+    try {
+      const slackBotToken = process.env.SLACK_BOT_TOKEN;
+      const slackChannelId = process.env.SLACK_CHANNEL_ID;
+      
+      if (!slackBotToken || !slackChannelId) {
+        return res.status(400).json({
+          message: "Slack credentials not configured"
+        });
+      }
+      
+      const message = {
+        channel: slackChannelId,
+        text: "🎉 Test message from your CRM system! Slack integration is working perfectly.",
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "*CRM System Integration Test* :rocket:"
+            }
+          },
+          {
+            type: "section",
+            text: {
+              type: "plain_text",
+              text: "This is a test message to confirm your Slack integration is working correctly!"
+            }
+          }
+        ]
+      };
+      
+      const response = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${slackBotToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(message)
+      });
+      
+      const data = await response.json();
+      
+      if (data.ok) {
+        res.json({
+          message: "Test message sent successfully to Slack!",
+          messageId: data.ts,
+          channel: slackChannelId
+        });
+      } else {
+        res.status(400).json({
+          message: "Failed to send test message",
+          error: data.error
+        });
+      }
+    } catch (error) {
+      console.error('Error sending Slack test message:', error);
+      res.status(500).json({
+        message: "Failed to send test message",
+        error: (error as Error).message
+      });
+    }
+  });
+  
+  // Send message to Slack (for workflow automation)
+  app.post("/api/integrations/slack/send", async (req, res) => {
+    try {
+      const { message, blocks } = req.body;
+      const slackBotToken = process.env.SLACK_BOT_TOKEN;
+      const slackChannelId = process.env.SLACK_CHANNEL_ID;
+      
+      if (!slackBotToken || !slackChannelId) {
+        return res.status(400).json({
+          message: "Slack credentials not configured"
+        });
+      }
+      
+      if (!message && !blocks) {
+        return res.status(400).json({
+          message: "Message content is required"
+        });
+      }
+      
+      const payload = {
+        channel: slackChannelId,
+        ...(message && { text: message }),
+        ...(blocks && { blocks })
+      };
+      
+      const response = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${slackBotToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await response.json();
+      
+      if (data.ok) {
+        res.json({
+          message: "Message sent successfully to Slack!",
+          messageId: data.ts,
+          channel: slackChannelId
+        });
+      } else {
+        res.status(400).json({
+          message: "Failed to send message",
+          error: data.error
+        });
+      }
+    } catch (error) {
+      console.error('Error sending Slack message:', error);
+      res.status(500).json({
+        message: "Failed to send message",
+        error: (error as Error).message
+      });
+    }
+  });
+
   // Twilio SMS Integration Routes
   // Helper function to create Twilio client
   function createTwilioClient(accountSid: string, authToken: string) {
