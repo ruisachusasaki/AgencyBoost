@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -24,10 +25,24 @@ interface AutomationTrigger {
   createdAt: string;
 }
 
+interface AutomationAction {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  category: string;
+  configSchema: any;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export default function AutomationTriggers() {
+  const [activeTab, setActiveTab] = useState("triggers");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTrigger, setEditingTrigger] = useState<AutomationTrigger | null>(null);
   const [deletingTrigger, setDeletingTrigger] = useState<AutomationTrigger | null>(null);
+  const [editingAction, setEditingAction] = useState<AutomationAction | null>(null);
+  const [deletingAction, setDeletingAction] = useState<AutomationAction | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     type: "",
@@ -43,6 +58,11 @@ export default function AutomationTriggers() {
   // Fetch automation triggers
   const { data: triggers = [], isLoading } = useQuery<AutomationTrigger[]>({
     queryKey: ["/api/automation-triggers"],
+  });
+
+  // Fetch automation actions
+  const { data: actions = [], isLoading: isLoadingActions } = useQuery<AutomationAction[]>({
+    queryKey: ["/api/automation-actions"],
   });
 
   // Create trigger mutation
@@ -128,12 +148,95 @@ export default function AutomationTriggers() {
     },
   });
 
+  // Create action mutation
+  const createActionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/automation-actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create action");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/automation-actions"] });
+      setIsCreateDialogOpen(false);
+      resetForm();
+      toast({
+        title: "Success",
+        description: "Automation action created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create action",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update action mutation
+  const updateActionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/automation-actions/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update action");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/automation-actions"] });
+      setEditingAction(null);
+      resetForm();
+      toast({
+        title: "Success",
+        description: "Automation action updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update action",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete action mutation
+  const deleteActionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/automation-actions/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete action");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/automation-actions"] });
+      setDeletingAction(null);
+      toast({
+        title: "Success",
+        description: "Automation action deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete action",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: "",
       type: "",
       description: "",
-      category: "contact_management",
+      category: activeTab === "triggers" ? "contact_management" : "communication",
       configSchema: {},
       isActive: true
     });
@@ -141,10 +244,18 @@ export default function AutomationTriggers() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingTrigger) {
-      updateTriggerMutation.mutate({ id: editingTrigger.id, data: formData });
+    if (activeTab === "triggers") {
+      if (editingTrigger) {
+        updateTriggerMutation.mutate({ id: editingTrigger.id, data: formData });
+      } else {
+        createTriggerMutation.mutate(formData);
+      }
     } else {
-      createTriggerMutation.mutate(formData);
+      if (editingAction) {
+        updateActionMutation.mutate({ id: editingAction.id, data: formData });
+      } else {
+        createActionMutation.mutate(formData);
+      }
     }
   };
 
@@ -157,6 +268,19 @@ export default function AutomationTriggers() {
       category: trigger.category,
       configSchema: trigger.configSchema || {},
       isActive: trigger.isActive
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const openEditActionDialog = (action: AutomationAction) => {
+    setEditingAction(action);
+    setFormData({
+      name: action.name,
+      type: action.type,
+      description: action.description || "",
+      category: action.category,
+      configSchema: action.configSchema || {},
+      isActive: action.isActive
     });
     setIsCreateDialogOpen(true);
   };
@@ -183,7 +307,7 @@ export default function AutomationTriggers() {
     return colors[category] || "bg-gray-100 text-gray-800";
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingActions) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
@@ -202,103 +326,236 @@ export default function AutomationTriggers() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Automation Triggers</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Automation Management</h1>
           <p className="text-muted-foreground">
-            Manage available trigger definitions for workflow automation
+            Manage triggers and actions for workflow automation
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/automation-triggers"] })} 
-            data-testid="button-refresh-triggers"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-trigger">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Trigger
-          </Button>
-        </div>
       </div>
 
-      <div className="grid gap-4">
-        {triggers.map((trigger) => (
-          <Card key={trigger.id} className="relative" data-testid={`card-trigger-${trigger.id}`}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-blue-600" />
-                    {trigger.name}
-                    <Badge 
-                      className={getCategoryBadgeColor(trigger.category)}
-                      data-testid={`badge-category-${trigger.category}`}
-                    >
-                      {trigger.category.replace(/_/g, ' ')}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-sm text-gray-600 mt-1">
-                    Type: <code className="bg-gray-100 px-1 rounded text-xs">{trigger.type}</code>
-                    {trigger.description && (
-                      <span className="block mt-1">{trigger.description}</span>
-                    )}
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={trigger.isActive}
-                    onCheckedChange={() => toggleTriggerStatus(trigger)}
-                    data-testid={`switch-active-${trigger.id}`}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(trigger)}
-                    data-testid={`button-edit-${trigger.id}`}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeletingTrigger(trigger)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    data-testid={`button-delete-${trigger.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
-
-        {triggers.length === 0 && (
-          <Card className="text-center py-8">
-            <CardContent>
-              <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No triggers found</h3>
-              <p className="text-gray-600 mb-4">Get started by creating your first automation trigger.</p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Trigger
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="triggers">Triggers</TabsTrigger>
+          <TabsTrigger value="actions">Actions</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="triggers" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Automation Triggers</h2>
+              <p className="text-sm text-gray-600">Define events that start automated workflows</p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/automation-triggers"] })} 
+                data-testid="button-refresh-triggers"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              <Button 
+                onClick={() => {
+                  setActiveTab("triggers");
+                  resetForm();
+                  setIsCreateDialogOpen(true);
+                }} 
+                data-testid="button-create-trigger"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Trigger
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            {triggers.map((trigger) => (
+              <Card key={trigger.id} className="relative" data-testid={`card-trigger-${trigger.id}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-blue-600" />
+                        {trigger.name}
+                        <Badge 
+                          className={getCategoryBadgeColor(trigger.category)}
+                          data-testid={`badge-category-${trigger.category}`}
+                        >
+                          {trigger.category.replace(/_/g, ' ')}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600 mt-1">
+                        Type: <code className="bg-gray-100 px-1 rounded text-xs">{trigger.type}</code>
+                        {trigger.description && (
+                          <span className="block mt-1">{trigger.description}</span>
+                        )}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={trigger.isActive}
+                        onCheckedChange={() => toggleTriggerStatus(trigger)}
+                        data-testid={`switch-active-${trigger.id}`}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(trigger)}
+                        data-testid={`button-edit-${trigger.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingTrigger(trigger)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        data-testid={`button-delete-${trigger.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+
+            {triggers.length === 0 && (
+              <Card className="text-center py-8">
+                <CardContent>
+                  <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No triggers found</h3>
+                  <p className="text-gray-600 mb-4">Get started by creating your first automation trigger.</p>
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Trigger
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="actions" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Automation Actions</h2>
+              <p className="text-sm text-gray-600">Define actions that can be executed in workflows</p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/automation-actions"] })} 
+                data-testid="button-refresh-actions"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button 
+                onClick={() => {
+                  setActiveTab("actions");
+                  resetForm();
+                  setIsCreateDialogOpen(true);
+                }} 
+                data-testid="button-create-action"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Action
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            {actions.map((action) => (
+              <Card key={action.id} className="relative" data-testid={`card-action-${action.id}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="h-5 w-5 text-green-600" />
+                        {action.name}
+                        <Badge 
+                          className={getCategoryBadgeColor(action.category)}
+                          data-testid={`badge-category-${action.category}`}
+                        >
+                          {action.category.replace(/_/g, ' ')}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600 mt-1">
+                        Type: <code className="bg-gray-100 px-1 rounded text-xs">{action.type}</code>
+                        {action.description && (
+                          <span className="block mt-1">{action.description}</span>
+                        )}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={action.isActive}
+                        onCheckedChange={() => updateActionMutation.mutate({
+                          id: action.id,
+                          data: { isActive: !action.isActive }
+                        })}
+                        data-testid={`switch-active-${action.id}`}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditActionDialog(action)}
+                        data-testid={`button-edit-${action.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingAction(action)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        data-testid={`button-delete-${action.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+
+            {actions.length === 0 && (
+              <Card className="text-center py-8">
+                <CardContent>
+                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No actions found</h3>
+                  <p className="text-gray-600 mb-4">Get started by creating your first automation action.</p>
+                  <Button onClick={() => {
+                    setActiveTab("actions");
+                    resetForm();
+                    setIsCreateDialogOpen(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Action
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Create/Edit Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-md" data-testid="dialog-trigger-form">
           <DialogHeader>
             <DialogTitle>
-              {editingTrigger ? "Edit Trigger" : "Create New Trigger"}
+              {activeTab === "triggers" ? 
+                (editingTrigger ? "Edit Trigger" : "Create New Trigger") :
+                (editingAction ? "Edit Action" : "Create New Action")
+              }
             </DialogTitle>
             <DialogDescription>
-              {editingTrigger ? "Update the trigger definition" : "Define a new automation trigger"}
+              {activeTab === "triggers" ? 
+                (editingTrigger ? "Update the trigger definition" : "Define a new automation trigger") :
+                (editingAction ? "Update the action definition" : "Define a new automation action")
+              }
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -334,15 +591,31 @@ export default function AutomationTriggers() {
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="contact_management">Contact Management</SelectItem>
-                  <SelectItem value="form_management">Form Management</SelectItem>
-                  <SelectItem value="project_management">Project Management</SelectItem>
-                  <SelectItem value="task_management">Task Management</SelectItem>
-                  <SelectItem value="lead_management">Lead Management</SelectItem>
-                  <SelectItem value="campaign_management">Campaign Management</SelectItem>
-                  <SelectItem value="financial_management">Financial Management</SelectItem>
-                  <SelectItem value="email_marketing">Email Marketing</SelectItem>
-                  <SelectItem value="time_based">Time Based</SelectItem>
+                  {activeTab === "triggers" ? (
+                    <>
+                      <SelectItem value="contact_management">Contact Management</SelectItem>
+                      <SelectItem value="form_management">Form Management</SelectItem>
+                      <SelectItem value="project_management">Project Management</SelectItem>
+                      <SelectItem value="task_management">Task Management</SelectItem>
+                      <SelectItem value="lead_management">Lead Management</SelectItem>
+                      <SelectItem value="campaign_management">Campaign Management</SelectItem>
+                      <SelectItem value="financial_management">Financial Management</SelectItem>
+                      <SelectItem value="email_marketing">Email Marketing</SelectItem>
+                      <SelectItem value="time_based">Time Based</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="communication">Communication</SelectItem>
+                      <SelectItem value="data_management">Data Management</SelectItem>
+                      <SelectItem value="assignment">Assignment</SelectItem>
+                      <SelectItem value="status_progress">Status & Progress</SelectItem>
+                      <SelectItem value="financial_billing">Financial & Billing</SelectItem>
+                      <SelectItem value="calendar_scheduling">Calendar & Scheduling</SelectItem>
+                      <SelectItem value="knowledge_training">Knowledge & Training</SelectItem>
+                      <SelectItem value="notification_alert">Notification & Alert</SelectItem>
+                      <SelectItem value="internal">Internal Control</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -394,6 +667,7 @@ export default function AutomationTriggers() {
                 onClick={() => {
                   setIsCreateDialogOpen(false);
                   setEditingTrigger(null);
+                  setEditingAction(null);
                   resetForm();
                 }}
                 data-testid="button-cancel"
@@ -402,10 +676,16 @@ export default function AutomationTriggers() {
               </Button>
               <Button
                 type="submit"
-                disabled={createTriggerMutation.isPending || updateTriggerMutation.isPending}
-                data-testid="button-save-trigger"
+                disabled={activeTab === "triggers" ? 
+                  (createTriggerMutation.isPending || updateTriggerMutation.isPending) :
+                  (createActionMutation.isPending || updateActionMutation.isPending)
+                }
+                data-testid={activeTab === "triggers" ? "button-save-trigger" : "button-save-action"}
               >
-                {editingTrigger ? "Update" : "Create"} Trigger
+                {activeTab === "triggers" ? 
+                  (editingTrigger ? "Update" : "Create") + " Trigger" :
+                  (editingAction ? "Update" : "Create") + " Action"
+                }
               </Button>
             </div>
           </form>
