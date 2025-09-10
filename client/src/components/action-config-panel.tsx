@@ -1163,6 +1163,7 @@ export default function ActionConfigPanel({
                             <X className="h-3 w-3" />
                           </Button>
                         </div>
+                        {/* Text fields */}
                         {field.type === "text" && (
                           <Input
                             id={`custom-${field.id}`}
@@ -1174,6 +1175,83 @@ export default function ActionConfigPanel({
                             placeholder={`Enter ${field.name.toLowerCase()}`}
                           />
                         )}
+                        
+                        {/* Email fields */}
+                        {field.type === "email" && (
+                          <Input
+                            id={`custom-${field.id}`}
+                            type="email"
+                            value={settings.customFields?.[field.id] || ""}
+                            onChange={(e) => updateSetting("customFields", {
+                              ...settings.customFields,
+                              [field.id]: e.target.value
+                            })}
+                            placeholder={`Enter ${field.name.toLowerCase()}`}
+                          />
+                        )}
+                        
+                        {/* Phone fields */}
+                        {field.type === "phone" && (
+                          <Input
+                            id={`custom-${field.id}`}
+                            type="tel"
+                            value={settings.customFields?.[field.id] || ""}
+                            onChange={(e) => updateSetting("customFields", {
+                              ...settings.customFields,
+                              [field.id]: e.target.value
+                            })}
+                            placeholder={`Enter ${field.name.toLowerCase()}`}
+                          />
+                        )}
+                        
+                        {/* URL fields */}
+                        {field.type === "url" && (
+                          <Input
+                            id={`custom-${field.id}`}
+                            type="url"
+                            value={settings.customFields?.[field.id] || ""}
+                            onChange={(e) => updateSetting("customFields", {
+                              ...settings.customFields,
+                              [field.id]: e.target.value
+                            })}
+                            placeholder={`Enter ${field.name.toLowerCase()}`}
+                          />
+                        )}
+                        
+                        {/* Currency fields */}
+                        {field.type === "currency" && (
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                            <Input
+                              id={`custom-${field.id}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="pl-8"
+                              value={settings.customFields?.[field.id] || ""}
+                              onChange={(e) => updateSetting("customFields", {
+                                ...settings.customFields,
+                                [field.id]: parseFloat(e.target.value) || 0
+                              })}
+                              placeholder={`Enter ${field.name.toLowerCase()}`}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Date fields */}
+                        {field.type === "date" && (
+                          <Input
+                            id={`custom-${field.id}`}
+                            type="date"
+                            value={settings.customFields?.[field.id] || ""}
+                            onChange={(e) => updateSetting("customFields", {
+                              ...settings.customFields,
+                              [field.id]: e.target.value
+                            })}
+                          />
+                        )}
+                        
+                        {/* Textarea fields */}
                         {field.type === "textarea" && (
                           <Textarea
                             id={`custom-${field.id}`}
@@ -1185,7 +1263,9 @@ export default function ActionConfigPanel({
                             placeholder={`Enter ${field.name.toLowerCase()}`}
                           />
                         )}
-                        {field.type === "select" && field.options && (
+                        
+                        {/* Select/Dropdown fields */}
+                        {(field.type === "select" || field.type === "dropdown") && field.options && (
                           <Select
                             value={settings.customFields?.[field.id] || ""}
                             onValueChange={(value) => updateSetting("customFields", {
@@ -1205,6 +1285,8 @@ export default function ActionConfigPanel({
                             </SelectContent>
                           </Select>
                         )}
+                        
+                        {/* Number fields */}
                         {field.type === "number" && (
                           <Input
                             id={`custom-${field.id}`}
@@ -1217,6 +1299,8 @@ export default function ActionConfigPanel({
                             placeholder={`Enter ${field.name.toLowerCase()}`}
                           />
                         )}
+                        
+                        {/* Checkbox fields */}
                         {field.type === "checkbox" && (
                           <div className="flex items-center space-x-2">
                             <Checkbox
@@ -1229,6 +1313,21 @@ export default function ActionConfigPanel({
                             />
                             <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
                           </div>
+                        )}
+                        
+                        {/* File upload fields */}
+                        {field.type === "file_upload" && (
+                          <Input
+                            id={`custom-${field.id}`}
+                            type="file"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              updateSetting("customFields", {
+                                ...settings.customFields,
+                                [field.id]: file?.name || ""
+                              });
+                            }}
+                          />
                         )}
                       </div>
                     );
