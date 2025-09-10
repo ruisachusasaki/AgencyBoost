@@ -155,6 +155,13 @@ export default function ActionConfigPanel({
     const newMessage = currentMessage + tag;
     updateSetting("message", newMessage);
   };
+  
+  // Function to insert merge tag into notes
+  const insertMergeTagIntoNotes = (tag: string) => {
+    const currentNotes = settings.notes || "";
+    const newNotes = currentNotes + tag;
+    updateSetting("notes", newNotes);
+  };
 
   useEffect(() => {
     const initialSettings = action.settings || {};
@@ -844,7 +851,39 @@ export default function ActionConfigPanel({
             </div>
 
             <div>
-              <Label htmlFor="activity-notes">Notes/Details</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="activity-notes">Notes/Details</Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" type="button">
+                      <Tag className="h-4 w-4 mr-2" />
+                      Insert Merge Tag
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-64" align="end">
+                    {mergeTagGroups.map((group, groupIndex) => (
+                      <div key={group.label}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
+                          {group.label}
+                        </div>
+                        {group.tags.map((tag) => (
+                          <DropdownMenuItem 
+                            key={tag.value} 
+                            onClick={() => insertMergeTagIntoNotes(tag.value)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{tag.label}</span>
+                              <span className="text-xs text-gray-500">{tag.value}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                        {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <Textarea
                 id="activity-notes"
                 value={settings.notes || ""}
