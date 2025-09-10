@@ -746,6 +746,135 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "log_communication":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="activity-type">Activity Type</Label>
+              <Select 
+                value={settings.activityType || "email"} 
+                onValueChange={(value) => updateSetting("activityType", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select activity type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="phone_call">Phone Call</SelectItem>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="note">Note</SelectItem>
+                  <SelectItem value="form_submission">Form Submission</SelectItem>
+                  <SelectItem value="website_visit">Website Visit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="activity-subject">Subject/Title</Label>
+              <Input
+                id="activity-subject"
+                value={settings.subject || ""}
+                onChange={(e) => updateSetting("subject", e.target.value)}
+                placeholder="e.g., New lead inquiry, Follow-up call"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="activity-contact">Contact/Client</Label>
+              <Select 
+                value={settings.contactSource || "trigger_contact"} 
+                onValueChange={(value) => updateSetting("contactSource", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select contact source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trigger_contact">
+                    <div className="flex items-center gap-2">
+                      <span>Contact from Trigger</span>
+                      {hasFormTrigger && (
+                        <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="specific_contact">Specific Contact</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {settings.contactSource === "specific_contact" && (
+              <div>
+                <Label htmlFor="specific-contact">Select Contact</Label>
+                <Select 
+                  value={settings.contactId || ""} 
+                  onValueChange={(value) => updateSetting("contactId", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client: any) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name} ({client.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="activity-staff">Staff Member</Label>
+              <Select 
+                value={settings.staffId || ""} 
+                onValueChange={(value) => updateSetting("staffId", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto_assign">Auto-assign</SelectItem>
+                  {staff.map((member: any) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstName} {member.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="activity-notes">Notes/Details</Label>
+              <Textarea
+                id="activity-notes"
+                value={settings.notes || ""}
+                onChange={(e) => updateSetting("notes", e.target.value)}
+                placeholder="Additional details about this communication..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="activity-outcome">Outcome/Result</Label>
+              <Select 
+                value={settings.outcome || "completed"} 
+                onValueChange={(value) => updateSetting("outcome", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select outcome" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="scheduled_followup">Scheduled Follow-up</SelectItem>
+                  <SelectItem value="no_response">No Response</SelectItem>
+                  <SelectItem value="interested">Interested</SelectItem>
+                  <SelectItem value="not_interested">Not Interested</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
@@ -771,6 +900,8 @@ export default function ActionConfigPanel({
       case "assign_lead":
       case "assign_task":
         return Users;
+      case "log_communication":
+        return FileText;
       default:
         return FileText;
     }
