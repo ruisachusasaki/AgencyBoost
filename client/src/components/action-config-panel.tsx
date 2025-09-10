@@ -162,6 +162,20 @@ export default function ActionConfigPanel({
     const newNotes = currentNotes + tag;
     updateSetting("notes", newNotes);
   };
+  
+  // Function to insert merge tag into task title
+  const insertMergeTagIntoTitle = (tag: string) => {
+    const currentTitle = settings.title || "";
+    const newTitle = currentTitle + tag;
+    updateSetting("title", newTitle);
+  };
+  
+  // Function to insert merge tag into task description
+  const insertMergeTagIntoDescription = (tag: string) => {
+    const currentDescription = settings.description || "";
+    const newDescription = currentDescription + tag;
+    updateSetting("description", newDescription);
+  };
 
   useEffect(() => {
     const initialSettings = action.settings || {};
@@ -546,7 +560,39 @@ export default function ActionConfigPanel({
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="task-title">Task Title</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="task-title">Task Title</Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-xs">
+                      <Plus className="w-3 h-3 mr-1" />
+                      Insert merge tag
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-80 max-h-80 overflow-y-auto">
+                    {mergeTagGroups.map((group, groupIndex) => (
+                      <div key={group.label}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-gray-700 bg-gray-50">
+                          {group.label}
+                        </div>
+                        {group.tags.map((tag) => (
+                          <DropdownMenuItem 
+                            key={tag.value} 
+                            onClick={() => insertMergeTagIntoTitle(tag.value)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{tag.label}</span>
+                              <span className="text-xs text-gray-500">{tag.value}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                        {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <Input
                 id="task-title"
                 value={settings.title || ""}
@@ -556,7 +602,39 @@ export default function ActionConfigPanel({
             </div>
 
             <div>
-              <Label htmlFor="task-description">Task Description</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="task-description">Task Description</Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-xs">
+                      <Plus className="w-3 h-3 mr-1" />
+                      Insert merge tag
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-80 max-h-80 overflow-y-auto">
+                    {mergeTagGroups.map((group, groupIndex) => (
+                      <div key={group.label}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-gray-700 bg-gray-50">
+                          {group.label}
+                        </div>
+                        {group.tags.map((tag) => (
+                          <DropdownMenuItem 
+                            key={tag.value} 
+                            onClick={() => insertMergeTagIntoDescription(tag.value)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{tag.label}</span>
+                              <span className="text-xs text-gray-500">{tag.value}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                        {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <Textarea
                 id="task-description"
                 value={settings.description || ""}
