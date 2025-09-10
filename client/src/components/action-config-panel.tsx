@@ -1590,6 +1590,538 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "split":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Conditions</Label>
+              <p className="text-sm text-gray-500 mb-3">Define the criteria for routing workflow execution</p>
+              
+              <div className="space-y-3">
+                {(settings.conditions || []).map((condition: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium">Branch {index + 1}</h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          const newConditions = settings.conditions.filter((_: any, i: number) => i !== index);
+                          updateSetting("conditions", newConditions);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <Label className="text-xs">Field</Label>
+                        <Input
+                          value={condition.field || ""}
+                          onChange={(e) => {
+                            const newConditions = [...(settings.conditions || [])];
+                            newConditions[index] = { ...condition, field: e.target.value };
+                            updateSetting("conditions", newConditions);
+                          }}
+                          placeholder="e.g., email, company, score"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs">Operator</Label>
+                        <Select 
+                          value={condition.operator || ""} 
+                          onValueChange={(value) => {
+                            const newConditions = [...(settings.conditions || [])];
+                            newConditions[index] = { ...condition, operator: value };
+                            updateSetting("conditions", newConditions);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select operator" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="equals">Equals</SelectItem>
+                            <SelectItem value="not_equals">Not Equals</SelectItem>
+                            <SelectItem value="contains">Contains</SelectItem>
+                            <SelectItem value="not_contains">Not Contains</SelectItem>
+                            <SelectItem value="greater_than">Greater Than</SelectItem>
+                            <SelectItem value="less_than">Less Than</SelectItem>
+                            <SelectItem value="is_empty">Is Empty</SelectItem>
+                            <SelectItem value="is_not_empty">Is Not Empty</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs">Value</Label>
+                        <Input
+                          value={condition.value || ""}
+                          onChange={(e) => {
+                            const newConditions = [...(settings.conditions || [])];
+                            newConditions[index] = { ...condition, value: e.target.value };
+                            updateSetting("conditions", newConditions);
+                          }}
+                          placeholder="Comparison value"
+                          disabled={condition.operator === 'is_empty' || condition.operator === 'is_not_empty'}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs">Next Action ID</Label>
+                        <Input
+                          value={condition.branch_action_id || ""}
+                          onChange={(e) => {
+                            const newConditions = [...(settings.conditions || [])];
+                            newConditions[index] = { ...condition, branch_action_id: e.target.value };
+                            updateSetting("conditions", newConditions);
+                          }}
+                          placeholder="Target action ID"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const newConditions = [...(settings.conditions || []), { field: "", operator: "equals", value: "", branch_action_id: "" }];
+                    updateSetting("conditions", newConditions);
+                  }}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Condition
+                </Button>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="default-branch">Default Branch Action ID</Label>
+              <Input
+                id="default-branch"
+                value={settings.default_branch_action_id || ""}
+                onChange={(e) => updateSetting("default_branch_action_id", e.target.value)}
+                placeholder="Action ID for when no conditions match"
+              />
+            </div>
+          </div>
+        );
+
+      case "wait":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="wait-type">Wait Type</Label>
+              <Select 
+                value={settings.wait_type || ""} 
+                onValueChange={(value) => updateSetting("wait_type", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select wait type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="time_delay">Time Delay</SelectItem>
+                  <SelectItem value="event_time">Event/Appointment Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {settings.wait_type === "time_delay" && (
+              <>
+                <div>
+                  <Label htmlFor="delay-amount">Delay Amount</Label>
+                  <Input
+                    id="delay-amount"
+                    type="number"
+                    value={settings.delay_amount || ""}
+                    onChange={(e) => updateSetting("delay_amount", parseInt(e.target.value) || 0)}
+                    placeholder="Enter amount"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="delay-unit">Time Unit</Label>
+                  <Select 
+                    value={settings.delay_unit || ""} 
+                    onValueChange={(value) => updateSetting("delay_unit", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select time unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutes</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            
+            {settings.wait_type === "event_time" && (
+              <>
+                <div>
+                  <Label htmlFor="event-timing">Event Timing</Label>
+                  <Select 
+                    value={settings.event_timing || ""} 
+                    onValueChange={(value) => updateSetting("event_timing", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select timing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="before">Before</SelectItem>
+                      <SelectItem value="after">After</SelectItem>
+                      <SelectItem value="exact">Exact Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="time-offset-amount">Time Offset</Label>
+                  <Input
+                    id="time-offset-amount"
+                    type="number"
+                    value={settings.time_offset_amount || ""}
+                    onChange={(e) => updateSetting("time_offset_amount", parseInt(e.target.value) || 0)}
+                    placeholder="Enter offset amount"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="time-offset-unit">Offset Unit</Label>
+                  <Select 
+                    value={settings.time_offset_unit || ""} 
+                    onValueChange={(value) => updateSetting("time_offset_unit", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutes</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                      <SelectItem value="months">Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="date-field">Date Field</Label>
+                  <Input
+                    id="date-field"
+                    value={settings.date_field || ""}
+                    onChange={(e) => updateSetting("date_field", e.target.value)}
+                    placeholder="Field containing the date/time (e.g., appointment_date)"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        );
+
+      case "go_to":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="target-action">Target Action ID</Label>
+              <Input
+                id="target-action"
+                value={settings.target_action_id || ""}
+                onChange={(e) => updateSetting("target_action_id", e.target.value)}
+                placeholder="ID of the action to jump to"
+              />
+            </div>
+            
+            <div>
+              <Label>Jump Condition (Optional)</Label>
+              <p className="text-sm text-gray-500 mb-3">Leave empty to always jump, or add a condition</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Field</Label>
+                  <Input
+                    value={settings.condition?.field || ""}
+                    onChange={(e) => updateSetting("condition", { ...settings.condition, field: e.target.value })}
+                    placeholder="Field to check"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="text-xs">Operator</Label>
+                  <Select 
+                    value={settings.condition?.operator || "always"} 
+                    onValueChange={(value) => updateSetting("condition", { ...settings.condition, operator: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select operator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="always">Always</SelectItem>
+                      <SelectItem value="equals">Equals</SelectItem>
+                      <SelectItem value="not_equals">Not Equals</SelectItem>
+                      <SelectItem value="contains">Contains</SelectItem>
+                      <SelectItem value="greater_than">Greater Than</SelectItem>
+                      <SelectItem value="less_than">Less Than</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="text-xs">Value</Label>
+                  <Input
+                    value={settings.condition?.value || ""}
+                    onChange={(e) => updateSetting("condition", { ...settings.condition, value: e.target.value })}
+                    placeholder="Comparison value"
+                    disabled={settings.condition?.operator === 'always'}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "date_time_formatter":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="source-field">Source Field</Label>
+              <Input
+                id="source-field"
+                value={settings.source_field || ""}
+                onChange={(e) => updateSetting("source_field", e.target.value)}
+                placeholder="Field containing the date to format"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="from-format">From Format</Label>
+              <Select 
+                value={settings.from_format || ""} 
+                onValueChange={(value) => updateSetting("from_format", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select input format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                  <SelectItem value="MM-DD-YYYY">MM-DD-YYYY</SelectItem>
+                  <SelectItem value="DD-MM-YYYY">DD-MM-YYYY</SelectItem>
+                  <SelectItem value="MMM DD, YYYY">MMM DD, YYYY</SelectItem>
+                  <SelectItem value="MMMM DD, YYYY">MMMM DD, YYYY</SelectItem>
+                  <SelectItem value="DD MMM YYYY">DD MMM YYYY</SelectItem>
+                  <SelectItem value="timestamp">Timestamp</SelectItem>
+                  <SelectItem value="iso8601">ISO 8601</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="to-format">To Format</Label>
+              <Select 
+                value={settings.to_format || ""} 
+                onValueChange={(value) => updateSetting("to_format", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select output format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                  <SelectItem value="MM-DD-YYYY">MM-DD-YYYY</SelectItem>
+                  <SelectItem value="DD-MM-YYYY">DD-MM-YYYY</SelectItem>
+                  <SelectItem value="MMM DD, YYYY">MMM DD, YYYY</SelectItem>
+                  <SelectItem value="MMMM DD, YYYY">MMMM DD, YYYY</SelectItem>
+                  <SelectItem value="DD MMM YYYY">DD MMM YYYY</SelectItem>
+                  <SelectItem value="MM/DD/YYYY HH:mm">MM/DD/YYYY HH:mm</SelectItem>
+                  <SelectItem value="YYYY-MM-DD HH:mm:ss">YYYY-MM-DD HH:mm:ss</SelectItem>
+                  <SelectItem value="timestamp">Timestamp</SelectItem>
+                  <SelectItem value="iso8601">ISO 8601</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="target-field">Target Field</Label>
+              <Input
+                id="target-field"
+                value={settings.target_field || ""}
+                onChange={(e) => updateSetting("target_field", e.target.value)}
+                placeholder="Field to store the formatted date"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="timezone">Timezone</Label>
+              <Input
+                id="timezone"
+                value={settings.timezone || "UTC"}
+                onChange={(e) => updateSetting("timezone", e.target.value)}
+                placeholder="e.g., America/New_York, UTC"
+              />
+            </div>
+          </div>
+        );
+
+      case "number_formatter":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="source-field">Source Field</Label>
+              <Input
+                id="source-field"
+                value={settings.source_field || ""}
+                onChange={(e) => updateSetting("source_field", e.target.value)}
+                placeholder="Field containing the value to format"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="format-type">Format Type</Label>
+              <Select 
+                value={settings.format_type || ""} 
+                onValueChange={(value) => updateSetting("format_type", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select format type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text_to_number">Text to Number</SelectItem>
+                  <SelectItem value="format_number">Format Number</SelectItem>
+                  <SelectItem value="format_phone">Format Phone Number</SelectItem>
+                  <SelectItem value="format_currency">Format Currency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {(settings.format_type === "format_number" || settings.format_type === "format_currency") && (
+              <>
+                <div>
+                  <Label htmlFor="decimal-places">Decimal Places</Label>
+                  <Input
+                    id="decimal-places"
+                    type="number"
+                    value={settings.decimal_places || 2}
+                    onChange={(e) => updateSetting("decimal_places", parseInt(e.target.value) || 0)}
+                    placeholder="Number of decimal places"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="thousands-separator">Thousands Separator</Label>
+                    <Select 
+                      value={settings.thousands_separator || ","} 
+                      onValueChange={(value) => updateSetting("thousands_separator", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value=",">Comma (,)</SelectItem>
+                        <SelectItem value=".">Period (.)</SelectItem>
+                        <SelectItem value=" ">Space ( )</SelectItem>
+                        <SelectItem value="">None</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="decimal-separator">Decimal Separator</Label>
+                    <Select 
+                      value={settings.decimal_separator || "."} 
+                      onValueChange={(value) => updateSetting("decimal_separator", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value=".">Period (.)</SelectItem>
+                        <SelectItem value=",">Comma (,)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {settings.format_type === "format_phone" && (
+              <div>
+                <Label htmlFor="phone-format">Phone Format</Label>
+                <Select 
+                  value={settings.phone_format || "(XXX) XXX-XXXX"} 
+                  onValueChange={(value) => updateSetting("phone_format", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="(XXX) XXX-XXXX">(XXX) XXX-XXXX</SelectItem>
+                    <SelectItem value="XXX-XXX-XXXX">XXX-XXX-XXXX</SelectItem>
+                    <SelectItem value="+1 XXX XXX XXXX">+1 XXX XXX XXXX</SelectItem>
+                    <SelectItem value="XXX.XXX.XXXX">XXX.XXX.XXXX</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {settings.format_type === "format_currency" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="currency-code">Currency</Label>
+                  <Select 
+                    value={settings.currency_code || "USD"} 
+                    onValueChange={(value) => updateSetting("currency_code", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                      <SelectItem value="CAD">CAD (C$)</SelectItem>
+                      <SelectItem value="AUD">AUD (A$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="symbol-position">Symbol Position</Label>
+                  <Select 
+                    value={settings.currency_symbol_position || "before"} 
+                    onValueChange={(value) => updateSetting("currency_symbol_position", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="before">Before ($100)</SelectItem>
+                      <SelectItem value="after">After (100$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <Label htmlFor="target-field">Target Field</Label>
+              <Input
+                id="target-field"
+                value={settings.target_field || ""}
+                onChange={(e) => updateSetting("target_field", e.target.value)}
+                placeholder="Field to store the formatted value"
+              />
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
@@ -1619,6 +2151,16 @@ export default function ActionConfigPanel({
         return FileText;
       case "create_lead":
         return Users;
+      case "split":
+        return LucideIcons.GitBranch;
+      case "wait":
+        return LucideIcons.Clock;
+      case "go_to":
+        return LucideIcons.ArrowRight;
+      case "date_time_formatter":
+        return LucideIcons.Calendar;
+      case "number_formatter":
+        return LucideIcons.Hash;
       default:
         return FileText;
     }
