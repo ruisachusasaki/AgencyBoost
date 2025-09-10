@@ -123,6 +123,9 @@ export default function Integrations() {
     // Check Twilio status and load phone numbers
     checkTwilioStatus();
     loadTwilioNumbers();
+    
+    // Check Slack status
+    checkSlackStatus();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -144,6 +147,30 @@ export default function Integrations() {
     }
   };
 
+  const checkSlackStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/slack/status');
+      const status = await response.json();
+      
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "slack" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : "disconnected" as const,
+              lastSync: status.lastMessage ? new Date(status.lastMessage).toLocaleString() : "",
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking Slack status:', error);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "slack" 
+          ? { ...integration, status: "error" as const }
+          : integration
+      ));
+    }
+  };
+  
   const checkTwilioStatus = async () => {
     try {
       const response = await apiRequest('GET', '/api/integrations/twilio/status');
