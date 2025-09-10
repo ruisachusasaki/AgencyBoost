@@ -914,6 +914,270 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "create_lead":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="lead-pipeline-stage">Pipeline Stage</Label>
+              <Select 
+                value={settings.stageId || ""} 
+                onValueChange={(value) => updateSetting("stageId", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select initial pipeline stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leadPipelineStages.map((stage: any) => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      {stage.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="lead-assignment">Lead Assignment</Label>
+              <Select 
+                value={settings.assignmentType || "round_robin"} 
+                onValueChange={(value) => updateSetting("assignmentType", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="round_robin">
+                    <div className="flex items-center gap-2">
+                      <span>Round Robin</span>
+                      <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="specific_staff">Specific Staff Member</SelectItem>
+                  <SelectItem value="unassigned">Leave Unassigned</SelectItem>
+                  <SelectItem value="department_rotation">Department Rotation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {settings.assignmentType === "specific_staff" && (
+              <div>
+                <Label htmlFor="specific-staff-lead">Assign To</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between"
+                    >
+                      {settings.assignedTo 
+                        ? staff.find((member: any) => member.id === settings.assignedTo)?.firstName + " " + 
+                          staff.find((member: any) => member.id === settings.assignedTo)?.lastName
+                        : "Select staff member..."
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search staff members..." />
+                      <CommandEmpty>No staff member found.</CommandEmpty>
+                      <CommandGroup>
+                        {staff.map((member: any) => (
+                          <CommandItem
+                            key={member.id}
+                            value={`${member.firstName} ${member.lastName} ${member.email}`}
+                            onSelect={() => {
+                              updateSetting("assignedTo", member.id);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                settings.assignedTo === member.id ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{member.firstName} {member.lastName}</span>
+                              <span className="text-xs text-muted-foreground">{member.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+            {settings.assignmentType === "department_rotation" && (
+              <div>
+                <Label htmlFor="department-rotation">Department</Label>
+                <Select 
+                  value={settings.department || ""} 
+                  onValueChange={(value) => updateSetting("department", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="support">Support</SelectItem>
+                    <SelectItem value="business_development">Business Development</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="lead-source">Lead Source</Label>
+              <Select 
+                value={settings.source || ""} 
+                onValueChange={(value) => updateSetting("source", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select lead source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website_form">Website Form</SelectItem>
+                  <SelectItem value="social_media">Social Media</SelectItem>
+                  <SelectItem value="email_campaign">Email Campaign</SelectItem>
+                  <SelectItem value="referral">Referral</SelectItem>
+                  <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                  <SelectItem value="trade_show">Trade Show</SelectItem>
+                  <SelectItem value="content_marketing">Content Marketing</SelectItem>
+                  <SelectItem value="paid_advertising">Paid Advertising</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="lead-status">Initial Status</Label>
+              <Select 
+                value={settings.status || "new"} 
+                onValueChange={(value) => updateSetting("status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select initial status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="qualified">Qualified</SelectItem>
+                  <SelectItem value="unqualified">Unqualified</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="lead-value">Estimated Value ($)</Label>
+              <Input
+                id="lead-value"
+                type="number"
+                value={settings.value || ""}
+                onChange={(e) => updateSetting("value", parseFloat(e.target.value) || 0)}
+                placeholder="e.g., 5000"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="lead-probability">Close Probability (%)</Label>
+              <Input
+                id="lead-probability"
+                type="number"
+                min="0"
+                max="100"
+                value={settings.probability || ""}
+                onChange={(e) => updateSetting("probability", parseInt(e.target.value) || 0)}
+                placeholder="e.g., 25"
+              />
+            </div>
+
+            {/* Custom Fields Section */}
+            {customFields.length > 0 && (
+              <div className="space-y-4">
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Custom Fields
+                  </h4>
+                  {customFields.map((field: any) => (
+                    <div key={field.id}>
+                      <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
+                      {field.type === "text" && (
+                        <Input
+                          id={`custom-${field.id}`}
+                          value={settings.customFields?.[field.id] || ""}
+                          onChange={(e) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: e.target.value
+                          })}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                        />
+                      )}
+                      {field.type === "textarea" && (
+                        <Textarea
+                          id={`custom-${field.id}`}
+                          value={settings.customFields?.[field.id] || ""}
+                          onChange={(e) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: e.target.value
+                          })}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                        />
+                      )}
+                      {field.type === "select" && field.options && (
+                        <Select
+                          value={settings.customFields?.[field.id] || ""}
+                          onValueChange={(value) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: value
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option: string, index: number) => (
+                              <SelectItem key={index} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {field.type === "number" && (
+                        <Input
+                          id={`custom-${field.id}`}
+                          type="number"
+                          value={settings.customFields?.[field.id] || ""}
+                          onChange={(e) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: parseFloat(e.target.value) || 0
+                          })}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                        />
+                      )}
+                      {field.type === "checkbox" && (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`custom-${field.id}`}
+                            checked={settings.customFields?.[field.id] || false}
+                            onCheckedChange={(checked) => updateSetting("customFields", {
+                              ...settings.customFields,
+                              [field.id]: checked
+                            })}
+                          />
+                          <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
@@ -941,6 +1205,8 @@ export default function ActionConfigPanel({
         return Users;
       case "log_communication":
         return FileText;
+      case "create_lead":
+        return Users;
       default:
         return FileText;
     }
