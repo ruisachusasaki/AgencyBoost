@@ -1092,86 +1092,135 @@ export default function ActionConfigPanel({
               />
             </div>
 
-            {/* Custom Fields Section */}
+            {/* Custom Fields Selection */}
             {customFields.length > 0 && (
               <div className="space-y-4">
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Settings className="h-4 w-4" />
-                    Custom Fields
+                    Custom Fields for New Lead
                   </h4>
-                  {customFields.map((field: any) => (
-                    <div key={field.id}>
-                      <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
-                      {field.type === "text" && (
-                        <Input
-                          id={`custom-${field.id}`}
-                          value={settings.customFields?.[field.id] || ""}
-                          onChange={(e) => updateSetting("customFields", {
-                            ...settings.customFields,
-                            [field.id]: e.target.value
-                          })}
-                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Select which custom fields to include when creating the lead
+                  </p>
+                  <div className="space-y-3">
+                    {customFields.map((field: any) => (
+                      <div key={field.id} className="flex items-start space-x-3">
+                        <Checkbox
+                          id={`include-${field.id}`}
+                          checked={(settings.selectedCustomFields || []).includes(field.id)}
+                          onCheckedChange={(checked) => {
+                            const currentFields = settings.selectedCustomFields || [];
+                            if (checked) {
+                              updateSetting("selectedCustomFields", [...currentFields, field.id]);
+                            } else {
+                              updateSetting("selectedCustomFields", currentFields.filter((id: string) => id !== field.id));
+                              // Also remove the field value if unchecked
+                              const newCustomFields = { ...settings.customFields };
+                              delete newCustomFields[field.id];
+                              updateSetting("customFields", newCustomFields);
+                            }
+                          }}
                         />
-                      )}
-                      {field.type === "textarea" && (
-                        <Textarea
-                          id={`custom-${field.id}`}
-                          value={settings.customFields?.[field.id] || ""}
-                          onChange={(e) => updateSetting("customFields", {
-                            ...settings.customFields,
-                            [field.id]: e.target.value
-                          })}
-                          placeholder={`Enter ${field.name.toLowerCase()}`}
-                        />
-                      )}
-                      {field.type === "select" && field.options && (
-                        <Select
-                          value={settings.customFields?.[field.id] || ""}
-                          onValueChange={(value) => updateSetting("customFields", {
-                            ...settings.customFields,
-                            [field.id]: value
-                          })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options.map((option: string, index: number) => (
-                              <SelectItem key={index} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      {field.type === "number" && (
-                        <Input
-                          id={`custom-${field.id}`}
-                          type="number"
-                          value={settings.customFields?.[field.id] || ""}
-                          onChange={(e) => updateSetting("customFields", {
-                            ...settings.customFields,
-                            [field.id]: parseFloat(e.target.value) || 0
-                          })}
-                          placeholder={`Enter ${field.name.toLowerCase()}`}
-                        />
-                      )}
-                      {field.type === "checkbox" && (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`custom-${field.id}`}
-                            checked={settings.customFields?.[field.id] || false}
-                            onCheckedChange={(checked) => updateSetting("customFields", {
-                              ...settings.customFields,
-                              [field.id]: checked
-                            })}
-                          />
-                          <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
+                        <div className="flex-1 space-y-2">
+                          <Label htmlFor={`include-${field.id}`} className="flex items-center gap-2">
+                            <span className="font-medium">{field.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {field.type.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                          </Label>
+                          
+                          {/* Show field input only if selected */}
+                          {(settings.selectedCustomFields || []).includes(field.id) && (
+                            <div className="ml-6 mt-2">
+                              {field.type === "text" && (
+                                <Input
+                                  id={`custom-${field.id}`}
+                                  value={settings.customFields?.[field.id] || ""}
+                                  onChange={(e) => updateSetting("customFields", {
+                                    ...settings.customFields,
+                                    [field.id]: e.target.value
+                                  })}
+                                  placeholder={`Enter ${field.name.toLowerCase()}`}
+                                  className="text-sm"
+                                />
+                              )}
+                              {field.type === "textarea" && (
+                                <Textarea
+                                  id={`custom-${field.id}`}
+                                  value={settings.customFields?.[field.id] || ""}
+                                  onChange={(e) => updateSetting("customFields", {
+                                    ...settings.customFields,
+                                    [field.id]: e.target.value
+                                  })}
+                                  placeholder={`Enter ${field.name.toLowerCase()}`}
+                                  rows={2}
+                                  className="text-sm"
+                                />
+                              )}
+                              {field.type === "select" && field.options && (
+                                <Select
+                                  value={settings.customFields?.[field.id] || ""}
+                                  onValueChange={(value) => updateSetting("customFields", {
+                                    ...settings.customFields,
+                                    [field.id]: value
+                                  })}
+                                >
+                                  <SelectTrigger className="text-sm">
+                                    <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {field.options.map((option: string, index: number) => (
+                                      <SelectItem key={index} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {field.type === "number" && (
+                                <Input
+                                  id={`custom-${field.id}`}
+                                  type="number"
+                                  value={settings.customFields?.[field.id] || ""}
+                                  onChange={(e) => updateSetting("customFields", {
+                                    ...settings.customFields,
+                                    [field.id]: parseFloat(e.target.value) || 0
+                                  })}
+                                  placeholder={`Enter ${field.name.toLowerCase()}`}
+                                  className="text-sm"
+                                />
+                              )}
+                              {field.type === "checkbox" && (
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`custom-${field.id}`}
+                                    checked={settings.customFields?.[field.id] || false}
+                                    onCheckedChange={(checked) => updateSetting("customFields", {
+                                      ...settings.customFields,
+                                      [field.id]: checked
+                                    })}
+                                  />
+                                  <Label htmlFor={`custom-${field.id}`} className="text-sm">
+                                    {field.name}
+                                  </Label>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Show count of selected fields */}
+                  {(settings.selectedCustomFields || []).length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-green-600 font-medium">
+                        ✓ {(settings.selectedCustomFields || []).length} custom field(s) selected
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             )}
