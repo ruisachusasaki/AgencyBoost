@@ -163,29 +163,6 @@ export default function ActionConfigPanel({
     updateSetting("notes", newNotes);
   };
 
-  // Filter management functions for Create Lead action
-  const addLeadFilter = () => {
-    const newFilter = {
-      field_id: "",
-      operator: "equals",
-      value: ""
-    };
-    updateSetting("filters", [...(settings.filters || []), newFilter]);
-  };
-
-  const removeLeadFilter = (index: number) => {
-    const currentFilters = settings.filters || [];
-    updateSetting("filters", currentFilters.filter((_: any, i: number) => i !== index));
-  };
-
-  const updateLeadFilter = (index: number, field: string, value: any) => {
-    const currentFilters = settings.filters || [];
-    const updatedFilters = currentFilters.map((filter: any, i: number) => 
-      i === index ? { ...filter, [field]: value } : filter
-    );
-    updateSetting("filters", updatedFilters);
-  };
-
   useEffect(() => {
     const initialSettings = action.settings || {};
     
@@ -1115,273 +1092,89 @@ export default function ActionConfigPanel({
               />
             </div>
 
-            {/* Custom Fields Selection */}
+            {/* Custom Fields Section */}
             {customFields.length > 0 && (
               <div className="space-y-4">
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Settings className="h-4 w-4" />
-                    Custom Fields for New Lead
+                    Custom Fields
                   </h4>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Select which custom fields to include when creating the lead
-                  </p>
-                  <div className="space-y-3">
-                    {customFields.map((field: any) => (
-                      <div key={field.id} className="flex items-start space-x-3">
-                        <Checkbox
-                          id={`include-${field.id}`}
-                          checked={(settings.selectedCustomFields || []).includes(field.id)}
-                          onCheckedChange={(checked) => {
-                            const currentFields = settings.selectedCustomFields || [];
-                            if (checked) {
-                              updateSetting("selectedCustomFields", [...currentFields, field.id]);
-                            } else {
-                              updateSetting("selectedCustomFields", currentFields.filter((id: string) => id !== field.id));
-                              // Also remove the field value if unchecked
-                              const newCustomFields = { ...settings.customFields };
-                              delete newCustomFields[field.id];
-                              updateSetting("customFields", newCustomFields);
-                            }
-                          }}
+                  {customFields.map((field: any) => (
+                    <div key={field.id}>
+                      <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
+                      {field.type === "text" && (
+                        <Input
+                          id={`custom-${field.id}`}
+                          value={settings.customFields?.[field.id] || ""}
+                          onChange={(e) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: e.target.value
+                          })}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
                         />
-                        <div className="flex-1 space-y-2">
-                          <Label htmlFor={`include-${field.id}`} className="flex items-center gap-2">
-                            <span className="font-medium">{field.name}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {field.type.replace('_', ' ').toUpperCase()}
-                            </Badge>
-                          </Label>
-                          
-                          {/* Show field input only if selected */}
-                          {(settings.selectedCustomFields || []).includes(field.id) && (
-                            <div className="ml-6 mt-2">
-                              {field.type === "text" && (
-                                <Input
-                                  id={`custom-${field.id}`}
-                                  value={settings.customFields?.[field.id] || ""}
-                                  onChange={(e) => updateSetting("customFields", {
-                                    ...settings.customFields,
-                                    [field.id]: e.target.value
-                                  })}
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  className="text-sm"
-                                />
-                              )}
-                              {field.type === "textarea" && (
-                                <Textarea
-                                  id={`custom-${field.id}`}
-                                  value={settings.customFields?.[field.id] || ""}
-                                  onChange={(e) => updateSetting("customFields", {
-                                    ...settings.customFields,
-                                    [field.id]: e.target.value
-                                  })}
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  rows={2}
-                                  className="text-sm"
-                                />
-                              )}
-                              {field.type === "select" && field.options && (
-                                <Select
-                                  value={settings.customFields?.[field.id] || ""}
-                                  onValueChange={(value) => updateSetting("customFields", {
-                                    ...settings.customFields,
-                                    [field.id]: value
-                                  })}
-                                >
-                                  <SelectTrigger className="text-sm">
-                                    <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.options.map((option: string, index: number) => (
-                                      <SelectItem key={index} value={option}>
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                              {field.type === "number" && (
-                                <Input
-                                  id={`custom-${field.id}`}
-                                  type="number"
-                                  value={settings.customFields?.[field.id] || ""}
-                                  onChange={(e) => updateSetting("customFields", {
-                                    ...settings.customFields,
-                                    [field.id]: parseFloat(e.target.value) || 0
-                                  })}
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  className="text-sm"
-                                />
-                              )}
-                              {field.type === "checkbox" && (
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={`custom-${field.id}`}
-                                    checked={settings.customFields?.[field.id] || false}
-                                    onCheckedChange={(checked) => updateSetting("customFields", {
-                                      ...settings.customFields,
-                                      [field.id]: checked
-                                    })}
-                                  />
-                                  <Label htmlFor={`custom-${field.id}`} className="text-sm">
-                                    {field.name}
-                                  </Label>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                      )}
+                      {field.type === "textarea" && (
+                        <Textarea
+                          id={`custom-${field.id}`}
+                          value={settings.customFields?.[field.id] || ""}
+                          onChange={(e) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: e.target.value
+                          })}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                        />
+                      )}
+                      {field.type === "select" && field.options && (
+                        <Select
+                          value={settings.customFields?.[field.id] || ""}
+                          onValueChange={(value) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: value
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option: string, index: number) => (
+                              <SelectItem key={index} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {field.type === "number" && (
+                        <Input
+                          id={`custom-${field.id}`}
+                          type="number"
+                          value={settings.customFields?.[field.id] || ""}
+                          onChange={(e) => updateSetting("customFields", {
+                            ...settings.customFields,
+                            [field.id]: parseFloat(e.target.value) || 0
+                          })}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                        />
+                      )}
+                      {field.type === "checkbox" && (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`custom-${field.id}`}
+                            checked={settings.customFields?.[field.id] || false}
+                            onCheckedChange={(checked) => updateSetting("customFields", {
+                              ...settings.customFields,
+                              [field.id]: checked
+                            })}
+                          />
+                          <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Show count of selected fields */}
-                  {(settings.selectedCustomFields || []).length > 0 && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-xs text-green-600 font-medium">
-                        ✓ {(settings.selectedCustomFields || []).length} custom field(s) selected
-                      </p>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             )}
-
-            {/* Lead Filters Section */}
-            <div className="space-y-4">
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      Lead Creation Filters
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Only create leads when these conditions are met
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addLeadFilter}
-                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Filter
-                  </Button>
-                </div>
-
-                {/* Render existing filters */}
-                {(settings.filters || []).length > 0 && (
-                  <div className="space-y-3">
-                    {(settings.filters || []).map((filter: any, index: number) => (
-                      <div key={index} className="p-4 border rounded-lg bg-gray-50">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 grid grid-cols-3 gap-3">
-                            {/* Field Selection */}
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Field</Label>
-                              <Select
-                                value={filter.field_id || ""}
-                                onValueChange={(value) => updateLeadFilter(index, "field_id", value)}
-                              >
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Select field" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="name">Lead Name</SelectItem>
-                                  <SelectItem value="email">Email</SelectItem>
-                                  <SelectItem value="phone">Phone</SelectItem>
-                                  <SelectItem value="company">Company</SelectItem>
-                                  <SelectItem value="source">Lead Source</SelectItem>
-                                  <SelectItem value="status">Status</SelectItem>
-                                  <SelectItem value="value">Lead Value</SelectItem>
-                                  <SelectItem value="probability">Close Probability</SelectItem>
-                                  {customFields.map((field: any) => (
-                                    <SelectItem key={field.id} value={field.id}>
-                                      {field.name} (Custom)
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Operator Selection */}
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Condition</Label>
-                              <Select
-                                value={filter.operator || "equals"}
-                                onValueChange={(value) => updateLeadFilter(index, "operator", value)}
-                              >
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Condition" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="equals">Equals</SelectItem>
-                                  <SelectItem value="not_equals">Not Equals</SelectItem>
-                                  <SelectItem value="contains">Contains</SelectItem>
-                                  <SelectItem value="not_contains">Does Not Contain</SelectItem>
-                                  <SelectItem value="starts_with">Starts With</SelectItem>
-                                  <SelectItem value="ends_with">Ends With</SelectItem>
-                                  <SelectItem value="greater_than">Greater Than</SelectItem>
-                                  <SelectItem value="less_than">Less Than</SelectItem>
-                                  <SelectItem value="is_empty">Is Empty</SelectItem>
-                                  <SelectItem value="is_not_empty">Is Not Empty</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Value Input */}
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Value</Label>
-                              {filter.operator === "is_empty" || filter.operator === "is_not_empty" ? (
-                                <Input
-                                  value="No value needed"
-                                  disabled
-                                  className="text-sm text-muted-foreground"
-                                />
-                              ) : (
-                                <Input
-                                  value={filter.value || ""}
-                                  onChange={(e) => updateLeadFilter(index, "value", e.target.value)}
-                                  placeholder="Enter value"
-                                  className="text-sm"
-                                />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Remove Filter Button */}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeLeadFilter(index)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Filter Summary */}
-                {(settings.filters || []).length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <p className="text-xs text-green-600 font-medium">
-                      ✓ {(settings.filters || []).length} filter(s) configured
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Leads will only be created when ALL filters match
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         );
 
