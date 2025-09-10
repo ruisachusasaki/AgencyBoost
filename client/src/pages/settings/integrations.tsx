@@ -475,6 +475,13 @@ export default function Integrations() {
   // State for managing multiple phone numbers
   const [twilioNumbers, setTwilioNumbers] = useState([]);
   const [showManageNumbers, setShowManageNumbers] = useState(false);
+  
+  // Slack configuration state
+  const [isSlackConfigDialogOpen, setIsSlackConfigDialogOpen] = useState(false);
+  
+  const openSlackConfigDialog = () => {
+    setIsSlackConfigDialogOpen(true);
+  };
 
   const handleTwilioConnect = async () => {
     if (!twilioSettings.accountSid || !twilioSettings.authToken || !twilioSettings.phoneNumber || !twilioSettings.name) {
@@ -780,7 +787,17 @@ export default function Integrations() {
                               Add Number
                             </Button>
                           )}
-                          {integration.id !== "twilio" && (
+                          {integration.id === "slack" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openSlackConfigDialog()}
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Settings
+                            </Button>
+                          )}
+                          {integration.id !== "twilio" && integration.id !== "slack" && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -985,6 +1002,93 @@ export default function Integrations() {
                   }
                 }}>
                   Test & Save
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Slack Configuration Dialog */}
+        <Dialog open={isSlackConfigDialogOpen} onOpenChange={setIsSlackConfigDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Configure Slack Integration
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Current Issue</h3>
+                <p className="text-yellow-700 text-sm">
+                  Your Slack integration is failing due to missing bot permissions. Follow the steps below to fix this.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Step 1: Update Bot Permissions</h3>
+                <ol className="text-sm text-gray-700 space-y-2 ml-4">
+                  <li>1. Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://api.slack.com/apps</a></li>
+                  <li>2. Select your app</li>
+                  <li>3. Go to <strong>"OAuth & Permissions"</strong> in the sidebar</li>
+                  <li>4. In <strong>"Bot Token Scopes"</strong>, add these permissions:
+                    <ul className="ml-4 mt-1 space-y-1">
+                      <li>• <code className="bg-gray-100 px-1 rounded">chat:write</code> (to send messages)</li>
+                      <li>• <code className="bg-gray-100 px-1 rounded">channels:read</code> (to access channel info)</li>
+                    </ul>
+                  </li>
+                  <li>5. Click <strong>"Reinstall App"</strong> at the top of the page</li>
+                  <li>6. Copy the new <strong>"Bot User OAuth Token"</strong> (starts with xoxb-)</li>
+                </ol>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Step 2: Get Channel ID</h3>
+                <ol className="text-sm text-gray-700 space-y-2 ml-4">
+                  <li>1. Open Slack and go to your desired channel</li>
+                  <li>2. Right-click the channel name and select <strong>"Copy link"</strong></li>
+                  <li>3. The Channel ID is the last part of the URL (e.g., C1234567890)</li>
+                </ol>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Step 3: Update Your Secrets</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-blue-800 text-sm mb-3">
+                    Update these environment variables in your Replit Secrets:
+                  </p>
+                  <ul className="text-sm text-blue-700 space-y-2">
+                    <li>• <strong>SLACK_BOT_TOKEN</strong>: Your new Bot User OAuth Token</li>
+                    <li>• <strong>SLACK_CHANNEL_ID</strong>: Your channel ID</li>
+                  </ul>
+                  <p className="text-blue-600 text-xs mt-3">
+                    Go to your project settings → Secrets tab to update these values.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-semibold text-green-800 mb-2">💡 Pro Tip</h3>
+                <p className="text-green-700 text-sm">
+                  After updating your secrets, the page will automatically restart. Then you can test the connection again!
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsSlackConfigDialogOpen(false)}
+                >
+                  Close
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setIsSlackConfigDialogOpen(false);
+                    window.open('https://api.slack.com/apps', '_blank');
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Open Slack Apps
                 </Button>
               </div>
             </div>
