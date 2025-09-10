@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,8 +46,8 @@ export default function ActionConfigPanel({
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   
-  // Merge tags for notifications
-  const mergeTagGroups = [
+  // Merge tags for notifications - using useMemo to depend on loaded custom fields
+  const mergeTagGroups = useMemo(() => [
     {
       label: "Contact Information",
       tags: [
@@ -94,7 +94,7 @@ export default function ActionConfigPanel({
         value: `{{custom.${field.name.toLowerCase().replace(/\s+/g, '_')}}}`
       }))
     }] : [])
-  ];
+  ], [customFields]);
   
   // Function to insert merge tag into message
   const insertMergeTag = (tag: string) => {
