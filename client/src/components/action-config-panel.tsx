@@ -978,11 +978,6 @@ export default function ActionConfigPanel({
               </Select>
             </div>
 
-            {/* Debug info */}
-            <div className="mb-2 p-2 bg-yellow-100 border rounded text-xs">
-              Debug: assignmentType = "{settings.assignmentType}" (should be "round_robin")
-            </div>
-
             {settings.assignmentType === "round_robin" && (
               <div className="space-y-4">
                 <div>
