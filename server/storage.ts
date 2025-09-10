@@ -1820,6 +1820,107 @@ export class MemStorage implements IStorage {
         },
         isActive: true,
         createdAt: new Date()
+      },
+
+      // 🔧 Internal Control Actions
+      {
+        id: "action-43",
+        name: "Split",
+        type: "split",
+        description: "Conditional branching - route workflow based on criteria",
+        category: "internal",
+        configSchema: {
+          conditions: { 
+            type: "array", 
+            items: { 
+              field: { type: "string", required: true },
+              operator: { type: "string", options: ["equals", "not_equals", "contains", "not_contains", "greater_than", "less_than", "is_empty", "is_not_empty"], required: true },
+              value: { type: "string" },
+              branch_action_id: { type: "string", required: true }
+            },
+            required: true 
+          },
+          default_branch_action_id: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-44",
+        name: "Wait",
+        type: "wait",
+        description: "Pause workflow execution for time delays or events",
+        category: "internal",
+        configSchema: {
+          wait_type: { type: "string", options: ["time_delay", "event_time"], required: true },
+          // Time delay options
+          delay_amount: { type: "number" },
+          delay_unit: { type: "string", options: ["minutes", "hours", "days"] },
+          // Event time options  
+          event_timing: { type: "string", options: ["before", "after", "exact"] },
+          time_offset_amount: { type: "number" },
+          time_offset_unit: { type: "string", options: ["minutes", "hours", "days", "months"] },
+          date_field: { type: "string" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-45",
+        name: "Go To",
+        type: "go_to",
+        description: "Jump to another action in the workflow",
+        category: "internal",
+        configSchema: {
+          target_action_id: { type: "string", required: true },
+          condition: { 
+            type: "object",
+            field: { type: "string" },
+            operator: { type: "string", options: ["always", "equals", "not_equals", "contains", "greater_than", "less_than"] },
+            value: { type: "string" }
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-46",
+        name: "Date/Time Formatter",
+        type: "date_time_formatter",
+        description: "Transform date formats and date/time values",
+        category: "internal",
+        configSchema: {
+          source_field: { type: "string", required: true },
+          from_format: { type: "string", options: ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD", "MM-DD-YYYY", "DD-MM-YYYY", "MMM DD, YYYY", "MMMM DD, YYYY", "DD MMM YYYY", "timestamp", "iso8601"], required: true },
+          to_format: { type: "string", options: ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD", "MM-DD-YYYY", "DD-MM-YYYY", "MMM DD, YYYY", "MMMM DD, YYYY", "DD MMM YYYY", "MM/DD/YYYY HH:mm", "YYYY-MM-DD HH:mm:ss", "timestamp", "iso8601"], required: true },
+          target_field: { type: "string", required: true },
+          timezone: { type: "string", default: "UTC" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-47",
+        name: "Number Formatter",
+        type: "number_formatter",
+        description: "Format numbers, phone numbers, and currency values",
+        category: "internal",
+        configSchema: {
+          source_field: { type: "string", required: true },
+          format_type: { type: "string", options: ["text_to_number", "format_number", "format_phone", "format_currency"], required: true },
+          // Number formatting options
+          decimal_places: { type: "number", default: 2 },
+          thousands_separator: { type: "string", options: [",", ".", " ", ""], default: "," },
+          decimal_separator: { type: "string", options: [".", ","], default: "." },
+          // Phone formatting options
+          phone_format: { type: "string", options: ["(XXX) XXX-XXXX", "XXX-XXX-XXXX", "+1 XXX XXX XXXX", "XXX.XXX.XXXX"], default: "(XXX) XXX-XXXX" },
+          // Currency formatting options
+          currency_code: { type: "string", options: ["USD", "EUR", "GBP", "CAD", "AUD"], default: "USD" },
+          currency_symbol_position: { type: "string", options: ["before", "after"], default: "before" },
+          target_field: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
