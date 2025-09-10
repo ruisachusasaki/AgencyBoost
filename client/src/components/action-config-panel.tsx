@@ -163,6 +163,29 @@ export default function ActionConfigPanel({
     updateSetting("notes", newNotes);
   };
 
+  // Filter management functions for Create Lead action
+  const addLeadFilter = () => {
+    const newFilter = {
+      field_id: "",
+      operator: "equals",
+      value: ""
+    };
+    updateSetting("filters", [...(settings.filters || []), newFilter]);
+  };
+
+  const removeLeadFilter = (index: number) => {
+    const currentFilters = settings.filters || [];
+    updateSetting("filters", currentFilters.filter((_: any, i: number) => i !== index));
+  };
+
+  const updateLeadFilter = (index: number, field: string, value: any) => {
+    const currentFilters = settings.filters || [];
+    const updatedFilters = currentFilters.map((filter: any, i: number) => 
+      i === index ? { ...filter, [field]: value } : filter
+    );
+    updateSetting("filters", updatedFilters);
+  };
+
   useEffect(() => {
     const initialSettings = action.settings || {};
     
@@ -1224,6 +1247,141 @@ export default function ActionConfigPanel({
                 </div>
               </div>
             )}
+
+            {/* Lead Filters Section */}
+            <div className="space-y-4">
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Lead Creation Filters
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Only create leads when these conditions are met
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLeadFilter}
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Filter
+                  </Button>
+                </div>
+
+                {/* Render existing filters */}
+                {(settings.filters || []).length > 0 && (
+                  <div className="space-y-3">
+                    {(settings.filters || []).map((filter: any, index: number) => (
+                      <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 grid grid-cols-3 gap-3">
+                            {/* Field Selection */}
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Field</Label>
+                              <Select
+                                value={filter.field_id || ""}
+                                onValueChange={(value) => updateLeadFilter(index, "field_id", value)}
+                              >
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue placeholder="Select field" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="name">Lead Name</SelectItem>
+                                  <SelectItem value="email">Email</SelectItem>
+                                  <SelectItem value="phone">Phone</SelectItem>
+                                  <SelectItem value="company">Company</SelectItem>
+                                  <SelectItem value="source">Lead Source</SelectItem>
+                                  <SelectItem value="status">Status</SelectItem>
+                                  <SelectItem value="value">Lead Value</SelectItem>
+                                  <SelectItem value="probability">Close Probability</SelectItem>
+                                  {customFields.map((field: any) => (
+                                    <SelectItem key={field.id} value={field.id}>
+                                      {field.name} (Custom)
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Operator Selection */}
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Condition</Label>
+                              <Select
+                                value={filter.operator || "equals"}
+                                onValueChange={(value) => updateLeadFilter(index, "operator", value)}
+                              >
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue placeholder="Condition" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="equals">Equals</SelectItem>
+                                  <SelectItem value="not_equals">Not Equals</SelectItem>
+                                  <SelectItem value="contains">Contains</SelectItem>
+                                  <SelectItem value="not_contains">Does Not Contain</SelectItem>
+                                  <SelectItem value="starts_with">Starts With</SelectItem>
+                                  <SelectItem value="ends_with">Ends With</SelectItem>
+                                  <SelectItem value="greater_than">Greater Than</SelectItem>
+                                  <SelectItem value="less_than">Less Than</SelectItem>
+                                  <SelectItem value="is_empty">Is Empty</SelectItem>
+                                  <SelectItem value="is_not_empty">Is Not Empty</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Value Input */}
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Value</Label>
+                              {filter.operator === "is_empty" || filter.operator === "is_not_empty" ? (
+                                <Input
+                                  value="No value needed"
+                                  disabled
+                                  className="text-sm text-muted-foreground"
+                                />
+                              ) : (
+                                <Input
+                                  value={filter.value || ""}
+                                  onChange={(e) => updateLeadFilter(index, "value", e.target.value)}
+                                  placeholder="Enter value"
+                                  className="text-sm"
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Remove Filter Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLeadFilter(index)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Filter Summary */}
+                {(settings.filters || []).length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-green-600 font-medium">
+                      ✓ {(settings.filters || []).length} filter(s) configured
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leads will only be created when ALL filters match
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         );
 
