@@ -43,6 +43,7 @@ export default function ActionConfigPanel({
 }: ActionConfigPanelProps) {
   const [settings, setSettings] = useState(action.settings || {});
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Check if workflow has form submission triggers
   const hasFormTrigger = workflowTriggers.some(trigger => 
@@ -108,7 +109,46 @@ export default function ActionConfigPanel({
     setSettings(initialSettings);
   }, [action, hasFormTrigger]);
 
+  const validateSettings = (): string[] => {
+    const errors: string[] = [];
+    
+    // Email and SMS both require templates
+    if ((action.type === 'send_email' || action.type === 'send_sms') && !settings.templateId) {
+      errors.push(`${action.type === 'send_email' ? 'Email' : 'SMS'} template is required`);
+    }
+    
+    // Validate email-specific requirements
+    if (action.type === 'send_email') {
+      if (settings.recipient === 'specific_staff' && !settings.staffId) {
+        errors.push('Staff member selection is required');
+      }
+      if (settings.recipient === 'custom_email' && !settings.customEmail) {
+        errors.push('Email address is required');
+      }
+    }
+    
+    // Validate SMS-specific requirements
+    if (action.type === 'send_sms') {
+      if (settings.recipient === 'specific_staff' && !settings.staffId) {
+        errors.push('Staff member selection is required');
+      }
+      if (settings.recipient === 'custom_phone' && !settings.customPhone) {
+        errors.push('Phone number is required');
+      }
+    }
+    
+    return errors;
+  };
+
   const handleSave = () => {
+    const errors = validateSettings();
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors([]);
     onSave({
       ...action,
       settings
@@ -120,6 +160,11 @@ export default function ActionConfigPanel({
       ...prev,
       [key]: value
     }));
+    
+    // Clear validation errors when user starts fixing them
+    if (validationErrors.length > 0) {
+      setValidationErrors([]);
+    }
   };
 
   const renderActionSettings = () => {
@@ -632,13 +677,30 @@ export default function ActionConfigPanel({
       </div>
 
       {/* Footer */}
-      <div className="border-t p-6 flex justify-end space-x-3">
-        <Button variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button onClick={handleSave} className="bg-[#46a1a0] hover:bg-[#3a8a89]">
-          Save Configuration
-        </Button>
+      <div className="border-t p-6">
+        {/* Validation Errors */}
+        {validationErrors.length > 0 && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <X className="h-4 w-4 text-red-600" />
+              <span className="text-sm font-medium text-red-800">Please fix the following errors:</span>
+            </div>
+            <ul className="list-disc list-inside space-y-1">
+              {validationErrors.map((error, index) => (
+                <li key={index} className="text-sm text-red-700">{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        <div className="flex justify-end space-x-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} className="bg-[#46a1a0] hover:bg-[#3a8a89]">
+            Save Configuration
+          </Button>
+        </div>
       </div>
     </div>
   );
