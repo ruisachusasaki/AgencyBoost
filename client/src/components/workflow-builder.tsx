@@ -30,6 +30,26 @@ interface WorkflowBuilderProps {
 }
 
 
+
+export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkflow }: WorkflowBuilderProps) {
+  const [workflowName, setWorkflowName] = useState(editingWorkflow?.name || "");
+  const [workflowDescription, setWorkflowDescription] = useState(editingWorkflow?.description || "");
+  const [workflowCategory, setWorkflowCategory] = useState(editingWorkflow?.category || "");
+  const [selectedTrigger, setSelectedTrigger] = useState<WorkflowStep | null>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
+  const [showTriggerSelect, setShowTriggerSelect] = useState(false);
+  const [showActionSelect, setShowActionSelect] = useState(false);
+
+  // Fetch triggers from API
+  const { data: apiTriggers = [] } = useQuery<any[]>({
+    queryKey: ["/api/automation-triggers"],
+  });
+
+  // Fetch actions from API
+  const { data: apiActions = [] } = useQuery<any[]>({
+    queryKey: ["/api/automation-actions"],
+  });
+
   // Map action types to icons
   const getIconForAction = (type: string) => {
     const iconMap: { [key: string]: any } = {
@@ -113,25 +133,6 @@ interface WorkflowBuilderProps {
     };
     return categoryNames[category] || category;
   };
-
-export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkflow }: WorkflowBuilderProps) {
-  const [workflowName, setWorkflowName] = useState(editingWorkflow?.name || "");
-  const [workflowDescription, setWorkflowDescription] = useState(editingWorkflow?.description || "");
-  const [workflowCategory, setWorkflowCategory] = useState(editingWorkflow?.category || "");
-  const [selectedTrigger, setSelectedTrigger] = useState<WorkflowStep | null>(null);
-  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
-  const [showTriggerSelect, setShowTriggerSelect] = useState(false);
-  const [showActionSelect, setShowActionSelect] = useState(false);
-
-  // Fetch triggers from API
-  const { data: apiTriggers = [] } = useQuery<any[]>({
-    queryKey: ["/api/automation-triggers"],
-  });
-
-  // Fetch actions from API
-  const { data: apiActions = [] } = useQuery<any[]>({
-    queryKey: ["/api/automation-actions"],
-  });
 
 
 
