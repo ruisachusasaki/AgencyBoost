@@ -215,6 +215,22 @@ export default function ActionConfigPanel({
       }
     }
     
+    // Validate create lead requirements
+    if (action.type === 'create_lead') {
+      if (!settings.stageId) {
+        errors.push('Pipeline stage is required');
+      }
+      if (!settings.assignmentType) {
+        errors.push('Lead assignment method is required');
+      }
+      if (settings.assignmentType === 'specific_staff' && !settings.assignedTo) {
+        errors.push('Staff member selection is required when using specific assignment');
+      }
+      if (settings.assignmentType === 'department_rotation' && !settings.department) {
+        errors.push('Department selection is required when using department rotation');
+      }
+    }
+    
     return errors;
   };
 
