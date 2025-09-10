@@ -568,14 +568,14 @@ export default function ActionConfigPanel({
             <div>
               <Label htmlFor="task-assignee">Assign To</Label>
               <Select 
-                value={settings.assigneeId || ""} 
-                onValueChange={(value) => updateSetting("assigneeId", value)}
+                value={settings.assigneeId || "unassigned"} 
+                onValueChange={(value) => updateSetting("assigneeId", value === "unassigned" ? "" : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select assignee" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No assignment</SelectItem>
+                  <SelectItem value="unassigned">No assignment</SelectItem>
                   {staff.map((member: any) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.firstName} {member.lastName}
