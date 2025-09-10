@@ -223,6 +223,9 @@ export default function ActionConfigPanel({
       if (!settings.assignmentType) {
         errors.push('Lead assignment method is required');
       }
+      if (settings.assignmentType === 'round_robin' && (!settings.roundRobinUsers || settings.roundRobinUsers.length === 0)) {
+        errors.push('At least one staff member must be selected for round robin assignment');
+      }
       if (settings.assignmentType === 'specific_staff' && !settings.assignedTo) {
         errors.push('Staff member selection is required when using specific assignment');
       }
@@ -974,6 +977,155 @@ export default function ActionConfigPanel({
                 </SelectContent>
               </Select>
             </div>
+
+            {settings.assignmentType === "round_robin" && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="round-robin-users">Round Robin Users</Label>
+                  <div className="space-y-3">
+                    {/* Selected staff members display */}
+                    <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-gray-50 min-h-[40px]">
+                      {settings.roundRobinUsers?.map((userId: string) => {
+                        const member = staff.find((s: any) => s.id === userId);
+                        if (!member) return null;
+                        return (
+                          <div key={userId} className="flex items-center gap-1 bg-white border rounded-md px-2 py-1">
+                            <span className="text-sm">{member.firstName} {member.lastName}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              onClick={() => {
+                                const currentUsers = settings.roundRobinUsers || [];
+                                const newUsers = currentUsers.filter((id: string) => id !== userId);
+                                updateSetting("roundRobinUsers", newUsers);
+                                // Also remove from weights
+                                const currentWeights = settings.roundRobinWeights || {};
+                                const { [userId]: removed, ...remainingWeights } = currentWeights;
+                                updateSetting("roundRobinWeights", remainingWeights);
+                              }}
+                              className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      }) || []}
+                      
+                      {/* Add user dropdown */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" type="button" className="border-dashed">
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add User
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search staff members..." />
+                            <CommandEmpty>No staff member found.</CommandEmpty>
+                            <CommandGroup>
+                              {staff
+                                .filter((member: any) => !settings.roundRobinUsers?.includes(member.id))
+                                .map((member: any) => (
+                                <CommandItem
+                                  key={member.id}
+                                  value={`${member.firstName} ${member.lastName} ${member.email}`}
+                                  onSelect={() => {
+                                    const currentUsers = settings.roundRobinUsers || [];
+                                    updateSetting("roundRobinUsers", [...currentUsers, member.id]);
+                                    // Initialize weight to 1
+                                    const currentWeights = settings.roundRobinWeights || {};
+                                    updateSetting("roundRobinWeights", {
+                                      ...currentWeights,
+                                      [member.id]: 1
+                                    });
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span>{member.firstName} {member.lastName}</span>
+                                    <span className="text-xs text-muted-foreground">{member.email}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    {(!settings.roundRobinUsers || settings.roundRobinUsers.length === 0) && (
+                      <p className="text-sm text-gray-500">No users selected. Click "Add User" to select staff members for round robin assignment.</p>
+                    )}
+                  </div>
+                </div>
+
+                {settings.roundRobinUsers && settings.roundRobinUsers.length > 0 && (
+                  <div>
+                    <Label htmlFor="split-traffic">Split Traffic</Label>
+                    <Select 
+                      value={settings.splitTraffic || "equally"} 
+                      onValueChange={(value) => updateSetting("splitTraffic", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select distribution method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="equally">Equally</SelectItem>
+                        <SelectItem value="unevenly">Unevenly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {settings.splitTraffic === "unevenly" && settings.roundRobinUsers && settings.roundRobinUsers.length > 0 && (
+                  <div>
+                    <Label>Traffic Weightage</Label>
+                    <div className="space-y-3 mt-2">
+                      {settings.roundRobinUsers.map((userId: string) => {
+                        const member = staff.find((s: any) => s.id === userId);
+                        if (!member) return null;
+                        return (
+                          <div key={userId} className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {member.firstName} {member.lastName}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={settings.roundRobinWeights?.[userId] || 1}
+                                onChange={(e) => {
+                                  const currentWeights = settings.roundRobinWeights || {};
+                                  updateSetting("roundRobinWeights", {
+                                    ...currentWeights,
+                                    [userId]: parseInt(e.target.value) || 1
+                                  });
+                                }}
+                                className="w-16 text-center"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {settings.roundRobinUsers && settings.roundRobinUsers.length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="only-unassigned-leads"
+                      checked={settings.onlyUnassignedLeads || false}
+                      onCheckedChange={(checked) => updateSetting("onlyUnassignedLeads", checked)}
+                    />
+                    <Label htmlFor="only-unassigned-leads" className="text-sm">
+                      Only apply to unassigned leads
+                    </Label>
+                  </div>
+                )}
+              </div>
+            )}
 
             {settings.assignmentType === "specific_staff" && (
               <div>
