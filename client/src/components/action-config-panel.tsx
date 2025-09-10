@@ -45,6 +45,59 @@ export default function ActionConfigPanel({
   const [settings, setSettings] = useState(action.settings || {});
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Check if workflow has form submission triggers
+  const hasFormTrigger = workflowTriggers.some(trigger => 
+    trigger.type === 'form_submission' || 
+    trigger.type === 'form_filled' ||
+    trigger.name?.toLowerCase().includes('form')
+  );
+
+  // Fetch data for different action types
+  const { data: emailTemplates = [] } = useQuery<any[]>({
+    queryKey: ["/api/email-templates"],
+  });
+
+  const { data: smsTemplates = [] } = useQuery<any[]>({
+    queryKey: ["/api/sms-templates"],
+  });
+
+  const { data: staff = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff"],
+  });
+
+  const { data: clientsData } = useQuery<any>({
+    queryKey: ["/api/clients"],
+  });
+  const clients = clientsData?.clients || [];
+
+  const { data: projects = [] } = useQuery<any[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  const { data: tasks = [] } = useQuery<any[]>({
+    queryKey: ["/api/tasks"],
+  });
+
+  const { data: leads = [] } = useQuery<any[]>({
+    queryKey: ["/api/leads"],
+  });
+
+  const { data: leadPipelineStages = [] } = useQuery<any[]>({
+    queryKey: ["/api/lead-pipeline-stages"],
+  });
+
+  const { data: taskStatuses = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-statuses"],
+  });
+
+  const { data: customFields = [] } = useQuery<any[]>({
+    queryKey: ["/api/custom-fields"],
+  });
+
+  const { data: tags = [] } = useQuery<any[]>({
+    queryKey: ["/api/tags"],
+  });
   
   // Merge tags for notifications - using useMemo to depend on loaded custom fields
   const mergeTagGroups = useMemo(() => [
@@ -102,59 +155,6 @@ export default function ActionConfigPanel({
     const newMessage = currentMessage + tag;
     updateSetting("message", newMessage);
   };
-
-  // Check if workflow has form submission triggers
-  const hasFormTrigger = workflowTriggers.some(trigger => 
-    trigger.type === 'form_submission' || 
-    trigger.type === 'form_filled' ||
-    trigger.name?.toLowerCase().includes('form')
-  );
-
-  // Fetch data for different action types
-  const { data: emailTemplates = [] } = useQuery<any[]>({
-    queryKey: ["/api/email-templates"],
-  });
-
-  const { data: smsTemplates = [] } = useQuery<any[]>({
-    queryKey: ["/api/sms-templates"],
-  });
-
-  const { data: staff = [] } = useQuery<any[]>({
-    queryKey: ["/api/staff"],
-  });
-
-  const { data: clientsData } = useQuery<any>({
-    queryKey: ["/api/clients"],
-  });
-  const clients = clientsData?.clients || [];
-
-  const { data: projects = [] } = useQuery<any[]>({
-    queryKey: ["/api/projects"],
-  });
-
-  const { data: tasks = [] } = useQuery<any[]>({
-    queryKey: ["/api/tasks"],
-  });
-
-  const { data: leads = [] } = useQuery<any[]>({
-    queryKey: ["/api/leads"],
-  });
-
-  const { data: leadPipelineStages = [] } = useQuery<any[]>({
-    queryKey: ["/api/lead-pipeline-stages"],
-  });
-
-  const { data: taskStatuses = [] } = useQuery<any[]>({
-    queryKey: ["/api/task-statuses"],
-  });
-
-  const { data: customFields = [] } = useQuery<any[]>({
-    queryKey: ["/api/custom-fields"],
-  });
-
-  const { data: tags = [] } = useQuery<any[]>({
-    queryKey: ["/api/tags"],
-  });
 
   useEffect(() => {
     const initialSettings = action.settings || {};
