@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap, Users, Target, TrendingUp, DollarSign, FileText, Calendar, AlertCircle, GraduationCap, BookOpen, Trophy, BellRing, BarChart3, UserCheck } from "lucide-react";
+import { Plus, Mail, Clock, CheckSquare, Tag, MessageSquare, Phone, Trash2, Settings, Zap, Users, Target, TrendingUp, DollarSign, FileText, Calendar, AlertCircle, GraduationCap, BookOpen, Trophy, BellRing, BarChart3, UserCheck, GitBranch, ArrowRight, Hash } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 
 interface WorkflowStep {
   id: string;
@@ -29,62 +30,89 @@ interface WorkflowBuilderProps {
 }
 
 
-const AVAILABLE_ACTIONS = [
-  {
-    id: "send_email",
-    name: "Send Email",
-    description: "Send an email using a template",
-    icon: Mail,
-    config: {
-      fields: ["template_id", "subject", "delay"]
+  // Map action types to icons
+  const getIconForAction = (type: string) => {
+    const iconMap: { [key: string]: any } = {
+      send_email: Mail,
+      send_sms: MessageSquare,
+      create_task: CheckSquare,
+      create_lead: Users,
+      add_tag: Tag,
+      wait: Clock,
+      make_call: Phone,
+      log_communication: FileText,
+      send_internal_notification: BellRing,
+      send_slack_message: MessageSquare,
+      create_project: Plus,
+      update_client_fields: Users,
+      update_lead_stage: Target,
+      update_project_status: Settings,
+      add_client_tags: Tag,
+      update_custom_fields: Settings,
+      assign_contact_owner: UserCheck,
+      assign_task_to_staff: CheckSquare,
+      assign_lead_to_staff: Users,
+      add_team_role_assignment: Users,
+      reassign_project_manager: UserCheck,
+      remove_staff_assignment: Users,
+      mark_task_complete: CheckSquare,
+      update_lead_score: TrendingUp,
+      change_client_status: Users,
+      update_deal_value: DollarSign,
+      schedule_follow_up: Calendar,
+      create_calendar_event: Calendar,
+      send_proposal: FileText,
+      generate_invoice: DollarSign,
+      update_payment_status: DollarSign,
+      add_note: FileText,
+      create_support_ticket: AlertCircle,
+      schedule_training: GraduationCap,
+      assign_course: BookOpen,
+      award_badge: Trophy,
+      update_progress: BarChart3,
+      send_completion_certificate: Trophy,
+      appointment_reminder: Calendar,
+      task_deadline_alert: AlertCircle,
+      lead_follow_up_reminder: Users,
+      client_check_in_reminder: Calendar,
+      overdue_task_alert: AlertCircle,
+      // Internal actions
+      split: GitBranch,
+      go_to: ArrowRight,
+      date_time_formatter: Calendar,
+      number_formatter: Hash
+    };
+    return iconMap[type] || FileText;
+  };
+
+  // Group actions by category
+  const groupedActions = apiActions.reduce((groups: any, action: any) => {
+    const category = action.category || 'other';
+    if (!groups[category]) {
+      groups[category] = [];
     }
-  },
-  {
-    id: "send_sms",
-    name: "Send SMS",
-    description: "Send an SMS message",
-    icon: MessageSquare,
-    config: {
-      fields: ["message", "delay"]
-    }
-  },
-  {
-    id: "create_task",
-    name: "Create Task",
-    description: "Create a task for team members",
-    icon: CheckSquare,
-    config: {
-      fields: ["title", "description", "assignee", "priority", "due_date"]
-    }
-  },
-  {
-    id: "add_tag",
-    name: "Add Tag",
-    description: "Add a tag to the contact",
-    icon: Tag,
-    config: {
-      fields: ["tag_name"]
-    }
-  },
-  {
-    id: "wait",
-    name: "Wait",
-    description: "Wait for a specified amount of time",
-    icon: Clock,
-    config: {
-      fields: ["duration", "unit"]
-    }
-  },
-  {
-    id: "make_call",
-    name: "Make Phone Call",
-    description: "Schedule or make a phone call",
-    icon: Phone,
-    config: {
-      fields: ["phone_number", "script", "assignee"]
-    }
-  }
-];
+    groups[category].push({
+      ...action,
+      icon: getIconForAction(action.type)
+    });
+    return groups;
+  }, {});
+
+  // Get category display names
+  const getCategoryDisplayName = (category: string) => {
+    const categoryNames: { [key: string]: string } = {
+      communication: '📧 Communication',
+      data_management: '📋 Data Management', 
+      assignment: '👥 Assignment',
+      status_progress: '📊 Status & Progress',
+      financial_billing: '💰 Financial & Billing',
+      calendar_scheduling: '📅 Calendar & Scheduling',
+      knowledge_training: '🎓 Knowledge & Training',
+      notification_alert: '🔔 Notification & Alert',
+      internal: '🔧 Internal Control'
+    };
+    return categoryNames[category] || category;
+  };
 
 export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkflow }: WorkflowBuilderProps) {
   const [workflowName, setWorkflowName] = useState(editingWorkflow?.name || "");
@@ -98,6 +126,11 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
   // Fetch triggers from API
   const { data: apiTriggers = [] } = useQuery<any[]>({
     queryKey: ["/api/automation-triggers"],
+  });
+
+  // Fetch actions from API
+  const { data: apiActions = [] } = useQuery<any[]>({
+    queryKey: ["/api/automation-actions"],
   });
 
 
@@ -360,23 +393,32 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
               </Button>
             ) : (
               <div>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-3">
-                  {AVAILABLE_ACTIONS.map((action) => (
-                    <Card 
-                      key={action.id} 
-                      className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-[#46a1a0]"
-                      onClick={() => handleActionSelect(action)}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-2">
-                          <action.icon className="h-4 w-4 text-[#46a1a0]" />
-                          <CardTitle className="text-sm">{action.name}</CardTitle>
-                        </div>
-                        <CardDescription className="text-xs">
-                          {action.description}
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {Object.entries(groupedActions).map(([category, actions]: [string, any[]]) => (
+                    <div key={category}>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                        {getCategoryDisplayName(category)}
+                      </h4>
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-3">
+                        {actions.map((action) => (
+                          <Card 
+                            key={action.id} 
+                            className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-[#46a1a0]"
+                            onClick={() => handleActionSelect(action)}
+                          >
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center gap-2">
+                                <action.icon className="h-4 w-4 text-[#46a1a0]" />
+                                <CardTitle className="text-sm">{action.name}</CardTitle>
+                              </div>
+                              <CardDescription className="text-xs">
+                                {action.description}
+                              </CardDescription>
+                            </CardHeader>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
                 <Button 
