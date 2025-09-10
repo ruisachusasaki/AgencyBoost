@@ -692,7 +692,7 @@ export default function AutomationTriggers() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog for Triggers */}
       <AlertDialog open={!!deletingTrigger} onOpenChange={() => setDeletingTrigger(null)}>
         <AlertDialogContent data-testid="dialog-delete-confirmation">
           <AlertDialogHeader>
@@ -714,6 +714,33 @@ export default function AutomationTriggers() {
               data-testid="button-confirm-delete"
             >
               Delete Trigger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog for Actions */}
+      <AlertDialog open={!!deletingAction} onOpenChange={() => setDeletingAction(null)}>
+        <AlertDialogContent data-testid="dialog-delete-action-confirmation">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Delete Automation Action
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the action "{deletingAction?.name}"? 
+              This action cannot be undone and may affect existing workflows.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-action">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingAction && deleteActionMutation.mutate(deletingAction.id)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteActionMutation.isPending}
+              data-testid="button-confirm-delete-action"
+            >
+              Delete Action
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

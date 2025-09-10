@@ -3359,6 +3359,10 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async deleteAutomationAction(id: string): Promise<boolean> {
+    return this.automationActions.delete(id);
+  }
+
   // Template Folders
   async getTemplateFolders(): Promise<TemplateFolder[]> {
     return Array.from(this.templateFolders.values());

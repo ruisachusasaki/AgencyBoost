@@ -4165,6 +4165,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/automation-actions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertAutomationActionSchema.parse(req.body);
+      const action = await storage.updateAutomationAction(id, validatedData);
+      res.json(action);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update automation action" });
+    }
+  });
+
+  app.delete("/api/automation-actions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAutomationAction(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete automation action" });
+    }
+  });
+
   // Helper function to check if file exists (either in comment_files or task_attachments)
   async function checkFileExists(fileId: string): Promise<{ exists: boolean, isTaskAttachment: boolean }> {
     try {
