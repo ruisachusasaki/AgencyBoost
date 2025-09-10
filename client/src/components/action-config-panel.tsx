@@ -137,6 +137,19 @@ export default function ActionConfigPanel({
       }
     }
     
+    // Validate internal notification requirements
+    if (action.type === 'send_internal_notification') {
+      if (!settings.title) {
+        errors.push('Notification title is required');
+      }
+      if (!settings.message) {
+        errors.push('Notification message is required');
+      }
+      if (settings.notifyType === 'specific_staff' && !settings.staffId) {
+        errors.push('Staff member selection is required');
+      }
+    }
+    
     return errors;
   };
 
@@ -594,21 +607,49 @@ export default function ActionConfigPanel({
             {settings.notifyType === "specific_staff" && (
               <div>
                 <Label htmlFor="staff-to-notify">Staff Member</Label>
-                <Select 
-                  value={settings.staffId || ""} 
-                  onValueChange={(value) => updateSetting("staffId", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((member: any) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.firstName} {member.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={staffComboboxOpen} onOpenChange={setStaffComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={staffComboboxOpen}
+                      className="w-full justify-between"
+                    >
+                      {settings.staffId
+                        ? staff.find((member: any) => member.id === settings.staffId)?.firstName + " " + staff.find((member: any) => member.id === settings.staffId)?.lastName
+                        : "Select staff member..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search staff members..." />
+                      <CommandEmpty>No staff member found.</CommandEmpty>
+                      <CommandGroup>
+                        {staff.map((member: any) => (
+                          <CommandItem
+                            key={member.id}
+                            value={`${member.firstName} ${member.lastName} ${member.email}`}
+                            onSelect={() => {
+                              updateSetting("staffId", member.id);
+                              setStaffComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                settings.staffId === member.id ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{member.firstName} {member.lastName}</span>
+                              <span className="text-xs text-muted-foreground">{member.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
           </div>
