@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -44,6 +45,63 @@ export default function ActionConfigPanel({
   const [settings, setSettings] = useState(action.settings || {});
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  
+  // Merge tags for notifications
+  const mergeTagGroups = [
+    {
+      label: "Contact Information",
+      tags: [
+        { label: "Name", value: "{{name}}" },
+        { label: "Email", value: "{{email}}" },
+        { label: "Phone", value: "{{phone}}" },
+        { label: "Company", value: "{{company}}" },
+        { label: "Position", value: "{{position}}" },
+        { label: "Website", value: "{{website}}" },
+      ]
+    },
+    {
+      label: "Address",
+      tags: [
+        { label: "Street Address", value: "{{address}}" },
+        { label: "Address Line 2", value: "{{address2}}" },
+        { label: "City", value: "{{city}}" },
+        { label: "State", value: "{{state}}" },
+        { label: "Zip Code", value: "{{zipCode}}" },
+      ]
+    },
+    {
+      label: "Business Information",
+      tags: [
+        { label: "Client Vertical", value: "{{clientVertical}}" },
+        { label: "Monthly Revenue", value: "{{mrr}}" },
+        { label: "Payment Terms", value: "{{paymentTerms}}" },
+        { label: "Invoicing Contact", value: "{{invoicingContact}}" },
+        { label: "Invoicing Email", value: "{{invoicingEmail}}" },
+      ]
+    },
+    {
+      label: "Other",
+      tags: [
+        { label: "Notes", value: "{{notes}}" },
+        { label: "Contact Source", value: "{{contactSource}}" },
+      ]
+    },
+    // Dynamically add custom fields if they exist
+    ...(Array.isArray(customFields) && customFields.length > 0 ? [{
+      label: "Custom Fields",
+      tags: customFields.map((field: any) => ({
+        label: field.name,
+        value: `{{custom.${field.name.toLowerCase().replace(/\s+/g, '_')}}}`
+      }))
+    }] : [])
+  ];
+  
+  // Function to insert merge tag into message
+  const insertMergeTag = (tag: string) => {
+    const currentMessage = settings.message || "";
+    const newMessage = currentMessage + tag;
+    updateSetting("message", newMessage);
+  };
 
   // Check if workflow has form submission triggers
   const hasFormTrigger = workflowTriggers.some(trigger => 
@@ -577,12 +635,45 @@ export default function ActionConfigPanel({
             </div>
 
             <div>
-              <Label htmlFor="notification-message">Message</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="notification-message">Message</Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" type="button">
+                      <Tag className="h-4 w-4 mr-2" />
+                      Insert Merge Tag
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-64" align="end">
+                    {mergeTagGroups.map((group, groupIndex) => (
+                      <div key={group.label}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
+                          {group.label}
+                        </div>
+                        {group.tags.map((tag) => (
+                          <DropdownMenuItem 
+                            key={tag.value} 
+                            onClick={() => insertMergeTag(tag.value)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{tag.label}</span>
+                              <span className="text-xs text-gray-500">{tag.value}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                        {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <Textarea
                 id="notification-message"
                 value={settings.message || ""}
                 onChange={(e) => updateSetting("message", e.target.value)}
-                placeholder="Enter notification message"
+                placeholder="Enter notification message (use merge tags to insert dynamic content)"
+                rows={4}
               />
             </div>
 
