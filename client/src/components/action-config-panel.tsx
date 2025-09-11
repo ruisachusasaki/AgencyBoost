@@ -908,7 +908,7 @@ export default function ActionConfigPanel({
                       <div className="absolute right-2 top-2">
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300">
+                            <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-600 hover:bg-gray-50">
                               <Tag className="h-3 w-3 mr-1" />
                               <span className="text-xs">Tags</span>
                             </Button>
