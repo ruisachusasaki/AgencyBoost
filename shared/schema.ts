@@ -321,6 +321,32 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client Health Scores - Weekly scoring system for client performance tracking
+export const clientHealthScores = pgTable("client_health_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  weekStartDate: date("week_start_date").notNull(), // Monday of the scoring week
+  weekEndDate: date("week_end_date").notNull(), // Sunday of the scoring week
+  weeklyRecap: text("weekly_recap"), // Large text input for weekly summary
+  opportunities: text("opportunities"), // Large text input for opportunities
+  solutions: text("solutions"), // Large text input for solutions
+  goals: text("goals").notNull(), // 'Above', 'On Track', 'Below'
+  fulfillment: text("fulfillment").notNull(), // 'Early', 'On Time', 'Behind'
+  relationship: text("relationship").notNull(), // 'Engaged', 'Passive', 'Disengaged'
+  clientActions: text("client_actions").notNull(), // 'Early', 'Up to Date', 'Late'
+  totalScore: integer("total_score").notNull(), // Calculated from the 4 scoring fields
+  averageScore: decimal("average_score", { precision: 3, scale: 2 }).notNull(), // totalScore / 4
+  healthIndicator: text("health_indicator").notNull(), // 'Green', 'Yellow', 'Red'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate scores for same client and week
+  uniqueClientWeek: {
+    columns: [table.clientId, table.weekStartDate],
+    unique: true
+  }
+}));
+
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -882,6 +908,12 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
 export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertClientHealthScoreSchema = createInsertSchema(clientHealthScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertProjectSchema = createInsertSchema(projects).omit({
@@ -1585,6 +1617,9 @@ export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
 
 export type ClientTransaction = typeof clientTransactions.$inferSelect;
 export type InsertClientTransaction = z.infer<typeof insertClientTransactionSchema>;
+
+export type ClientHealthScore = typeof clientHealthScores.$inferSelect;
+export type InsertClientHealthScore = z.infer<typeof insertClientHealthScoreSchema>;
 
 // Departments and Positions Management
 export const departments = pgTable("departments", {
