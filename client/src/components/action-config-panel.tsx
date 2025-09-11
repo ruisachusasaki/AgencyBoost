@@ -43,6 +43,7 @@ export default function ActionConfigPanel({
   onClose 
 }: ActionConfigPanelProps) {
   const [settings, setSettings] = useState(action.settings || {});
+  const [customName, setCustomName] = useState(action.customName || "");
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
@@ -186,6 +187,7 @@ export default function ActionConfigPanel({
     }
     
     setSettings(initialSettings);
+    setCustomName(action.customName || "");
   }, [action, hasFormTrigger]);
 
   const validateSettings = (): string[] => {
@@ -262,7 +264,8 @@ export default function ActionConfigPanel({
     setValidationErrors([]);
     onSave({
       ...action,
-      settings
+      settings,
+      customName: customName.trim() || undefined
     });
   };
 
@@ -2193,6 +2196,24 @@ export default function ActionConfigPanel({
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Custom Name Input */}
+            <div className="space-y-2 mb-6">
+              <Label htmlFor="actionCustomName" className="text-sm font-medium">
+                Custom Name (Optional)
+              </Label>
+              <Input
+                id="actionCustomName"
+                data-testid="input-action-custom-name"
+                placeholder={`e.g., "Send Welcome Email - New Lead"`}
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                className="bg-white"
+              />
+              <p className="text-xs text-muted-foreground">
+                Give this action a custom name to help identify it in your workflow
+              </p>
+            </div>
+            
             {renderActionSettings()}
           </CardContent>
         </Card>

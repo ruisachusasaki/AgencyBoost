@@ -66,8 +66,14 @@ export default function WorkflowBuilderPage() {
       type: string;
       conditions: any;
       name?: string;
+      customName?: string;
     }>;
-    actions: any[];
+    actions: Array<{
+      type: string;
+      settings: any;
+      name?: string;
+      customName?: string;
+    }>;
   }>({
     name: "",
     description: "",

@@ -39,6 +39,7 @@ export default function TriggerConfigPanel({
   onClose 
 }: TriggerConfigPanelProps) {
   const [conditions, setConditions] = useState(trigger.conditions || {});
+  const [customName, setCustomName] = useState(trigger.customName || "");
 
   // Fetch all forms for form_id dropdowns
   const { data: forms = [] } = useQuery<any[]>({
@@ -165,6 +166,7 @@ export default function TriggerConfigPanel({
 
   useEffect(() => {
     setConditions(trigger.conditions || {});
+    setCustomName(trigger.customName || "");
   }, [trigger]);
 
   // Initialize filters array if it doesn't exist
@@ -208,7 +210,8 @@ export default function TriggerConfigPanel({
   const handleSave = () => {
     onSave({
       ...trigger,
-      conditions
+      conditions,
+      customName: customName.trim() || undefined
     });
   };
 
@@ -1590,6 +1593,24 @@ export default function TriggerConfigPanel({
             {triggerDefinition.description}
           </p>
         )}
+      </div>
+
+      {/* Custom Name Input */}
+      <div className="space-y-2">
+        <Label htmlFor="customName" className="text-sm font-medium">
+          Custom Name (Optional)
+        </Label>
+        <Input
+          id="customName"
+          data-testid="input-trigger-custom-name"
+          placeholder={`e.g., "Lead Form Submitted - Landing Page"`}
+          value={customName}
+          onChange={(e) => setCustomName(e.target.value)}
+          className="bg-white"
+        />
+        <p className="text-xs text-muted-foreground">
+          Give this trigger a custom name to help identify it in your workflow
+        </p>
       </div>
 
       {/* Configuration Content */}

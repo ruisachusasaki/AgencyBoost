@@ -49,7 +49,16 @@ const TriggerNode = ({ data }: { data: any }) => {
         </div>
       </CardHeader>
       <CardContent className="pt-0" onClick={() => data.onConfigure?.()}>
-        <div className="font-medium text-blue-900">{data.label}</div>
+        <div className="font-medium text-blue-900">
+          {data.customName ? (
+            <div>
+              <div className="text-sm font-semibold">{data.customName}</div>
+              <div className="text-xs opacity-75">{data.label}</div>
+            </div>
+          ) : (
+            data.label
+          )}
+        </div>
         {hasConditions && (
           <div className="text-xs text-blue-700 mt-1">
             Click to edit conditions
@@ -96,7 +105,16 @@ const ActionNode = ({ data }: { data: any }) => (
       </div>
     </CardHeader>
     <CardContent className="pt-0">
-      <div className="font-medium text-green-900">{data.label}</div>
+      <div className="font-medium text-green-900">
+        {data.customName ? (
+          <div>
+            <div className="text-sm font-semibold">{data.customName}</div>
+            <div className="text-xs opacity-75">{data.label}</div>
+          </div>
+        ) : (
+          data.label
+        )}
+      </div>
       <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 flex gap-1">
         <Button size="sm" variant="outline" className="text-xs h-6" onClick={(e) => {
           e.stopPropagation();
@@ -258,6 +276,7 @@ export default function WorkflowCanvas({
             position: { x: xPosition + (index * 300), y: yPosition },
             data: {
               label: trigger.name,
+              customName: trigger.customName,
               trigger: trigger,
               onConfigure: () => onConfigureTrigger?.(index),
               onDelete: () => onDeleteTrigger?.(index),
@@ -304,6 +323,7 @@ export default function WorkflowCanvas({
           position: { x: xPosition, y: yPosition },
           data: {
             label: action.name,
+            customName: action.customName,
             onConfigure: () => onConfigureAction?.(index),
             onDelete: () => onDeleteAction?.(index),
           },
