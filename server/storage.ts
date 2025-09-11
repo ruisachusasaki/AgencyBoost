@@ -1400,20 +1400,6 @@ export class MemStorage implements IStorage {
         isActive: true,
         createdAt: new Date()
       },
-      {
-        id: "action-13",
-        name: "Update Custom Fields",
-        type: "update_custom_fields",
-        description: "Modify custom field values for contacts",
-        category: "data_management",
-        configSchema: {
-          entity_type: { type: "string", options: ["client", "lead", "project"], required: true },
-          entity_id: { type: "string", required: true },
-          custom_fields: { type: "object", required: true }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
 
       // 👥 Assignment Actions
       {

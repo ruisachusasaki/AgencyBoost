@@ -68,7 +68,6 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
       update_lead_stage: Target,
       update_project_status: Settings,
       add_client_tags: Tag,
-      update_custom_fields: Settings,
       assign_contact_owner: UserCheck,
       assign_task_to_staff: CheckSquare,
       assign_lead_to_staff: Users,
