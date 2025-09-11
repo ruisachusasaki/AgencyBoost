@@ -879,10 +879,12 @@ export default function ActionConfigPanel({
         );
 
       case "add_client_tags":
-        // Filter tags based on search query
-        const filteredTags = tags.filter((tag: any) => 
-          tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
-        );
+        // Only show tags when there's an actual search query - not by default
+        const filteredTags = tagSearchQuery.trim() 
+          ? tags.filter((tag: any) => 
+              tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+            )
+          : [];
         
         // Check if search query matches any existing tag exactly
         const exactMatch = tags.find((tag: any) => 
