@@ -1195,13 +1195,63 @@ export class MemStorage implements IStorage {
         id: "action-3",
         name: "Create Internal Notification",
         type: "create_internal_notification",
-        description: "Create a system notification for staff members",
+        description: "Send emails, SMS, or notifications to users",
         category: "communication",
         configSchema: {
-          recipient: { type: "string", required: true },
-          title: { type: "string", required: true },
-          message: { type: "string", required: true },
-          type: { type: "string", options: ["info", "warning", "success", "error"], default: "info" }
+          notificationType: { 
+            type: "string", 
+            options: ["email", "sms", "notification"], 
+            required: true,
+            label: "Notification Type"
+          },
+          // Email configuration
+          emailTemplateId: { 
+            type: "string", 
+            label: "Email Template",
+            dependsOn: { field: "notificationType", value: "email" }
+          },
+          // SMS configuration
+          smsTemplateId: { 
+            type: "string", 
+            label: "SMS Template",
+            dependsOn: { field: "notificationType", value: "sms" }
+          },
+          // Notification configuration
+          title: { 
+            type: "string", 
+            label: "Notification Title",
+            dependsOn: { field: "notificationType", value: "notification" }
+          },
+          message: { 
+            type: "string", 
+            label: "Message",
+            dependsOn: { field: "notificationType", value: "notification" }
+          },
+          // User targeting (applies to all types)
+          userType: {
+            type: "string",
+            options: ["all_users", "assigned_user", "particular_user", "custom_email", "custom_number"],
+            required: true,
+            label: "Send To"
+          },
+          // For particular user selection
+          userId: {
+            type: "string",
+            label: "Select User",
+            dependsOn: { field: "userType", value: "particular_user" }
+          },
+          // For custom email
+          customEmail: {
+            type: "string",
+            label: "Custom Email",
+            dependsOn: { field: "userType", value: "custom_email" }
+          },
+          // For custom number
+          customNumber: {
+            type: "string",
+            label: "Custom Number",
+            dependsOn: { field: "userType", value: "custom_number" }
+          }
         },
         isActive: true,
         createdAt: new Date()

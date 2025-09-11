@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText } from "lucide-react";
+import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText, Bell } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -228,6 +228,61 @@ export default function ActionConfigPanel({
       }
       if (settings.notifyType === 'specific_staff' && !settings.staffId) {
         errors.push('Staff member selection is required');
+      }
+    }
+    
+    // Validate create_internal_notification requirements
+    if (action.type === 'create_internal_notification') {
+      if (!settings.notificationType) {
+        errors.push('Notification type is required');
+      }
+      
+      // Email validation
+      if (settings.notificationType === 'email') {
+        if (!settings.emailTemplateId) {
+          errors.push('Email template is required');
+        }
+        if (!settings.userType) {
+          errors.push('Recipient type is required');
+        }
+        if (settings.userType === 'particular_user' && !settings.userId) {
+          errors.push('User selection is required');
+        }
+        if (settings.userType === 'custom_email' && !settings.customEmail) {
+          errors.push('Custom email address is required');
+        }
+      }
+      
+      // SMS validation
+      if (settings.notificationType === 'sms') {
+        if (!settings.smsTemplateId) {
+          errors.push('SMS template is required');
+        }
+        if (!settings.userType) {
+          errors.push('Recipient type is required');
+        }
+        if (settings.userType === 'particular_user' && !settings.userId) {
+          errors.push('User selection is required');
+        }
+        if (settings.userType === 'custom_number' && !settings.customNumber) {
+          errors.push('Custom phone number is required');
+        }
+      }
+      
+      // Notification validation
+      if (settings.notificationType === 'notification') {
+        if (!settings.title) {
+          errors.push('Notification title is required');
+        }
+        if (!settings.message) {
+          errors.push('Notification message is required');
+        }
+        if (!settings.userType) {
+          errors.push('Recipient type is required');
+        }
+        if (settings.userType === 'particular_user' && !settings.userId) {
+          errors.push('User selection is required');
+        }
       }
     }
     
@@ -728,83 +783,240 @@ export default function ActionConfigPanel({
           </div>
         );
 
-      case "send_internal_notification":
+      case "create_internal_notification":
         return (
           <div className="space-y-4">
+            {/* Notification Type Selection */}
             <div>
-              <Label htmlFor="notification-title">Notification Title</Label>
-              <Input
-                id="notification-title"
-                value={settings.title || ""}
-                onChange={(e) => updateSetting("title", e.target.value)}
-                placeholder="Enter notification title"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="notification-message">Message</Label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" type="button">
-                      <Tag className="h-4 w-4 mr-2" />
-                      Insert Merge Tag
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-64" align="end">
-                    {mergeTagGroups.map((group, groupIndex) => (
-                      <div key={group.label}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
-                          {group.label}
-                        </div>
-                        {group.tags.map((tag) => (
-                          <DropdownMenuItem 
-                            key={tag.value} 
-                            onClick={() => insertMergeTag(tag.value)}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-medium">{tag.label}</span>
-                              <span className="text-xs text-gray-500">{tag.value}</span>
-                            </div>
-                          </DropdownMenuItem>
-                        ))}
-                        {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
-                      </div>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <Textarea
-                id="notification-message"
-                value={settings.message || ""}
-                onChange={(e) => updateSetting("message", e.target.value)}
-                placeholder="Enter notification message (use merge tags to insert dynamic content)"
-                rows={4}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="notify-who">Notify</Label>
+              <Label htmlFor="notification-type">Notification Type</Label>
               <Select 
-                value={settings.notifyType || "assigned_staff"} 
-                onValueChange={(value) => updateSetting("notifyType", value)}
+                value={settings.notificationType || ""} 
+                onValueChange={(value) => {
+                  // Clear other settings when type changes
+                  setSettings({ notificationType: value });
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select who to notify" />
+                  <SelectValue placeholder="Select notification type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="assigned_staff">Assigned Staff Member</SelectItem>
-                  <SelectItem value="specific_staff">Specific Staff Member</SelectItem>
-                  <SelectItem value="all_staff">All Staff</SelectItem>
-                  <SelectItem value="managers_only">Managers Only</SelectItem>
+                  <SelectItem value="email">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="sms">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      SMS
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="notification">
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-4 w-4" />
+                      Notification
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {settings.notifyType === "specific_staff" && (
+            {/* Email Configuration */}
+            {settings.notificationType === "email" && (
+              <>
+                <div>
+                  <Label htmlFor="email-template">Email Template</Label>
+                  <Select 
+                    value={settings.emailTemplateId || ""} 
+                    onValueChange={(value) => updateSetting("emailTemplateId", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select email template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {emailTemplates.map((template: any) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="email-user-type">Send To</Label>
+                  <Select 
+                    value={settings.userType || ""} 
+                    onValueChange={(value) => updateSetting("userType", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select recipient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_users">All Users</SelectItem>
+                      <SelectItem value="assigned_user">Assigned User</SelectItem>
+                      <SelectItem value="particular_user">Particular User</SelectItem>
+                      <SelectItem value="custom_email">Custom Email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* SMS Configuration */}
+            {settings.notificationType === "sms" && (
+              <>
+                <div>
+                  <Label htmlFor="sms-template">SMS Template</Label>
+                  <Select 
+                    value={settings.smsTemplateId || ""} 
+                    onValueChange={(value) => updateSetting("smsTemplateId", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select SMS template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {smsTemplates.map((template: any) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="sms-user-type">Send To</Label>
+                  <Select 
+                    value={settings.userType || ""} 
+                    onValueChange={(value) => updateSetting("userType", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select recipient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_users">All Users</SelectItem>
+                      <SelectItem value="assigned_user">Assigned User</SelectItem>
+                      <SelectItem value="particular_user">Particular User</SelectItem>
+                      <SelectItem value="custom_number">Custom Number</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* Notification Configuration */}
+            {settings.notificationType === "notification" && (
+              <>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="notification-title">Notification Title</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" type="button">
+                          <Tag className="h-4 w-4 mr-2" />
+                          Insert Merge Tag
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-64" align="end">
+                        {mergeTagGroups.map((group, groupIndex) => (
+                          <div key={group.label}>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
+                              {group.label}
+                            </div>
+                            {group.tags.map((tag) => (
+                              <DropdownMenuItem 
+                                key={tag.value} 
+                                onClick={() => insertMergeTagIntoTitle(tag.value)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{tag.label}</span>
+                                  <span className="text-xs text-gray-500">{tag.value}</span>
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                            {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                          </div>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <Input
+                    id="notification-title"
+                    value={settings.title || ""}
+                    onChange={(e) => updateSetting("title", e.target.value)}
+                    placeholder="Enter notification title"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="notification-message">Message</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" type="button">
+                          <Tag className="h-4 w-4 mr-2" />
+                          Insert Merge Tag
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-64" align="end">
+                        {mergeTagGroups.map((group, groupIndex) => (
+                          <div key={group.label}>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
+                              {group.label}
+                            </div>
+                            {group.tags.map((tag) => (
+                              <DropdownMenuItem 
+                                key={tag.value} 
+                                onClick={() => insertMergeTag(tag.value)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{tag.label}</span>
+                                  <span className="text-xs text-gray-500">{tag.value}</span>
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                            {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                          </div>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <Textarea
+                    id="notification-message"
+                    value={settings.message || ""}
+                    onChange={(e) => updateSetting("message", e.target.value)}
+                    placeholder="Enter notification message (use merge tags to insert dynamic content)"
+                    rows={4}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="notification-user-type">Send To</Label>
+                  <Select 
+                    value={settings.userType || ""} 
+                    onValueChange={(value) => updateSetting("userType", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select recipient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_users">All Users</SelectItem>
+                      <SelectItem value="assigned_user">Assigned User</SelectItem>
+                      <SelectItem value="particular_user">Particular User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* User Selection (for all notification types when particular_user is selected) */}
+            {settings.userType === "particular_user" && (
               <div>
-                <Label htmlFor="staff-to-notify">Staff Member</Label>
+                <Label htmlFor="staff-to-notify">Select User</Label>
                 <Popover open={staffComboboxOpen} onOpenChange={setStaffComboboxOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -812,30 +1024,31 @@ export default function ActionConfigPanel({
                       role="combobox"
                       aria-expanded={staffComboboxOpen}
                       className="w-full justify-between"
+                      data-testid="button-select-user"
                     >
-                      {settings.staffId
-                        ? staff.find((member: any) => member.id === settings.staffId)?.firstName + " " + staff.find((member: any) => member.id === settings.staffId)?.lastName
-                        : "Select staff member..."}
+                      {settings.userId
+                        ? staff.find((member: any) => member.id === settings.userId)?.firstName + " " + staff.find((member: any) => member.id === settings.userId)?.lastName
+                        : "Select user..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0">
                     <Command>
-                      <CommandInput placeholder="Search staff members..." />
-                      <CommandEmpty>No staff member found.</CommandEmpty>
+                      <CommandInput placeholder="Search users..." />
+                      <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
                         {staff.map((member: any) => (
                           <CommandItem
                             key={member.id}
                             value={`${member.firstName} ${member.lastName} ${member.email}`}
                             onSelect={() => {
-                              updateSetting("staffId", member.id);
+                              updateSetting("userId", member.id);
                               setStaffComboboxOpen(false);
                             }}
                           >
                             <Check
                               className={`mr-2 h-4 w-4 ${
-                                settings.staffId === member.id ? "opacity-100" : "opacity-0"
+                                settings.userId === member.id ? "opacity-100" : "opacity-0"
                               }`}
                             />
                             <div className="flex flex-col">
@@ -848,6 +1061,36 @@ export default function ActionConfigPanel({
                     </Command>
                   </PopoverContent>
                 </Popover>
+              </div>
+            )}
+
+            {/* Custom Email Input */}
+            {settings.userType === "custom_email" && (
+              <div>
+                <Label htmlFor="custom-email">Custom Email</Label>
+                <Input
+                  id="custom-email"
+                  type="email"
+                  value={settings.customEmail || ""}
+                  onChange={(e) => updateSetting("customEmail", e.target.value)}
+                  placeholder="Enter custom email address"
+                  data-testid="input-custom-email"
+                />
+              </div>
+            )}
+
+            {/* Custom Number Input */}
+            {settings.userType === "custom_number" && (
+              <div>
+                <Label htmlFor="custom-number">Custom Number</Label>
+                <Input
+                  id="custom-number"
+                  type="tel"
+                  value={settings.customNumber || ""}
+                  onChange={(e) => updateSetting("customNumber", e.target.value)}
+                  placeholder="Enter custom phone number"
+                  data-testid="input-custom-number"
+                />
               </div>
             )}
           </div>
