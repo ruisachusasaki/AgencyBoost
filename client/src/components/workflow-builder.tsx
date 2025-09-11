@@ -412,9 +412,6 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
                                 <action.icon className="h-4 w-4 text-[#46a1a0]" />
                                 <CardTitle className="text-sm">{action.name}</CardTitle>
                               </div>
-                              <CardDescription className="text-xs">
-                                {action.description}
-                              </CardDescription>
                             </CardHeader>
                           </Card>
                         ))}
