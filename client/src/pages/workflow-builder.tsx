@@ -234,13 +234,20 @@ export default function WorkflowBuilderPage() {
         return await response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsSaving(false); // Reset local saving state
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
       toast({ 
         title: "Success", 
         description: editingWorkflowId ? "Workflow updated successfully" : "Workflow created successfully" 
       });
+      
+      // If this was a creation (no editingWorkflowId), update URL to edit mode
+      if (!editingWorkflowId && data?.id) {
+        const newUrl = `/workflows/build?edit=${data.id}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+      
       // Stay in workflow builder instead of navigating away
       // navigate("/workflows"); // Removed auto-navigation
     },
