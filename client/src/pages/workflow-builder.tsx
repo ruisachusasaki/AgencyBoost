@@ -1043,11 +1043,6 @@ export default function WorkflowBuilderPage() {
                       >
                         <div className="flex-1">
                           <div className="font-medium">{action.name}</div>
-                          {action.description && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              {action.description}
-                            </div>
-                          )}
                         </div>
                       </Button>
                     ))}
