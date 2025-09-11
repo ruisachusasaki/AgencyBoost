@@ -922,7 +922,6 @@ export default function WorkflowsPage() {
                     (actions as any[]).slice(0, 5).map((action: any) => (
                       <div key={action.id} className="p-2 border rounded">
                         <div className="font-medium">{action.name}</div>
-                        <div className="text-sm text-muted-foreground">{action.description}</div>
                       </div>
                     ))
                   ) : (
