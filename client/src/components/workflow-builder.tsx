@@ -75,7 +75,6 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
       reassign_project_manager: UserCheck,
       remove_staff_assignment: Users,
       mark_task_complete: CheckSquare,
-      update_lead_score: TrendingUp,
       change_client_status: Users,
       update_deal_value: DollarSign,
       schedule_follow_up: Calendar,

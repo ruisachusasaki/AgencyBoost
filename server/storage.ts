@@ -1515,21 +1515,6 @@ export class MemStorage implements IStorage {
         createdAt: new Date()
       },
       {
-        id: "action-21",
-        name: "Update Lead Score",
-        type: "update_lead_score",
-        description: "Modify lead qualification scores",
-        category: "status_progress",
-        configSchema: {
-          lead_id: { type: "string", required: true },
-          score_change: { type: "number", required: true },
-          score_type: { type: "string", options: ["add", "subtract", "set"], default: "add" },
-          reason: { type: "string" }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
-      {
         id: "action-22",
         name: "Change Client Status",
         type: "change_client_status",
@@ -1540,20 +1525,6 @@ export class MemStorage implements IStorage {
           status: { type: "string", options: ["active", "inactive", "pending"], required: true },
           reason: { type: "string" },
           notify_team: { type: "boolean", default: true }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
-      {
-        id: "action-23",
-        name: "Update Campaign Metrics",
-        type: "update_campaign_metrics",
-        description: "Track campaign performance data",
-        category: "status_progress",
-        configSchema: {
-          campaign_id: { type: "string", required: true },
-          metrics: { type: "object", required: true },
-          increment_mode: { type: "boolean", default: true }
         },
         isActive: true,
         createdAt: new Date()
