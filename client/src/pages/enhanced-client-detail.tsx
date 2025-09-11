@@ -1061,7 +1061,7 @@ export default function EnhancedClientDetail() {
   const [scheduledTimezone, setScheduledTimezone] = useState('America/New_York');
 
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'contact' | 'activity' | 'communication' | 'hub'>('contact');
+  const [activeTab, setActiveTab] = useState<'contact' | 'activity' | 'communication' | 'hub' | 'health'>('contact');
 
 
 
@@ -2570,7 +2570,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b border-gray-200">
-            <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 rounded-none h-auto p-0">
+            <TabsList className="grid w-full grid-cols-6 bg-transparent border-0 rounded-none h-auto p-0">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -2584,6 +2584,13 @@ export default function EnhancedClientDetail() {
               >
                 <Zap className="h-4 w-4" />
                 Client Hub
+              </TabsTrigger>
+              <TabsTrigger 
+                value="health" 
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
+              >
+                <Activity className="h-4 w-4" />
+                Client Health
               </TabsTrigger>
               <TabsTrigger 
                 value="products" 
@@ -6026,6 +6033,23 @@ export default function EnhancedClientDetail() {
               </Dialog>
             </div>
             )}
+        </TabsContent>
+
+        {/* Client Health Tab */}
+        <TabsContent value="health" className="space-y-6 mt-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Client Health Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">Client health metrics and analytics will be displayed here.</p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Products Tab */}
