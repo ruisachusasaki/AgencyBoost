@@ -649,6 +649,184 @@ export default function ActionConfigPanel({
         );
 
       case "assign_contact_owner":
+        return (
+          <div className="space-y-4">
+            {/* Users Multi-Select Field */}
+            <div>
+              <Label>Users</Label>
+              <div className="space-y-2">
+                {/* Selected Users as Badges */}
+                {settings.staffIds && settings.staffIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {settings.staffIds.map((staffId: string) => {
+                      const member = staff.find((m: any) => m.id === staffId);
+                      if (!member) return null;
+                      return (
+                        <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
+                          <span>{member.firstName} {member.lastName}</span>
+                          <X
+                            className="h-3 w-3 cursor-pointer hover:text-red-500"
+                            onClick={() => {
+                              const newStaffIds = settings.staffIds.filter((id: string) => id !== staffId);
+                              updateSetting("staffIds", newStaffIds);
+                              // Remove from weights if exists
+                              if (settings.staffWeights && settings.staffWeights[staffId]) {
+                                const newWeights = { ...settings.staffWeights };
+                                delete newWeights[staffId];
+                                updateSetting("staffWeights", newWeights);
+                              }
+                            }}
+                          />
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* Add User Button */}
+                <Popover open={staffComboboxOpen} onOpenChange={setStaffComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={staffComboboxOpen}
+                      className="w-full justify-start"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add user
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search users..." />
+                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
+                        {staff
+                          .filter((member: any) => !settings.staffIds?.includes(member.id))
+                          .map((member: any) => (
+                            <CommandItem
+                              key={member.id}
+                              value={`${member.firstName} ${member.lastName} ${member.email}`}
+                              onSelect={() => {
+                                const currentStaffIds = settings.staffIds || [];
+                                const newStaffIds = [...currentStaffIds, member.id];
+                                updateSetting("staffIds", newStaffIds);
+                                
+                                // Add default weight
+                                const currentWeights = settings.staffWeights || {};
+                                updateSetting("staffWeights", {
+                                  ...currentWeights,
+                                  [member.id]: 1
+                                });
+                                
+                                setStaffComboboxOpen(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span>{member.firstName} {member.lastName}</span>
+                                <span className="text-xs text-muted-foreground">{member.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Reassign Checkbox */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="reassign-existing"
+                checked={settings.reassignExisting || false}
+                onCheckedChange={(checked) => updateSetting("reassignExisting", checked)}
+              />
+              <Label htmlFor="reassign-existing">
+                Reassign if already assigned to someone else
+              </Label>
+            </div>
+
+            {/* Split Traffic Dropdown - Only show when multiple users selected */}
+            {settings.staffIds && settings.staffIds.length > 1 && (
+              <div>
+                <Label htmlFor="split-traffic">Split Traffic</Label>
+                <Select 
+                  value={settings.splitType || "equally"} 
+                  onValueChange={(value) => updateSetting("splitType", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="equally">Equally</SelectItem>
+                    <SelectItem value="unevenly">Unevenly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Traffic Weightage Section - Only show when "Unevenly" is selected */}
+            {settings.staffIds && settings.staffIds.length > 1 && settings.splitType === "unevenly" && (
+              <div>
+                <Label>Traffic Weightage</Label>
+                <div className="space-y-3 mt-2">
+                  {settings.staffIds.map((staffId: string) => {
+                    const member = staff.find((m: any) => m.id === staffId);
+                    if (!member) return null;
+                    
+                    const currentWeight = settings.staffWeights?.[staffId] || 1;
+                    
+                    return (
+                      <div key={staffId} className="flex items-center justify-between p-3 border rounded-lg">
+                        <span className="font-medium">
+                          {member.firstName} {member.lastName}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              const newWeight = Math.max(1, currentWeight - 1);
+                              const newWeights = {
+                                ...settings.staffWeights,
+                                [staffId]: newWeight
+                              };
+                              updateSetting("staffWeights", newWeights);
+                            }}
+                            disabled={currentWeight <= 1}
+                          >
+                            -
+                          </Button>
+                          <span className="w-8 text-center font-mono">
+                            {currentWeight}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              const newWeight = currentWeight + 1;
+                              const newWeights = {
+                                ...settings.staffWeights,
+                                [staffId]: newWeight
+                              };
+                              updateSetting("staffWeights", newWeights);
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
       case "assign_lead":
       case "assign_task":
         return (
