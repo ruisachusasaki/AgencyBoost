@@ -1406,12 +1406,16 @@ export class MemStorage implements IStorage {
         id: "action-14",
         name: "Assign Contact Owner",
         type: "assign_contact_owner",
-        description: "Set primary contact responsible person",
+        description: "Set primary contact responsible person with support for multiple users and round-robin assignment",
         category: "assignment",
         configSchema: {
           contact_id: { type: "string", required: true },
-          staff_id: { type: "string", required: true },
+          assignment_type: { type: "string", options: ["single", "round_robin"], default: "single", required: true },
+          staff_ids: { type: "array", items: { type: "string" }, required: true },
+          split_type: { type: "string", options: ["equally", "unevenly"], default: "equally" },
+          staff_weights: { type: "array", items: { type: "object" } },
           notify_assignee: { type: "boolean", default: true },
+          reassign_if_assigned: { type: "boolean", default: false },
           transfer_notes: { type: "string" }
         },
         isActive: true,

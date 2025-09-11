@@ -40,12 +40,12 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 36535
-externalPort = 3000
+localPort = 35343
+externalPort = 3001
 
 [[ports]]
-localPort = 46215
-externalPort = 3001
+localPort = 36535
+externalPort = 3000
 
 [agent]
 integrations = ["javascript_object_storage:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_slack:1.0.0"]
