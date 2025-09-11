@@ -46,6 +46,7 @@ export default function ActionConfigPanel({
   const [customName, setCustomName] = useState(action.customName || "");
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [tagSearchQueries, setTagSearchQueries] = useState<{ [key: number]: string }>({});
 
   // Check if workflow has form submission triggers
   const hasFormTrigger = workflowTriggers.some(trigger => 
@@ -907,27 +908,84 @@ export default function ActionConfigPanel({
                       <div className="absolute right-2 top-2">
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400">
-                              <Tag className="h-3 w-3" />
+                            <Button variant="outline" size="sm" className="h-8 px-2 text-gray-600 border-gray-200 hover:bg-gray-50">
+                              <Tag className="h-3 w-3 mr-1" />
+                              <span className="text-xs">Tags</span>
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-80 p-0">
-                            <div className="p-3">
-                              <h4 className="text-sm font-medium mb-2">Available Merge Tags</h4>
-                              <div className="space-y-2 max-h-48 overflow-y-auto">
-                                <div className="text-xs text-gray-500">Click to insert:</div>
+                          <PopoverContent className="w-96 p-0">
+                            <div className="p-4">
+                              <h4 className="text-sm font-medium mb-3">Insert Merge Tags</h4>
+                              
+                              {/* Search Input */}
+                              <div className="mb-3">
+                                <Input
+                                  placeholder="Search merge tags..."
+                                  value={tagSearchQueries?.[index] || ""}
+                                  onChange={(e) => {
+                                    const newSearchQueries = { ...tagSearchQueries };
+                                    newSearchQueries[index] = e.target.value;
+                                    setTagSearchQueries(newSearchQueries);
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1 max-h-64 overflow-y-auto">
+                                <div className="text-xs text-gray-500 mb-2">Click any tag to insert:</div>
                                 {[
-                                  { tag: '{{firstName}}', desc: 'Client first name' },
-                                  { tag: '{{lastName}}', desc: 'Client last name' },
-                                  { tag: '{{email}}', desc: 'Client email' },
-                                  { tag: '{{phone}}', desc: 'Client phone' },
-                                  { tag: '{{company}}', desc: 'Client company' },
-                                  { tag: '{{currentDate}}', desc: 'Current date' },
-                                  { tag: '{{currentTime}}', desc: 'Current time' }
-                                ].map((item, tagIndex) => (
+                                  // Client Basic Info
+                                  { tag: '{{firstName}}', desc: 'Client first name', category: 'Client Info' },
+                                  { tag: '{{lastName}}', desc: 'Client last name', category: 'Client Info' },
+                                  { tag: '{{fullName}}', desc: 'Client full name', category: 'Client Info' },
+                                  { tag: '{{email}}', desc: 'Client email address', category: 'Client Info' },
+                                  { tag: '{{phone}}', desc: 'Client phone number', category: 'Client Info' },
+                                  { tag: '{{company}}', desc: 'Client company name', category: 'Client Info' },
+                                  { tag: '{{website}}', desc: 'Client website', category: 'Client Info' },
+                                  
+                                  // Client Address
+                                  { tag: '{{address}}', desc: 'Client address', category: 'Address' },
+                                  { tag: '{{city}}', desc: 'Client city', category: 'Address' },
+                                  { tag: '{{state}}', desc: 'Client state', category: 'Address' },
+                                  { tag: '{{zipCode}}', desc: 'Client zip code', category: 'Address' },
+                                  { tag: '{{country}}', desc: 'Client country', category: 'Address' },
+                                  
+                                  // Date & Time
+                                  { tag: '{{currentDate}}', desc: 'Current date', category: 'Date & Time' },
+                                  { tag: '{{currentTime}}', desc: 'Current time', category: 'Date & Time' },
+                                  { tag: '{{currentDateTime}}', desc: 'Current date and time', category: 'Date & Time' },
+                                  { tag: '{{currentYear}}', desc: 'Current year', category: 'Date & Time' },
+                                  { tag: '{{currentMonth}}', desc: 'Current month', category: 'Date & Time' },
+                                  { tag: '{{currentDay}}', desc: 'Current day', category: 'Date & Time' },
+                                  
+                                  // System Info
+                                  { tag: '{{assignedUser}}', desc: 'Assigned user name', category: 'System' },
+                                  { tag: '{{assignedUserEmail}}', desc: 'Assigned user email', category: 'System' },
+                                  { tag: '{{clientId}}', desc: 'Client unique ID', category: 'System' },
+                                  { tag: '{{workflowName}}', desc: 'Current workflow name', category: 'System' },
+                                  
+                                  // Lead/Project Info
+                                  { tag: '{{leadSource}}', desc: 'Lead source', category: 'Lead Info' },
+                                  { tag: '{{leadStage}}', desc: 'Current lead stage', category: 'Lead Info' },
+                                  { tag: '{{leadValue}}', desc: 'Lead value', category: 'Lead Info' },
+                                  { tag: '{{projectName}}', desc: 'Associated project name', category: 'Project Info' },
+                                  { tag: '{{projectStatus}}', desc: 'Project status', category: 'Project Info' },
+                                  
+                                  // Custom Fields (if available)
+                                  ...(customFields || []).map((cf: any) => ({
+                                    tag: `{{${cf.name.replace(/\s+/g, '')}}}`,
+                                    desc: `Custom field: ${cf.name}`,
+                                    category: 'Custom Fields'
+                                  }))
+                                ].filter(item => 
+                                  !tagSearchQueries?.[index] || 
+                                  item.tag.toLowerCase().includes((tagSearchQueries[index] || "").toLowerCase()) ||
+                                  item.desc.toLowerCase().includes((tagSearchQueries[index] || "").toLowerCase()) ||
+                                  item.category.toLowerCase().includes((tagSearchQueries[index] || "").toLowerCase())
+                                ).map((item, tagIndex) => (
                                   <button
                                     key={tagIndex}
-                                    className="w-full text-left p-2 hover:bg-gray-50 rounded text-xs"
+                                    className="w-full text-left p-2 hover:bg-gray-50 rounded text-xs border border-transparent hover:border-gray-200"
                                     onClick={() => {
                                       const currentFields = [...(settings.fields || [])];
                                       const currentValue = currentFields[index]?.value || "";
@@ -935,8 +993,15 @@ export default function ActionConfigPanel({
                                       updateSetting("fields", currentFields);
                                     }}
                                   >
-                                    <div className="font-mono text-blue-600">{item.tag}</div>
-                                    <div className="text-gray-500">{item.desc}</div>
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <div className="font-mono text-blue-600 font-medium">{item.tag}</div>
+                                        <div className="text-gray-500">{item.desc}</div>
+                                      </div>
+                                      <div className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                        {item.category}
+                                      </div>
+                                    </div>
                                   </button>
                                 ))}
                               </div>
