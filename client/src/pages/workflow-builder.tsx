@@ -57,6 +57,9 @@ export default function WorkflowBuilderPage() {
     name: string;
   } | null>(null);
 
+  // Local saving state to prevent race conditions
+  const [isSaving, setIsSaving] = useState(false);
+
   
   const [workflowData, setWorkflowData] = useState<{
     name: string;
@@ -232,6 +235,7 @@ export default function WorkflowBuilderPage() {
       }
     },
     onSuccess: () => {
+      setIsSaving(false); // Reset local saving state
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
       toast({ 
         title: "Success", 
@@ -241,6 +245,7 @@ export default function WorkflowBuilderPage() {
       // navigate("/workflows"); // Removed auto-navigation
     },
     onError: () => {
+      setIsSaving(false); // Reset local saving state
       toast({ 
         variant: "destructive", 
         title: "Error", 
@@ -250,10 +255,18 @@ export default function WorkflowBuilderPage() {
   });
 
   const handleSave = () => {
+    // Prevent double submissions with immediate local state check
+    if (isSaving || createWorkflowMutation.isPending) {
+      return;
+    }
+
     if (!workflowData.name.trim()) {
       toast({ variant: "destructive", title: "Error", description: "Workflow name is required" });
       return;
     }
+    
+    // Set local saving state immediately to prevent race condition
+    setIsSaving(true);
     
     createWorkflowMutation.mutate({
       ...workflowData,
@@ -544,11 +557,12 @@ export default function WorkflowBuilderPage() {
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={createWorkflowMutation.isPending}
+            disabled={isSaving || createWorkflowMutation.isPending}
             className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+            data-testid="button-save-workflow"
           >
             <Save className="h-4 w-4 mr-2" />
-            {createWorkflowMutation.isPending ? "Saving..." : "Save Workflow"}
+            {(isSaving || createWorkflowMutation.isPending) ? "Saving..." : "Save Workflow"}
           </Button>
         </div>
       </div>
