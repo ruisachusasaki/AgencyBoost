@@ -12,9 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText, Bell } from "lucide-react";
+import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText, Bell, Search } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertTagSchema, type Tag as TagType, type InsertTag } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface ActionConfigPanelProps {
   action: {
@@ -47,6 +53,12 @@ export default function ActionConfigPanel({
   const [staffComboboxOpen, setStaffComboboxOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [tagSearchQueries, setTagSearchQueries] = useState<{ [key: number]: string }>({});
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
+  const [showCreateTagDialog, setShowCreateTagDialog] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Check if workflow has form submission triggers
   const hasFormTrigger = workflowTriggers.some(trigger => 
@@ -100,6 +112,65 @@ export default function ActionConfigPanel({
   const { data: tags = [] } = useQuery<any[]>({
     queryKey: ["/api/tags"],
   });
+
+  // Create tag mutation
+  const createTagMutation = useMutation({
+    mutationFn: async (data: InsertTag) => {
+      const response = await fetch('/api/tags', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to create tag');
+      return response.json();
+    },
+    onSuccess: (newTag) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+      // Auto-select the newly created tag
+      const currentTags = settings.tagIds || [];
+      updateSetting("tagIds", [...currentTags, newTag.id]);
+      setShowCreateTagDialog(false);
+      setNewTagName("");
+      toast({
+        title: "Success",
+        description: "Tag created and added to action.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create tag. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create tag form
+  const createTagForm = useForm<InsertTag>({
+    resolver: zodResolver(insertTagSchema),
+    defaultValues: {
+      name: "",
+      color: "#46a1a0",
+      description: "",
+    },
+  });
+
+  // Handle quick tag creation
+  const handleQuickCreateTag = (tagName: string) => {
+    const trimmedName = tagName.trim();
+    if (!trimmedName) return;
+    
+    createTagMutation.mutate({
+      name: trimmedName,
+      color: "#46a1a0",
+      description: ""
+    });
+  };
+
+  // Handle create tag form submission
+  const handleCreateTagSubmit = (data: InsertTag) => {
+    createTagMutation.mutate(data);
+  };
   
   // Merge tags for notifications - using useMemo to depend on loaded custom fields
   const mergeTagGroups = useMemo(() => [
@@ -319,6 +390,13 @@ export default function ActionConfigPanel({
             errors.push(`Field ${index + 1}: Value is required`);
           }
         });
+      }
+    }
+    
+    // Validate add client tags requirements
+    if (action.type === 'add_client_tags') {
+      if (!settings.tagIds || settings.tagIds.length === 0) {
+        errors.push('At least one tag must be selected');
       }
     }
     
@@ -797,6 +875,261 @@ export default function ActionConfigPanel({
                 ))}
               </div>
             </div>
+          </div>
+        );
+
+      case "add_client_tags":
+        // Filter tags based on search query
+        const filteredTags = tags.filter((tag: any) => 
+          tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+        );
+        
+        // Check if search query matches any existing tag exactly
+        const exactMatch = tags.find((tag: any) => 
+          tag.name.toLowerCase() === tagSearchQuery.toLowerCase()
+        );
+        
+        // Show create option if there's a search query and no exact match
+        const showCreateOption = tagSearchQuery.trim() && !exactMatch;
+        
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="client-tags-search">Add Tags to Client</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Search and select existing tags or create new ones to add to the client.
+              </p>
+              
+              {/* Search Input */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="client-tags-search"
+                  data-testid="input-tag-search"
+                  placeholder="Search tags or type to create new..."
+                  value={tagSearchQuery}
+                  onChange={(e) => setTagSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              {/* Selected Tags Display */}
+              {(settings.tagIds || []).length > 0 && (
+                <div className="mb-4">
+                  <Label className="text-sm font-medium mb-2 block">Selected Tags ({(settings.tagIds || []).length})</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {(settings.tagIds || []).map((tagId: string) => {
+                      const tag = tags.find((t: any) => t.id === tagId);
+                      if (!tag) return null;
+                      return (
+                        <Badge 
+                          key={tagId} 
+                          style={{ backgroundColor: tag.color || '#46a1a0' }} 
+                          className="text-white flex items-center gap-1"
+                        >
+                          {tag.name}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 ml-1 hover:bg-white/20"
+                            onClick={() => {
+                              const currentTags = settings.tagIds || [];
+                              updateSetting("tagIds", currentTags.filter((id: string) => id !== tagId));
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {/* Available Tags */}
+              <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-2">
+                {/* Create new tag option */}
+                {showCreateOption && (
+                  <div 
+                    className="flex items-center justify-between p-2 hover:bg-muted rounded cursor-pointer"
+                    onClick={() => handleQuickCreateTag(tagSearchQuery)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-[#46a1a0]" />
+                      <span className="text-sm">Create tag: "{tagSearchQuery}"</span>
+                    </div>
+                    {createTagMutation.isPending && (
+                      <span className="text-xs text-muted-foreground">Creating...</span>
+                    )}
+                  </div>
+                )}
+                
+                {/* Existing tags */}
+                {filteredTags.length > 0 ? (
+                  filteredTags.map((tag: any) => {
+                    const isSelected = (settings.tagIds || []).includes(tag.id);
+                    return (
+                      <div 
+                        key={tag.id} 
+                        className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'bg-[#46a1a0]/10 border border-[#46a1a0]/20' 
+                            : 'hover:bg-muted'
+                        }`}
+                        onClick={() => {
+                          const currentTags = settings.tagIds || [];
+                          if (isSelected) {
+                            updateSetting("tagIds", currentTags.filter((id: string) => id !== tag.id));
+                          } else {
+                            updateSetting("tagIds", [...currentTags, tag.id]);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: tag.color || '#46a1a0' }}
+                          />
+                          <span className="text-sm font-medium">{tag.name}</span>
+                          {tag.description && (
+                            <span className="text-xs text-muted-foreground">• {tag.description}</span>
+                          )}
+                        </div>
+                        {isSelected && <Check className="h-4 w-4 text-[#46a1a0]" />}
+                      </div>
+                    );
+                  })
+                ) : (
+                  !showCreateOption && (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      {tagSearchQuery ? 'No tags found matching your search.' : 'No tags available.'}
+                      {tagSearchQuery && (
+                        <div className="mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickCreateTag(tagSearchQuery)}
+                            className="text-[#46a1a0] border-[#46a1a0] hover:bg-[#46a1a0]/10"
+                            disabled={createTagMutation.isPending}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Create "{tagSearchQuery}"
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+              
+              {/* Advanced Tag Creation Button */}
+              <div className="flex justify-between items-center pt-2 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreateTagDialog(true)}
+                  className="text-[#46a1a0] border-[#46a1a0] hover:bg-[#46a1a0]/10"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Custom Tag
+                </Button>
+                <div className="text-xs text-muted-foreground">
+                  {(settings.tagIds || []).length} tag(s) selected
+                </div>
+              </div>
+            </div>
+            
+            {/* Advanced Tag Creation Dialog */}
+            <Dialog open={showCreateTagDialog} onOpenChange={setShowCreateTagDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Tag</DialogTitle>
+                  <DialogDescription>
+                    Create a new tag with custom color and description.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...createTagForm}>
+                  <form onSubmit={createTagForm.handleSubmit(handleCreateTagSubmit)} className="space-y-4">
+                    <FormField
+                      control={createTagForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tag Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter tag name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={createTagForm.control}
+                      name="color"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Color</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="color"
+                                {...field}
+                                value={field.value || "#46a1a0"}
+                                className="w-12 h-10 p-1 border rounded cursor-pointer"
+                              />
+                              <Input
+                                {...field}
+                                value={field.value || "#46a1a0"}
+                                placeholder="#46a1a0"
+                                className="flex-1"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={createTagForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Enter tag description"
+                              rows={3}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </form>
+                </Form>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowCreateTagDialog(false);
+                      createTagForm.reset();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={createTagForm.handleSubmit(handleCreateTagSubmit)}
+                    disabled={createTagMutation.isPending}
+                    className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+                  >
+                    {createTagMutation.isPending ? 'Creating...' : 'Create Tag'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         );
 
@@ -2659,6 +2992,8 @@ export default function ActionConfigPanel({
         return LucideIcons.Calendar;
       case "update_client_fields":
         return LucideIcons.Edit;
+      case "add_client_tags":
+        return Tag;
       case "number_formatter":
         return LucideIcons.Hash;
       default:
