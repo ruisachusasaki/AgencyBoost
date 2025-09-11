@@ -406,7 +406,7 @@ export default function ActionConfigPanel({
                     <Command>
                       <CommandInput placeholder="Search staff members..." />
                       <CommandEmpty>No staff member found.</CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
                         {staff.map((member: any) => (
                           <CommandItem
                             key={member.id}
@@ -510,7 +510,7 @@ export default function ActionConfigPanel({
                     <Command>
                       <CommandInput placeholder="Search staff members..." />
                       <CommandEmpty>No staff member found.</CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
                         {staff.map((member: any) => (
                           <CommandItem
                             key={member.id}
@@ -1036,7 +1036,7 @@ export default function ActionConfigPanel({
                     <Command>
                       <CommandInput placeholder="Search users..." />
                       <CommandEmpty>No user found.</CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
                         {staff.map((member: any) => (
                           <CommandItem
                             key={member.id}
@@ -1348,7 +1348,7 @@ export default function ActionConfigPanel({
                           <Command>
                             <CommandInput placeholder="Search staff members..." />
                             <CommandEmpty>No staff member found.</CommandEmpty>
-                            <CommandGroup>
+                            <CommandGroup className="max-h-64 overflow-y-auto">
                               {staff
                                 .filter((member: any) => !settings.roundRobinUsers?.includes(member.id))
                                 .map((member: any) => (
@@ -1472,7 +1472,7 @@ export default function ActionConfigPanel({
                     <Command>
                       <CommandInput placeholder="Search staff members..." />
                       <CommandEmpty>No staff member found.</CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
                         {staff.map((member: any) => (
                           <CommandItem
                             key={member.id}
