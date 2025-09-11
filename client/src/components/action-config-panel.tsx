@@ -400,6 +400,27 @@ export default function ActionConfigPanel({
       }
     }
     
+    // Validate assign contact owner requirements
+    if (action.type === 'assign_contact_owner') {
+      if (!settings.staffIds || settings.staffIds.length === 0) {
+        errors.push('At least one staff member must be selected');
+      }
+      if (settings.staffIds && settings.staffIds.length > 1 && settings.splitType === 'unevenly') {
+        if (!settings.staffWeights) {
+          errors.push('Weight settings are required for uneven distribution');
+        } else {
+          settings.staffIds.forEach((staffId: string) => {
+            const weight = settings.staffWeights[staffId];
+            if (!weight || weight < 1 || !Number.isInteger(weight) || weight <= 0) {
+              const staffMember = staff.find((s: any) => s.id === staffId);
+              const staffName = staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Selected staff member';
+              errors.push(`${staffName} must have a valid weight of at least 1`);
+            }
+          });
+        }
+      }
+    }
+    
     return errors;
   };
 
