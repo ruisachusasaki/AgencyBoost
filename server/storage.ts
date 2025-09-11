@@ -15,6 +15,7 @@ import {
   type Note, type InsertNote,
   type ClientAppointment, type InsertClientAppointment,
   type Document, type InsertDocument,
+  type ClientHealthScore, type InsertClientHealthScore, clientHealthScores,
   type Activity, type InsertActivity,
   type SocialMediaAccount, type InsertSocialMediaAccount,
   type SocialMediaPost, type InsertSocialMediaPost,
@@ -69,6 +70,14 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: string): Promise<boolean>;
+  
+  // Client Health Scores
+  createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore>;
+  getClientHealthScores(clientId: string): Promise<ClientHealthScore[]>;
+  getClientHealthScore(id: string): Promise<ClientHealthScore | null>;
+  updateClientHealthScore(id: string, data: Partial<InsertClientHealthScore>): Promise<ClientHealthScore>;
+  deleteClientHealthScore(id: string): Promise<void>;
+  getClientHealthScoreByWeek(clientId: string, weekStartDate: Date): Promise<ClientHealthScore | null>;
   
   // Projects
   getProjects(): Promise<Project[]>;
@@ -3862,6 +3871,56 @@ export class DbStorage implements IStorage {
   async deleteClient(id: string): Promise<boolean> {
     const result = await db.delete(clients).where(eq(clients.id, id));
     return true;
+  }
+
+  // Client Health Scores
+  async createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore> {
+    const result = await db.insert(clientHealthScores).values({
+      ...data,
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getClientHealthScores(clientId: string): Promise<ClientHealthScore[]> {
+    return await db.select()
+      .from(clientHealthScores)
+      .where(eq(clientHealthScores.clientId, clientId))
+      .orderBy(desc(clientHealthScores.weekStartDate));
+  }
+
+  async getClientHealthScore(id: string): Promise<ClientHealthScore | null> {
+    const result = await db.select()
+      .from(clientHealthScores)
+      .where(eq(clientHealthScores.id, id));
+    return result[0] || null;
+  }
+
+  async updateClientHealthScore(id: string, data: Partial<InsertClientHealthScore>): Promise<ClientHealthScore> {
+    const result = await db.update(clientHealthScores)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(clientHealthScores.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteClientHealthScore(id: string): Promise<void> {
+    await db.delete(clientHealthScores).where(eq(clientHealthScores.id, id));
+  }
+
+  async getClientHealthScoreByWeek(clientId: string, weekStartDate: Date): Promise<ClientHealthScore | null> {
+    const result = await db.select()
+      .from(clientHealthScores)
+      .where(and(
+        eq(clientHealthScores.clientId, clientId),
+        eq(clientHealthScores.weekStartDate, weekStartDate.toISOString().split('T')[0])
+      ));
+    return result[0] || null;
   }
 
   async getAllClientsForExport(): Promise<Client[]> {
