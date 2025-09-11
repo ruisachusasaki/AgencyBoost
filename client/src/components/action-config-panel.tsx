@@ -305,6 +305,22 @@ export default function ActionConfigPanel({
       }
     }
     
+    // Validate update client fields requirements
+    if (action.type === 'update_client_fields') {
+      if (!settings.fields || settings.fields.length === 0) {
+        errors.push('At least one field must be configured');
+      } else {
+        settings.fields.forEach((field: any, index: number) => {
+          if (!field.fieldId) {
+            errors.push(`Field ${index + 1}: Field selection is required`);
+          }
+          if (!field.value || field.value.trim() === '') {
+            errors.push(`Field ${index + 1}: Value is required`);
+          }
+        });
+      }
+    }
+    
     return errors;
   };
 
@@ -779,6 +795,177 @@ export default function ActionConfigPanel({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        );
+
+      case "update_client_fields":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Client Fields</Label>
+              <p className="text-sm text-gray-600 mb-3">Add fields to update for the client who triggered this workflow.</p>
+              
+              {/* Existing Fields */}
+              {(settings.fields || []).map((field: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`field-${index}`}>Field {index + 1}</Label>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        const currentFields = settings.fields || [];
+                        const newFields = currentFields.filter((_: any, i: number) => i !== index);
+                        updateSetting("fields", newFields);
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Field Selection */}
+                  <div>
+                    <Label htmlFor={`field-select-${index}`}>Select Field</Label>
+                    <Select 
+                      value={field.fieldId || ""} 
+                      onValueChange={(value) => {
+                        const currentFields = [...(settings.fields || [])];
+                        const selectedField = [...(clients.data?.clients || []).length > 0 ? Object.keys((clients.data?.clients || [])[0] || {}) : [], ...(customFields || []).map((cf: any) => ({ id: cf.id, name: cf.name, type: cf.type }))].find((f: any) => f.id === value || f === value);
+                        currentFields[index] = { 
+                          ...currentFields[index], 
+                          fieldId: value,
+                          fieldName: selectedField?.name || value,
+                          fieldType: selectedField?.type || 'text'
+                        };
+                        updateSetting("fields", currentFields);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select field to update" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64 overflow-y-auto">
+                        {/* Standard Client Fields */}
+                        <SelectItem value="firstName">First Name</SelectItem>
+                        <SelectItem value="lastName">Last Name</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="phone">Phone</SelectItem>
+                        <SelectItem value="company">Company</SelectItem>
+                        <SelectItem value="address">Address</SelectItem>
+                        <SelectItem value="city">City</SelectItem>
+                        <SelectItem value="state">State</SelectItem>
+                        <SelectItem value="zipCode">Zip Code</SelectItem>
+                        <SelectItem value="country">Country</SelectItem>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="notes">Notes</SelectItem>
+                        
+                        {/* Custom Fields */}
+                        {customFields && customFields.length > 0 && (
+                          <>
+                            <Separator />
+                            {customFields.map((customField: any) => (
+                              <SelectItem key={customField.id} value={customField.id}>
+                                {customField.name}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Value Input */}
+                  <div>
+                    <Label htmlFor={`field-value-${index}`}>Value</Label>
+                    <div className="relative">
+                      {field.fieldType === 'multiline' ? (
+                        <Textarea
+                          id={`field-value-${index}`}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            const currentFields = [...(settings.fields || [])];
+                            currentFields[index] = { ...currentFields[index], value: e.target.value };
+                            updateSetting("fields", currentFields);
+                          }}
+                          placeholder="Enter value or use merge tags like {{firstName}}, {{email}}"
+                          rows={3}
+                        />
+                      ) : (
+                        <Input
+                          id={`field-value-${index}`}
+                          type={field.fieldType === 'number' ? 'number' : field.fieldType === 'email' ? 'email' : 'text'}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            const currentFields = [...(settings.fields || [])];
+                            currentFields[index] = { ...currentFields[index], value: e.target.value };
+                            updateSetting("fields", currentFields);
+                          }}
+                          placeholder="Enter value or use merge tags like {{firstName}}, {{email}}"
+                        />
+                      )}
+                      <div className="absolute right-2 top-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400">
+                              <Tag className="h-3 w-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-0">
+                            <div className="p-3">
+                              <h4 className="text-sm font-medium mb-2">Available Merge Tags</h4>
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                <div className="text-xs text-gray-500">Click to insert:</div>
+                                {[
+                                  { tag: '{{firstName}}', desc: 'Client first name' },
+                                  { tag: '{{lastName}}', desc: 'Client last name' },
+                                  { tag: '{{email}}', desc: 'Client email' },
+                                  { tag: '{{phone}}', desc: 'Client phone' },
+                                  { tag: '{{company}}', desc: 'Client company' },
+                                  { tag: '{{currentDate}}', desc: 'Current date' },
+                                  { tag: '{{currentTime}}', desc: 'Current time' }
+                                ].map((item, tagIndex) => (
+                                  <button
+                                    key={tagIndex}
+                                    className="w-full text-left p-2 hover:bg-gray-50 rounded text-xs"
+                                    onClick={() => {
+                                      const currentFields = [...(settings.fields || [])];
+                                      const currentValue = currentFields[index]?.value || "";
+                                      currentFields[index] = { ...currentFields[index], value: currentValue + item.tag };
+                                      updateSetting("fields", currentFields);
+                                    }}
+                                  >
+                                    <div className="font-mono text-blue-600">{item.tag}</div>
+                                    <div className="text-gray-500">{item.desc}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Add Field Button */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const currentFields = settings.fields || [];
+                  updateSetting("fields", [...currentFields, { fieldId: "", fieldName: "", fieldType: "text", value: "" }]);
+                }}
+                className="w-full border-dashed"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Field
+              </Button>
+              
+              {(!settings.fields || settings.fields.length === 0) && (
+                <p className="text-sm text-gray-500 text-center">No fields configured. Click "Add Field" to start.</p>
+              )}
             </div>
           </div>
         );
@@ -2405,6 +2592,8 @@ export default function ActionConfigPanel({
         return LucideIcons.ArrowRight;
       case "date_time_formatter":
         return LucideIcons.Calendar;
+      case "update_client_fields":
+        return LucideIcons.Edit;
       case "number_formatter":
         return LucideIcons.Hash;
       default:
