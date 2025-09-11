@@ -31,6 +31,7 @@ import {
   insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema,
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
   insertTrainingLessonResourceSchema,
+  insertClientHealthScoreSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions,
