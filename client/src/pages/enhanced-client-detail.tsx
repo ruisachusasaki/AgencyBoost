@@ -28,7 +28,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import ClientHealthModal from "@/components/client-health-modal";
-import { analyzeHealthStatus, formatHealthStatusTooltip, getHealthStatusClasses, type HealthStatusResult } from "@/lib/health-status-utils";
+import type { HealthStatusResult } from "@shared/utils/healthAnalysis";
 
 // EmailTemplateSelector Component
 function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {

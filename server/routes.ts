@@ -57,6 +57,7 @@ import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-o
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
+import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healthAnalysis";
 // Extend Express Request to include session
 declare global {
   namespace Express {
@@ -549,40 +550,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedInputData = inputClientHealthScoreSchema.parse(inputData);
       console.log('DEBUG - Validated input data:', JSON.stringify(validatedInputData, null, 2));
       
-      // Calculate scoring based on the scoring fields
-      const calculateFieldScore = (field: string, value: string) => {
-        switch (field) {
-          case 'goals':
-            return value === 'Above' || value === 'On Track' ? 3 : 0;
-          case 'fulfillment':
-            return value === 'Early' || value === 'On Time' ? 3 : 0;
-          case 'relationship':
-            return value === 'Engaged' ? 3 : value === 'Passive' ? 2 : 1;
-          case 'clientActions':
-            return value === 'Early' || value === 'Up to Date' ? 3 : 1;
-          default:
-            return 0;
-        }
-      };
-      
-      // Calculate total score and average
-      const goalsScore = calculateFieldScore('goals', validatedInputData.goals);
-      const fulfillmentScore = calculateFieldScore('fulfillment', validatedInputData.fulfillment);
-      const relationshipScore = calculateFieldScore('relationship', validatedInputData.relationship);
-      const clientActionsScore = calculateFieldScore('clientActions', validatedInputData.clientActions);
-      
-      const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
-      const averageScore = parseFloat((totalScore / 4).toFixed(2));
-      
-      // Determine health indicator based on average score
-      let healthIndicator: string;
-      if (averageScore >= 3) {
-        healthIndicator = 'Green';
-      } else if (averageScore >= 2) {
-        healthIndicator = 'Yellow';
-      } else {
-        healthIndicator = 'Red';
-      }
+      // Calculate health metrics using shared logic
+      const { totalScore, averageScore, healthIndicator } = calculateHealthMetrics({
+        goals: validatedInputData.goals,
+        fulfillment: validatedInputData.fulfillment,
+        relationship: validatedInputData.relationship,
+        clientActions: validatedInputData.clientActions
+      });
       
       // Create complete data with calculated values for storage
       const completeData = {
@@ -671,44 +645,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasAnyScoreFieldUpdate = scoringFields.some(field => validatedData.hasOwnProperty(field));
       
       if (hasAnyScoreFieldUpdate) {
-        const calculateFieldScore = (field: string, value: string) => {
-          switch (field) {
-            case 'goals':
-              return value === 'Above' || value === 'On Track' ? 3 : 0;
-            case 'fulfillment':
-              return value === 'Early' || value === 'On Time' ? 3 : 0;
-            case 'relationship':
-              return value === 'Engaged' ? 3 : value === 'Passive' ? 2 : 1;
-            case 'clientActions':
-              return value === 'Early' || value === 'Up to Date' ? 3 : 1;
-            default:
-              return 0;
-          }
-        };
-        
         // Use updated values if provided, otherwise use existing values
         const goals = validatedData.goals || oldHealthScore.goals;
         const fulfillment = validatedData.fulfillment || oldHealthScore.fulfillment;
         const relationship = validatedData.relationship || oldHealthScore.relationship;
         const clientActions = validatedData.clientActions || oldHealthScore.clientActions;
         
-        const goalsScore = calculateFieldScore('goals', goals);
-        const fulfillmentScore = calculateFieldScore('fulfillment', fulfillment);
-        const relationshipScore = calculateFieldScore('relationship', relationship);
-        const clientActionsScore = calculateFieldScore('clientActions', clientActions);
-        
-        const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
-        const averageScore = parseFloat((totalScore / 4).toFixed(2));
-        
-        // Determine health indicator based on average score
-        let healthIndicator: string;
-        if (averageScore >= 3) {
-          healthIndicator = 'Green';
-        } else if (averageScore >= 2) {
-          healthIndicator = 'Yellow';
-        } else {
-          healthIndicator = 'Red';
-        }
+        // Calculate health metrics using shared logic
+        const { totalScore, averageScore, healthIndicator } = calculateHealthMetrics({
+          goals,
+          fulfillment,
+          relationship,
+          clientActions
+        });
         
         updatedData = {
           ...updatedData,
@@ -808,90 +757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all health scores for this client
       const healthScores = await storage.getClientHealthScores(clientId);
       
-      const analyzeHealthStatus = (scores: any[]) => {
-        // Sort scores by week start date (most recent first)
-        const sortedScores = [...scores].sort((a, b) => 
-          new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime()
-        );
-
-        // Get the last 4 weeks
-        const lastFourWeeks = sortedScores.slice(0, 4);
-        
-        // If we don't have 4 weeks of data, no highlighting
-        if (lastFourWeeks.length < 4) {
-          return {
-            shouldHighlight: false,
-            highlightType: null,
-            reason: 'Insufficient data (less than 4 weeks)',
-            weeks: lastFourWeeks.map(score => ({
-              weekStart: score.weekStartDate,
-              healthIndicator: score.healthIndicator,
-              isGreen: score.healthIndicator === 'Green'
-            }))
-          };
-        }
-
-        // Check if any of the last 4 weeks are green
-        const hasGreenWeek = lastFourWeeks.some(score => score.healthIndicator === 'Green');
-        
-        if (hasGreenWeek) {
-          return {
-            shouldHighlight: false,
-            highlightType: null,
-            reason: 'Has green week(s) in last 4 weeks',
-            weeks: lastFourWeeks.map(score => ({
-              weekStart: score.weekStartDate,
-              healthIndicator: score.healthIndicator,
-              isGreen: score.healthIndicator === 'Green'
-            }))
-          };
-        }
-
-        // All 4 weeks are non-green (Yellow or Red)
-        const redWeeks = lastFourWeeks.filter(score => score.healthIndicator === 'Red');
-        const yellowWeeks = lastFourWeeks.filter(score => score.healthIndicator === 'Yellow');
-        
-        // Check for improvement pattern (Red to Yellow trend)
-        const checkImprovementPattern = (weeklyScores: any[]) => {
-          if (weeklyScores.length < 2) return false;
-          
-          const recentTwoWeeks = weeklyScores.slice(0, 2);
-          const olderTwoWeeks = weeklyScores.slice(2, 4);
-          
-          const recentRedCount = recentTwoWeeks.filter(score => score.healthIndicator === 'Red').length;
-          const olderRedCount = olderTwoWeeks.filter(score => score.healthIndicator === 'Red').length;
-          
-          return recentRedCount < olderRedCount && olderRedCount > 0;
-        };
-        
-        const isShowingImprovement = checkImprovementPattern(lastFourWeeks);
-        
-        // Determine highlighting type
-        let highlightType: 'red' | 'yellow' | null = null;
-        let reason = '';
-
-        if (redWeeks.length >= 2 && !isShowingImprovement) {
-          highlightType = 'red';
-          reason = `${redWeeks.length} red weeks in last 4 weeks, no improvement trend`;
-        } else if (yellowWeeks.length >= 2 || isShowingImprovement) {
-          highlightType = 'yellow';
-          reason = isShowingImprovement 
-            ? 'Showing improvement from red to yellow'
-            : `${yellowWeeks.length} yellow weeks in last 4 weeks`;
-        }
-
-        return {
-          shouldHighlight: highlightType !== null,
-          highlightType,
-          reason,
-          weeks: lastFourWeeks.map(score => ({
-            weekStart: score.weekStartDate,
-            healthIndicator: score.healthIndicator,
-            isGreen: score.healthIndicator === 'Green'
-          }))
-        };
-      };
-      
+      // Use shared health analysis logic
       const healthStatus = analyzeHealthStatus(healthScores);
       
       res.json(healthStatus);

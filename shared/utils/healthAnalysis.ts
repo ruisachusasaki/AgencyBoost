@@ -1,5 +1,42 @@
-import type { ClientHealthScore } from "@shared/schema";
+import type { ClientHealthScore } from "../schema";
 
+/**
+ * Field scoring values based on business rules
+ */
+const FIELD_SCORING = {
+  goals: {
+    Above: 3,
+    "On Track": 3,
+    Below: 0
+  },
+  fulfillment: {
+    Early: 3,
+    "On Time": 3,
+    Behind: 0
+  },
+  relationship: {
+    Engaged: 3,
+    Passive: 2,
+    Disengaged: 1
+  },
+  clientActions: {
+    Early: 3,
+    "Up to Date": 3,
+    Late: 1
+  }
+} as const;
+
+/**
+ * Health indicator thresholds
+ */
+const HEALTH_THRESHOLDS = {
+  GREEN: 3,
+  YELLOW: 2
+} as const;
+
+/**
+ * Health analysis result interface
+ */
 export interface HealthStatusResult {
   shouldHighlight: boolean;
   highlightType: 'red' | 'yellow' | null;
@@ -9,6 +46,56 @@ export interface HealthStatusResult {
     healthIndicator: string;
     isGreen: boolean;
   }[];
+}
+
+/**
+ * Calculate score for a specific field and value
+ */
+export function calculateFieldScore(field: string, value: string): number {
+  const fieldScoring = FIELD_SCORING[field as keyof typeof FIELD_SCORING];
+  if (!fieldScoring) {
+    return 0;
+  }
+  
+  return fieldScoring[value as keyof typeof fieldScoring] || 0;
+}
+
+/**
+ * Calculate total score, average score, and health indicator
+ */
+export function calculateHealthMetrics(data: {
+  goals: string;
+  fulfillment: string;
+  relationship: string;
+  clientActions: string;
+}): {
+  totalScore: number;
+  averageScore: number;
+  healthIndicator: string;
+} {
+  const goalsScore = calculateFieldScore('goals', data.goals);
+  const fulfillmentScore = calculateFieldScore('fulfillment', data.fulfillment);
+  const relationshipScore = calculateFieldScore('relationship', data.relationship);
+  const clientActionsScore = calculateFieldScore('clientActions', data.clientActions);
+  
+  const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
+  const averageScore = parseFloat((totalScore / 4).toFixed(2));
+  
+  // Determine health indicator based on average score
+  let healthIndicator: string;
+  if (averageScore >= HEALTH_THRESHOLDS.GREEN) {
+    healthIndicator = 'Green';
+  } else if (averageScore >= HEALTH_THRESHOLDS.YELLOW) {
+    healthIndicator = 'Yellow';
+  } else {
+    healthIndicator = 'Red';
+  }
+  
+  return {
+    totalScore,
+    averageScore,
+    healthIndicator
+  };
 }
 
 /**
