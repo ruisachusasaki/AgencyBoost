@@ -324,6 +324,13 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
   // Fetch health scores for this client
   const { data: healthScores = [], isLoading, error } = useQuery({
     queryKey: ["/api/clients", clientId, "health-scores"],
+    queryFn: async () => {
+      const response = await fetch(`/api/clients/${clientId}/health-scores`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch health scores');
+      }
+      return response.json();
+    },
     enabled: !!clientId,
   });
 
