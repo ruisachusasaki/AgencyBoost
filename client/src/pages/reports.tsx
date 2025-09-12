@@ -816,14 +816,16 @@ export default function Reports() {
                     </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Search clients..."
-                      value={healthSearchTerm}
-                      onChange={(e) => setHealthSearchTerm(e.target.value)}
-                      className="w-48"
-                      data-testid="input-health-search"
-                    />
-                    <Search className="h-4 w-4 text-slate-400" />
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search clients..."
+                        value={healthSearchTerm}
+                        onChange={(e) => setHealthSearchTerm(e.target.value)}
+                        className="w-48 pl-10"
+                        data-testid="input-health-search"
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-slate-600">Latest Only:</label>
