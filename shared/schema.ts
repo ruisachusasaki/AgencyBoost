@@ -910,6 +910,17 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   createdAt: true,
 });
 
+// Schema for user input validation (omits calculated fields)
+export const inputClientHealthScoreSchema = createInsertSchema(clientHealthScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalScore: true,
+  averageScore: true,
+  healthIndicator: true,
+});
+
+// Schema for storage validation (includes calculated fields)
 export const insertClientHealthScoreSchema = createInsertSchema(clientHealthScores).omit({
   id: true,
   createdAt: true,
@@ -1619,6 +1630,7 @@ export type ClientTransaction = typeof clientTransactions.$inferSelect;
 export type InsertClientTransaction = z.infer<typeof insertClientTransactionSchema>;
 
 export type ClientHealthScore = typeof clientHealthScores.$inferSelect;
+export type InputClientHealthScore = z.infer<typeof inputClientHealthScoreSchema>;
 export type InsertClientHealthScore = z.infer<typeof insertClientHealthScoreSchema>;
 
 // Departments and Positions Management

@@ -31,7 +31,7 @@ import {
   insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema,
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
   insertTrainingLessonResourceSchema,
-  insertClientHealthScoreSchema,
+  inputClientHealthScoreSchema, insertClientHealthScoreSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions,
@@ -531,6 +531,272 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Export error:", error);
       res.status(500).json({ message: "Failed to export clients", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Client Health Score routes
+  app.post("/api/clients/:clientId/health-scores", async (req, res) => {
+    console.log('DEBUG - Health score POST route called with clientId:', req.params.clientId);
+    console.log('DEBUG - Request body:', JSON.stringify(req.body, null, 2));
+    try {
+      const { clientId } = req.params;
+      
+      // Add clientId to the request body data
+      const inputData = { ...req.body, clientId };
+      
+      // Validate the input data first (without calculated fields)
+      console.log('DEBUG - Input data before validation:', JSON.stringify(inputData, null, 2));
+      const validatedInputData = inputClientHealthScoreSchema.parse(inputData);
+      console.log('DEBUG - Validated input data:', JSON.stringify(validatedInputData, null, 2));
+      
+      // Calculate scoring based on the scoring fields
+      const calculateFieldScore = (field: string, value: string) => {
+        switch (field) {
+          case 'goals':
+            return value === 'Above' || value === 'On Track' ? 3 : 0;
+          case 'fulfillment':
+            return value === 'Early' || value === 'On Time' ? 3 : 0;
+          case 'relationship':
+            return value === 'Engaged' ? 3 : value === 'Passive' ? 2 : 1;
+          case 'clientActions':
+            return value === 'Early' || value === 'Up to Date' ? 3 : 1;
+          default:
+            return 0;
+        }
+      };
+      
+      // Calculate total score and average
+      const goalsScore = calculateFieldScore('goals', validatedInputData.goals);
+      const fulfillmentScore = calculateFieldScore('fulfillment', validatedInputData.fulfillment);
+      const relationshipScore = calculateFieldScore('relationship', validatedInputData.relationship);
+      const clientActionsScore = calculateFieldScore('clientActions', validatedInputData.clientActions);
+      
+      const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
+      const averageScore = parseFloat((totalScore / 4).toFixed(2));
+      
+      // Determine health indicator based on average score
+      let healthIndicator: string;
+      if (averageScore >= 3) {
+        healthIndicator = 'Green';
+      } else if (averageScore >= 2) {
+        healthIndicator = 'Yellow';
+      } else {
+        healthIndicator = 'Red';
+      }
+      
+      // Create complete data with calculated values for storage
+      const completeData = {
+        ...validatedInputData,
+        totalScore,
+        averageScore,
+        healthIndicator
+      };
+      
+      // Debug logging
+      console.log('DEBUG - Calculated values:', { totalScore, averageScore, healthIndicator });
+      console.log('DEBUG - Complete data before storage:', JSON.stringify(completeData, null, 2));
+      
+      const healthScore = await storage.createClientHealthScore(completeData);
+      
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "client_health_score",
+        healthScore.id,
+        `Health Score for ${healthScore.weekStartDate}`,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `New health score created for client ${clientId} with ${healthIndicator} status (${averageScore}/3.0)`,
+        null,
+        { totalScore, averageScore, healthIndicator },
+        req
+      );
+      
+      res.status(201).json(healthScore);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      
+      // Handle unique constraint violation for duplicate week
+      if (error instanceof Error && error.message.includes('duplicate key value violates unique constraint')) {
+        return res.status(409).json({ 
+          message: "A health score already exists for this client and week", 
+          error: "Health score must be unique per client per week" 
+        });
+      }
+      
+      console.error("Error creating health score:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to create health score", error: errorMessage });
+    }
+  });
+
+  app.get("/api/clients/:clientId/health-scores", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const healthScores = await storage.getClientHealthScores(clientId);
+      res.json(healthScores);
+    } catch (error) {
+      console.error("Error fetching client health scores:", error);
+      res.status(500).json({ message: "Failed to fetch health scores" });
+    }
+  });
+
+  app.get("/api/health-scores/:id", async (req, res) => {
+    try {
+      const healthScore = await storage.getClientHealthScore(req.params.id);
+      if (!healthScore) {
+        return res.status(404).json({ message: "Health score not found" });
+      }
+      res.json(healthScore);
+    } catch (error) {
+      console.error("Error fetching health score:", error);
+      res.status(500).json({ message: "Failed to fetch health score" });
+    }
+  });
+
+  app.put("/api/health-scores/:id", async (req, res) => {
+    try {
+      // Get the old health score data first for audit logging
+      const oldHealthScore = await storage.getClientHealthScore(req.params.id);
+      if (!oldHealthScore) {
+        return res.status(404).json({ message: "Health score not found" });
+      }
+      
+      const validatedData = inputClientHealthScoreSchema.partial().parse(req.body);
+      
+      // Recalculate scoring if any scoring fields are being updated
+      let updatedData = { ...validatedData };
+      const scoringFields = ['goals', 'fulfillment', 'relationship', 'clientActions'];
+      const hasAnyScoreFieldUpdate = scoringFields.some(field => validatedData.hasOwnProperty(field));
+      
+      if (hasAnyScoreFieldUpdate) {
+        const calculateFieldScore = (field: string, value: string) => {
+          switch (field) {
+            case 'goals':
+              return value === 'Above' || value === 'On Track' ? 3 : 0;
+            case 'fulfillment':
+              return value === 'Early' || value === 'On Time' ? 3 : 0;
+            case 'relationship':
+              return value === 'Engaged' ? 3 : value === 'Passive' ? 2 : 1;
+            case 'clientActions':
+              return value === 'Early' || value === 'Up to Date' ? 3 : 1;
+            default:
+              return 0;
+          }
+        };
+        
+        // Use updated values if provided, otherwise use existing values
+        const goals = validatedData.goals || oldHealthScore.goals;
+        const fulfillment = validatedData.fulfillment || oldHealthScore.fulfillment;
+        const relationship = validatedData.relationship || oldHealthScore.relationship;
+        const clientActions = validatedData.clientActions || oldHealthScore.clientActions;
+        
+        const goalsScore = calculateFieldScore('goals', goals);
+        const fulfillmentScore = calculateFieldScore('fulfillment', fulfillment);
+        const relationshipScore = calculateFieldScore('relationship', relationship);
+        const clientActionsScore = calculateFieldScore('clientActions', clientActions);
+        
+        const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
+        const averageScore = parseFloat((totalScore / 4).toFixed(2));
+        
+        // Determine health indicator based on average score
+        let healthIndicator: string;
+        if (averageScore >= 3) {
+          healthIndicator = 'Green';
+        } else if (averageScore >= 2) {
+          healthIndicator = 'Yellow';
+        } else {
+          healthIndicator = 'Red';
+        }
+        
+        updatedData = {
+          ...updatedData,
+          totalScore,
+          averageScore,
+          healthIndicator
+        };
+      }
+      
+      const healthScore = await storage.updateClientHealthScore(req.params.id, updatedData);
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "client_health_score",
+        healthScore.id,
+        `Health Score for ${healthScore.weekStartDate}`,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Health score updated for week ${healthScore.weekStartDate}`,
+        { totalScore: oldHealthScore.totalScore, averageScore: oldHealthScore.averageScore, healthIndicator: oldHealthScore.healthIndicator },
+        { totalScore: healthScore.totalScore, averageScore: healthScore.averageScore, healthIndicator: healthScore.healthIndicator },
+        req
+      );
+      
+      res.json(healthScore);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      
+      console.error("Error updating health score:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to update health score", error: errorMessage });
+    }
+  });
+
+  app.delete("/api/health-scores/:id", async (req, res) => {
+    try {
+      // Get health score data before deletion for audit logging
+      const healthScore = await storage.getClientHealthScore(req.params.id);
+      if (!healthScore) {
+        return res.status(404).json({ message: "Health score not found" });
+      }
+      
+      await storage.deleteClientHealthScore(req.params.id);
+      
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "client_health_score",
+        healthScore.id,
+        `Health Score for ${healthScore.weekStartDate}`,
+        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        `Health score deleted for week ${healthScore.weekStartDate}`,
+        { totalScore: healthScore.totalScore, averageScore: healthScore.averageScore, healthIndicator: healthScore.healthIndicator },
+        null,
+        req
+      );
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting health score:", error);
+      res.status(500).json({ message: "Failed to delete health score" });
+    }
+  });
+
+  app.get("/api/clients/:clientId/health-scores/current-week", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      // Calculate the current week start (Monday)
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // If Sunday, go back 6 days, otherwise currentDay - 1
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - daysFromMonday);
+      monday.setHours(0, 0, 0, 0);
+      
+      const existingScore = await storage.getClientHealthScoreByWeek(clientId, monday);
+      
+      if (existingScore) {
+        res.json({ exists: true, healthScore: existingScore });
+      } else {
+        res.json({ exists: false, weekStartDate: monday.toISOString().split('T')[0] });
+      }
+    } catch (error) {
+      console.error("Error checking current week health score:", error);
+      res.status(500).json({ message: "Failed to check current week health score" });
     }
   });
 
