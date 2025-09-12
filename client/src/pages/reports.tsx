@@ -22,9 +22,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import type { Client, Project, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
 
@@ -249,23 +248,30 @@ export default function Reports() {
     setHealthPage(1);
   };
 
-  const getSortIcon = (field: string) => {
-    if (healthSortField !== field) {
-      return <ArrowUpDown className="h-3 w-3 text-gray-400" />;
-    }
-    return healthSortOrder === "asc" ? 
-      <ArrowUp className="h-3 w-3 text-blue-600" /> : 
-      <ArrowDown className="h-3 w-3 text-blue-600" />;
-  };
 
   const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
     <TableHead 
-      className="cursor-pointer hover:bg-gray-50 select-none" 
+      className="cursor-pointer hover:bg-muted/50 transition-colors" 
       onClick={() => handleHealthSort(field)}
     >
       <div className="flex items-center justify-between">
-        <span>{children}</span>
-        {getSortIcon(field)}
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              healthSortField === field && healthSortOrder === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              healthSortField === field && healthSortOrder === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
       </div>
     </TableHead>
   );
