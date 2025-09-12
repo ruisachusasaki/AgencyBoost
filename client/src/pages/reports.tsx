@@ -21,7 +21,10 @@ import {
   Target,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import type { Client, Project, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
 
@@ -36,6 +39,8 @@ export default function Reports() {
   const [healthPage, setHealthPage] = useState(1);
   const [healthPageSize, setHealthPageSize] = useState(20);
   const [showLatestOnly, setShowLatestOnly] = useState(false);
+  const [healthSortField, setHealthSortField] = useState<string>("weekStartDate");
+  const [healthSortOrder, setHealthSortOrder] = useState<"asc" | "desc">("desc");
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<{clients: Client[]}>({
     queryKey: ["/api/clients"],
@@ -76,8 +81,8 @@ export default function Reports() {
     latestPerClient: showLatestOnly,
     page: healthPage,
     limit: healthPageSize,
-    sort: "weekStartDate",
-    sortOrder: "desc" as const
+    sort: healthSortField,
+    sortOrder: healthSortOrder
   };
 
   const { data: healthScoresData, isLoading: healthScoresLoading } = useQuery<{
@@ -229,6 +234,41 @@ export default function Reports() {
     topPerformingClients: calculateTopHealthClients(healthScores, clients),
     atRiskClients: healthScores.filter(h => h.healthIndicator === 'Red').slice(0, 5)
   };
+
+  // Health table sorting functions
+  const handleHealthSort = (field: string) => {
+    if (healthSortField === field) {
+      // Toggle sort order if clicking same field
+      setHealthSortOrder(healthSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with default desc order
+      setHealthSortField(field);
+      setHealthSortOrder("desc");
+    }
+    // Reset to first page when sorting
+    setHealthPage(1);
+  };
+
+  const getSortIcon = (field: string) => {
+    if (healthSortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 text-gray-400" />;
+    }
+    return healthSortOrder === "asc" ? 
+      <ArrowUp className="h-3 w-3 text-blue-600" /> : 
+      <ArrowDown className="h-3 w-3 text-blue-600" />;
+  };
+
+  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none" 
+      onClick={() => handleHealthSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        <span>{children}</span>
+        {getSortIcon(field)}
+      </div>
+    </TableHead>
+  );
 
   // Helper functions for health analytics
   function calculateHealthTrend(scores: Array<ClientHealthScore & { clientName: string; clientEmail: string }>) {
@@ -1010,10 +1050,10 @@ export default function Reports() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Week</TableHead>
-                      <TableHead>Health Status</TableHead>
-                      <TableHead>Score</TableHead>
+                      <SortableHeader field="clientName">Client</SortableHeader>
+                      <SortableHeader field="weekStartDate">Week</SortableHeader>
+                      <SortableHeader field="healthIndicator">Health Status</SortableHeader>
+                      <SortableHeader field="averageScore">Score</SortableHeader>
                       <TableHead>Goals</TableHead>
                       <TableHead>Fulfillment</TableHead>
                       <TableHead>Relationship</TableHead>
