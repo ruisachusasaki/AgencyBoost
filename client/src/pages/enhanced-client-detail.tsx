@@ -21,11 +21,13 @@ import { ProductSearchResults } from "@/components/ProductSearchResults";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate } from "@shared/schema";
+import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, ClientHealthScore } from "@shared/schema";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import ClientHealthModal from "@/components/client-health-modal";
 
 // EmailTemplateSelector Component
 function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
@@ -303,6 +305,344 @@ function SmsTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content:
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+// ClientHealthTabContent Component
+function ClientHealthTabContent({ clientId }: { clientId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+
+  // Get current week range for checking if score exists
+  const weekRange = getCurrentWeekRange();
+  const weekStart = weekRange.weekStart.toISOString().split('T')[0];
+  const weekEnd = weekRange.weekEnd.toISOString().split('T')[0];
+  const displayRange = weekRange.displayRange;
+
+  // Fetch health scores for this client
+  const { data: healthScores = [], isLoading, error } = useQuery({
+    queryKey: ["/api/client-health-scores", clientId],
+    enabled: !!clientId,
+  });
+
+  // Check if current week score exists
+  const currentWeekScore = (healthScores as ClientHealthScore[]).find(score => 
+    score.weekStartDate === weekStart && score.weekEndDate === weekEnd
+  );
+
+  // Helper function to get health indicator styling
+  const getHealthIndicatorStyling = (healthIndicator: string) => {
+    switch (healthIndicator) {
+      case 'Green':
+        return {
+          badge: 'bg-green-100 text-green-800 border-green-200',
+          dot: 'bg-green-500',
+          text: 'text-green-700'
+        };
+      case 'Yellow':
+        return {
+          badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+          dot: 'bg-yellow-500',
+          text: 'text-yellow-700'
+        };
+      case 'Red':
+        return {
+          badge: 'bg-red-100 text-red-800 border-red-200',
+          dot: 'bg-red-500',
+          text: 'text-red-700'
+        };
+      default:
+        return {
+          badge: 'bg-gray-100 text-gray-800 border-gray-200',
+          dot: 'bg-gray-500',
+          text: 'text-gray-700'
+        };
+    }
+  };
+
+  // Helper function to get metric styling based on value
+  const getMetricStyling = (metric: string, value: string) => {
+    if (metric === 'goals') {
+      switch (value) {
+        case 'Above': return 'text-green-600 bg-green-50';
+        case 'On Track': return 'text-blue-600 bg-blue-50';
+        case 'Below': return 'text-red-600 bg-red-50';
+        default: return 'text-gray-600 bg-gray-50';
+      }
+    }
+    if (metric === 'fulfillment') {
+      switch (value) {
+        case 'Early': return 'text-green-600 bg-green-50';
+        case 'On Time': return 'text-blue-600 bg-blue-50';
+        case 'Behind': return 'text-red-600 bg-red-50';
+        default: return 'text-gray-600 bg-gray-50';
+      }
+    }
+    if (metric === 'relationship') {
+      switch (value) {
+        case 'Engaged': return 'text-green-600 bg-green-50';
+        case 'Passive': return 'text-yellow-600 bg-yellow-50';
+        case 'Disengaged': return 'text-red-600 bg-red-50';
+        default: return 'text-gray-600 bg-gray-50';
+      }
+    }
+    if (metric === 'clientActions') {
+      switch (value) {
+        case 'Early': return 'text-green-600 bg-green-50';
+        case 'Up to Date': return 'text-blue-600 bg-blue-50';
+        case 'Late': return 'text-red-600 bg-red-50';
+        default: return 'text-gray-600 bg-gray-50';
+      }
+    }
+    return 'text-gray-600 bg-gray-50';
+  };
+
+  // Handle successful health score submission
+  const handleHealthScoreSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/client-health-scores", clientId] });
+    setIsHealthModalOpen(false);
+    toast({
+      title: "Health Score Recorded",
+      description: `Weekly health score for ${displayRange} has been saved successfully.`,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Client Health Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="animate-pulse">
+                <div className="h-10 bg-gray-200 rounded w-48"></div>
+              </div>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-4 bg-gray-200 rounded w-32"></div>
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Client Health Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-2">
+                <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              </div>
+              <h3 className="font-medium text-gray-900 mb-1">Unable to Load Health Scores</h3>
+              <p className="text-gray-500 text-sm">There was an error loading the health scores. Please try again.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/client-health-scores", clientId] })}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Client Health Overview
+            </div>
+            <Button
+              onClick={() => setIsHealthModalOpen(true)}
+              disabled={!!currentWeekScore}
+              className="flex items-center gap-2"
+              data-testid="button-take-weekly-score"
+            >
+              <Plus className="h-4 w-4" />
+              {currentWeekScore ? `Score Taken (${displayRange})` : 'Take Weekly Score'}
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(healthScores as ClientHealthScore[]).length === 0 ? (
+            // Empty State
+            <div className="text-center py-12">
+              <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                <Activity className="h-12 w-12 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Scores Yet</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                Start tracking this client's health by taking your first weekly score. 
+                Regular health scoring helps maintain strong client relationships and identify areas for improvement.
+              </p>
+              <Button
+                onClick={() => setIsHealthModalOpen(true)}
+                className="flex items-center gap-2"
+                data-testid="button-first-health-score"
+              >
+                <Plus className="h-4 w-4" />
+                Take First Weekly Score
+              </Button>
+            </div>
+          ) : (
+            // Historical Health Scores Display
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-gray-700">Health Score History</h3>
+                <div className="text-sm text-gray-500">
+                  {(healthScores as ClientHealthScore[]).length} score{(healthScores as ClientHealthScore[]).length !== 1 ? 's' : ''} recorded
+                </div>
+              </div>
+              
+              {/* Historical Scores */}
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {(healthScores as ClientHealthScore[])
+                  .sort((a, b) => new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime())
+                  .map((score) => {
+                    const styling = getHealthIndicatorStyling(score.healthIndicator);
+                    const weekDisplay = `${format(new Date(score.weekStartDate), 'M/d/yy')} - ${format(new Date(score.weekEndDate), 'M/d/yy')}`;
+                    
+                    return (
+                      <Card key={score.id} className="border border-gray-200 hover:border-gray-300 transition-colors">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${styling.dot}`}></div>
+                              <div>
+                                <h4 className="font-medium text-gray-900">Week: {weekDisplay}</h4>
+                                <p className="text-sm text-gray-500">
+                                  Recorded {formatDistanceToNow(new Date(score.createdAt), { addSuffix: true })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge className={`${styling.badge} border`}>
+                                {score.healthIndicator} Health
+                              </Badge>
+                              <div className="text-right">
+                                <div className="text-lg font-semibold text-gray-900">
+                                  {Number(score.averageScore).toFixed(1)}
+                                </div>
+                                <div className="text-xs text-gray-500">avg score</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Health Metrics */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div className="text-center">
+                              <div className="text-xs text-gray-500 mb-1">Goals</div>
+                              <Badge variant="outline" className={`text-xs ${getMetricStyling('goals', score.goals)}`}>
+                                {score.goals}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-gray-500 mb-1">Fulfillment</div>
+                              <Badge variant="outline" className={`text-xs ${getMetricStyling('fulfillment', score.fulfillment)}`}>
+                                {score.fulfillment}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-gray-500 mb-1">Relationship</div>
+                              <Badge variant="outline" className={`text-xs ${getMetricStyling('relationship', score.relationship)}`}>
+                                {score.relationship}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-gray-500 mb-1">Client Actions</div>
+                              <Badge variant="outline" className={`text-xs ${getMetricStyling('clientActions', score.clientActions)}`}>
+                                {score.clientActions}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Weekly Recap */}
+                          {score.weeklyRecap && (
+                            <div className="border-t border-gray-100 pt-4">
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">Weekly Recap</h5>
+                              <p className="text-sm text-gray-600 leading-relaxed">
+                                {score.weeklyRecap.length > 200 
+                                  ? `${score.weeklyRecap.substring(0, 200)}...` 
+                                  : score.weeklyRecap
+                                }
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Opportunities and Solutions */}
+                          <div className="grid md:grid-cols-2 gap-4 mt-4">
+                            {score.opportunities && (
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-700 mb-2">Opportunities</h5>
+                                <p className="text-sm text-gray-600 leading-relaxed">
+                                  {score.opportunities.length > 100 
+                                    ? `${score.opportunities.substring(0, 100)}...` 
+                                    : score.opportunities
+                                  }
+                                </p>
+                              </div>
+                            )}
+                            {score.solutions && (
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-700 mb-2">Solutions</h5>
+                                <p className="text-sm text-gray-600 leading-relaxed">
+                                  {score.solutions.length > 100 
+                                    ? `${score.solutions.substring(0, 100)}...` 
+                                    : score.solutions
+                                  }
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Health Score Modal */}
+      <ClientHealthModal
+        clientId={clientId}
+        isOpen={isHealthModalOpen}
+        onClose={() => setIsHealthModalOpen(false)}
+        onSuccess={handleHealthScoreSuccess}
+      />
     </div>
   );
 }
@@ -6037,19 +6377,7 @@ export default function EnhancedClientDetail() {
 
         {/* Client Health Tab */}
         <TabsContent value="health" className="space-y-6 mt-6">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Client Health Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Client health metrics and analytics will be displayed here.</p>
-              </CardContent>
-            </Card>
-          </div>
+          <ClientHealthTabContent clientId={clientId} />
         </TabsContent>
 
         {/* Products Tab */}
