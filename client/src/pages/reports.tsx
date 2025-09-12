@@ -360,7 +360,7 @@ export default function Reports() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "overview", name: "Business Overview", icon: BarChart3, count: null },
-            { id: "health", name: "Client Health", icon: Heart, count: healthScores.length }
+            { id: "health", name: "Client Health", icon: Heart, count: null }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
