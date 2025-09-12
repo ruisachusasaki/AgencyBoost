@@ -800,6 +800,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get client health status summary for highlighting
+  app.get("/api/clients/:clientId/health-status", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      // Get all health scores for this client
+      const healthScores = await storage.getClientHealthScores(clientId);
+      
+      const analyzeHealthStatus = (scores: any[]) => {
+        // Sort scores by week start date (most recent first)
+        const sortedScores = [...scores].sort((a, b) => 
+          new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime()
+        );
+
+        // Get the last 4 weeks
+        const lastFourWeeks = sortedScores.slice(0, 4);
+        
+        // If we don't have 4 weeks of data, no highlighting
+        if (lastFourWeeks.length < 4) {
+          return {
+            shouldHighlight: false,
+            highlightType: null,
+            reason: 'Insufficient data (less than 4 weeks)',
+            weeks: lastFourWeeks.map(score => ({
+              weekStart: score.weekStartDate,
+              healthIndicator: score.healthIndicator,
+              isGreen: score.healthIndicator === 'Green'
+            }))
+          };
+        }
+
+        // Check if any of the last 4 weeks are green
+        const hasGreenWeek = lastFourWeeks.some(score => score.healthIndicator === 'Green');
+        
+        if (hasGreenWeek) {
+          return {
+            shouldHighlight: false,
+            highlightType: null,
+            reason: 'Has green week(s) in last 4 weeks',
+            weeks: lastFourWeeks.map(score => ({
+              weekStart: score.weekStartDate,
+              healthIndicator: score.healthIndicator,
+              isGreen: score.healthIndicator === 'Green'
+            }))
+          };
+        }
+
+        // All 4 weeks are non-green (Yellow or Red)
+        const redWeeks = lastFourWeeks.filter(score => score.healthIndicator === 'Red');
+        const yellowWeeks = lastFourWeeks.filter(score => score.healthIndicator === 'Yellow');
+        
+        // Check for improvement pattern (Red to Yellow trend)
+        const checkImprovementPattern = (weeklyScores: any[]) => {
+          if (weeklyScores.length < 2) return false;
+          
+          const recentTwoWeeks = weeklyScores.slice(0, 2);
+          const olderTwoWeeks = weeklyScores.slice(2, 4);
+          
+          const recentRedCount = recentTwoWeeks.filter(score => score.healthIndicator === 'Red').length;
+          const olderRedCount = olderTwoWeeks.filter(score => score.healthIndicator === 'Red').length;
+          
+          return recentRedCount < olderRedCount && olderRedCount > 0;
+        };
+        
+        const isShowingImprovement = checkImprovementPattern(lastFourWeeks);
+        
+        // Determine highlighting type
+        let highlightType: 'red' | 'yellow' | null = null;
+        let reason = '';
+
+        if (redWeeks.length >= 2 && !isShowingImprovement) {
+          highlightType = 'red';
+          reason = `${redWeeks.length} red weeks in last 4 weeks, no improvement trend`;
+        } else if (yellowWeeks.length >= 2 || isShowingImprovement) {
+          highlightType = 'yellow';
+          reason = isShowingImprovement 
+            ? 'Showing improvement from red to yellow'
+            : `${yellowWeeks.length} yellow weeks in last 4 weeks`;
+        }
+
+        return {
+          shouldHighlight: highlightType !== null,
+          highlightType,
+          reason,
+          weeks: lastFourWeeks.map(score => ({
+            weekStart: score.weekStartDate,
+            healthIndicator: score.healthIndicator,
+            isGreen: score.healthIndicator === 'Green'
+          }))
+        };
+      };
+      
+      const healthStatus = analyzeHealthStatus(healthScores);
+      
+      res.json(healthStatus);
+    } catch (error) {
+      console.error('Error getting client health status:', error);
+      res.status(500).json({ message: "Failed to get client health status" });
+    }
+  });
+
   // Health Scores Bulk API
   app.get("/api/health-scores", async (req, res) => {
     try {

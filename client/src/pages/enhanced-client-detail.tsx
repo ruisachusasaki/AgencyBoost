@@ -28,6 +28,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import ClientHealthModal from "@/components/client-health-modal";
+import { analyzeHealthStatus, formatHealthStatusTooltip, getHealthStatusClasses, type HealthStatusResult } from "@/lib/health-status-utils";
 
 // EmailTemplateSelector Component
 function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
@@ -1686,6 +1687,12 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId,
   });
 
+  // Get client health status for highlighting
+  const { data: healthStatus, isLoading: healthStatusLoading } = useQuery<HealthStatusResult>({
+    queryKey: [`/api/clients/${clientId}/health-status`],
+    enabled: !!clientId,
+  });
+
   // Initialize brief content from client data
   useEffect(() => {
     if (client) {
@@ -3103,7 +3110,51 @@ export default function EnhancedClientDetail() {
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{getClientDisplayName()}</h1>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <h1 
+                      className={`text-3xl font-bold tracking-tight transition-colors duration-200 ${
+                        healthStatus?.shouldHighlight && healthStatus.highlightType === 'red'
+                          ? 'bg-red-50 border border-red-200 text-red-900 px-3 py-1 rounded-lg'
+                          : healthStatus?.shouldHighlight && healthStatus.highlightType === 'yellow'
+                          ? 'bg-yellow-50 border border-yellow-200 text-yellow-900 px-3 py-1 rounded-lg'
+                          : 'text-gray-900'
+                      }`}
+                      data-testid="client-name-header"
+                    >
+                      {getClientDisplayName()}
+                    </h1>
+                  </TooltipTrigger>
+                  {healthStatus?.shouldHighlight && (
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <div className="text-sm">
+                        <p className="font-medium">Health Alert</p>
+                        <p className="text-xs mt-1">{healthStatus.reason}</p>
+                        {healthStatus.weeks.length > 0 && (
+                          <div className="mt-2 text-xs">
+                            <p className="font-medium">Last 4 weeks:</p>
+                            {healthStatus.weeks.map((week, index) => (
+                              <div key={week.weekStart} className="flex justify-between items-center">
+                                <span>Week {index + 1}:</span>
+                                <span className={`font-medium ${
+                                  week.healthIndicator === 'Green' 
+                                    ? 'text-green-600' 
+                                    : week.healthIndicator === 'Yellow' 
+                                    ? 'text-yellow-600' 
+                                    : 'text-red-600'
+                                }`}>
+                                  {week.healthIndicator}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <p className="text-muted-foreground">{getBusinessDisplayName()}</p>
             </div>
           </div>
