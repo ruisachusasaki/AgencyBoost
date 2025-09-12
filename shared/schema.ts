@@ -1633,6 +1633,22 @@ export type ClientHealthScore = typeof clientHealthScores.$inferSelect;
 export type InputClientHealthScore = z.infer<typeof inputClientHealthScoreSchema>;
 export type InsertClientHealthScore = z.infer<typeof insertClientHealthScoreSchema>;
 
+// Health Scores bulk filtering query parameter validation schema
+export const healthScoreFilterSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  statuses: z.string().transform(str => str.split(',')).pipe(z.array(z.enum(['Green', 'Yellow', 'Red']))).optional(),
+  search: z.string().min(1).optional(),
+  clientId: z.string().uuid().optional(),
+  latestPerClient: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
+  page: z.string().transform(Number).pipe(z.number().int().min(1)).optional().default('1'),
+  limit: z.string().transform(Number).pipe(z.number().int().min(1).max(100)).optional().default('25'),
+  sort: z.enum(['weekStartDate', 'clientName', 'healthIndicator', 'totalScore']).optional().default('weekStartDate'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc')
+});
+
+export type HealthScoreFilter = z.infer<typeof healthScoreFilterSchema>;
+
 // Departments and Positions Management
 export const departments = pgTable("departments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

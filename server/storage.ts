@@ -79,6 +79,25 @@ export interface IStorage {
   deleteClientHealthScore(id: string): Promise<void>;
   getClientHealthScoreByWeek(clientId: string, weekStartDate: Date): Promise<ClientHealthScore | null>;
   
+  // Health Scores Bulk API
+  getHealthScoresFiltered(filters: {
+    from?: string;
+    to?: string; 
+    statuses?: string[];
+    search?: string;
+    clientId?: string;
+    latestPerClient?: boolean;
+    page?: number;
+    limit?: number;
+    sort?: string;
+    sortOrder?: string;
+  }): Promise<{
+    items: Array<ClientHealthScore & { clientName: string; clientEmail: string }>;
+    total: number;
+    page: number;
+    limit: number;
+  }>;
+  
   // Projects
   getProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
