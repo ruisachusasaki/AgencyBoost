@@ -323,14 +323,16 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
 
   // Fetch health scores for this client
   const { data: healthScores = [], isLoading, error } = useQuery({
-    queryKey: ["/api/client-health-scores", clientId],
+    queryKey: ["/api/clients", clientId, "health-scores"],
     enabled: !!clientId,
   });
 
   // Check if current week score exists
-  const currentWeekScore = (healthScores as ClientHealthScore[]).find(score => 
-    score.weekStartDate === weekStart && score.weekEndDate === weekEnd
-  );
+  const currentWeekScore = Array.isArray(healthScores) 
+    ? (healthScores as ClientHealthScore[]).find(score => 
+        score.weekStartDate === weekStart && score.weekEndDate === weekEnd
+      )
+    : undefined;
 
   // Helper function to get health indicator styling
   const getHealthIndicatorStyling = (healthIndicator: string) => {
@@ -401,7 +403,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
 
   // Handle successful health score submission
   const handleHealthScoreSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/client-health-scores", clientId] });
+    queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] });
     setIsHealthModalOpen(false);
     toast({
       title: "Health Score Recorded",
@@ -463,7 +465,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                 variant="outline" 
                 size="sm" 
                 className="mt-4"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/client-health-scores", clientId] })}
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] })}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -496,7 +498,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {(healthScores as ClientHealthScore[]).length === 0 ? (
+          {!Array.isArray(healthScores) || healthScores.length === 0 ? (
             // Empty State
             <div className="text-center py-12">
               <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
@@ -522,13 +524,13 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-gray-700">Health Score History</h3>
                 <div className="text-sm text-gray-500">
-                  {(healthScores as ClientHealthScore[]).length} score{(healthScores as ClientHealthScore[]).length !== 1 ? 's' : ''} recorded
+                  {Array.isArray(healthScores) ? healthScores.length : 0} score{Array.isArray(healthScores) && healthScores.length !== 1 ? 's' : ''} recorded
                 </div>
               </div>
               
               {/* Historical Scores */}
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {(healthScores as ClientHealthScore[])
+                {(Array.isArray(healthScores) ? healthScores as ClientHealthScore[] : [])
                   .sort((a, b) => new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime())
                   .map((score) => {
                     const styling = getHealthIndicatorStyling(score.healthIndicator);

@@ -52,11 +52,10 @@ export default function ClientHealthModal({
 
   const createHealthScoreMutation = useMutation({
     mutationFn: async (data: InputClientHealthScore) => {
-      return await apiRequest("POST", "/api/client-health-scores", data);
+      return await apiRequest("POST", `/api/clients/${clientId}/health-scores`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/client-health-scores"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/client-health-scores", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] });
       toast({
         title: "Health Score Saved",
         description: "Client health score has been successfully recorded.",
