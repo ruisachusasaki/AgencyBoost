@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -357,13 +356,35 @@ export default function Reports() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2" data-testid="tabs-main">
-          <TabsTrigger value="overview" data-testid="tab-overview">Business Overview</TabsTrigger>
-          <TabsTrigger value="health" data-testid="tab-health">Client Health</TabsTrigger>
-        </TabsList>
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "overview", name: "Business Overview", icon: BarChart3, count: null },
+            { id: "health", name: "Client Health", icon: Heart, count: healthScores.length }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                data-testid={`tab-${tab.id}`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} {tab.count !== null ? `(${tab.count})` : ''}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="overview" className="space-y-6 mt-6">
+      {/* Tab Content */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
           {/* Filters */}
           <Card>
             <CardHeader>
@@ -678,10 +699,12 @@ export default function Reports() {
           </div>
         </CardContent>
       </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* Client Health Tab */}
-        <TabsContent value="health" className="space-y-6 mt-6">
+      {/* Client Health Tab */}
+      {activeTab === "health" && (
+        <div className="space-y-6">
           {/* Health Filters */}
           <Card>
             <CardHeader>
@@ -1071,8 +1094,8 @@ export default function Reports() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
