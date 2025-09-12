@@ -632,7 +632,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-700">Filter Health Scores</h4>
+                      <h4 className="text-sm font-bold text-gray-700">Filter Health Scores</h4>
                       <Button
                         variant="outline"
                         size="sm"
@@ -709,24 +709,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                       <div className="space-y-2">
                         <Label className="text-xs font-medium text-gray-600">Health Status</Label>
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const allSelected = Object.values(healthStatusFilters).every(v => v);
-                                const newState = allSelected 
-                                  ? { Green: false, Yellow: false, Red: false }
-                                  : { Green: true, Yellow: true, Red: true };
-                                setHealthStatusFilters(newState);
-                              }}
-                              className="h-6 text-xs px-2"
-                              data-testid="button-toggle-all-health-statuses"
-                            >
-                              {Object.values(healthStatusFilters).every(v => v) ? 'Deselect All' : 'Select All'}
-                            </Button>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             {Object.entries(healthStatusFilters).map(([status, isActive]) => (
                               <div key={status} className="flex items-center space-x-1">
                                 <Checkbox
@@ -753,6 +736,21 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                                 </Label>
                               </div>
                             ))}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const allSelected = Object.values(healthStatusFilters).every(v => v);
+                                const newState = allSelected 
+                                  ? { Green: false, Yellow: false, Red: false }
+                                  : { Green: true, Yellow: true, Red: true };
+                                setHealthStatusFilters(newState);
+                              }}
+                              className="h-6 text-xs px-2 ml-2"
+                              data-testid="button-toggle-all-health-statuses"
+                            >
+                              {Object.values(healthStatusFilters).every(v => v) ? 'Deselect All' : 'Select All'}
+                            </Button>
                           </div>
                         </div>
                       </div>
