@@ -38,9 +38,11 @@ export default function Reports() {
   const [healthPageSize, setHealthPageSize] = useState(20);
   const [showLatestOnly, setShowLatestOnly] = useState(false);
 
-  const { data: clients = [], isLoading: clientsLoading } = useQuery<Client[]>({
+  const { data: clientsData, isLoading: clientsLoading } = useQuery<{clients: Client[]}>({
     queryKey: ["/api/clients"],
   });
+
+  const clients = clientsData?.clients || [];
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
