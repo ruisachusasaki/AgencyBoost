@@ -800,6 +800,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health Scores Bulk API
+  app.get("/api/health-scores", async (req, res) => {
+    try {
+      // Extract and validate query parameters
+      const {
+        from = "",
+        to = "",
+        statuses = [],
+        search = "",
+        clientId = "",
+        latestPerClient = "false",
+        page = "1",
+        limit = "50",
+        sort = "weekStartDate",
+        sortOrder = "desc"
+      } = req.query;
+
+      // Convert query params to proper types
+      const filters = {
+        from: from as string || undefined,
+        to: to as string || undefined,
+        statuses: Array.isArray(statuses) ? statuses as string[] : 
+                 typeof statuses === 'string' && statuses ? statuses.split(',') : [],
+        search: search as string || undefined,
+        clientId: clientId as string || undefined,
+        latestPerClient: latestPerClient === 'true',
+        page: Math.max(1, parseInt(page as string) || 1),
+        limit: Math.min(100, Math.max(1, parseInt(limit as string) || 50)), // Max 100 per page
+        sort: sort as string || 'weekStartDate',
+        sortOrder: (sortOrder as string === 'asc' ? 'asc' : 'desc')
+      };
+
+      // Validate filter parameters
+      if (filters.from && !/^\d{4}-\d{2}-\d{2}$/.test(filters.from)) {
+        return res.status(400).json({ message: "Invalid 'from' date format. Use YYYY-MM-DD" });
+      }
+      
+      if (filters.to && !/^\d{4}-\d{2}-\d{2}$/.test(filters.to)) {
+        return res.status(400).json({ message: "Invalid 'to' date format. Use YYYY-MM-DD" });
+      }
+
+      // Validate status values if provided
+      const validStatuses = ['Green', 'Yellow', 'Red'];
+      if (filters.statuses.length > 0) {
+        const invalidStatuses = filters.statuses.filter(status => !validStatuses.includes(status));
+        if (invalidStatuses.length > 0) {
+          return res.status(400).json({ 
+            message: `Invalid status values: ${invalidStatuses.join(', ')}. Valid values are: ${validStatuses.join(', ')}`
+          });
+        }
+      }
+
+      // Validate sort field
+      const validSortFields = ['weekStartDate', 'clientName', 'healthIndicator', 'averageScore'];
+      if (!validSortFields.includes(filters.sort)) {
+        return res.status(400).json({
+          message: `Invalid sort field: ${filters.sort}. Valid fields are: ${validSortFields.join(', ')}`
+        });
+      }
+
+      // Get filtered health scores
+      const result = await storage.getHealthScoresFiltered(filters);
+
+      // Add cache control headers for fresh data
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+
+      // Return paginated response
+      res.json({
+        ...result,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / result.limit),
+          hasNext: result.page * result.limit < result.total,
+          hasPrevious: result.page > 1
+        }
+      });
+
+    } catch (error) {
+      console.error("Error fetching health scores:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Failed to fetch health scores", 
+        error: errorMessage 
+      });
+    }
+  });
+
   // Project routes
   app.get("/api/projects", async (req, res) => {
     try {

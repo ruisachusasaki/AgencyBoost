@@ -60,7 +60,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, sql, asc, desc, and } from "drizzle-orm";
+import { eq, sql, asc, desc, and, or, max } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -3823,7 +3823,6 @@ export class MemStorage implements IStorage {
 // Database storage implementation using PostgreSQL
 
 export class DbStorage implements IStorage {
-  private db = db;
   // Clients
   async getClients(): Promise<Client[]> {
     return await db.select().from(clients);
@@ -3942,6 +3941,184 @@ export class DbStorage implements IStorage {
     return result[0] || null;
   }
 
+  // Health Scores Bulk API
+  async getHealthScoresFiltered(filters: {
+    from?: string;
+    to?: string; 
+    statuses?: string[];
+    search?: string;
+    clientId?: string;
+    latestPerClient?: boolean;
+    page?: number;
+    limit?: number;
+    sort?: string;
+    sortOrder?: string;
+  }): Promise<{
+    items: Array<ClientHealthScore & { clientName: string; clientEmail: string }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const {
+      from,
+      to,
+      statuses,
+      search,
+      clientId,
+      latestPerClient = false,
+      page = 1,
+      limit = 50,
+      sort = 'weekStartDate',
+      sortOrder = 'desc'
+    } = filters;
+
+    // Build WHERE conditions
+    const conditions: any[] = [];
+
+    // Date range filtering
+    if (from) {
+      conditions.push(sql`${clientHealthScores.weekStartDate} >= ${from}`);
+    }
+    if (to) {
+      conditions.push(sql`${clientHealthScores.weekStartDate} <= ${to}`);
+    }
+
+    // Health status filtering
+    if (statuses && statuses.length > 0) {
+      // Use proper Drizzle ORM syntax for IN clause
+      conditions.push(sql`${clientHealthScores.healthIndicator} IN (${sql.join(statuses.map(status => sql`${status}`), sql`, `)})`);
+    }
+
+    // Client search (name or email)
+    if (search) {
+      const searchTerm = `%${search}%`;
+      conditions.push(
+        or(
+          sql`LOWER(${clients.name}) LIKE LOWER(${searchTerm})`,
+          sql`LOWER(${clients.email}) LIKE LOWER(${searchTerm})`
+        )
+      );
+    }
+
+    // Specific client filtering
+    if (clientId) {
+      conditions.push(eq(clientHealthScores.clientId, clientId));
+    }
+
+    // For latest per client, we need a different approach
+    let baseQuery = db
+      .select({
+        id: clientHealthScores.id,
+        clientId: clientHealthScores.clientId,
+        weekStartDate: clientHealthScores.weekStartDate,
+        weekEndDate: clientHealthScores.weekEndDate,
+        weeklyRecap: clientHealthScores.weeklyRecap,
+        opportunities: clientHealthScores.opportunities,
+        solutions: clientHealthScores.solutions,
+        goals: clientHealthScores.goals,
+        fulfillment: clientHealthScores.fulfillment,
+        relationship: clientHealthScores.relationship,
+        clientActions: clientHealthScores.clientActions,
+        totalScore: clientHealthScores.totalScore,
+        averageScore: clientHealthScores.averageScore,
+        healthIndicator: clientHealthScores.healthIndicator,
+        createdAt: clientHealthScores.createdAt,
+        updatedAt: clientHealthScores.updatedAt,
+        clientName: clients.name,
+        clientEmail: clients.email
+      })
+      .from(clientHealthScores)
+      .innerJoin(clients, eq(clientHealthScores.clientId, clients.id));
+
+    // Apply WHERE conditions to base query
+    if (conditions.length > 0) {
+      baseQuery = baseQuery.where(and(...conditions));
+    }
+
+    // Handle latestPerClient option with a simpler two-step approach
+    if (latestPerClient) {
+      // First, get the latest week start date for each client
+      const latestWeeks = await db
+        .select({
+          clientId: clientHealthScores.clientId,
+          maxWeekStart: max(clientHealthScores.weekStartDate).as('maxWeekStart')
+        })
+        .from(clientHealthScores)
+        .groupBy(clientHealthScores.clientId);
+
+      // Create array of (clientId, maxWeekStart) pairs for filtering
+      const clientWeekPairs = latestWeeks.map(item => ({
+        clientId: item.clientId,
+        weekStartDate: item.maxWeekStart
+      }));
+
+      // If we have pairs, add them as conditions
+      if (clientWeekPairs.length > 0) {
+        const latestConditions = clientWeekPairs.map(pair => 
+          and(
+            eq(clientHealthScores.clientId, pair.clientId),
+            eq(clientHealthScores.weekStartDate, pair.weekStartDate)
+          )
+        );
+        conditions.push(or(...latestConditions));
+      }
+    }
+
+    // Apply sorting using proper column references
+    const sortColumn = sort === 'weekStartDate' ? clientHealthScores.weekStartDate :
+                       sort === 'clientName' ? clients.name :
+                       sort === 'healthIndicator' ? clientHealthScores.healthIndicator :
+                       sort === 'averageScore' ? clientHealthScores.averageScore :
+                       clientHealthScores.weekStartDate;
+
+    if (sortOrder === 'desc') {
+      baseQuery = baseQuery.orderBy(desc(sortColumn));
+    } else {
+      baseQuery = baseQuery.orderBy(asc(sortColumn));
+    }
+
+    // Get total count (simpler approach)
+    let countQuery = db
+      .select({ count: sql<number>`count(*)` })
+      .from(clientHealthScores)
+      .innerJoin(clients, eq(clientHealthScores.clientId, clients.id));
+
+    // Apply same WHERE conditions to count query
+    let countConditions = [...conditions];
+    if (countConditions.length > 0) {
+      countQuery = countQuery.where(and(...countConditions));
+    }
+
+    // For latestPerClient count, use a simplified approach
+    if (latestPerClient) {
+      // Count distinct clients instead of all records
+      countQuery = db
+        .select({ count: sql<number>`count(DISTINCT ${clientHealthScores.clientId})` })
+        .from(clientHealthScores)
+        .innerJoin(clients, eq(clientHealthScores.clientId, clients.id));
+        
+      if (countConditions.length > 0) {
+        countQuery = countQuery.where(and(...countConditions));
+      }
+    }
+
+    // Execute queries in parallel
+    const offset = (page - 1) * limit;
+    const [items, totalResult] = await Promise.all([
+      baseQuery.limit(limit).offset(offset),
+      countQuery
+    ]);
+
+    const total = totalResult[0]?.count || 0;
+
+    return {
+      items: items as Array<ClientHealthScore & { clientName: string; clientEmail: string }>,
+      total,
+      page,
+      limit
+    };
+  }
+
   async getAllClientsForExport(): Promise<Client[]> {
     return await db.select().from(clients).orderBy(clients.createdAt);
   }
@@ -3952,22 +4129,22 @@ export class DbStorage implements IStorage {
 
   // Projects
   async getProjects(): Promise<Project[]> {
-    const result = await this.db.select().from(projects);
+    const result = await db.select().from(projects);
     return result;
   }
 
   async getProject(id: string): Promise<Project | undefined> {
-    const result = await this.db.select().from(projects).where(eq(projects.id, id)).limit(1);
+    const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
     return result[0];
   }
 
   async getProjectsByClient(clientId: string): Promise<Project[]> {
-    const result = await this.db.select().from(projects).where(eq(projects.clientId, clientId));
+    const result = await db.select().from(projects).where(eq(projects.clientId, clientId));
     return result;
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const result = await this.db.insert(projects).values({
+    const result = await db.insert(projects).values({
       ...project,
       id: sql`gen_random_uuid()`,
       createdAt: new Date(),
@@ -3976,12 +4153,12 @@ export class DbStorage implements IStorage {
   }
 
   async updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined> {
-    const result = await this.db.update(projects).set(project).where(eq(projects.id, id)).returning();
+    const result = await db.update(projects).set(project).where(eq(projects.id, id)).returning();
     return result[0];
   }
 
   async deleteProject(id: string): Promise<boolean> {
-    const result = await this.db.delete(projects).where(eq(projects.id, id)).returning();
+    const result = await db.delete(projects).where(eq(projects.id, id)).returning();
     return result.length > 0;
   }
 
@@ -4066,17 +4243,17 @@ export class DbStorage implements IStorage {
 
   // Task Categories
   async getTaskCategories(): Promise<TaskCategory[]> {
-    const result = await this.db.select().from(taskCategories);
+    const result = await db.select().from(taskCategories);
     return result;
   }
 
   async getTaskCategory(id: string): Promise<TaskCategory | undefined> {
-    const result = await this.db.select().from(taskCategories).where(eq(taskCategories.id, id)).limit(1);
+    const result = await db.select().from(taskCategories).where(eq(taskCategories.id, id)).limit(1);
     return result[0];
   }
 
   async createTaskCategory(category: InsertTaskCategory): Promise<TaskCategory> {
-    const result = await this.db.insert(taskCategories).values({
+    const result = await db.insert(taskCategories).values({
       ...category,
       id: sql`gen_random_uuid()`,
       createdAt: new Date(),
@@ -4085,12 +4262,12 @@ export class DbStorage implements IStorage {
   }
 
   async updateTaskCategory(id: string, category: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined> {
-    const result = await this.db.update(taskCategories).set(category).where(eq(taskCategories.id, id)).returning();
+    const result = await db.update(taskCategories).set(category).where(eq(taskCategories.id, id)).returning();
     return result[0];
   }
 
   async deleteTaskCategory(id: string): Promise<boolean> {
-    const result = await this.db.delete(taskCategories).where(eq(taskCategories.id, id)).returning();
+    const result = await db.delete(taskCategories).where(eq(taskCategories.id, id)).returning();
     return result.length > 0;
   }
 
@@ -4124,12 +4301,12 @@ export class DbStorage implements IStorage {
 
   // Templates
   async getTemplateFolders(): Promise<TemplateFolder[]> {
-    const folders = await this.db.select().from(templateFolders);
+    const folders = await db.select().from(templateFolders);
     return folders;
   }
 
   async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> {
-    const folder = await this.db.select().from(templateFolders).where(eq(templateFolders.id, id)).limit(1);
+    const folder = await db.select().from(templateFolders).where(eq(templateFolders.id, id)).limit(1);
     return folder[0];
   }
 
@@ -4145,7 +4322,7 @@ export class DbStorage implements IStorage {
       updatedAt: new Date(),
     };
     
-    await this.db.insert(templateFolders).values(folder);
+    await db.insert(templateFolders).values(folder);
     return folder;
   }
 
@@ -4155,12 +4332,12 @@ export class DbStorage implements IStorage {
       updatedAt: new Date(),
     };
     
-    await this.db.update(templateFolders).set(updates).where(eq(templateFolders.id, id));
+    await db.update(templateFolders).set(updates).where(eq(templateFolders.id, id));
     return this.getTemplateFolder(id);
   }
 
   async deleteTemplateFolder(id: string): Promise<boolean> {
-    const result = await this.db.delete(templateFolders).where(eq(templateFolders.id, id));
+    const result = await db.delete(templateFolders).where(eq(templateFolders.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -4199,21 +4376,21 @@ export class DbStorage implements IStorage {
   }
 
   async getSmsTemplates(): Promise<SmsTemplate[]> {
-    const result = await this.db.select().from(smsTemplates);
+    const result = await db.select().from(smsTemplates);
     return result;
   }
 
   async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> {
-    const result = await this.db.select().from(smsTemplates).where(eq(smsTemplates.id, id)).limit(1);
+    const result = await db.select().from(smsTemplates).where(eq(smsTemplates.id, id)).limit(1);
     return result[0];
   }
 
   async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> {
-    return await this.db.select().from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
+    return await db.select().from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
   }
 
   async createSmsTemplate(template: InsertSmsTemplate): Promise<SmsTemplate> {
-    const result = await this.db.insert(smsTemplates).values({
+    const result = await db.insert(smsTemplates).values({
       ...template,
       id: sql`gen_random_uuid()`,
       createdAt: new Date(),
@@ -4223,7 +4400,7 @@ export class DbStorage implements IStorage {
   }
 
   async updateSmsTemplate(id: string, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate | undefined> {
-    const result = await this.db.update(smsTemplates).set({
+    const result = await db.update(smsTemplates).set({
       ...template,
       updatedAt: new Date(),
     }).where(eq(smsTemplates.id, id)).returning();
@@ -4231,7 +4408,7 @@ export class DbStorage implements IStorage {
   }
 
   async deleteSmsTemplate(id: string): Promise<boolean> {
-    const result = await this.db.delete(smsTemplates).where(eq(smsTemplates.id, id)).returning();
+    const result = await db.delete(smsTemplates).where(eq(smsTemplates.id, id)).returning();
     return result.length > 0;
   }
 
@@ -4259,22 +4436,22 @@ export class DbStorage implements IStorage {
 
   // Departments
   async getDepartments(): Promise<Department[]> {
-    const result = await this.db.select().from(departments).orderBy(asc(departments.name));
+    const result = await db.select().from(departments).orderBy(asc(departments.name));
     return result;
   }
 
   async getDepartment(id: string): Promise<Department | undefined> {
-    const result = await this.db.select().from(departments).where(eq(departments.id, id));
+    const result = await db.select().from(departments).where(eq(departments.id, id));
     return result[0];
   }
 
   async createDepartment(department: InsertDepartment): Promise<Department> {
-    const result = await this.db.insert(departments).values(department).returning();
+    const result = await db.insert(departments).values(department).returning();
     return result[0];
   }
 
   async updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department | undefined> {
-    const result = await this.db
+    const result = await db
       .update(departments)
       .set({ ...department, updatedAt: new Date() })
       .where(eq(departments.id, id))
@@ -4284,7 +4461,7 @@ export class DbStorage implements IStorage {
 
   async deleteDepartment(id: string): Promise<boolean> {
     try {
-      await this.db.delete(departments).where(eq(departments.id, id));
+      await db.delete(departments).where(eq(departments.id, id));
       return true;
     } catch (error) {
       console.error("Error deleting department:", error);
@@ -4294,17 +4471,17 @@ export class DbStorage implements IStorage {
 
   // Positions
   async getPositions(): Promise<Position[]> {
-    const result = await this.db.select().from(positions).orderBy(asc(positions.name));
+    const result = await db.select().from(positions).orderBy(asc(positions.name));
     return result;
   }
 
   async getPosition(id: string): Promise<Position | undefined> {
-    const result = await this.db.select().from(positions).where(eq(positions.id, id));
+    const result = await db.select().from(positions).where(eq(positions.id, id));
     return result[0];
   }
 
   async getPositionsByDepartment(departmentId: string): Promise<Position[]> {
-    const result = await this.db
+    const result = await db
       .select()
       .from(positions)
       .where(eq(positions.departmentId, departmentId))
@@ -4313,12 +4490,12 @@ export class DbStorage implements IStorage {
   }
 
   async createPosition(position: InsertPosition): Promise<Position> {
-    const result = await this.db.insert(positions).values(position).returning();
+    const result = await db.insert(positions).values(position).returning();
     return result[0];
   }
 
   async updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position | undefined> {
-    const result = await this.db
+    const result = await db
       .update(positions)
       .set({ ...position, updatedAt: new Date() })
       .where(eq(positions.id, id))
@@ -4328,7 +4505,7 @@ export class DbStorage implements IStorage {
 
   async deletePosition(id: string): Promise<boolean> {
     try {
-      await this.db.delete(positions).where(eq(positions.id, id));
+      await db.delete(positions).where(eq(positions.id, id));
       return true;
     } catch (error) {
       console.error("Error deleting position:", error);
@@ -4338,17 +4515,17 @@ export class DbStorage implements IStorage {
 
   // Tags
   async getTags(): Promise<Tag[]> {
-    const result = await this.db.select().from(tags);
+    const result = await db.select().from(tags);
     return result;
   }
 
   async getTag(id: string): Promise<Tag | undefined> {
-    const result = await this.db.select().from(tags).where(eq(tags.id, id)).limit(1);
+    const result = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
     return result[0];
   }
 
   async createTag(tag: InsertTag): Promise<Tag> {
-    const result = await this.db.insert(tags).values({
+    const result = await db.insert(tags).values({
       ...tag,
       id: sql`gen_random_uuid()`,
       createdAt: new Date(),
@@ -4358,7 +4535,7 @@ export class DbStorage implements IStorage {
   }
 
   async updateTag(id: string, tag: Partial<InsertTag>): Promise<Tag | undefined> {
-    const result = await this.db.update(tags).set({
+    const result = await db.update(tags).set({
       ...tag,
       updatedAt: new Date(),
     }).where(eq(tags.id, id)).returning();
@@ -4366,7 +4543,7 @@ export class DbStorage implements IStorage {
   }
 
   async deleteTag(id: string): Promise<boolean> {
-    const result = await this.db.delete(tags).where(eq(tags.id, id)).returning();
+    const result = await db.delete(tags).where(eq(tags.id, id)).returning();
     return result.length > 0;
   }
 
