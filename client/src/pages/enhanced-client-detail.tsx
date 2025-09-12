@@ -738,7 +738,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                                       [status]: checked as boolean
                                     }))
                                   }
-                                  className="h-3 w-3"
+                                  className="h-4 w-4"
                                   data-testid={`checkbox-filter-${status.toLowerCase()}`}
                                 />
                                 <Label 
