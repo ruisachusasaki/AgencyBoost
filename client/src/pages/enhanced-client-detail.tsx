@@ -315,6 +315,63 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
   const queryClient = useQueryClient();
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
 
+  // Filter state management
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
+  const [customDateRange, setCustomDateRange] = useState<{
+    from: Date | null;
+    to: Date | null;
+  }>({ from: null, to: null });
+  const [healthStatusFilters, setHealthStatusFilters] = useState<{
+    Green: boolean;
+    Yellow: boolean;
+    Red: boolean;
+  }>({ Green: true, Yellow: true, Red: true });
+
+  // Calculate date range based on current filter (pure derivation to prevent infinite re-renders)
+  const currentDateRange = useMemo(() => {
+    const now = new Date();
+    switch (dateRangeFilter) {
+      case "this_week":
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return { from: startOfWeek, to: endOfWeek };
+      case "last_week":
+        const lastWeekStart = new Date(now);
+        lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
+        lastWeekStart.setHours(0, 0, 0, 0);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        lastWeekEnd.setHours(23, 59, 59, 999);
+        return { from: lastWeekStart, to: lastWeekEnd };
+      case "this_month":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+        return { from: startOfMonth, to: endOfMonth };
+      case "last_3_months":
+        const threeMonthsAgo = new Date(now);
+        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        threeMonthsAgo.setDate(1);
+        threeMonthsAgo.setHours(0, 0, 0, 0);
+        return { from: threeMonthsAgo, to: now };
+      case "custom":
+        return customDateRange;
+      default:
+        return { from: null, to: null };
+    }
+  }, [dateRangeFilter, customDateRange]);
+
+  // Clear filters function
+  const clearFilters = () => {
+    setDateRangeFilter("all");
+    setCustomDateRange({ from: null, to: null });
+    setHealthStatusFilters({ Green: true, Yellow: true, Red: true });
+  };
+
   // Get current week range for checking if score exists
   const weekRange = getCurrentWeekRange();
   const weekStart = weekRange.weekStart.toISOString().split('T')[0];
@@ -333,6 +390,40 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     },
     enabled: !!clientId,
   });
+
+  // Apply filters to health scores
+  const filteredHealthScores = useMemo(() => {
+    if (!Array.isArray(healthScores)) return [];
+
+    let filtered = healthScores as ClientHealthScore[];
+
+    // Apply date range filter
+    if (dateRangeFilter !== "all") {
+      if (currentDateRange.from || currentDateRange.to) {
+        filtered = filtered.filter((score) => {
+          const scoreDate = new Date(score.weekStartDate);
+          if (currentDateRange.from && scoreDate < currentDateRange.from) return false;
+          if (currentDateRange.to && scoreDate > currentDateRange.to) return false;
+          return true;
+        });
+      }
+    }
+
+    // Apply health status filter
+    const activeStatuses = Object.entries(healthStatusFilters)
+      .filter(([_, active]) => active)
+      .map(([status]) => status);
+    
+    if (activeStatuses.length < 3) { // If not all statuses are selected
+      filtered = filtered.filter((score) => 
+        activeStatuses.includes(score.healthIndicator)
+      );
+    }
+
+    return filtered.sort((a, b) => 
+      new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime()
+    );
+  }, [healthScores, dateRangeFilter, currentDateRange, healthStatusFilters]);
 
   // Check if current week score exists
   const currentWeekScore = Array.isArray(healthScores) 
@@ -531,15 +622,191 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-gray-700">Health Score History</h3>
                 <div className="text-sm text-gray-500">
-                  {Array.isArray(healthScores) ? healthScores.length : 0} score{Array.isArray(healthScores) && healthScores.length !== 1 ? 's' : ''} recorded
+                  {filteredHealthScores.length} of {Array.isArray(healthScores) ? healthScores.length : 0} score{Array.isArray(healthScores) && healthScores.length !== 1 ? 's' : ''} 
+                  {filteredHealthScores.length !== (Array.isArray(healthScores) ? healthScores.length : 0) ? ' (filtered)' : ''}
                 </div>
               </div>
+
+              {/* Comprehensive Filter Controls */}
+              <Card className="border border-gray-200 bg-gray-50">
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-700">Filter Health Scores</h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="text-xs"
+                        data-testid="button-clear-filters"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Clear Filters
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Date Range Filter */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Date Range</Label>
+                        <Select
+                          value={dateRangeFilter}
+                          onValueChange={setDateRangeFilter}
+                          data-testid="select-date-range-filter"
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="this_week">This Week</SelectItem>
+                            <SelectItem value="last_week">Last Week</SelectItem>
+                            <SelectItem value="this_month">This Month</SelectItem>
+                            <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+                            <SelectItem value="custom">Custom Range</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Custom Date Range Picker */}
+                        {dateRangeFilter === "custom" && (
+                          <div className="flex gap-2 items-center">
+                            <div className="flex-1">
+                              <Input
+                                type="date"
+                                value={customDateRange.from ? format(customDateRange.from, 'yyyy-MM-dd') : ''}
+                                onChange={(e) => 
+                                  setCustomDateRange(prev => ({
+                                    ...prev,
+                                    from: e.target.value ? new Date(e.target.value) : null
+                                  }))
+                                }
+                                className="h-8 text-xs"
+                                placeholder="From date"
+                                data-testid="input-custom-date-from"
+                              />
+                            </div>
+                            <span className="text-xs text-gray-400">to</span>
+                            <div className="flex-1">
+                              <Input
+                                type="date"
+                                value={customDateRange.to ? format(customDateRange.to, 'yyyy-MM-dd') : ''}
+                                onChange={(e) => 
+                                  setCustomDateRange(prev => ({
+                                    ...prev,
+                                    to: e.target.value ? new Date(e.target.value) : null
+                                  }))
+                                }
+                                className="h-8 text-xs"
+                                placeholder="To date"
+                                data-testid="input-custom-date-to"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Health Status Filter */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Health Status</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const allSelected = Object.values(healthStatusFilters).every(v => v);
+                                const newState = allSelected 
+                                  ? { Green: false, Yellow: false, Red: false }
+                                  : { Green: true, Yellow: true, Red: true };
+                                setHealthStatusFilters(newState);
+                              }}
+                              className="h-6 text-xs px-2"
+                              data-testid="button-toggle-all-health-statuses"
+                            >
+                              {Object.values(healthStatusFilters).every(v => v) ? 'Deselect All' : 'Select All'}
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(healthStatusFilters).map(([status, isActive]) => (
+                              <div key={status} className="flex items-center space-x-1">
+                                <Checkbox
+                                  id={`filter-${status.toLowerCase()}`}
+                                  checked={isActive}
+                                  onCheckedChange={(checked) => 
+                                    setHealthStatusFilters(prev => ({
+                                      ...prev,
+                                      [status]: checked as boolean
+                                    }))
+                                  }
+                                  className="h-3 w-3"
+                                  data-testid={`checkbox-filter-${status.toLowerCase()}`}
+                                />
+                                <Label 
+                                  htmlFor={`filter-${status.toLowerCase()}`} 
+                                  className="text-xs font-normal cursor-pointer"
+                                >
+                                  <Badge 
+                                    className={`text-xs ${getHealthIndicatorStyling(status).badge} border`}
+                                  >
+                                    {status}
+                                  </Badge>
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Filters Summary */}
+                    {(dateRangeFilter !== "all" || !Object.values(healthStatusFilters).every(v => v)) && (
+                      <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200">
+                        <span className="text-xs text-gray-500">Active filters:</span>
+                        {dateRangeFilter !== "all" && (
+                          <Badge variant="outline" className="text-xs">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {dateRangeFilter === "custom" 
+                              ? `${customDateRange.from ? format(customDateRange.from, 'M/d/yy') : '?'} - ${customDateRange.to ? format(customDateRange.to, 'M/d/yy') : '?'}`
+                              : dateRangeFilter.replace('_', ' ')
+                            }
+                          </Badge>
+                        )}
+                        {!Object.values(healthStatusFilters).every(v => v) && (
+                          <Badge variant="outline" className="text-xs">
+                            <Filter className="h-3 w-3 mr-1" />
+                            {Object.entries(healthStatusFilters).filter(([_, active]) => active).map(([status]) => status).join(', ')}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
               
-              {/* Historical Scores */}
-              <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {(Array.isArray(healthScores) ? healthScores as ClientHealthScore[] : [])
-                  .sort((a, b) => new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime())
-                  .map((score) => {
+              {/* No Results After Filtering */}
+              {filteredHealthScores.length === 0 && Array.isArray(healthScores) && healthScores.length > 0 ? (
+                <div className="text-center py-8 border border-gray-200 rounded-lg bg-white">
+                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Filter className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Scores Match Filters</h3>
+                  <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                    Try adjusting your filters to see more results.
+                  </p>
+                  <Button
+                    onClick={clearFilters}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-clear-filters-empty-state"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                </div>
+              ) : (
+                // Historical Scores
+                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                  {filteredHealthScores.map((score) => {
                     const styling = getHealthIndicatorStyling(score.healthIndicator);
                     const weekDisplay = `${format(new Date(score.weekStartDate), 'M/d/yy')} - ${format(new Date(score.weekEndDate), 'M/d/yy')}`;
                     
@@ -639,7 +906,8 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                       </Card>
                     );
                   })}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
