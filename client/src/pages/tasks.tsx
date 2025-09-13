@@ -275,7 +275,6 @@ export default function Tasks() {
           case 'priority': return task.priority;
           case 'assignedTo': return getStaffName(task.assignedTo);
           case 'clientId': return getClientName(task.clientId);
-          case 'projectId': return getProjectName(task.projectId);
           case 'categoryId': return getCategoryName(task.categoryId);
           default: return null;
         }
@@ -289,7 +288,7 @@ export default function Tasks() {
 
   // Check if a field should use dropdown for value selection
   const isDropdownField = (fieldName: string): boolean => {
-    return ['status', 'priority', 'assignedTo', 'clientId', 'projectId', 'categoryId'].includes(fieldName);
+    return ['status', 'priority', 'assignedTo', 'clientId', 'categoryId'].includes(fieldName);
   };
 
   // Get count for a specific smart list (independent of current active filter)
@@ -302,7 +301,11 @@ export default function Tasks() {
   const getVisibleSmartLists = (): SmartList[] => {
     if (!currentUser) return [];
     
-    return smartLists.filter(list => {
+    // Filter and deduplicate Smart Lists
+    const filtered = smartLists.filter(list => {
+      // Only include tasks Smart Lists
+      if (list.entityType !== 'tasks') return false;
+      
       // Universal lists are visible to everyone
       if (list.visibility === 'universal') return true;
       
@@ -316,6 +319,14 @@ export default function Tasks() {
       }
       
       return false;
+    });
+
+    // Deduplicate by ID
+    const seen = new Set();
+    return filtered.filter(list => {
+      if (seen.has(list.id)) return false;
+      seen.add(list.id);
+      return true;
     });
   };
 
@@ -339,10 +350,9 @@ export default function Tasks() {
             case 'description': return task.description || '';
             case 'status': return task.status || '';
             case 'priority': return task.priority || '';
-            case 'assignedTo': return getStaffName(task.assignedTo) || '';
-            case 'clientId': return getClientName(task.clientId) || '';
-            case 'projectId': return getProjectName(task.projectId) || '';
-            case 'categoryId': return getCategoryName(task.categoryId) || '';
+            case 'assignedTo': return task.assignedTo || '';
+            case 'clientId': return task.clientId || '';
+            case 'categoryId': return task.categoryId || '';
             case 'dueDate': return task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '';
             case 'createdAt': return task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd') : '';
             default: return '';
@@ -506,10 +516,8 @@ export default function Tasks() {
       }
     }
 
-    // Add existing Smart List conditions if any
-    if (currentFilter.conditions.length > 0) {
-      conditions.push(...currentFilter.conditions);
-    }
+    // Note: We build the Smart List filter solely from current UI state
+    // to avoid duplicate/conflicting conditions
     
     // Set the filter for saving
     setCurrentFilter({
@@ -704,8 +712,7 @@ export default function Tasks() {
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getStaffName(task.assignedTo)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getClientName(task.clientId)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getProjectName(task.projectId)?.toLowerCase().includes(searchTerm.toLowerCase())
+        getClientName(task.clientId)?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
       const matchesStatus = statusFilter === "all" || task.status === statusFilter;
@@ -1661,6 +1668,75 @@ export default function Tasks() {
       <Card>
         <CardHeader className="border-b border-slate-200">
           <div className="space-y-4">
+            {/* Smart Lists Tabs */}
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-1 h-auto">
+                <div className="flex items-center gap-1 overflow-x-auto">
+                  <TabsTrigger value="all-tasks" className="whitespace-nowrap" data-testid="tab-all-tasks">
+                    All Tasks
+                  </TabsTrigger>
+                  {getVisibleSmartLists().slice(0, maxVisibleTabs - 1).map((smartList) => (
+                    <TabsTrigger 
+                      key={smartList.id} 
+                      value={smartList.id} 
+                      className="whitespace-nowrap flex items-center gap-1"
+                      data-testid={`tab-smart-list-${smartList.id}`}
+                    >
+                      {smartList.name}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 ml-1 hover:bg-slate-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareListId(smartList.id);
+                            }}
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSmartList(smartList.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TabsTrigger>
+                  ))}
+                  {getVisibleSmartLists().length > maxVisibleTabs - 1 && (
+                    <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
+                      <DropdownMenuTrigger asChild>
+                        <TabsTrigger value="more" className="whitespace-nowrap">
+                          More
+                        </TabsTrigger>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {getVisibleSmartLists().slice(maxVisibleTabs - 1).map((smartList) => (
+                          <DropdownMenuItem
+                            key={smartList.id}
+                            onClick={() => {
+                              handleTabChange(smartList.id);
+                              setIsMoreDropdownOpen(false);
+                            }}
+                          >
+                            {smartList.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </TabsList>
+            </Tabs>
+
             {/* Search Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="relative flex-1 max-w-sm">
@@ -1899,12 +1975,12 @@ export default function Tasks() {
           {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
-                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || projectFilter !== "all" || categoryFilter !== "all"
+                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all"
                   ? "No tasks found matching your criteria." 
                   : "No tasks found."
                 }
               </p>
-              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && projectFilter === "all" && categoryFilter === "all" && (
+              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && (
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>Create Your First Task</Button>
