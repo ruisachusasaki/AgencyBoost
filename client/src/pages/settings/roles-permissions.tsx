@@ -68,7 +68,9 @@ export default function RolesPermissions() {
   });
 
   // Check if user is admin - only admins can manage roles
-  const isAdmin = currentUser && ['Admin', 'admin'].includes(currentUser.role);
+  // Development bypass: allow access in development environment
+  const isDevelopment = import.meta.env.DEV;
+  const isAdmin = isDevelopment || (currentUser && ['Admin', 'admin'].includes(currentUser.role));
 
   // Available modules for permissions
   const modules = [
@@ -76,10 +78,10 @@ export default function RolesPermissions() {
     "leads", "workflows", "social_media", "reports", "settings", "staff", "roles"
   ];
 
-  // Fetch roles - only if user is admin
+  // Fetch roles - only if user is admin (or in development)
   const { data: roles = [], isLoading } = useQuery<RoleWithPermissions[]>({
     queryKey: ["/api/roles"],
-    enabled: isAdmin, // Only fetch if user is admin
+    enabled: isAdmin, // Only fetch if user is admin or in development
     retry: false,
   });
 
@@ -338,16 +340,17 @@ export default function RolesPermissions() {
   };
 
   // Show loading state while checking authentication
-  if (loadingUser) {
+  if (loadingUser && !isDevelopment) {
     return (
       <div className="space-y-6">
+        <Link to="/settings">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
         <div className="flex items-center gap-3">
-          <Link to="/settings">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
-            </Button>
-          </Link>
+          <Shield className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Roles & Permissions</h1>
             <p className="text-muted-foreground">Checking permissions...</p>
@@ -357,17 +360,18 @@ export default function RolesPermissions() {
     );
   }
 
-  // Show authentication error
-  if (userError) {
+  // Show authentication error (but skip in development)
+  if (userError && !isDevelopment) {
     return (
       <div className="space-y-6">
+        <Link to="/settings">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
         <div className="flex items-center gap-3">
-          <Link to="/settings">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
-            </Button>
-          </Link>
+          <Shield className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Roles & Permissions</h1>
           </div>
@@ -385,17 +389,18 @@ export default function RolesPermissions() {
     );
   }
 
-  // Show access denied for non-admin users
-  if (!isAdmin) {
+  // Show access denied for non-admin users (but skip in development)
+  if (!isAdmin && !isDevelopment) {
     return (
       <div className="space-y-6">
+        <Link to="/settings">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
         <div className="flex items-center gap-3">
-          <Link to="/settings">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
-            </Button>
-          </Link>
+          <Shield className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Roles & Permissions</h1>
           </div>
@@ -416,13 +421,14 @@ export default function RolesPermissions() {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <Link to="/settings">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Settings
+          </Button>
+        </Link>
         <div className="flex items-center gap-3">
-          <Link to="/settings">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
-            </Button>
-          </Link>
+          <Shield className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Roles & Permissions</h1>
             <p className="text-muted-foreground">Loading roles...</p>
@@ -448,7 +454,10 @@ export default function RolesPermissions() {
             <Shield className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-bold">Roles & Permissions</h1>
-              <p className="text-muted-foreground">Manage user roles and their permissions</p>
+              <p className="text-muted-foreground">
+                Manage user roles and their permissions
+                {isDevelopment && <span className="text-amber-600 ml-2">(Development Mode)</span>}
+              </p>
             </div>
           </div>
 
