@@ -172,17 +172,6 @@ export default function CalendarMain() {
   // Extract clients array from response
   const clients = (clientsResponse as any)?.clients || [];
 
-  // Add error handling
-  if (calendarsError || staffError || appointmentsError) {
-    return (
-      <div className="flex-1 p-6">
-        <div className="text-red-500">
-          Error loading calendar data: {calendarsError?.message || staffError?.message || appointmentsError?.message}
-        </div>
-      </div>
-    );
-  }
-
   // Filter staff based on search
   const filteredStaff = useMemo(() => {
     return staff.filter(member => 
@@ -556,6 +545,17 @@ export default function CalendarMain() {
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
+
+  // Add error handling after all hooks are defined
+  if (calendarsError || staffError || appointmentsError) {
+    return (
+      <div className="flex-1 p-6">
+        <div className="text-red-500">
+          Error loading calendar data: {calendarsError?.message || staffError?.message || appointmentsError?.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
