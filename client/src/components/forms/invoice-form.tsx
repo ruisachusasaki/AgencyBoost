@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertInvoiceSchema, type Invoice, type InsertInvoice, type Client, type Project } from "@shared/schema";
+import { insertInvoiceSchema, type Invoice, type InsertInvoice, type Client } from "@shared/schema";
 import { useEffect } from "react";
 
 interface InvoiceFormProps {
@@ -24,16 +24,14 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
     queryKey: ["/api/clients"],
   });
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
+  // Projects removed - invoices no longer linked to projects
 
   const form = useForm<InsertInvoice>({
     resolver: zodResolver(insertInvoiceSchema),
     defaultValues: {
       invoiceNumber: invoice?.invoiceNumber || `INV-${Date.now()}`,
       clientId: invoice?.clientId || "",
-      projectId: invoice?.projectId || "",
+      // projectId removed
       amount: invoice?.amount || "",
       tax: invoice?.tax || "",
       total: invoice?.total || "",
@@ -88,7 +86,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
   });
 
   const selectedClientId = form.watch("clientId");
-  const clientProjects = projects.filter(p => p.clientId === selectedClientId);
+  // Projects removed - no client project filtering
 
   // Watch amount and tax to calculate total
   const amount = form.watch("amount");
@@ -105,7 +103,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
     // Clean up empty string IDs
     const cleanData = {
       ...data,
-      projectId: data.projectId || null,
+      // projectId removed
       paidDate: data.status === "paid" && !data.paidDate ? new Date() : data.paidDate,
     };
 
@@ -186,31 +184,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="projectId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Project</SelectItem>
-                    {clientProjects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Project field removed - projects no longer exist */}
 
           <FormField
             control={form.control}

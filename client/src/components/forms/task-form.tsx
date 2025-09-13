@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, Repeat } from "lucide-react";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Project, type Staff, type TaskPriority, type TaskCategory } from "@shared/schema";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Staff, type TaskPriority, type TaskCategory } from "@shared/schema";
 
 // TeamWorkflow type with statuses included
 type TeamWorkflowWithStatuses = {
@@ -52,9 +52,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   
   const clients = clientsData?.clients || [];
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
+  // Projects removed from system
 
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
@@ -68,6 +66,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/task-categories"],
   });
 
+  const { data: taskStatuses = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-statuses"],
+  });
+
   const { data: teamWorkflows = [] } = useQuery<TeamWorkflowWithStatuses[]>({
     queryKey: ["/api/team-workflows"],
   });
@@ -75,6 +77,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   // Get default values from settings
   const defaultPriority = taskPriorities.find((p: TaskPriority) => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
   const defaultCategory = taskCategories.find((c: TaskCategory) => c.isDefault)?.id || "";
+  const defaultStatus = taskStatuses.find((s: any) => s.isDefault)?.value || "todo";
 
   const [isRecurringEnabled, setIsRecurringEnabled] = useState(task?.isRecurring || false);
 
@@ -85,13 +88,13 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       description: task?.description || "",
       categoryId: task?.categoryId || defaultCategory,
       workflowId: task?.workflowId || "",
-      status: task?.status || "pending",
+      status: task?.status || defaultStatus,
       priority: task?.priority || defaultPriority,
       assignedTo: task?.assignedTo || null,
       startDate: task?.startDate ? new Date(task.startDate) : null,
       dueDate: task?.dueDate ? new Date(task.dueDate) : null,
       clientId: task?.clientId || "",
-      projectId: task?.projectId || "",
+      // projectId removed
       // Recurring task defaults
       isRecurring: task?.isRecurring || false,
       recurringInterval: task?.recurringInterval || 1,
@@ -111,13 +114,13 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         description: task.description || "",
         categoryId: task.categoryId || defaultCategory,
         workflowId: task.workflowId || "",
-        status: task.status || "pending",
+        status: task.status || defaultStatus,
         priority: task.priority || defaultPriority,
         assignedTo: task.assignedTo || null,
         startDate: task.startDate ? new Date(task.startDate) : null,
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
         clientId: task.clientId || "",
-        projectId: task.projectId || "",
+        // projectId removed
         isRecurring: task.isRecurring || false,
         recurringInterval: task.recurringInterval || 1,
         recurringUnit: (task.recurringUnit as "hours" | "days" | "weeks" | "months" | "years") || "days",
@@ -173,7 +176,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   });
 
   const selectedClientId = form.watch("clientId");
-  const clientProjects = projects.filter(p => p.clientId === selectedClientId);
+  // Projects removed - no longer filter by client
   
   const selectedWorkflowId = form.watch("workflowId");
   const selectedWorkflow = teamWorkflows.find(w => w.id === selectedWorkflowId);
@@ -185,7 +188,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     const cleanData = {
       ...data,
       clientId: data.clientId && data.clientId !== "none" && data.clientId !== "" ? data.clientId : null,
-      projectId: data.projectId && data.projectId !== "none" && data.projectId !== "" ? data.projectId : null,
+      // projectId removed
       assignedTo: data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "" ? data.assignedTo : null,
       categoryId: data.categoryId && data.categoryId !== "" ? data.categoryId : null,
       workflowId: data.workflowId && data.workflowId !== "" ? data.workflowId : null,
@@ -491,31 +494,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
           />
 
           {/* 11. Project */}
-          <FormField
-            control={form.control}
-            name="projectId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Project</SelectItem>
-                    {clientProjects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Project field removed - projects no longer exist */}
         </div>
 
         {/* Recurring Task Settings */}

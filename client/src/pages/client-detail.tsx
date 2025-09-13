@@ -10,7 +10,7 @@ import ClientForm from "@/components/forms/client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Client, Project, Campaign, Task, Invoice, CustomFieldFolder } from "@shared/schema";
+import type { Client, Campaign, Task, Invoice, CustomFieldFolder } from "@shared/schema";
 
 export default function ClientDetail() {
   const [match, params] = useRoute("/clients/:id");
@@ -27,11 +27,6 @@ export default function ClientDetail() {
     enabled: !!clientId,
   });
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    select: (data) => data.filter(p => p.clientId === clientId),
-    enabled: !!clientId,
-  });
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],

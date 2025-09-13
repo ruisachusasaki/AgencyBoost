@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, FolderOpen, DollarSign, UserPlus, TrendingUp, TrendingDown } from "lucide-react";
-import type { Client, Project, Lead, Invoice } from "@shared/schema";
+import type { Client, Lead, Invoice } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 interface PaginatedClientsResponse {
@@ -18,9 +18,6 @@ export default function MetricsCards() {
 
   const totalClients = clientsData?.pagination?.total || 0;
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
 
   const { data: leads = [] } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -30,7 +27,8 @@ export default function MetricsCards() {
     queryKey: ["/api/invoices"],
   });
 
-  const activeProjects = projects.filter(p => p.status === "active").length;
+  // Projects have been removed from the system
+  const activeProjects = 0;
   const newLeads = leads.filter(l => l.status === "new").length;
   
   const currentMonth = new Date().getMonth();
@@ -49,13 +47,13 @@ export default function MetricsCards() {
       iconColor: "text-teal-600"
     },
     {
-      title: "Active Projects", 
-      value: activeProjects.toString(),
-      change: "+3 this week",
-      changeType: "positive" as const,
+      title: "Active Campaigns", 
+      value: "0",
+      change: "Projects removed",
+      changeType: "neutral" as const,
       icon: FolderOpen,
-      bgColor: "bg-green-100",
-      iconColor: "text-green-600"
+      bgColor: "bg-gray-100",
+      iconColor: "text-gray-600"
     },
     {
       title: "Monthly Revenue",

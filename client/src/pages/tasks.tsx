@@ -17,7 +17,7 @@ import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, Client, Project, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory } from "@shared/schema";
+import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -54,7 +54,7 @@ interface SmartList {
   updatedAt: Date;
 }
 
-type SortField = 'title' | 'assignedTo' | 'dueDate' | 'status' | 'priority' | 'clientId' | 'projectId' | 'createdAt';
+type SortField = 'title' | 'assignedTo' | 'dueDate' | 'status' | 'priority' | 'clientId' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'table' | 'kanban';
 
@@ -64,7 +64,6 @@ export default function Tasks() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -79,7 +78,6 @@ export default function Tasks() {
     { id: "priority", label: "Priority", width: "w-1/10" },
     { id: "category", label: "Category", width: "w-1/10" },
     { id: "client", label: "Client", width: "w-1/8" },
-    { id: "project", label: "Project", width: "w-1/8" },
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
@@ -120,9 +118,6 @@ export default function Tasks() {
   
   const clients = clientsData?.clients || [];
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -244,11 +239,6 @@ export default function Tasks() {
     return client?.name || "Unknown Client";
   };
 
-  const getProjectName = (projectId: string | null) => {
-    if (!projectId) return null;
-    const project = projects.find(p => p.id === projectId);
-    return project?.name || "Unknown Project";
-  };
 
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return null;
@@ -599,9 +589,7 @@ export default function Tasks() {
       const matchesClient = clientFilter === "all" || 
         (clientFilter === "none" && !task.clientId) ||
         task.clientId === clientFilter;
-      const matchesProject = projectFilter === "all" || 
-        (projectFilter === "none" && !task.projectId) ||
-        task.projectId === projectFilter;
+      const matchesProject = true; // Projects removed - all tasks match
       const matchesCategory = categoryFilter === "all" || 
         (categoryFilter === "none" && !task.categoryId) ||
         task.categoryId === categoryFilter;
@@ -644,9 +632,8 @@ export default function Tasks() {
           bValue = (getClientName(b.clientId) || 'No client').toLowerCase();
           break;
         case 'projectId':
-          aValue = (getProjectName(a.projectId) || 'No project').toLowerCase();
-          bValue = (getProjectName(b.projectId) || 'No project').toLowerCase();
-          break;
+          // Projects removed - no sorting by project
+          return 0;
         case 'createdAt':
           aValue = new Date(a.createdAt || 0).getTime();
           bValue = new Date(b.createdAt || 0).getTime();
@@ -661,7 +648,7 @@ export default function Tasks() {
     });
 
     return filtered;
-  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, projectFilter, categoryFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, projects, taskCategories]);
+  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
 
   // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
@@ -1275,11 +1262,10 @@ export default function Tasks() {
   }
 
   // Kanban View Component
-  const KanbanView = ({ tasks, staff, clients, projects, onDragEnd, onDeleteTask, deleteTaskMutation }: {
+  const KanbanView = ({ tasks, staff, clients, onDragEnd, onDeleteTask, deleteTaskMutation }: {
     tasks: Task[];
     staff: Staff[];
     clients: Client[];
-    projects: Project[];
     onDragEnd: (result: any) => void;
     onDeleteTask: (id: string) => void;
     deleteTaskMutation: any;
@@ -1301,10 +1287,17 @@ export default function Tasks() {
     }) || [];
 
     const getTasksByStatus = (status: string) => {
-      return tasks.filter(task => 
-        task.status === status && 
-        task.workflowId === selectedWorkflow?.id
-      );
+      return tasks.filter(task => {
+        // Match tasks by status
+        const statusMatches = task.status === status;
+        
+        // Include tasks that either:
+        // 1. Have a workflowId that matches the selected workflow, OR
+        // 2. Have no workflowId (null) - these should appear in any workflow
+        const workflowMatches = !task.workflowId || task.workflowId === selectedWorkflow?.id;
+        
+        return statusMatches && workflowMatches;
+      });
     };
 
     const TaskCard = ({ task, index }: { task: Task; index: number }) => (
@@ -1712,21 +1705,6 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
               
-              {/* Project Filter */}
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  <SelectItem value="none">No Project</SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               
               {/* Category Filter */}
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -1928,7 +1906,6 @@ export default function Tasks() {
               tasks={filteredAndSortedTasks}
               staff={staff}
               clients={clients}
-              projects={projects}
               onDragEnd={handleKanbanDragEnd}
               onDeleteTask={handleDeleteTask}
               deleteTaskMutation={deleteTaskMutation}

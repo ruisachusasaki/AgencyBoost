@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertCampaignSchema, type Campaign, type InsertCampaign, type Client, type Project } from "@shared/schema";
+import { insertCampaignSchema, type Campaign, type InsertCampaign, type Client } from "@shared/schema";
 
 interface CampaignFormProps {
   campaign?: Campaign | null;
@@ -23,9 +23,6 @@ export default function CampaignForm({ campaign, onSuccess }: CampaignFormProps)
     queryKey: ["/api/clients"],
   });
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
 
   const form = useForm<InsertCampaign>({
     resolver: zodResolver(insertCampaignSchema),
@@ -89,7 +86,7 @@ export default function CampaignForm({ campaign, onSuccess }: CampaignFormProps)
   });
 
   const selectedClientId = form.watch("clientId");
-  const clientProjects = projects.filter(p => p.clientId === selectedClientId);
+  // Projects have been removed from the system
 
   const onSubmit = (data: InsertCampaign) => {
     if (campaign) {

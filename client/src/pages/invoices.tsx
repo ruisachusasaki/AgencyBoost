@@ -9,7 +9,7 @@ import { Plus, Search, Edit, Trash2, Calendar, DollarSign, FileText } from "luci
 import InvoiceForm from "@/components/forms/invoice-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Invoice, Client, Project } from "@shared/schema";
+import type { Invoice, Client } from "@shared/schema";
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,9 +27,6 @@ export default function Invoices() {
     queryKey: ["/api/clients"],
   });
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
 
   const deleteInvoiceMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -69,9 +66,8 @@ export default function Invoices() {
   };
 
   const getProjectName = (projectId: string | null) => {
-    if (!projectId) return null;
-    const project = projects.find(p => p.id === projectId);
-    return project?.name || "Unknown Project";
+    // Projects have been removed from the system
+    return null;
   };
 
   const getStatusColor = (status: string) => {

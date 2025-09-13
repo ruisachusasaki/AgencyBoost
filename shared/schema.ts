@@ -347,57 +347,14 @@ export const clientHealthScores = pgTable("client_health_scores", {
   }
 }));
 
-export const projects = pgTable("projects", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  description: text("description"),
-  clientId: varchar("client_id").notNull().references(() => clients.id),
-  status: text("status").notNull().default("planning"), // planning, active, completed, cancelled, on_hold
-  priority: text("priority").notNull().default("medium"), // low, medium, high
-  budget: decimal("budget", { precision: 10, scale: 2 }),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
-  progress: integer("progress").default(0), // 0-100
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
-// Project templates for recurring project types
-export const projectTemplates = pgTable("project_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  description: text("description"),
-  category: text("category").default("General"), // Marketing Campaign, Website Development, SEO Audit, etc.
-  priority: text("priority").notNull().default("medium"), // low, medium, high
-  estimatedDuration: integer("estimated_duration"), // in days
-  estimatedBudget: decimal("estimated_budget", { precision: 10, scale: 2 }),
-  isActive: boolean("is_active").default(true),
-  usageCount: integer("usage_count").default(0), // track how many times template is used
-  createdBy: uuid("created_by").notNull().references(() => staff.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
-// Template tasks - predefined tasks for project templates
-export const templateTasks = pgTable("template_tasks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  templateId: varchar("template_id").notNull().references(() => projectTemplates.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  priority: text("priority").notNull().default("normal"), // urgent, high, normal, low
-  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
-  dayOffset: integer("day_offset").default(0), // days after project start
-  dependsOn: varchar("depends_on_task_id"), // reference to another template task (same template)
-  assignToRole: text("assign_to_role"), // "project_manager", "designer", "developer", etc.
-  order: integer("order").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
   clientId: varchar("client_id").notNull().references(() => clients.id),
-  projectId: varchar("project_id").references(() => projects.id),
   status: text("status").notNull().default("draft"), // draft, active, paused, completed, cancelled
   type: text("type").notNull(), // social_media, ppc, seo, email, content
   budget: decimal("budget", { precision: 10, scale: 2 }),
@@ -507,13 +464,12 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   description: text("description"),
-  status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
+  status: text("status").notNull().default("todo"), // todo, in_progress, completed, cancelled
   priority: text("priority").notNull().default("normal"), // urgent, high, normal, low
   categoryId: varchar("category_id").references(() => taskCategories.id), // Category for workflow assignment
   workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // Direct workflow assignment
   assignedTo: uuid("assigned_to").references(() => staff.id),
   clientId: varchar("client_id").references(() => clients.id),
-  projectId: varchar("project_id").references(() => projects.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   dueDate: timestamp("due_date"),
   startDate: timestamp("start_date"),
@@ -719,7 +675,6 @@ export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   invoiceNumber: text("invoice_number").notNull().unique(),
   clientId: varchar("client_id").notNull().references(() => clients.id),
-  projectId: varchar("project_id").references(() => projects.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
@@ -928,25 +883,8 @@ export const insertClientHealthScoreSchema = createInsertSchema(clientHealthScor
   updatedAt: true,
 });
 
-export const insertProjectSchema = createInsertSchema(projects).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  startDate: z.union([z.string(), z.date()]).transform((val) => val ? new Date(val) : undefined).optional(),
-  endDate: z.union([z.string(), z.date()]).transform((val) => val ? new Date(val) : undefined).optional(),
-});
 
-export const insertProjectTemplateSchema = createInsertSchema(projectTemplates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  usageCount: true,
-});
 
-export const insertTemplateTaskSchema = createInsertSchema(templateTasks).omit({
-  id: true,
-  createdAt: true,
-});
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
@@ -1179,14 +1117,8 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 
-export type Project = typeof projects.$inferSelect;
-export type InsertProject = z.infer<typeof insertProjectSchema>;
 
-export type ProjectTemplate = typeof projectTemplates.$inferSelect;
-export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
 
-export type TemplateTask = typeof templateTasks.$inferSelect;
-export type InsertTemplateTask = z.infer<typeof insertTemplateTaskSchema>;
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
@@ -1328,7 +1260,6 @@ export const enhancedTasks = pgTable("enhanced_tasks", {
   categoryId: varchar("category_id").references(() => taskCategories.id),
   templateId: varchar("template_id").references(() => taskTemplates.id),
   clientId: varchar("client_id").references(() => clients.id),
-  projectId: varchar("project_id").references(() => projects.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   workflowId: varchar("workflow_id").references(() => workflows.id),
   parentTaskId: varchar("parent_task_id"),
@@ -1424,7 +1355,7 @@ export const roles = pgTable("roles", {
 export const permissions = pgTable("permissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
-  module: text("module").notNull(), // clients, projects, campaigns, tasks, invoices, reports, settings, etc.
+  module: text("module").notNull(), // clients, campaigns, tasks, invoices, reports, settings, etc.
   canView: boolean("can_view").default(false),
   canCreate: boolean("can_create").default(false),
   canEdit: boolean("can_edit").default(false),

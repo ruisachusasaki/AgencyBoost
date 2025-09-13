@@ -25,7 +25,7 @@ import {
   ChevronUp,
   ChevronDown
 } from "lucide-react";
-import type { Client, Project, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
+import type { Client, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("30");
@@ -47,9 +47,9 @@ export default function Reports() {
 
   const clients = clientsData?.clients || [];
 
-  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
+  // Projects have been removed from the system
+  const projects: never[] = [];
+  const projectsLoading = false;
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -105,7 +105,7 @@ export default function Reports() {
   const healthScores = healthScoresData?.items || [];
   const healthPagination = healthScoresData?.pagination;
 
-  const isLoading = clientsLoading || projectsLoading || campaignsLoading || leadsLoading || tasksLoading || invoicesLoading;
+  const isLoading = clientsLoading || campaignsLoading || leadsLoading || tasksLoading || invoicesLoading;
 
   // Calculate date filter
   const getDateFilter = () => {
@@ -126,7 +126,8 @@ export default function Reports() {
   };
 
   const filteredClients = filterData(clients);
-  const filteredProjects = filterData(projects);
+  // Projects have been removed from the system
+  const filteredProjects: never[] = [];
   const filteredCampaigns = filterData(campaigns);
   const filteredLeads = filterData(leads);
   const filteredTasks = tasks.filter(task => {

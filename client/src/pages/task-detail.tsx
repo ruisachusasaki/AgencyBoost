@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Task, Client, Project, Campaign, Staff } from "@shared/schema";
+import { Task, Client, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
@@ -43,9 +43,6 @@ export default function TaskDetail() {
   
   const clients = clientsData?.clients || [];
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-  });
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],

@@ -85,9 +85,8 @@ export default function ActionConfigPanel({
   });
   const clients = clientsData?.clients || [];
 
-  const { data: projects = [] } = useQuery<any[]>({
-    queryKey: ["/api/projects"],
-  });
+  // Projects have been removed from the system
+  const projects: never[] = [];
 
   const { data: tasks = [] } = useQuery<any[]>({
     queryKey: ["/api/tasks"],

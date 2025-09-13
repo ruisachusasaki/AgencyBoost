@@ -1,6 +1,6 @@
 import { 
   type Client, type InsertClient, clients,
-  type Project, type InsertProject, projects,
+  // Projects removed from system
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
   type Task, type InsertTask,
@@ -24,7 +24,7 @@ import {
   type TemplateFolder, type InsertTemplateFolder, templateFolders,
   type EmailTemplate, type InsertEmailTemplate, emailTemplates,
   type SmsTemplate, type InsertSmsTemplate, smsTemplates,
-  type SmartList, type InsertSmartList,
+  type SmartList, type InsertSmartList, smartLists,
   type Workflow, type InsertWorkflow,
   type WorkflowExecution, type InsertWorkflowExecution,
   type WorkflowTemplate, type InsertWorkflowTemplate,
@@ -50,8 +50,6 @@ import {
   type ImageAnnotation, type InsertImageAnnotation, imageAnnotations,
   type TaskActivity, type InsertTaskActivity, taskActivities,
   type TaskDependency, type InsertTaskDependency, taskDependencies,
-  type ProjectTemplate, type InsertProjectTemplate, projectTemplates,
-  type TemplateTask, type InsertTemplateTask, templateTasks,
   type Department, type InsertDepartment, departments,
   type Position, type InsertPosition, positions,
   type JobApplication, type InsertJobApplication, jobApplications,
@@ -98,32 +96,11 @@ export interface IStorage {
     limit: number;
   }>;
   
-  // Projects
-  getProjects(): Promise<Project[]>;
-  getProject(id: string): Promise<Project | undefined>;
-  getProjectsByClient(clientId: string): Promise<Project[]>;
-  createProject(project: InsertProject): Promise<Project>;
-  updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined>;
-  deleteProject(id: string): Promise<boolean>;
-
-  // Project Templates
-  getProjectTemplates(): Promise<ProjectTemplate[]>;
-  getProjectTemplate(id: string): Promise<ProjectTemplate | undefined>;
-  createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate>;
-  updateProjectTemplate(id: string, template: Partial<InsertProjectTemplate>): Promise<ProjectTemplate | undefined>;
-  deleteProjectTemplate(id: string): Promise<boolean>;
-  incrementTemplateUsage(id: string): Promise<void>;
-
-  // Template Tasks
-  getTemplateTasksByTemplate(templateId: string): Promise<TemplateTask[]>;
-  createTemplateTask(task: InsertTemplateTask): Promise<TemplateTask>;
-  deleteTemplateTasksByTemplate(templateId: string): Promise<void>;
   
   // Campaigns
   getCampaigns(): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   getCampaignsByClient(clientId: string): Promise<Campaign[]>;
-  getCampaignsByProject(projectId: string): Promise<Campaign[]>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
   updateCampaign(id: string, campaign: Partial<InsertCampaign>): Promise<Campaign | undefined>;
   deleteCampaign(id: string): Promise<boolean>;
@@ -146,7 +123,6 @@ export interface IStorage {
   getTasks(): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   getTasksByClient(clientId: string): Promise<Task[]>;
-  getTasksByProject(projectId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
@@ -241,7 +217,6 @@ export interface IStorage {
   getEnhancedTasks(): Promise<EnhancedTask[]>;
   getEnhancedTask(id: string): Promise<EnhancedTask | undefined>;
   getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]>;
-  getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]>;
   getEnhancedTasksByAssignee(assigneeId: string): Promise<EnhancedTask[]>;
   getEnhancedTasksByWorkflow(workflowId: string): Promise<EnhancedTask[]>;
   createEnhancedTask(task: InsertEnhancedTask): Promise<EnhancedTask>;
@@ -501,7 +476,6 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private clients: Map<string, Client> = new Map();
-  private projects: Map<string, Project> = new Map();
   private campaigns: Map<string, Campaign> = new Map();
   private leads: Map<string, Lead> = new Map();
   private tasks: Map<string, Task> = new Map();
@@ -525,13 +499,11 @@ export class MemStorage implements IStorage {
   private automationActions: Map<string, AutomationAction> = new Map();
   private notifications: Map<string, Notification> = new Map();
   private auditLogs: Map<string, AuditLog> = new Map();
-  private projectTemplates: Map<string, ProjectTemplate> = new Map();
   private templateTasks: Map<string, TemplateTask> = new Map();
 
   constructor() {
     // Add sample data for testing
     this.addSampleData();
-    this.addSampleProjectTemplates();
     this.initializeWorkflowTemplates();
     this.initializeAutomationElements();
     this.initializeTemplateFoldersAndTemplates();
@@ -634,121 +606,6 @@ export class MemStorage implements IStorage {
     this.clients.set(sampleClient2.id, sampleClient2);
   }
 
-  private addSampleProjectTemplates() {
-    // Sample project templates
-    const template1: ProjectTemplate = {
-      id: "template-1",
-      name: "SEO Audit & Optimization",
-      description: "Complete SEO analysis and optimization for client websites including technical audit, keyword research, and on-page optimization.",
-      category: "SEO Audit",
-      priority: "high",
-      estimatedDuration: 21,
-      estimatedBudget: "5000.00",
-      isActive: true,
-      usageCount: 12,
-      createdBy: "system", // Sample data created by system initialization
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const template2: ProjectTemplate = {
-      id: "template-2", 
-      name: "Social Media Campaign Setup",
-      description: "Complete social media marketing campaign including content strategy, asset creation, and campaign launch across multiple platforms.",
-      category: "Social Media Management",
-      priority: "medium",
-      estimatedDuration: 14,
-      estimatedBudget: "3500.00",
-      isActive: true,
-      usageCount: 8,
-      createdBy: "system", // Sample data created by system initialization
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const template3: ProjectTemplate = {
-      id: "template-3",
-      name: "Website Development",
-      description: "Full website development project including design, development, testing, and deployment with responsive design and SEO optimization.",
-      category: "Website Development",
-      priority: "high", 
-      estimatedDuration: 45,
-      estimatedBudget: "15000.00",
-      isActive: true,
-      usageCount: 5,
-      createdBy: "system", // Sample data created by system initialization
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const template4: ProjectTemplate = {
-      id: "template-4",
-      name: "PPC Campaign Launch", 
-      description: "Google Ads and social media advertising campaign setup including keyword research, ad creation, landing page optimization, and campaign monitoring.",
-      category: "PPC Campaign",
-      priority: "medium",
-      estimatedDuration: 10,
-      estimatedBudget: "2500.00",
-      isActive: true,
-      usageCount: 15,
-      createdBy: "system", // Sample data created by system initialization
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.projectTemplates.set("template-1", template1);
-    this.projectTemplates.set("template-2", template2);
-    this.projectTemplates.set("template-3", template3);
-    this.projectTemplates.set("template-4", template4);
-
-    // Sample template tasks for SEO Audit template
-    const seoTasks = [
-      {
-        id: "task-template-1",
-        templateId: "template-1",
-        title: "Initial Website Audit",
-        description: "Conduct comprehensive technical SEO audit of the website",
-        priority: "high" as const,
-        estimatedHours: "8.00",
-        dayOffset: 0,
-        dependsOn: null,
-        assignToRole: "SEO Specialist",
-        order: 1,
-        createdAt: new Date(),
-      },
-      {
-        id: "task-template-2", 
-        templateId: "template-1",
-        title: "Keyword Research",
-        description: "Research and identify target keywords for optimization",
-        priority: "high" as const,
-        estimatedHours: "12.00", 
-        dayOffset: 2,
-        dependsOn: "task-template-1",
-        assignToRole: "SEO Specialist",
-        order: 2,
-        createdAt: new Date(),
-      },
-      {
-        id: "task-template-3",
-        templateId: "template-1",
-        title: "On-Page Optimization",
-        description: "Implement on-page SEO improvements based on audit findings",
-        priority: "medium" as const,
-        estimatedHours: "16.00",
-        dayOffset: 7,
-        dependsOn: "task-template-2",
-        assignToRole: "Developer", 
-        order: 3,
-        createdAt: new Date(),
-      },
-    ];
-
-    // Add template tasks to storage
-    seoTasks.forEach(task => {
-      this.templateTasks.set(task.id, task as TemplateTask);
-    });
-  }
 
   private initializeWorkflowTemplates() {
     // Sample workflow templates based on best practices
@@ -1346,30 +1203,13 @@ export class MemStorage implements IStorage {
           priority: { type: "string", options: ["urgent", "high", "normal", "low"], default: "normal" },
           due_date: { type: "string" },
           client_id: { type: "string" },
-          project_id: { type: "string" },
+          // project_id removed - projects no longer exist,
           parent_task_id: { type: "string" }
         },
         isActive: true,
         createdAt: new Date()
       },
-      {
-        id: "action-8",
-        name: "Create Project",
-        type: "create_project",
-        description: "Set up new client projects with details",
-        category: "data_management",
-        configSchema: {
-          name: { type: "string", required: true },
-          description: { type: "string" },
-          client_id: { type: "string", required: true },
-          budget: { type: "number" },
-          start_date: { type: "string" },
-          end_date: { type: "string" },
-          priority: { type: "string", options: ["low", "medium", "high"], default: "medium" }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
+      // Create Project automation removed - projects no longer exist
       {
         id: "action-9",
         name: "Update Client Fields",
@@ -1399,21 +1239,7 @@ export class MemStorage implements IStorage {
         isActive: true,
         createdAt: new Date()
       },
-      {
-        id: "action-11",
-        name: "Update Project Status",
-        type: "update_project_status",
-        description: "Change project status and progress",
-        category: "data_management",
-        configSchema: {
-          project_id: { type: "string", required: true },
-          status: { type: "string", options: ["planning", "active", "completed", "cancelled", "on_hold"], required: true },
-          progress: { type: "number", min: 0, max: 100 },
-          notes: { type: "string" }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
+      // Update Project Status automation removed - projects no longer exist
       {
         id: "action-12",
         name: "Add Client Tags",
@@ -1493,22 +1319,7 @@ export class MemStorage implements IStorage {
         isActive: true,
         createdAt: new Date()
       },
-      {
-        id: "action-18",
-        name: "Reassign Project Manager",
-        type: "reassign_project_manager",
-        description: "Change project ownership and management",
-        category: "assignment",
-        configSchema: {
-          project_id: { type: "string", required: true },
-          new_manager_id: { type: "string", required: true },
-          notify_old_manager: { type: "boolean", default: true },
-          notify_new_manager: { type: "boolean", default: true },
-          handover_notes: { type: "string" }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
+      // Reassign Project Manager automation removed - projects no longer exist
       {
         id: "action-19",
         name: "Remove Staff Assignment",
@@ -1516,7 +1327,7 @@ export class MemStorage implements IStorage {
         description: "Clear assignments from team members",
         category: "assignment",
         configSchema: {
-          entity_type: { type: "string", options: ["client", "lead", "project", "task"], required: true },
+          entity_type: { type: "string", options: ["client", "lead", "task"], required: true },
           entity_id: { type: "string", required: true },
           staff_id: { type: "string", required: true },
           notify_staff: { type: "boolean", default: true },
@@ -1557,21 +1368,7 @@ export class MemStorage implements IStorage {
         isActive: true,
         createdAt: new Date()
       },
-      {
-        id: "action-24",
-        name: "Set Project Priority",
-        type: "set_project_priority",
-        description: "Adjust project priority levels",
-        category: "status_progress",
-        configSchema: {
-          project_id: { type: "string", required: true },
-          priority: { type: "string", options: ["low", "medium", "high"], required: true },
-          reason: { type: "string" },
-          notify_team: { type: "boolean", default: true }
-        },
-        isActive: true,
-        createdAt: new Date()
-      },
+      // Set Project Priority automation removed - projects no longer exist
       {
         id: "action-25",
         name: "Update Task Priority",
@@ -1617,7 +1414,7 @@ export class MemStorage implements IStorage {
           task_id: { type: "string", required: true },
           staff_id: { type: "string", required: true },
           description: { type: "string" },
-          project_id: { type: "string" }
+          // project_id removed - projects no longer exist
         },
         isActive: true,
         createdAt: new Date()
@@ -1692,7 +1489,7 @@ export class MemStorage implements IStorage {
         description: "Attach files to client records",
         category: "file_document",
         configSchema: {
-          entity_type: { type: "string", options: ["client", "project", "task"], required: true },
+          entity_type: { type: "string", options: ["client", "task"], required: true },
           entity_id: { type: "string", required: true },
           file_url: { type: "string", required: true },
           file_name: { type: "string", required: true },
@@ -1709,7 +1506,7 @@ export class MemStorage implements IStorage {
         category: "file_document",
         configSchema: {
           client_id: { type: "string", required: true },
-          project_id: { type: "string" },
+          // project_id removed - projects no longer exist,
           amount: { type: "number", required: true },
           description: { type: "string", required: true },
           due_date: { type: "string" },
@@ -1727,7 +1524,7 @@ export class MemStorage implements IStorage {
         configSchema: {
           folder_name: { type: "string", required: true },
           parent_folder_id: { type: "string" },
-          entity_type: { type: "string", options: ["client", "project"], required: true },
+          entity_type: { type: "string", options: ["client"], required: true },
           entity_id: { type: "string", required: true }
         },
         isActive: true,
@@ -2267,112 +2064,7 @@ export class MemStorage implements IStorage {
     return this.clients.delete(id);
   }
 
-  // Projects
-  async getProjects(): Promise<Project[]> {
-    return Array.from(this.projects.values());
-  }
 
-  async getProject(id: string): Promise<Project | undefined> {
-    return this.projects.get(id);
-  }
-
-  async getProjectsByClient(clientId: string): Promise<Project[]> {
-    return Array.from(this.projects.values()).filter(p => p.clientId === clientId);
-  }
-
-  async createProject(insertProject: InsertProject): Promise<Project> {
-    const id = randomUUID();
-    const now = new Date();
-    const project: Project = { 
-      id,
-      name: insertProject.name,
-      description: insertProject.description || null,
-      clientId: insertProject.clientId,
-      status: insertProject.status || "planning",
-      priority: insertProject.priority || "medium",
-      budget: insertProject.budget || null,
-      startDate: insertProject.startDate || null,
-      endDate: insertProject.endDate || null,
-      progress: insertProject.progress || null,
-      createdAt: now
-    };
-    this.projects.set(id, project);
-    return project;
-  }
-
-  async updateProject(id: string, projectUpdate: Partial<InsertProject>): Promise<Project | undefined> {
-    const project = this.projects.get(id);
-    if (!project) return undefined;
-    
-    const updatedProject = { ...project, ...projectUpdate };
-    this.projects.set(id, updatedProject);
-    return updatedProject;
-  }
-
-  async deleteProject(id: string): Promise<boolean> {
-    return this.projects.delete(id);
-  }
-
-  // Project Template Methods
-  async getProjectTemplates(): Promise<ProjectTemplate[]> {
-    return Array.from(this.projectTemplates.values()).filter(t => t.isActive);
-  }
-
-  async getProjectTemplate(id: string): Promise<ProjectTemplate | undefined> {
-    return this.projectTemplates.get(id);
-  }
-
-  async createProjectTemplate(insertTemplate: InsertProjectTemplate): Promise<ProjectTemplate> {
-    const id = randomUUID();
-    const now = new Date();
-    const template: ProjectTemplate = {
-      id,
-      name: insertTemplate.name,
-      description: insertTemplate.description || null,
-      category: insertTemplate.category || "General",
-      priority: insertTemplate.priority || "medium",
-      estimatedDuration: insertTemplate.estimatedDuration || null,
-      estimatedBudget: insertTemplate.estimatedBudget || null,
-      isActive: insertTemplate.isActive ?? true,
-      usageCount: 0,
-      createdBy: insertTemplate.createdBy,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.projectTemplates.set(id, template);
-    return template;
-  }
-
-  async updateProjectTemplate(id: string, templateUpdate: Partial<InsertProjectTemplate>): Promise<ProjectTemplate | undefined> {
-    const template = this.projectTemplates.get(id);
-    if (!template) return undefined;
-    
-    const updatedTemplate = { 
-      ...template, 
-      ...templateUpdate,
-      updatedAt: new Date()
-    };
-    this.projectTemplates.set(id, updatedTemplate);
-    return updatedTemplate;
-  }
-
-  async deleteProjectTemplate(id: string): Promise<boolean> {
-    // Also delete associated template tasks
-    const templateTasksToDelete = Array.from(this.templateTasks.values())
-      .filter(task => task.templateId === id);
-    templateTasksToDelete.forEach(task => this.templateTasks.delete(task.id));
-    
-    return this.projectTemplates.delete(id);
-  }
-
-  async incrementTemplateUsage(id: string): Promise<void> {
-    const template = this.projectTemplates.get(id);
-    if (template) {
-      template.usageCount += 1;
-      template.updatedAt = new Date();
-      this.projectTemplates.set(id, template);
-    }
-  }
 
   // Template Task Methods
   async getTemplateTasksByTemplate(templateId: string): Promise<TemplateTask[]> {
@@ -2420,9 +2112,6 @@ export class MemStorage implements IStorage {
     return Array.from(this.campaigns.values()).filter(c => c.clientId === clientId);
   }
 
-  async getCampaignsByProject(projectId: string): Promise<Campaign[]> {
-    return Array.from(this.campaigns.values()).filter(c => c.projectId === projectId);
-  }
 
   async createCampaign(insertCampaign: InsertCampaign): Promise<Campaign> {
     const id = randomUUID();
@@ -2518,9 +2207,6 @@ export class MemStorage implements IStorage {
     return Array.from(this.tasks.values()).filter(t => t.clientId === clientId);
   }
 
-  async getTasksByProject(projectId: string): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(t => t.projectId === projectId);
-  }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = randomUUID();
@@ -3226,9 +2912,6 @@ export class MemStorage implements IStorage {
     return Array.from(this.enhancedTasks.values()).filter(task => task.clientId === clientId);
   }
 
-  async getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]> {
-    return Array.from(this.enhancedTasks.values()).filter(task => task.projectId === projectId);
-  }
 
   async getEnhancedTasksByAssignee(assigneeId: string): Promise<EnhancedTask[]> {
     return Array.from(this.enhancedTasks.values()).filter(task => task.assignedTo === assigneeId);
@@ -3818,6 +3501,67 @@ export class MemStorage implements IStorage {
     this.auditLogs.set(id, newAuditLog);
     return newAuditLog;
   }
+
+  // Smart Lists implementation for MemStorage
+  private smartLists: Map<string, SmartList> = new Map();
+
+  async getSmartLists(userId: string, entityType?: string): Promise<SmartList[]> {
+    const allLists = Array.from(this.smartLists.values());
+    
+    // Filter by entity type if provided
+    const filteredByEntity = entityType 
+      ? allLists.filter(list => list.entityType === entityType)
+      : allLists;
+    
+    // Filter by visibility permissions  
+    return filteredByEntity.filter(list => {
+      // Universal lists are visible to everyone
+      if (list.visibility === 'universal') return true;
+      
+      // Personal lists are only visible to the creator
+      if (list.visibility === 'personal') return list.createdBy === userId;
+      
+      // Shared lists are visible to creator and shared users
+      if (list.visibility === 'shared') {
+        return list.createdBy === userId || (list.sharedWith && list.sharedWith.includes(userId));
+      }
+      
+      return false;
+    });
+  }
+
+  async getSmartList(id: string): Promise<SmartList | undefined> {
+    return this.smartLists.get(id);
+  }
+
+  async createSmartList(smartList: InsertSmartList): Promise<SmartList> {
+    const id = randomUUID();
+    const newSmartList: SmartList = {
+      ...smartList,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.smartLists.set(id, newSmartList);
+    return newSmartList;
+  }
+
+  async updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined> {
+    const existing = this.smartLists.get(id);
+    if (!existing) return undefined;
+    
+    const updated: SmartList = {
+      ...existing,
+      ...smartList,
+      updatedAt: new Date(),
+    };
+    this.smartLists.set(id, updated);
+    return updated;
+  }
+
+  async deleteSmartList(id: string): Promise<boolean> {
+    return this.smartLists.delete(id);
+  }
 }
 
 // Database storage implementation using PostgreSQL
@@ -4127,46 +3871,11 @@ export class DbStorage implements IStorage {
   // This allows the system to work while we migrate clients to database
   private memStorage = new MemStorage();
 
-  // Projects
-  async getProjects(): Promise<Project[]> {
-    const result = await db.select().from(projects);
-    return result;
-  }
-
-  async getProject(id: string): Promise<Project | undefined> {
-    const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
-    return result[0];
-  }
-
-  async getProjectsByClient(clientId: string): Promise<Project[]> {
-    const result = await db.select().from(projects).where(eq(projects.clientId, clientId));
-    return result;
-  }
-
-  async createProject(project: InsertProject): Promise<Project> {
-    const result = await db.insert(projects).values({
-      ...project,
-      id: sql`gen_random_uuid()`,
-      createdAt: new Date(),
-    }).returning();
-    return result[0];
-  }
-
-  async updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined> {
-    const result = await db.update(projects).set(project).where(eq(projects.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteProject(id: string): Promise<boolean> {
-    const result = await db.delete(projects).where(eq(projects.id, id)).returning();
-    return result.length > 0;
-  }
 
   // Campaigns  
   async getCampaigns(): Promise<Campaign[]> { return this.memStorage.getCampaigns(); }
   async getCampaign(id: string): Promise<Campaign | undefined> { return this.memStorage.getCampaign(id); }
   async getCampaignsByClient(clientId: string): Promise<Campaign[]> { return this.memStorage.getCampaignsByClient(clientId); }
-  async getCampaignsByProject(projectId: string): Promise<Campaign[]> { return this.memStorage.getCampaignsByProject(projectId); }
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> { return this.memStorage.createCampaign(campaign); }
   async updateCampaign(id: string, campaign: Partial<InsertCampaign>): Promise<Campaign | undefined> { return this.memStorage.updateCampaign(id, campaign); }
   async deleteCampaign(id: string): Promise<boolean> { return this.memStorage.deleteCampaign(id); }
@@ -4182,10 +3891,16 @@ export class DbStorage implements IStorage {
   async getTasks(): Promise<Task[]> { return this.memStorage.getTasks(); }
   async getTask(id: string): Promise<Task | undefined> { return this.memStorage.getTask(id); }
   async getTasksByClient(clientId: string): Promise<Task[]> { return this.memStorage.getTasksByClient(clientId); }
-  async getTasksByProject(projectId: string): Promise<Task[]> { return this.memStorage.getTasksByProject(projectId); }
   async createTask(task: InsertTask): Promise<Task> { return this.memStorage.createTask(task); }
   async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
   async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }
+
+  // Smart Lists
+  async getSmartLists(userId: string, entityType?: string): Promise<SmartList[]> { return this.memStorage.getSmartLists(userId, entityType); }
+  async getSmartList(id: string): Promise<SmartList | undefined> { return this.memStorage.getSmartList(id); }
+  async createSmartList(smartList: InsertSmartList): Promise<SmartList> { return this.memStorage.createSmartList(smartList); }
+  async updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined> { return this.memStorage.updateSmartList(id, smartList); }
+  async deleteSmartList(id: string): Promise<boolean> { return this.memStorage.deleteSmartList(id); }
 
   // Invoices  
   async getInvoices(): Promise<Invoice[]> { return this.memStorage.getInvoices(); }
@@ -4275,7 +3990,6 @@ export class DbStorage implements IStorage {
   async getEnhancedTasks(): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasks(); }
   async getEnhancedTask(id: string): Promise<EnhancedTask | undefined> { return this.memStorage.getEnhancedTask(id); }
   async getEnhancedTasksByClient(clientId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByClient(clientId); }
-  async getEnhancedTasksByProject(projectId: string): Promise<EnhancedTask[]> { return this.memStorage.getEnhancedTasksByProject(projectId); }
   async createEnhancedTask(task: InsertEnhancedTask): Promise<EnhancedTask> { return this.memStorage.createEnhancedTask(task); }
   async updateEnhancedTask(id: string, task: Partial<InsertEnhancedTask>): Promise<EnhancedTask | undefined> { return this.memStorage.updateEnhancedTask(id, task); }
   async deleteEnhancedTask(id: string): Promise<boolean> { return this.memStorage.deleteEnhancedTask(id); }
@@ -4687,7 +4401,6 @@ class MinimalStorage implements Partial<IStorage> {
   // Minimal implementations for other required methods
   async getTasks(): Promise<Task[]> { return []; }
   async getTask(id: string): Promise<Task | undefined> { return undefined; }
-  async getProjects(): Promise<Project[]> { return []; }
   async getCampaigns(): Promise<Campaign[]> { return []; }
   async getLeads(): Promise<Lead[]> { return []; }
   async getInvoices(): Promise<Invoice[]> { return []; }

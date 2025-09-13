@@ -3,9 +3,9 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
-import { storage } from "./storage";
+import { storage as appStorage } from "./storage";
 import { 
-  insertClientSchema, insertProjectSchema, insertProjectTemplateSchema, insertTemplateTaskSchema, insertCampaignSchema, insertLeadSchema, 
+  insertClientSchema, insertCampaignSchema, insertLeadSchema, 
   insertTaskSchema, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
@@ -103,9 +103,11 @@ async function createAuditLog(
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Configure multer for file uploads
+
+  // Configure multer for file uploads  
+  const multerStorage = multer.memoryStorage();
   const upload = multer({ 
-    storage: multer.memoryStorage(),
+    storage: multerStorage, // Use local variable to avoid any scope confusion
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
   });
   // Client routes - SECURED
@@ -124,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Expires': '0'
       });
       
-      const result = await storage.getClientsWithPagination(limit, offset, sortBy, sortOrder);
+      const result = await appStorage.getClientsWithPagination(limit, offset, sortBy, sortOrder);
       
       res.json({
         clients: result.clients,
@@ -146,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/clients/:id", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
-      const client = await storage.getClient(req.params.id);
+      const client = await appStorage.getClient(req.params.id);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -163,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const validatedData = insertClientSchema.parse(req.body);
-      const client = await storage.createClient(validatedData);
+      const client = await appStorage.createClient(validatedData);
       
       // Log the creation with authenticated user
       await createAuditLog(
@@ -201,13 +203,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/clients/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       // Get the old client data first for audit logging
-      const oldClient = await storage.getClient(req.params.id);
+      const oldClient = await appStorage.getClient(req.params.id);
       if (!oldClient) {
         return res.status(404).json({ message: "Client not found" });
       }
       
       const validatedData = insertClientSchema.partial().parse(req.body);
-      const client = await storage.updateClient(req.params.id, validatedData);
+      const client = await appStorage.updateClient(req.params.id, validatedData);
       
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
@@ -331,12 +333,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/clients/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       // Get client data before deletion for audit logging
-      const client = await storage.getClient(req.params.id);
+      const client = await appStorage.getClient(req.params.id);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      const deleted = await storage.deleteClient(req.params.id);
+      const deleted = await appStorage.deleteClient(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -417,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
 
                   const validatedData = insertClientSchema.parse(clientData);
-                  await storage.createClient(validatedData);
+                  await appStorage.createClient(validatedData);
                   imported++;
 
                   // Log the import for audit
@@ -466,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export clients to CSV - SECURED
   app.get("/api/clients/export", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
-      const clients = await storage.getAllClientsForExport();
+      const clients = await appStorage.getAllClientsForExport();
       
       if (clients.length === 0) {
         return res.status(404).json({ message: "No clients to export" });
@@ -561,7 +563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('DEBUG - Calculated values:', { totalScore, averageScore, healthIndicator });
       console.log('DEBUG - Complete data before storage:', JSON.stringify(completeData, null, 2));
       
-      const healthScore = await storage.createClientHealthScore(completeData);
+      const healthScore = await appStorage.createClientHealthScore(completeData);
       
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
@@ -602,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:clientId/health-scores", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
-      const healthScores = await storage.getClientHealthScores(clientId);
+      const healthScores = await appStorage.getClientHealthScores(clientId);
       res.json(healthScores);
     } catch (error) {
       console.error("Error fetching client health scores:", error);
@@ -612,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/health-scores/:id", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
-      const healthScore = await storage.getClientHealthScore(req.params.id);
+      const healthScore = await appStorage.getClientHealthScore(req.params.id);
       if (!healthScore) {
         return res.status(404).json({ message: "Health score not found" });
       }
@@ -626,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/health-scores/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       // Get the old health score data first for audit logging
-      const oldHealthScore = await storage.getClientHealthScore(req.params.id);
+      const oldHealthScore = await appStorage.getClientHealthScore(req.params.id);
       if (!oldHealthScore) {
         return res.status(404).json({ message: "Health score not found" });
       }
@@ -661,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
       
-      const healthScore = await storage.updateClientHealthScore(req.params.id, updatedData);
+      const healthScore = await appStorage.updateClientHealthScore(req.params.id, updatedData);
       
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
@@ -694,12 +696,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/health-scores/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       // Get health score data before deletion for audit logging
-      const healthScore = await storage.getClientHealthScore(req.params.id);
+      const healthScore = await appStorage.getClientHealthScore(req.params.id);
       if (!healthScore) {
         return res.status(404).json({ message: "Health score not found" });
       }
       
-      await storage.deleteClientHealthScore(req.params.id);
+      await appStorage.deleteClientHealthScore(req.params.id);
       
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
@@ -736,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       monday.setDate(now.getDate() - daysFromMonday);
       monday.setHours(0, 0, 0, 0);
       
-      const existingScore = await storage.getClientHealthScoreByWeek(clientId, monday);
+      const existingScore = await appStorage.getClientHealthScoreByWeek(clientId, monday);
       
       if (existingScore) {
         res.json({ exists: true, healthScore: existingScore });
@@ -755,7 +757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { clientId } = req.params;
       
       // Get all health scores for this client
-      const healthScores = await storage.getClientHealthScores(clientId);
+      const healthScores = await appStorage.getClientHealthScores(clientId);
       
       // Use shared health analysis logic
       const healthStatus = analyzeHealthStatus(healthScores);
@@ -828,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get filtered health scores
-      const result = await storage.getHealthScoresFiltered(filters);
+      const result = await appStorage.getHealthScoresFiltered(filters);
 
       // Add cache control headers for fresh data
       res.set({
@@ -860,221 +862,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Project routes - SECURED
-  app.get("/api/projects", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
-    try {
-      const projects = await storage.getProjects();
-      res.json(projects);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch projects" });
-    }
-  });
 
-  app.get("/api/projects/:id", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
-    try {
-      const project = await storage.getProject(req.params.id);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      res.json(project);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch project" });
-    }
-  });
-
-  app.get("/api/clients/:clientId/projects", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
-    try {
-      const projects = await storage.getProjectsByClient(req.params.clientId);
-      res.json(projects);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch projects" });
-    }
-  });
-
-  app.post("/api/projects", requireAuth(), requirePermission('projects', 'canCreate'), async (req, res) => {
-    try {
-      const validatedData = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(validatedData);
-      res.status(201).json(project);
-    } catch (error) {
-      console.error("Project creation error:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create project", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.put("/api/projects/:id", requireAuth(), requirePermission('projects', 'canEdit'), async (req, res) => {
-    try {
-      const validatedData = insertProjectSchema.partial().parse(req.body);
-      const project = await storage.updateProject(req.params.id, validatedData);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      res.json(project);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update project" });
-    }
-  });
-
-  app.delete("/api/projects/:id", requireAuth(), requirePermission('projects', 'canDelete'), async (req, res) => {
-    try {
-      const deleted = await storage.deleteProject(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete project" });
-    }
-  });
-
-  // Project Template Routes - temporarily commented out until DbStorage implementation
-  /*
-  app.get("/api/project-templates", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
-    try {
-      const templates = await storage.getProjectTemplates();
-      res.json(templates);
-    } catch (error) {
-      console.error("Failed to fetch project templates:", error);
-      res.status(500).json({ message: "Failed to fetch project templates" });
-    }
-  });
-  */
-
-  /*
-  app.get("/api/project-templates/:id", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
-    try {
-      const template = await storage.getProjectTemplate(req.params.id);
-      if (!template) {
-        return res.status(404).json({ message: "Project template not found" });
-      }
-      res.json(template);
-    } catch (error) {
-      console.error("Failed to fetch project template:", error);
-      res.status(500).json({ message: "Failed to fetch project template" });
-    }
-  });
-
-  app.post("/api/project-templates", requireAuth(), requirePermission('projects', 'canCreate'), async (req, res) => {
-    try {
-      const validatedData = insertProjectTemplateSchema.parse(req.body);
-      const template = await storage.createProjectTemplate(validatedData);
-      res.status(201).json(template);
-    } catch (error) {
-      console.error("Project template creation error:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create project template", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-  */
-
-  /*
-  app.put("/api/project-templates/:id", requireAuth(), requirePermission('projects', 'canEdit'), async (req, res) => {
-    try {
-      const validatedData = insertProjectTemplateSchema.partial().parse(req.body);
-      const template = await storage.updateProjectTemplate(req.params.id, validatedData);
-      if (!template) {
-        return res.status(404).json({ message: "Project template not found" });
-      }
-      res.json(template);
-    } catch (error) {
-      console.error("Failed to update project template:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update project template" });
-    }
-  });
-
-  app.delete("/api/project-templates/:id", requireAuth(), requirePermission('projects', 'canDelete'), async (req, res) => {
-    try {
-      const deleted = await storage.deleteProjectTemplate(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Project template not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      console.error("Failed to delete project template:", error);
-      res.status(500).json({ message: "Failed to delete project template" });
-    }
-  });
-
-  // Create project from template
-  app.post("/api/project-templates/:id/create-project", requireAuth(), requirePermission('projects', 'canCreate'), async (req, res) => {
-    try {
-      const template = await storage.getProjectTemplate(req.params.id);
-      if (!template) {
-        return res.status(404).json({ message: "Project template not found" });
-      }
-
-      // Get template tasks
-      const templateTasks = await storage.getTemplateTasksByTemplate(req.params.id);
-
-      // Increment template usage
-      await storage.incrementTemplateUsage(req.params.id);
-
-      // Create project from template (without client assignment for now)
-      const projectData = {
-        name: `${template.name} Project`,
-        description: template.description,
-        clientId: "", // Will need to be set by user
-        status: "planning" as const,
-        priority: template.priority,
-        budget: template.estimatedBudget,
-        startDate: new Date(),
-        endDate: template.estimatedDuration 
-          ? new Date(Date.now() + template.estimatedDuration * 24 * 60 * 60 * 1000)
-          : undefined,
-        progress: 0,
-      };
-
-      const project = await storage.createProject(projectData);
-      
-      // Create tasks from template tasks
-      const taskPromises = templateTasks.map(async (templateTask) => {
-        const taskData = {
-          title: templateTask.title,
-          description: templateTask.description,
-          projectId: project.id,
-          clientId: "", // Will need to be set
-          status: "todo" as const,
-          priority: templateTask.priority,
-          estimatedHours: templateTask.estimatedHours,
-          startDate: templateTask.dayOffset 
-            ? new Date(Date.now() + templateTask.dayOffset * 24 * 60 * 60 * 1000)
-            : undefined,
-          assignedTo: null, // Template role assignments would need to be mapped
-          parentTaskId: null, // Dependencies would need to be handled
-        };
-        
-        return storage.createTask(taskData);
-      });
-
-      await Promise.all(taskPromises);
-
-      res.status(201).json({ 
-        message: "Project created from template successfully",
-        project,
-        tasksCreated: templateTasks.length
-      });
-    } catch (error) {
-      console.error("Failed to create project from template:", error);
-      res.status(500).json({ message: "Failed to create project from template", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-  */
 
   // Campaign routes - SECURED (Marketing strategy data)
   app.get("/api/campaigns", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
     try {
-      const campaigns = await storage.getCampaigns();
+      const campaigns = await appStorage.getCampaigns();
       res.json(campaigns);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch campaigns" });
@@ -1083,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/campaigns/:id", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
-      const campaign = await storage.getCampaign(req.params.id);
+      const campaign = await appStorage.getCampaign(req.params.id);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -1099,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const validatedData = insertCampaignSchema.parse(req.body);
-      const campaign = await storage.createCampaign(validatedData);
+      const campaign = await appStorage.createCampaign(validatedData);
       
       // Log campaign creation for marketing audit
       await createAuditLog(
@@ -1129,7 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const validatedData = insertCampaignSchema.partial().parse(req.body);
-      const campaign = await storage.updateCampaign(req.params.id, validatedData);
+      const campaign = await appStorage.updateCampaign(req.params.id, validatedData);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -1162,12 +955,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Get campaign data before deletion for audit logging
-      const campaign = await storage.getCampaign(req.params.id);
+      const campaign = await appStorage.getCampaign(req.params.id);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
       
-      const deleted = await storage.deleteCampaign(req.params.id);
+      const deleted = await appStorage.deleteCampaign(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -1535,7 +1328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const entityType = req.query.entityType as string; // 'clients' or 'tasks'
       
-      const smartLists = await storage.getSmartLists(userId, entityType);
+      const smartLists = await appStorage.getSmartLists(userId, entityType);
       res.json(smartLists);
     } catch (error) {
       console.error("Error fetching smart lists:", error);
@@ -1548,7 +1341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const smartList = await storage.getSmartList(req.params.id);
+      const smartList = await appStorage.getSmartList(req.params.id);
       if (!smartList) {
         return res.status(404).json({ message: "Smart list not found" });
       }
@@ -1581,7 +1374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: userId, // Ensure created by authenticated user
       });
       
-      const smartList = await storage.createSmartList(validatedData);
+      const smartList = await appStorage.createSmartList(validatedData);
       
       // Log smart list creation for audit
       await createAuditLog(
@@ -1617,7 +1410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // First, check if the smart list exists and user has edit access
-      const existingSmartList = await storage.getSmartList(req.params.id);
+      const existingSmartList = await appStorage.getSmartList(req.params.id);
       if (!existingSmartList) {
         return res.status(404).json({ message: "Smart list not found" });
       }
@@ -1636,7 +1429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't allow changing the creator
       const { createdBy, ...updateData } = validatedData;
       
-      const smartList = await storage.updateSmartList(req.params.id, updateData);
+      const smartList = await appStorage.updateSmartList(req.params.id, updateData);
       if (!smartList) {
         return res.status(404).json({ message: "Smart list not found" });
       }
@@ -1670,7 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // First, check if the smart list exists and user has delete access
-      const existingSmartList = await storage.getSmartList(req.params.id);
+      const existingSmartList = await appStorage.getSmartList(req.params.id);
       if (!existingSmartList) {
         return res.status(404).json({ message: "Smart list not found" });
       }
@@ -1684,7 +1477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You don't have permission to delete this smart list" });
       }
       
-      const deleted = await storage.deleteSmartList(req.params.id);
+      const deleted = await appStorage.deleteSmartList(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Smart list not found" });
       }
@@ -1712,7 +1505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task routes - SECURED
   app.get("/api/tasks", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
     try {
-      const { search, status, priority, assignedTo, clientId, projectId } = req.query;
+      const { search, status, priority, assignedTo, clientId } = req.query;
+      // projectId removed - projects no longer exist
       
       const conditions = [];
       
@@ -1741,9 +1535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(tasks.clientId, clientId));
       }
       
-      if (projectId && typeof projectId === 'string') {
-        conditions.push(eq(tasks.projectId, projectId));
-      }
+      // projectId filter removed - projects no longer exist
       
       let tasksList;
       if (conditions.length > 0) {
@@ -2066,7 +1858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             and(
               eq(tasks.title, task.title),
               eq(tasks.clientId, task.clientId || ""),
-              eq(tasks.projectId, task.projectId || "")
+              // eq(tasks.projectId, task.projectId || "") // projects no longer exist
             )
           )
           .orderBy(desc(tasks.startDate));
@@ -2118,7 +1910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               priority: task.priority,
               assignedTo: task.assignedTo,
               clientId: task.clientId,
-              projectId: task.projectId,
+              projectId: null, // projects no longer exist
               campaignId: task.campaignId,
               startDate: nextStartDate,
               dueDate: nextDueDate,
@@ -3139,7 +2931,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invoice routes - Database Storage - SECURED
   app.get("/api/invoices", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
     try {
-      const { search, status, clientId, projectId } = req.query;
+      const { search, status, clientId } = req.query;
+      // projectId removed - projects no longer exist
       
       const conditions = [];
       
@@ -3160,9 +2953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(invoices.clientId, clientId));
       }
       
-      if (projectId && typeof projectId === 'string') {
-        conditions.push(eq(invoices.projectId, projectId));
-      }
+      // projectId filtering removed - projects no longer exist
       
       let invoicesList;
       if (conditions.length > 0) {
@@ -3605,7 +3396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Social Media Template routes
   app.get("/api/social-media-templates", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
-      const templates = await storage.getSocialMediaTemplates();
+      const templates = await appStorage.getSocialMediaTemplates();
       res.json(templates);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch social media templates" });
@@ -3614,7 +3405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/clients/:clientId/social-media-templates", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
-      const templates = await storage.getSocialMediaTemplates();
+      const templates = await appStorage.getSocialMediaTemplates();
       res.json(templates);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch client social media templates" });
@@ -3624,7 +3415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/social-media-templates", requireAuth(), requirePermission('social_media', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertSocialMediaTemplateSchema.parse(req.body);
-      const template = await storage.createSocialMediaTemplate(validatedData);
+      const template = await appStorage.createSocialMediaTemplate(validatedData);
       res.status(201).json(template);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -3637,7 +3428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Template Folder routes
   app.get("/api/template-folders", requireAuth(), requirePermission('templates', 'canView'), async (req, res) => {
     try {
-      const folders = await storage.getTemplateFolders();
+      const folders = await appStorage.getTemplateFolders();
       res.json(folders);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch template folders" });
@@ -3647,7 +3438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/template-folders", requireAuth(), requirePermission('templates', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTemplateFolderSchema.parse(req.body);
-      const folder = await storage.createTemplateFolder(validatedData);
+      const folder = await appStorage.createTemplateFolder(validatedData);
       res.status(201).json(folder);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -3662,8 +3453,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       
       // Check if any templates are using this folder
-      const emailTemplatesInFolder = await storage.getEmailTemplatesByFolder(id);
-      const smsTemplatesInFolder = await storage.getSmsTemplatesByFolder(id);
+      const emailTemplatesInFolder = await appStorage.getEmailTemplatesByFolder(id);
+      const smsTemplatesInFolder = await appStorage.getSmsTemplatesByFolder(id);
       
       const totalTemplates = emailTemplatesInFolder.length + smsTemplatesInFolder.length;
       
@@ -3673,7 +3464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const deleted = await storage.deleteTemplateFolder(id);
+      const deleted = await appStorage.deleteTemplateFolder(id);
       if (!deleted) {
         return res.status(404).json({ message: "Template folder not found" });
       }
@@ -3688,7 +3479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email Template routes - SECURED (Admin Only)
   app.get("/api/email-templates", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const templates = await storage.getEmailTemplates();
+      const templates = await appStorage.getEmailTemplates();
       res.json(templates);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch email templates" });
@@ -3702,7 +3493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertEmailTemplateSchema.parse(req.body);
       console.log("Creating email template with data:", validatedData);
-      const template = await storage.createEmailTemplate(validatedData);
+      const template = await appStorage.createEmailTemplate(validatedData);
       
       // Audit log for sensitive business communication templates
       await createAuditLog(
@@ -3730,7 +3521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/email-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const validatedData = insertEmailTemplateSchema.partial().parse(req.body);
-      const template = await storage.updateEmailTemplate(req.params.id, validatedData);
+      const template = await appStorage.updateEmailTemplate(req.params.id, validatedData);
       if (!template) {
         return res.status(404).json({ message: "Email template not found" });
       }
@@ -3749,10 +3540,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Get template details before deletion for audit
-      const templates = await storage.getEmailTemplates();
+      const templates = await appStorage.getEmailTemplates();
       const template = templates.find(t => t.id === req.params.id);
       
-      const deleted = await storage.deleteEmailTemplate(req.params.id);
+      const deleted = await appStorage.deleteEmailTemplate(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Email template not found" });
       }
@@ -3781,7 +3572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SMS Template routes - SECURED (Admin Only)
   app.get("/api/sms-templates", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const templates = await storage.getSmsTemplates();
+      const templates = await appStorage.getSmsTemplates();
       res.json(templates);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch SMS templates" });
@@ -3797,7 +3588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // SECURE: Use authenticated user ID only, not hardcoded fallback
       validatedData.createdBy = userId;
       
-      const template = await storage.createSmsTemplate(validatedData);
+      const template = await appStorage.createSmsTemplate(validatedData);
       
       // Audit log for sensitive business communication templates
       await createAuditLog(
@@ -3824,7 +3615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/sms-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const validatedData = insertSmsTemplateSchema.partial().parse(req.body);
-      const template = await storage.updateSmsTemplate(req.params.id, validatedData);
+      const template = await appStorage.updateSmsTemplate(req.params.id, validatedData);
       if (!template) {
         return res.status(404).json({ message: "SMS template not found" });
       }
@@ -3843,10 +3634,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Get template details before deletion for audit
-      const templates = await storage.getSmsTemplates();
+      const templates = await appStorage.getSmsTemplates();
       const template = templates.find(t => t.id === req.params.id);
       
-      const deleted = await storage.deleteSmsTemplate(req.params.id);
+      const deleted = await appStorage.deleteSmsTemplate(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "SMS template not found" });
       }
@@ -4027,7 +3818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tags routes - SECURED
   app.get("/api/tags", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
-      const tags = await storage.getTags();
+      const tags = await appStorage.getTags();
       res.json(tags);
     } catch (error) {
       console.error("Error fetching tags:", error);
@@ -4037,7 +3828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tags/:id", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
-      const tag = await storage.getTag(req.params.id);
+      const tag = await appStorage.getTag(req.params.id);
       if (!tag) {
         return res.status(404).json({ message: "Tag not found" });
       }
@@ -4051,7 +3842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tags", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertTagSchema.parse(req.body);
-      const tag = await storage.createTag(validatedData);
+      const tag = await appStorage.createTag(validatedData);
       res.status(201).json(tag);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4065,7 +3856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/tags/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertTagSchema.partial().parse(req.body);
-      const tag = await storage.updateTag(req.params.id, validatedData);
+      const tag = await appStorage.updateTag(req.params.id, validatedData);
       if (!tag) {
         return res.status(404).json({ message: "Tag not found" });
       }
@@ -4081,7 +3872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/tags/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
-      const deleted = await storage.deleteTag(req.params.id);
+      const deleted = await appStorage.deleteTag(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Tag not found" });
       }
@@ -4274,19 +4065,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Task routes - SECURED
   app.get("/api/enhanced-tasks", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
-      const { clientId, projectId, assignedTo, workflowId } = req.query;
+      const { clientId, assignedTo, workflowId } = req.query;
       let tasks;
       
       if (clientId) {
-        tasks = await storage.getEnhancedTasks(); // Temporary fix - get all tasks
-      } else if (projectId) {
-        tasks = await storage.getEnhancedTasksByProject(projectId as string);
+        tasks = await appStorage.getEnhancedTasks(); // Temporary fix - get all tasks
       } else if (assignedTo) {
-        tasks = await storage.getEnhancedTasks(); // Temporary fix - get all tasks
+        tasks = await appStorage.getEnhancedTasks(); // Temporary fix - get all tasks
       } else if (workflowId) {
-        tasks = await storage.getEnhancedTasks(); // Temporary fix - get all tasks
+        tasks = await appStorage.getEnhancedTasks(); // Temporary fix - get all tasks
       } else {
-        tasks = await storage.getEnhancedTasks();
+        tasks = await appStorage.getEnhancedTasks();
       }
       
       res.json(tasks);
@@ -4297,7 +4086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/enhanced-tasks/:id", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
-      const task = await storage.getEnhancedTask(req.params.id);
+      const task = await appStorage.getEnhancedTask(req.params.id);
       if (!task) {
         return res.status(404).json({ message: "Enhanced task not found" });
       }
@@ -4310,7 +4099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/enhanced-tasks", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertEnhancedTaskSchema.parse(req.body);
-      const task = await storage.createEnhancedTask(validatedData);
+      const task = await appStorage.createEnhancedTask(validatedData);
       res.status(201).json(task);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4323,7 +4112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/enhanced-tasks/:id", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
     try {
       const validatedData = insertEnhancedTaskSchema.partial().parse(req.body);
-      const task = await storage.updateEnhancedTask(req.params.id, validatedData);
+      const task = await appStorage.updateEnhancedTask(req.params.id, validatedData);
       if (!task) {
         return res.status(404).json({ message: "Enhanced task not found" });
       }
@@ -4338,7 +4127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/enhanced-tasks/:id", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
     try {
-      const deleted = await storage.deleteEnhancedTask(req.params.id);
+      const deleted = await appStorage.deleteEnhancedTask(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Enhanced task not found" });
       }
@@ -4351,7 +4140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task Categories routes - SECURED
   app.get("/api/task-categories", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
-      const categories = await storage.getTaskCategories();
+      const categories = await appStorage.getTaskCategories();
       res.json(categories);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch task categories" });
@@ -4361,7 +4150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/task-categories", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTaskCategorySchema.parse(req.body);
-      const category = await storage.createTaskCategory(validatedData);
+      const category = await appStorage.createTaskCategory(validatedData);
       res.status(201).json(category);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4378,9 +4167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let triggers;
       
       if (category) {
-        triggers = await storage.getAutomationTriggers(); // Temporary fix - get all triggers
+        triggers = await appStorage.getAutomationTriggers(); // Temporary fix - get all triggers
       } else {
-        triggers = await storage.getAutomationTriggers();
+        triggers = await appStorage.getAutomationTriggers();
       }
       
       res.json(triggers);
@@ -4392,7 +4181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/automation-triggers", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertAutomationTriggerSchema.parse(req.body);
-      const trigger = await storage.createAutomationTrigger(validatedData);
+      const trigger = await appStorage.createAutomationTrigger(validatedData);
       
       // Log the creation with authenticated user
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -4421,7 +4210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/automation-triggers/:id", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
-      const trigger = await storage.getAutomationTrigger(req.params.id);
+      const trigger = await appStorage.getAutomationTrigger(req.params.id);
       if (!trigger) {
         return res.status(404).json({ message: "Automation trigger not found" });
       }
@@ -4434,13 +4223,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/automation-triggers/:id", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       // Get the old trigger data first for audit logging
-      const oldTrigger = await storage.getAutomationTrigger(req.params.id);
+      const oldTrigger = await appStorage.getAutomationTrigger(req.params.id);
       if (!oldTrigger) {
         return res.status(404).json({ message: "Automation trigger not found" });
       }
       
       const validatedData = insertAutomationTriggerSchema.partial().parse(req.body);
-      const trigger = await storage.updateAutomationTrigger(req.params.id, validatedData);
+      const trigger = await appStorage.updateAutomationTrigger(req.params.id, validatedData);
       
       if (!trigger) {
         return res.status(404).json({ message: "Automation trigger not found" });
@@ -4486,12 +4275,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/automation-triggers/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       // Get trigger data before deletion for audit logging
-      const trigger = await storage.getAutomationTrigger(req.params.id);
+      const trigger = await appStorage.getAutomationTrigger(req.params.id);
       if (!trigger) {
         return res.status(404).json({ message: "Automation trigger not found" });
       }
       
-      const deleted = await storage.deleteAutomationTrigger(req.params.id);
+      const deleted = await appStorage.deleteAutomationTrigger(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Automation trigger not found" });
       }
@@ -4522,7 +4311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/automation-triggers/initialize", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       // Check if triggers already exist
-      const existingTriggers = await storage.getAutomationTriggers();
+      const existingTriggers = await appStorage.getAutomationTriggers();
       if (existingTriggers.length > 0) {
         return res.status(400).json({ message: "Triggers already initialized" });
       }
@@ -4982,7 +4771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create each trigger
       const createdTriggers = [];
       for (const triggerData of defaultTriggers) {
-        const trigger = await storage.createAutomationTrigger(triggerData);
+        const trigger = await appStorage.createAutomationTrigger(triggerData);
         createdTriggers.push(trigger);
         
         // Log the creation with authenticated admin user
@@ -5020,9 +4809,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let actions;
       
       if (category) {
-        actions = await storage.getAutomationActions(); // Temporary fix - get all actions
+        actions = await appStorage.getAutomationActions(); // Temporary fix - get all actions
       } else {
-        actions = await storage.getAutomationActions();
+        actions = await appStorage.getAutomationActions();
       }
       
       res.json(actions);
@@ -5034,7 +4823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/automation-actions", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertAutomationActionSchema.parse(req.body);
-      const action = await storage.createAutomationAction(validatedData);
+      const action = await appStorage.createAutomationAction(validatedData);
       res.status(201).json(action);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -5048,7 +4837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const validatedData = insertAutomationActionSchema.parse(req.body);
-      const action = await storage.updateAutomationAction(id, validatedData);
+      const action = await appStorage.updateAutomationAction(id, validatedData);
       res.json(action);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -5061,7 +4850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/automation-actions/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteAutomationAction(id);
+      await appStorage.deleteAutomationAction(id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete automation action" });
@@ -5728,7 +5517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Departments API - SECURED
   app.get("/api/departments", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {
-      const departments = await storage.getDepartments();
+      const departments = await appStorage.getDepartments();
       res.json(departments);
     } catch (error) {
       console.error('Error fetching departments:', error);
@@ -5738,7 +5527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/departments/:id", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {
-      const department = await storage.getDepartment(req.params.id);
+      const department = await appStorage.getDepartment(req.params.id);
       if (!department) {
         return res.status(404).json({ message: "Department not found" });
       }
@@ -5752,7 +5541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/departments", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const insertData = insertDepartmentSchema.parse(req.body);
-      const department = await storage.createDepartment(insertData);
+      const department = await appStorage.createDepartment(insertData);
       
       // Log the creation
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -5783,7 +5572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/departments/:id", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
       const insertData = insertDepartmentSchema.partial().parse(req.body);
-      const department = await storage.updateDepartment(req.params.id, insertData);
+      const department = await appStorage.updateDepartment(req.params.id, insertData);
       
       if (!department) {
         return res.status(404).json({ message: "Department not found" });
@@ -5817,12 +5606,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/departments/:id", requireAuth(), requirePermission('departments', 'canDelete'), async (req, res) => {
     try {
-      const department = await storage.getDepartment(req.params.id);
+      const department = await appStorage.getDepartment(req.params.id);
       if (!department) {
         return res.status(404).json({ message: "Department not found" });
       }
       
-      const success = await storage.deleteDepartment(req.params.id);
+      const success = await appStorage.deleteDepartment(req.params.id);
       if (!success) {
         return res.status(500).json({ message: "Failed to delete department" });
       }
@@ -5853,7 +5642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Positions API
   app.get("/api/positions", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
-      const positions = await storage.getPositions();
+      const positions = await appStorage.getPositions();
       res.json(positions);
     } catch (error) {
       console.error('Error fetching positions:', error);
@@ -5863,7 +5652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/positions/:id", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
-      const position = await storage.getPosition(req.params.id);
+      const position = await appStorage.getPosition(req.params.id);
       if (!position) {
         return res.status(404).json({ message: "Position not found" });
       }
@@ -5876,7 +5665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/departments/:departmentId/positions", async (req, res) => {
     try {
-      const positions = await storage.getPositionsByDepartment(req.params.departmentId);
+      const positions = await appStorage.getPositionsByDepartment(req.params.departmentId);
       res.json(positions);
     } catch (error) {
       console.error('Error fetching positions for department:', error);
@@ -5887,7 +5676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/positions", requireAuth(), requirePermission('departments', 'canCreate'), async (req, res) => {
     try {
       const insertData = insertPositionSchema.parse(req.body);
-      const position = await storage.createPosition(insertData);
+      const position = await appStorage.createPosition(insertData);
       
       // Log the creation
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -5918,7 +5707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/positions/:id", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
       const insertData = insertPositionSchema.partial().parse(req.body);
-      const position = await storage.updatePosition(req.params.id, insertData);
+      const position = await appStorage.updatePosition(req.params.id, insertData);
       
       if (!position) {
         return res.status(404).json({ message: "Position not found" });
@@ -5952,12 +5741,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/positions/:id", requireAuth(), requirePermission('departments', 'canDelete'), async (req, res) => {
     try {
-      const position = await storage.getPosition(req.params.id);
+      const position = await appStorage.getPosition(req.params.id);
       if (!position) {
         return res.status(404).json({ message: "Position not found" });
       }
       
-      const success = await storage.deletePosition(req.params.id);
+      const success = await appStorage.deletePosition(req.params.id);
       if (!success) {
         return res.status(500).json({ message: "Failed to delete position" });
       }
@@ -8515,7 +8304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: tasks.createdAt,
         assignedTo: tasks.assignedTo,
         clientId: tasks.clientId,
-        projectId: tasks.projectId,
+        projectId: null, // projects no longer exist
         campaignId: tasks.campaignId,
         workflowId: tasks.workflowId,
         categoryId: tasks.categoryId,
@@ -9426,7 +9215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify client exists
-      const client = await storage.getClient(clientId);
+      const client = await appStorage.getClient(clientId);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -9467,7 +9256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify client exists
-      const client = await storage.getClient(clientId);
+      const client = await appStorage.getClient(clientId);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -9523,7 +9312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { clientId } = req.params;
       
       // Verify client exists
-      const client = await storage.getClient(clientId);
+      const client = await appStorage.getClient(clientId);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
@@ -9589,7 +9378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const docRecord = document[0];
 
       // Get client info for audit log
-      const client = await storage.getClient(docRecord.clientId);
+      const client = await appStorage.getClient(docRecord.clientId);
 
       // Delete from database
       await db.delete(documents).where(eq(documents.id, id));
@@ -11486,10 +11275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test route to bypass storage
   app.get("/api/forms/test", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
     try {
-      console.log("Storage type:", storage.constructor.name);
-      console.log("Has getForms?", typeof storage.getForms);
-      console.log("Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(storage)).filter(name => name !== 'constructor'));
-      res.json({ success: true, storageType: storage.constructor.name });
+      res.json({ success: true, storageType: appStorage.constructor.name });
     } catch (error) {
       console.error("Test error:", error);
       res.status(500).json({ message: "Test failed" });
@@ -11922,7 +11708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/time-entries/running", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       // Check all tasks for incomplete time entries (running timers)
-      const allTasks = await storage.getTasks();
+      const allTasks = await appStorage.getTasks();
       
       for (const task of allTasks) {
         if (task.timeEntries && Array.isArray(task.timeEntries)) {
@@ -13828,7 +13614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public endpoint for job openings (no authentication required)
   app.get('/api/job-openings/public', async (req, res) => {
     try {
-      const jobOpenings = await storage.getJobOpenings();
+      const jobOpenings = await appStorage.getJobOpenings();
       res.json(jobOpenings);
     } catch (error) {
       console.error("Error fetching public job openings:", error);
@@ -14546,7 +14332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Webhook received: ${method} /api/webhooks/${webhookId}`, payload);
 
       // Find workflows that use this webhook_id
-      const workflows = await storage.getWorkflows();
+      const workflows = await appStorage.getWorkflows();
       const matchingWorkflows = workflows.filter((workflow: any) => {
         const trigger = workflow.trigger;
         return trigger && 
@@ -14631,7 +14417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const webhookId = req.params.webhookId;
       
       // Find workflows that use this webhook_id
-      const workflows = await storage.getWorkflows();
+      const workflows = await appStorage.getWorkflows();
       const matchingWorkflows = workflows.filter((workflow: any) => {
         const trigger = workflow.trigger;
         return trigger && 
