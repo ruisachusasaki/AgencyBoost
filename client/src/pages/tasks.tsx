@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
@@ -392,6 +392,133 @@ export default function Tasks() {
       setSortField(field);
       setSortDirection('asc');
     }
+  };
+
+  // Helper function to check if any filters are active
+  const areFiltersActive = (): boolean => {
+    return (
+      searchTerm.trim() !== "" ||
+      statusFilter !== "all" ||
+      assigneeFilter !== "all" ||
+      priorityFilter !== "all" ||
+      clientFilter !== "all" ||
+      categoryFilter !== "all" ||
+      showCompleted ||
+      showCancelled ||
+      currentFilter.conditions.length > 0
+    );
+  };
+
+  // Clear all filters to default state
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setAssigneeFilter("all");
+    setPriorityFilter("all");
+    setClientFilter("all");
+    setCategoryFilter("all");
+    setShowCompleted(false);
+    setShowCancelled(false);
+    setCurrentFilter({ conditions: [], logic: 'AND' });
+    setActiveSmartList(null);
+    setActiveTab("all-tasks");
+    
+    toast({
+      title: "Filters Cleared",
+      description: "All filters have been reset to default."
+    });
+  };
+
+  // Convert current filters to Smart List format and open save dialog
+  const handleSaveCurrentFiltersAsSmartList = () => {
+    // Convert current filter states to TaskFilter conditions
+    const conditions: any[] = [];
+    
+    if (searchTerm.trim()) {
+      conditions.push({
+        field: 'title',
+        operator: 'contains',
+        value: searchTerm.trim()
+      });
+    }
+    
+    if (statusFilter !== "all") {
+      conditions.push({
+        field: 'status',
+        operator: 'equals',
+        value: statusFilter
+      });
+    }
+    
+    if (assigneeFilter !== "all") {
+      if (assigneeFilter === "unassigned") {
+        conditions.push({
+          field: 'assignedTo',
+          operator: 'is_empty',
+          value: ''
+        });
+      } else {
+        conditions.push({
+          field: 'assignedTo',
+          operator: 'equals',
+          value: assigneeFilter
+        });
+      }
+    }
+    
+    if (priorityFilter !== "all") {
+      conditions.push({
+        field: 'priority',
+        operator: 'equals',
+        value: priorityFilter
+      });
+    }
+    
+    if (clientFilter !== "all") {
+      if (clientFilter === "none") {
+        conditions.push({
+          field: 'clientId',
+          operator: 'is_empty',
+          value: ''
+        });
+      } else {
+        conditions.push({
+          field: 'clientId',
+          operator: 'equals',
+          value: clientFilter
+        });
+      }
+    }
+    
+    if (categoryFilter !== "all") {
+      if (categoryFilter === "none") {
+        conditions.push({
+          field: 'categoryId',
+          operator: 'is_empty',
+          value: ''
+        });
+      } else {
+        conditions.push({
+          field: 'categoryId',
+          operator: 'equals',
+          value: categoryFilter
+        });
+      }
+    }
+
+    // Add existing Smart List conditions if any
+    if (currentFilter.conditions.length > 0) {
+      conditions.push(...currentFilter.conditions);
+    }
+    
+    // Set the filter for saving
+    setCurrentFilter({
+      conditions,
+      logic: 'AND'
+    });
+    
+    // Open the save dialog
+    setIsSaveSmartListOpen(true);
   };
 
   // Smart Lists management functions
@@ -1728,6 +1855,37 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 pt-2">
+              {/* Clear Filters Button */}
+              {areFiltersActive() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-2"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="h-4 w-4" />
+                  Clear Filters
+                </Button>
+              )}
+              
+              {/* Save as Smart List Button */}
+              {areFiltersActive() && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSaveCurrentFiltersAsSmartList}
+                  className="flex items-center gap-2"
+                  data-testid="button-save-smart-list"
+                >
+                  <Bookmark className="h-4 w-4" />
+                  Save as Smart List
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -1913,6 +2071,89 @@ export default function Tasks() {
           )}
         </CardContent>
       </Card>
+
+      {/* Save Smart List Dialog */}
+      <Dialog open={isSaveSmartListOpen} onOpenChange={setIsSaveSmartListOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save as Smart List</DialogTitle>
+            <DialogDescription>
+              Save the current filter settings as a reusable Smart List.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="smart-list-name">Name *</Label>
+              <Input
+                id="smart-list-name"
+                placeholder="Enter Smart List name"
+                value={smartListName}
+                onChange={(e) => setSmartListName(e.target.value)}
+                data-testid="input-smart-list-name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="smart-list-description">Description</Label>
+              <Textarea
+                id="smart-list-description"
+                placeholder="Optional description"
+                value={smartListDescription}
+                onChange={(e) => setSmartListDescription(e.target.value)}
+                rows={3}
+                data-testid="input-smart-list-description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <Select value={shareVisibility} onValueChange={(value: 'personal' | 'shared' | 'universal') => setShareVisibility(value)}>
+                <SelectTrigger data-testid="select-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="personal">Personal</SelectItem>
+                  <SelectItem value="shared">Shared with Team</SelectItem>
+                  <SelectItem value="universal">Universal (All Users)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSaveSmartListOpen(false);
+                setSmartListName("");
+                setSmartListDescription("");
+                setShareVisibility('personal');
+              }}
+              data-testid="button-cancel-smart-list"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (smartListName.trim()) {
+                  saveSmartListMutation.mutate({
+                    name: smartListName.trim(),
+                    description: smartListDescription.trim() || undefined,
+                    filters: currentFilter,
+                    visibility: shareVisibility,
+                    sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined
+                  });
+                }
+              }}
+              disabled={!smartListName.trim() || saveSmartListMutation.isPending}
+              data-testid="button-save-smart-list-confirm"
+            >
+              {saveSmartListMutation.isPending ? "Saving..." : "Save Smart List"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
