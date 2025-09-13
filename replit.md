@@ -1,7 +1,7 @@
 # AgencyFlow CRM System
 
 ## Overview
-AgencyFlow is a comprehensive Customer Relationship Management (CRM) system designed for marketing agencies. Its primary purpose is to provide a complete solution for managing clients, projects, campaigns, leads, tasks, and invoices. It includes integrated reporting capabilities and offers a responsive interface for tracking business operations and campaign performance. The project aims to provide a complete, modern CRM solution for marketing agencies, enhancing efficiency and operational oversight with a focus on business vision and market potential.
+AgencyFlow is a comprehensive Customer Relationship Management (CRM) system for marketing agencies. It manages clients, projects, campaigns, leads, tasks, and invoices, with integrated reporting and a responsive interface. The system aims to enhance efficiency and operational oversight, providing a modern solution for agencies.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -14,53 +14,33 @@ Filter Preferences: Simplified filtering with only essential filters (search and
 
 ### Core Technologies
 - **Frontend**: React 18 with TypeScript, Vite, TanStack Query, Wouter, React Hook Form with Zod.
-- **Backend**: Node.js with Express.js, TypeScript, RESTful API design.
+- **Backend**: Node.js with Express.js, TypeScript, RESTful API.
 - **Database**: PostgreSQL with Drizzle ORM.
 
-### Key Features and Design Patterns
-- **Data Models**: Comprehensive relational schema for Clients, Projects, Campaigns, Leads, Tasks, and Invoices.
-- **Dynamic Project Progress**: Project completion calculated automatically based on task completion status, displayed with progress bars.
-- **Authentication & Authorization**: Session-based authentication with role-based access control (Admin, Manager, User, Accounting) and granular permissions. Unified staff-user system for notifications.
-- **UI/UX**: Responsive sidebar navigation, mobile-first design, optimized 3-column layouts, Radix UI primitives, shadcn/ui components, and Tailwind CSS for styling. Includes enhanced visual design for elements like pipeline views.
-- **Data Management**: Full CRUD operations for core entities, comprehensive audit logs, table sorting, pagination, CSV import/export.
-- **Customization**: Custom Field Management with drag-and-drop reordering, and Marketing Template Management with WYSIWYG editor and dynamic merge tags.
-- **Advanced Features**: Smart Lists for filtering, enhanced Client Product Display, comprehensive Email and SMS communication with DND system, Document Management with secure handling, Notes System, robust Calendar Management.
-- **Hierarchical Sub-Task System**: ClickUp-style functionality supporting up to 5 levels of task nesting, expandable/collapsible tree views, comprehensive task management with visual hierarchy indicators, and proper progressive indentation.
-- **Task Dependencies System**: Comprehensive business rule enforcement supporting Finish to Start, Start to Start, Finish to Finish, and Start to Finish dependency types with real-time validation and visual icons.
-- **ClickUp-Style Recurring Task System**: Full scheduling capabilities (Daily, Weekly, Monthly, Yearly) with multiple end conditions, automatic generation of new task instances upon completion of the previous task, and completion-triggered automation.
-- **Comprehensive Bulk Actions System**: Checkbox-based selection for tasks with "Select All" and bulk toolbar for Delete, Assignee, Status, Due Date, and Priority operations, including permissions checking and audit logging.
-- **Task Status Visibility Controls**: Inline multi-select dropdown for showing/hiding completed and cancelled tasks.
-- **Form Builder**: Drag-and-drop form builder with live preview, extensive styling controls, integration with custom fields, and folder navigation.
-- **Data Integrity**: Ensures data consistency, standardizing on staff table IDs. All core entities are persisted in PostgreSQL.
-- **Unified Template System**: Email and SMS template systems unified between Marketing and Client communication sections.
-- **Lead Management Enhancement**: Rebuilt leads page with proper layout, overflow controls, staff assignment system, and enhanced lead card interactions.
-- **Appointment Booking System**: Fully functional appointment booking for leads and clients, integrated into the main calendar with visual differentiation and CRUD operations.
-- **Task Management System**: Complete task creation and management with comprehensive inline editing capabilities (staff assignment, dates, priority, time estimation, description).
-- **Professional Task Table Interface**: ClickUp-style table view with hierarchical sub-task display, toggle functionality, drag-and-drop column reordering (Task Name protected), sortable columns, and comprehensive task deletion.
-- **Global Timer System**: Professional-grade ClickUp-style timer with React Context state management, header bar indicator, and cross-navigation persistence.
-- **Activity Logging System**: Comprehensive task activity tracking with database persistence and visual timeline display, logging all task modifications and time estimate changes.
-- **Comments System with Threading**: Comprehensive commenting system with nested replies, @mention notifications with keyboard navigation, and threaded conversations. Includes emoji picker.
-- **Advanced File Upload and Media System**: Complete multimedia support for task comments including inline image display, browser-based voice recording (MediaRecorder API), file attachments with type detection, secure object storage integration, and inline HTML5 audio players.
-- **Image Annotation System**: Fully functional collaborative feedback system for uploaded images and PDFs with @mention functionality, real-time annotation display, and complete CRUD operations.
-- **HR Date Picker UX**: Time Off Request form with controlled date picker state for automatic closing and smart month navigation.
-- **Optimized HR Filter Layout**: Department and position filters sized appropriately for longer department names without text overflow.
-- **Job Application Form Configuration System**: Fully functional drag-and-drop form editor with backend persistence, auto-save functionality, field reordering protection for system fields, and seamless form field management with database storage.
-- **Public Job Application System**: Complete external applicant functionality with public careers page, customizable job application form with dynamic custom fields, proper database foreign key relationships, and successful form submission handling with custom field data persistence.
-- **Knowledge Base System**: Comprehensive Notion-like documentation platform with categorized content management, hierarchical article organization, advanced social features (likes, bookmarks, comments with @mentions), role-based access control, search functionality, and rich content editing capabilities.
-- **Advanced Icon Selection**: Professional icon picker component with search functionality, categorized browsing, visual grid display, and integration with complete Lucide React icon library.
-- **GoHighLevel-Style Automation System**: Transformed entire automation trigger system from hard-coded definitions to fully API-driven, database-backed system with sophisticated filtering capabilities, including dynamic field integration, specific entity selection, and a consistent field-condition-value pattern. This includes triggers for Task Overdue Timing Controls, Dynamic Lead Pipeline Integration, Field Change Trigger System, Note Added Trigger System, and Inbound Webhook Trigger System.
-- **Rich Text Editor Enhancement**: Comprehensive Tiptap editor fixes for checklist and toggle functionality, including CSS Grid layout for checklists and a div-based structure for toggles.
-- **Client Team Assignment Feature**: Implemented comprehensive team assignment functionality with 10 specific positions and improved profile image display.
-- **Client Health Scoring System**: Comprehensive proactive client health monitoring with visual red/yellow highlighting based on 4-week consecutive poor health patterns, interactive sortable health score details tables, hover tooltips with health breakdowns, improvement trend recognition, and automated team notification system that alerts relevant team members (contact owners, team members, managers) when clients hit health thresholds with duplicate prevention and security controls.
+### UI/UX Decisions
+- Responsive sidebar navigation and mobile-first design.
+- Optimized 3-column layouts using Radix UI primitives, shadcn/ui components, and Tailwind CSS.
+- Enhanced visual design for elements like pipeline views and professional icon picker.
+- Component-scoped CSS with design system variables to prevent styling issues.
 
-### CSS Architecture Guidelines
-- **Problem**: Broad CSS selectors cause styling issues.
-- **Solution**: Component-scoped CSS with design system variables.
-- Use CSS custom properties for consistent design tokens.
-- Target specific component containers.
-- Avoid universal selectors and overly broad rules.
-- Preserve semantic circular elements.
-- Always scope CSS changes to specific component containers to prevent cross-contamination.
+### Technical Implementations
+- **Data Models**: Relational schema for core entities (Clients, Projects, Campaigns, Leads, Tasks, Invoices).
+- **Authentication & Authorization**: Session-based authentication with role-based access control (Admin, Manager, User, Accounting) and granular permissions. Centralized middleware (`server/auth.ts`) handles authentication and permission checks (e.g., `requireAuth()`, `requirePermission()`, `requireAdmin()`).
+- **Data Management**: CRUD operations, audit logs, table sorting, pagination, CSV import/export.
+- **Customization**: Custom Field Management with drag-and-drop reordering, and Marketing Template Management with WYSIWYG editor.
+- **Task Management**: Dynamic project progress, hierarchical sub-task system (up to 5 levels), task dependencies (Finish to Start, Start to Start, Finish to Finish, Start to Finish), ClickUp-style recurring tasks, comprehensive bulk actions, and task status visibility controls.
+- **Communication**: Smart Lists, enhanced Client Product Display, comprehensive Email and SMS communication with DND system, Document Management, Notes System, and Calendar Management. Unified Email and SMS template systems.
+- **Lead Management**: Rebuilt leads page with staff assignment and enhanced lead card interactions.
+- **Appointment Booking**: Integrated appointment booking for leads and clients.
+- **Global Timer System**: ClickUp-style timer with cross-navigation persistence.
+- **Activity Logging**: Comprehensive task activity tracking with timeline display.
+- **Comments System**: Threaded comments with @mention notifications and emoji picker.
+- **File & Media**: Advanced file upload, inline image display, browser-based voice recording, secure object storage, and HTML5 audio players.
+- **Image Annotation**: Collaborative feedback system for images and PDFs with real-time annotation.
+- **HR Features**: Time Off Request form with controlled date picker, optimized HR filter layout, and a Job Application Form Configuration System with a public careers page.
+- **Knowledge Base**: Notion-like documentation platform with categories, hierarchy, social features, RBAC, and search.
+- **Automation System**: GoHighLevel-style API-driven, database-backed automation with dynamic triggers (e.g., Task Overdue Timing Controls, Dynamic Lead Pipeline Integration, Field Change Trigger System, Note Added Trigger System, Inbound Webhook Trigger System).
+- **Client Management**: Client Team Assignment and Client Health Scoring System with proactive monitoring, visual highlighting, and automated team notifications.
 
 ## External Dependencies
 
