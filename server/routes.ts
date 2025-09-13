@@ -13903,6 +13903,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/knowledge-base/categories", async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const { name, description, parentId, icon, color } = req.body;
       
       if (!name || name.trim() === '') {
@@ -14037,6 +14039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/knowledge-base/articles/:id", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const [article] = await db.select({
         id: knowledgeBaseArticles.id,
@@ -14088,6 +14091,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/knowledge-base/articles", requireAuth(), requirePermission('knowledge_base', 'canCreate'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const { title, content, excerpt, categoryId, parentId, slug, featuredImage, tags, isPublic } = req.body;
       
       if (!title || title.trim() === '') {
@@ -14189,6 +14194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/knowledge-base/bookmarks", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const bookmarks = await db.select({
         id: knowledgeBaseBookmarks.id,
@@ -14212,6 +14218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/knowledge-base/articles/:articleId/bookmark", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Check if bookmark already exists
       const existing = await db.select({ id: knowledgeBaseBookmarks.id })
@@ -14244,6 +14251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/knowledge-base/articles/:articleId/like", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Check if like already exists
       const existing = await db.select({ id: knowledgeBaseLikes.id })
@@ -14639,6 +14647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       
       // Get course details
@@ -14710,9 +14719,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create training course (Admin/Manager only)
-  app.post("/api/training/courses", async (req, res) => {
+  app.post("/api/training/courses", requireAuth(), requirePermission('training', 'canCreate'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const newCourse = insertTrainingCourseSchema.parse({
         ...req.body,
         createdBy: userId
@@ -14782,7 +14793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete training course
-  app.delete("/api/training/courses/:id", async (req, res) => {
+  app.delete("/api/training/courses/:id", requireAuth(), requirePermission('training', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -14810,6 +14821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id: courseId } = req.params;
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Check if course exists
       const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, courseId));
@@ -14857,9 +14869,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's enrolled courses
-  app.get("/api/training/my-courses", async (req, res) => {
+  app.get("/api/training/my-courses", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const enrolledCourses = await db.select({
         enrollmentId: trainingEnrollments.id,
@@ -15277,6 +15290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id: lessonId } = req.params;
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
       if (!lesson) {
@@ -15356,6 +15370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id: lessonId } = req.params;
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
       if (!lesson) {
@@ -15643,7 +15658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete quiz
-  app.delete("/api/training/quizzes/:id", async (req, res) => {
+  app.delete("/api/training/quizzes/:id", requireAuth(), requirePermission('training', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -15670,6 +15685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { quizId } = req.params;
       const { answers } = req.body;
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const [quiz] = await db.select().from(trainingQuizzes).where(eq(trainingQuizzes.id, quizId));
       if (!quiz) {
@@ -15746,6 +15762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { quizId } = req.params;
       const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const attempts = await db.select().from(trainingQuizAttempts)
         .where(and(eq(trainingQuizAttempts.quizId, quizId), eq(trainingQuizAttempts.userId, userId)))
