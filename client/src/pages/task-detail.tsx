@@ -133,11 +133,6 @@ export default function TaskDetail() {
     return client?.name || "Unknown Client";
   };
 
-  const getProjectName = (projectId: string | null) => {
-    if (!projectId) return null;
-    const project = projects.find(p => p.id === projectId);
-    return project?.name || "Unknown Project";
-  };
 
   const getCampaignName = (campaignId: string | null) => {
     if (!campaignId) return null;
@@ -706,29 +701,15 @@ export default function TaskDetail() {
                   </div>
                 </div>
 
-                {/* Row 4: Client and Project */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Client - Left Side */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm font-medium text-slate-700">Client</span>
-                    </div>
-                    <span className="text-sm text-slate-600">
-                      {getClientName(task.clientId) || "No client assigned"}
-                    </span>
+                {/* Row 4: Client */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-700">Client</span>
                   </div>
-                  
-                  {/* Project - Right Side */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm font-medium text-slate-700">Project</span>
-                    </div>
-                    <span className="text-sm text-slate-600">
-                      {getProjectName(task.projectId) || "No project assigned"}
-                    </span>
-                  </div>
+                  <span className="text-sm text-slate-600">
+                    {getClientName(task.clientId) || "No client assigned"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
