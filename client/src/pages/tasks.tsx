@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,7 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
@@ -16,12 +20,38 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, Client, Project, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
 
 
 interface Column {
   id: string;
   label: string;
   width?: string;
+}
+
+interface TaskFilterCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+interface TaskFilter {
+  conditions: TaskFilterCondition[];
+  logic: 'AND' | 'OR';
+}
+
+interface SmartList {
+  id: string;
+  name: string;
+  description?: string;
+  entityType: 'tasks';
+  filters: TaskFilter;
+  createdBy: string;
+  visibility: 'personal' | 'shared' | 'universal';
+  sharedWith?: string[];
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 type SortField = 'title' | 'assignedTo' | 'dueDate' | 'status' | 'priority' | 'clientId' | 'projectId' | 'createdAt';
@@ -56,6 +86,27 @@ export default function Tasks() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
+  
+  // Smart Lists state
+  const [currentFilter, setCurrentFilter] = useState<TaskFilter>({
+    conditions: [],
+    logic: 'AND'
+  });
+  const [activeSmartList, setActiveSmartList] = useState<string | null>(null);
+  const [smartListName, setSmartListName] = useState("");
+  const [smartListDescription, setSmartListDescription] = useState("");
+  const [isSaveSmartListOpen, setIsSaveSmartListOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all-tasks");
+  const [isShareSmartListOpen, setIsShareSmartListOpen] = useState(false);
+  const [shareListId, setShareListId] = useState<string | null>(null);
+  const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
+  const [shareVisibility, setShareVisibility] = useState<'personal' | 'shared' | 'universal'>('personal');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // Smart list overflow handling
+  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
+  const maxVisibleTabs = 4; // Show "All Tasks" + up to 3 smart lists, then "More"
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -99,6 +150,20 @@ export default function Tasks() {
   const { data: workflows = [] } = useQuery<any[]>({
     queryKey: ["/api/team-workflows"],
   });
+
+  // Fetch current user for Smart Lists authentication
+  const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
+
+  // Fetch Smart Lists for tasks
+  const { data: smartLists = [] } = useQuery<SmartList[]>({
+    queryKey: ["/api/smart-lists", { entityType: "tasks" }],
+    enabled: !!currentUser,
+  });
+
+  // Check if current user is admin
+  const isAdmin = currentUser?.role === 'Admin';
 
   // Auto-select first workflow if none selected and workflows are available
   React.useEffect(() => {
@@ -209,6 +274,127 @@ export default function Tasks() {
     return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
   };
 
+  // Get unique values for dropdown fields from actual task data
+  const getFieldOptions = (fieldName: string): string[] => {
+    if (!tasks || tasks.length === 0) return [];
+    
+    const values = tasks
+      .map(task => {
+        switch (fieldName) {
+          case 'status': return task.status;
+          case 'priority': return task.priority;
+          case 'assignedTo': return getStaffName(task.assignedTo);
+          case 'clientId': return getClientName(task.clientId);
+          case 'projectId': return getProjectName(task.projectId);
+          case 'categoryId': return getCategoryName(task.categoryId);
+          default: return null;
+        }
+      })
+      .filter((value): value is string => Boolean(value) && value !== 'Unknown' && value !== 'Unknown Client' && value !== 'Unknown Project' && value !== 'Unknown Category')
+      .filter((value, index, array) => array.indexOf(value) === index) // Remove duplicates
+      .sort();
+    
+    return values;
+  };
+
+  // Check if a field should use dropdown for value selection
+  const isDropdownField = (fieldName: string): boolean => {
+    return ['status', 'priority', 'assignedTo', 'clientId', 'projectId', 'categoryId'].includes(fieldName);
+  };
+
+  // Get count for a specific smart list (independent of current active filter)
+  const getSmartListCount = (smartList: SmartList): number => {
+    if (!tasks || tasks.length === 0) return 0;
+    return applyTaskFilter(tasks, smartList.filters).length;
+  };
+
+  // Get visible Smart Lists based on user permissions
+  const getVisibleSmartLists = (): SmartList[] => {
+    if (!currentUser) return [];
+    
+    return smartLists.filter(list => {
+      // Universal lists are visible to everyone
+      if (list.visibility === 'universal') return true;
+      
+      // Personal lists are only visible to the creator
+      if (list.visibility === 'personal') return list.createdBy === currentUser.id;
+      
+      // Shared lists are visible to creator and shared users
+      if (list.visibility === 'shared') {
+        return list.createdBy === currentUser.id || 
+               (list.sharedWith && list.sharedWith.includes(currentUser.id));
+      }
+      
+      return false;
+    });
+  };
+
+  // Apply filter to tasks
+  const applyTaskFilter = (tasks: Task[], filter: TaskFilter): Task[] => {
+    console.log('Applying task filter with conditions:', filter.conditions);
+    console.log('Filter logic:', filter.logic);
+    
+    if (!filter.conditions || filter.conditions.length === 0) {
+      console.log('No filter conditions, returning all tasks');
+      return tasks;
+    }
+
+    return tasks.filter(task => {
+      const results = filter.conditions.map(condition => {
+        if (!condition.field || !condition.operator) return true;
+
+        const getValue = (field: string): string => {
+          switch (field) {
+            case 'title': return task.title || '';
+            case 'description': return task.description || '';
+            case 'status': return task.status || '';
+            case 'priority': return task.priority || '';
+            case 'assignedTo': return getStaffName(task.assignedTo) || '';
+            case 'clientId': return getClientName(task.clientId) || '';
+            case 'projectId': return getProjectName(task.projectId) || '';
+            case 'categoryId': return getCategoryName(task.categoryId) || '';
+            case 'dueDate': return task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '';
+            case 'createdAt': return task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd') : '';
+            default: return '';
+          }
+        };
+
+        const fieldValue = getValue(condition.field).toLowerCase();
+        const searchValue = condition.value.toLowerCase();
+        
+        console.log(`Filter condition: ${condition.field} ${condition.operator} ${condition.value}`);
+        console.log(`Field value: "${fieldValue}", Search value: "${searchValue}"`);
+
+        switch (condition.operator) {
+          case 'contains': return fieldValue.includes(searchValue);
+          case 'equals': return fieldValue === searchValue;
+          case 'starts_with': return fieldValue.startsWith(searchValue);
+          case 'ends_with': return fieldValue.endsWith(searchValue);
+          case 'not_equals': return fieldValue !== searchValue;
+          case 'is_empty': return fieldValue === '';
+          case 'is_not_empty': return fieldValue !== '';
+          case 'before': 
+            if (condition.field === 'dueDate' || condition.field === 'createdAt') {
+              const taskDate = condition.field === 'dueDate' ? task.dueDate : task.createdAt;
+              return taskDate ? new Date(taskDate) < new Date(condition.value) : false;
+            }
+            return false;
+          case 'after':
+            if (condition.field === 'dueDate' || condition.field === 'createdAt') {
+              const taskDate = condition.field === 'dueDate' ? task.dueDate : task.createdAt;
+              return taskDate ? new Date(taskDate) > new Date(condition.value) : false;
+            }
+            return false;
+          default: return true;
+        }
+      });
+
+      return filter.logic === 'AND' 
+        ? results.every(result => result)
+        : results.some(result => result);
+    });
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -218,8 +404,185 @@ export default function Tasks() {
     }
   };
 
-  const filteredAndSortedTasks = tasks
-    .filter(task => {
+  // Smart Lists management functions
+  const handleLoadSmartList = (smartList: SmartList) => {
+    console.log('Loading Smart List:', smartList.name, smartList.filters);
+    setCurrentFilter(smartList.filters);
+    setActiveSmartList(smartList.id);
+    setActiveTab(smartList.id);
+  };
+
+  const handleTabChange = (tabValue: string) => {
+    if (tabValue === "all-tasks") {
+      setCurrentFilter({ conditions: [], logic: 'AND' });
+      setActiveSmartList(null);
+    } else {
+      const smartList = getVisibleSmartLists().find(list => list.id === tabValue);
+      if (smartList) {
+        handleLoadSmartList(smartList);
+      }
+    }
+    setActiveTab(tabValue);
+  };
+
+  const saveSmartListMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; filters: TaskFilter; visibility: 'personal' | 'shared' | 'universal'; sharedWith?: string[] }) => {
+      return await apiRequest("POST", "/api/smart-lists", {
+        name: data.name,
+        description: data.description,
+        entityType: "tasks",
+        filters: data.filters,
+        visibility: data.visibility,
+        sharedWith: data.sharedWith,
+        isDefault: false
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
+      toast({
+        title: "Success",
+        description: "Smart List saved successfully."
+      });
+      setSmartListName('');
+      setSmartListDescription('');
+      setShareVisibility('personal');
+      setShareWithUsers([]);
+      setIsSaveSmartListOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save Smart List.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteSmartListMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/smart-lists/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
+      toast({
+        title: "Smart List Deleted",
+        description: "Smart List removed successfully."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete Smart List.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateSmartListMutation = useMutation({
+    mutationFn: async (data: { id: string; visibility: 'personal' | 'shared' | 'universal'; sharedWith?: string[] }) => {
+      return await apiRequest("PUT", `/api/smart-lists/${data.id}`, {
+        visibility: data.visibility,
+        sharedWith: data.sharedWith
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
+      toast({
+        title: "Sharing Updated",
+        description: "Smart List sharing settings updated successfully."
+      });
+      setIsShareSmartListOpen(false);
+      setShareListId(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update sharing settings.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSaveSmartList = async () => {
+    try {
+      console.log('Saving Smart List with currentFilter:', currentFilter);
+      console.log('Current filter conditions:', currentFilter.conditions);
+      
+      await saveSmartListMutation.mutateAsync({
+        name: smartListName,
+        description: smartListDescription,
+        filters: currentFilter,
+        visibility: shareVisibility,
+        sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined
+      });
+    } catch (error) {
+      // Error is handled by the mutation onError callback
+    }
+  };
+
+  const handleDeleteSmartList = (smartListId: string) => {
+    try {
+      const smartList = getVisibleSmartLists().find(list => list.id === smartListId);
+      const currentUserId = currentUser?.id;
+      
+      // Only allow deletion if user is the creator or admin for universal lists
+      const canDelete = smartList?.createdBy === currentUserId || 
+                       (smartList?.visibility === 'universal' && isAdmin);
+      
+      if (!canDelete) {
+        toast({
+          title: "Permission Denied",
+          description: "You can only delete Smart Lists you created.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (activeSmartList === smartListId) {
+        setActiveSmartList(null);
+        setActiveTab("all-tasks");
+        setCurrentFilter({ conditions: [], logic: 'AND' });
+      }
+
+      deleteSmartListMutation.mutate(smartListId);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete Smart List.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateSharing = async () => {
+    if (!shareListId) return;
+    
+    try {
+      await updateSmartListMutation.mutateAsync({
+        id: shareListId,
+        visibility: shareVisibility,
+        sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined
+      });
+    } catch (error) {
+      // Error is handled by the mutation onError callback
+    }
+  };
+
+  // Apply filtering and sorting to tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    if (!tasks || tasks.length === 0) return tasks;
+
+    console.log('Current filter state:', currentFilter);
+    console.log('Active Smart List:', activeSmartList);
+    console.log('Search term:', searchTerm);
+
+    // First apply Smart List filters if any
+    let filtered = currentFilter.conditions.length > 0 
+      ? applyTaskFilter(tasks, currentFilter) 
+      : tasks;
+    
+    // Then apply legacy filter states for backward compatibility
+    filtered = filtered.filter(task => {
       const matchesSearch = (
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,6 +659,9 @@ export default function Tasks() {
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
+
+    return filtered;
+  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, projectFilter, categoryFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, projects, taskCategories]);
 
   // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {

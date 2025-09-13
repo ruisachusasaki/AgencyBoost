@@ -32,6 +32,7 @@ import {
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
   insertTrainingLessonResourceSchema,
   inputClientHealthScoreSchema, insertClientHealthScoreSchema,
+  insertSmartListSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -1523,6 +1524,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error moving lead stage:", error);
       res.status(500).json({ message: "Failed to move lead stage" });
+    }
+  });
+
+  // Smart Lists routes - SECURED (Saved Filters)
+  app.get("/api/smart-lists", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      const entityType = req.query.entityType as string; // 'clients' or 'tasks'
+      
+      const smartLists = await storage.getSmartLists(userId, entityType);
+      res.json(smartLists);
+    } catch (error) {
+      console.error("Error fetching smart lists:", error);
+      res.status(500).json({ message: "Failed to fetch smart lists" });
+    }
+  });
+
+  app.get("/api/smart-lists/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      const smartList = await storage.getSmartList(req.params.id);
+      if (!smartList) {
+        return res.status(404).json({ message: "Smart list not found" });
+      }
+      
+      // Check if user has access to this smart list
+      const hasAccess = smartList.visibility === 'universal' ||
+                       smartList.createdBy === userId ||
+                       (smartList.visibility === 'shared' && 
+                        smartList.sharedWith && 
+                        smartList.sharedWith.includes(userId));
+      
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this smart list" });
+      }
+      
+      res.json(smartList);
+    } catch (error) {
+      console.error("Error fetching smart list:", error);
+      res.status(500).json({ message: "Failed to fetch smart list" });
+    }
+  });
+
+  app.post("/api/smart-lists", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      const validatedData = insertSmartListSchema.parse({
+        ...req.body,
+        createdBy: userId, // Ensure created by authenticated user
+      });
+      
+      const smartList = await storage.createSmartList(validatedData);
+      
+      // Log smart list creation for audit
+      await createAuditLog(
+        "created",
+        "smart_list",
+        smartList.id,
+        smartList.name,
+        userId,
+        `Smart list created: ${smartList.name} for ${smartList.entityType}`,
+        null,
+        { 
+          name: smartList.name, 
+          entityType: smartList.entityType,
+          visibility: smartList.visibility,
+          filterCount: smartList.filters?.conditions?.length || 0
+        },
+        req
+      );
+      
+      res.status(201).json(smartList);
+    } catch (error) {
+      console.error("Error creating smart list:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create smart list" });
+    }
+  });
+
+  app.put("/api/smart-lists/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // First, check if the smart list exists and user has edit access
+      const existingSmartList = await storage.getSmartList(req.params.id);
+      if (!existingSmartList) {
+        return res.status(404).json({ message: "Smart list not found" });
+      }
+      
+      // Only creator can edit personal/shared lists, admins can edit universal lists
+      const isAdmin = await isCurrentUserAdmin(req);
+      const canEdit = existingSmartList.createdBy === userId || 
+                     (existingSmartList.visibility === 'universal' && isAdmin);
+      
+      if (!canEdit) {
+        return res.status(403).json({ message: "You don't have permission to edit this smart list" });
+      }
+      
+      const validatedData = insertSmartListSchema.partial().parse(req.body);
+      
+      // Don't allow changing the creator
+      const { createdBy, ...updateData } = validatedData;
+      
+      const smartList = await storage.updateSmartList(req.params.id, updateData);
+      if (!smartList) {
+        return res.status(404).json({ message: "Smart list not found" });
+      }
+      
+      // Log smart list update for audit
+      await createAuditLog(
+        "updated",
+        "smart_list",
+        smartList.id,
+        smartList.name,
+        userId,
+        `Smart list updated: ${smartList.name}`,
+        existingSmartList,
+        updateData,
+        req
+      );
+      
+      res.json(smartList);
+    } catch (error) {
+      console.error("Error updating smart list:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update smart list" });
+    }
+  });
+
+  app.delete("/api/smart-lists/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // First, check if the smart list exists and user has delete access
+      const existingSmartList = await storage.getSmartList(req.params.id);
+      if (!existingSmartList) {
+        return res.status(404).json({ message: "Smart list not found" });
+      }
+      
+      // Only creator can delete personal/shared lists, admins can delete universal lists
+      const isAdmin = await isCurrentUserAdmin(req);
+      const canDelete = existingSmartList.createdBy === userId || 
+                       (existingSmartList.visibility === 'universal' && isAdmin);
+      
+      if (!canDelete) {
+        return res.status(403).json({ message: "You don't have permission to delete this smart list" });
+      }
+      
+      const deleted = await storage.deleteSmartList(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Smart list not found" });
+      }
+      
+      // Log smart list deletion for audit
+      await createAuditLog(
+        "deleted",
+        "smart_list",
+        req.params.id,
+        existingSmartList.name,
+        userId,
+        `Smart list deleted: ${existingSmartList.name}`,
+        existingSmartList,
+        null,
+        req
+      );
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting smart list:", error);
+      res.status(500).json({ message: "Failed to delete smart list" });
     }
   });
 

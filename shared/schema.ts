@@ -488,11 +488,12 @@ export const leads = pgTable("leads", {
   tags: text("tags").array().default([]), // array of tag names
 });
 
-// Smart Lists for saved client filters
+// Smart Lists for saved client and task filters
 export const smartLists = pgTable("smart_lists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
+  entityType: text("entity_type").notNull().default("clients"), // clients, tasks
   filters: jsonb("filters").notNull(), // JSON object containing filter criteria
   createdBy: varchar("created_by").notNull().references(() => users.id),
   visibility: text("visibility").notNull().default("personal"), // personal, shared, universal
