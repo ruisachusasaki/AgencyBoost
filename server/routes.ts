@@ -58,25 +58,24 @@ import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
 import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healthAnalysis";
-// Extend Express Request to include session
-declare global {
-  namespace Express {
-    interface Request {
-      session?: {
-        userId?: string;
-        user?: any;
-      };
-    }
-  }
-}
+import { 
+  requireAuth, 
+  requirePermission, 
+  requireAdmin,
+  getAuthenticatedUserId,
+  getAuthenticatedUserIdOrFail,
+  getAuthenticatedAuditContext,
+  getAuditContext,
+  isCurrentUserAdmin
+} from "./auth";
 
-// Helper function to create audit logs
+// SECURE Helper function to create audit logs - NO HARDCODED FALLBACKS
 async function createAuditLog(
   action: "created" | "updated" | "deleted",
   entityType: string,
   entityId: string,
   entityName: string,
-  userId: string = "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default to first staff member, in real app get from session
+  userId: string, // REQUIRED - no fallback allowed
   details: string,
   oldValues?: any,
   newValues?: any,
@@ -130,8 +129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
   });
-  // Client routes
-  app.get("/api/clients", async (req, res) => {
+  // Client routes - SECURED
+  app.get("/api/clients", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -166,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:id", async (req, res) => {
+  app.get("/api/clients/:id", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const client = await storage.getClient(req.params.id);
       if (!client) {
@@ -179,18 +178,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", requireAuth(), requirePermission('clients', 'canCreate'), async (req, res) => {
     try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const validatedData = insertClientSchema.parse(req.body);
       const client = await storage.createClient(validatedData);
       
-      // Log the creation
+      // Log the creation with authenticated user
       await createAuditLog(
         "created",
         "contact",
         client.id,
         client.name || client.email,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `New contact record created with email: ${client.email}`,
         null,
         { name: client.name, email: client.email, company: client.company },
@@ -217,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/clients/:id", async (req, res) => {
+  app.put("/api/clients/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       // Get the old client data first for audit logging
       const oldClient = await storage.getClient(req.params.id);
@@ -279,8 +281,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create separate audit logs for DND changes due to their critical nature
       if (dndChanges.length > 0) {
-        // Get current user - hardcoded for demo, in production get from session
-        const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+        // Get current authenticated user - SECURE
+        const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+        if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
         
         // Get staff name for audit log
         const staffResult = await db.select().from(staff).where(eq(staff.id, currentUserId)).limit(1);
@@ -330,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "contact",
         client.id,
         client.name || client.email,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        currentUserId, // SECURE: Use authenticated user ID only
         changes.length > 0 ? `Updated ${changes.join(", ")}` : "Contact record updated",
         { name: oldClient.name, email: oldClient.email, phone: oldClient.phone },
         { name: client.name, email: client.email, phone: client.phone },
@@ -346,7 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       // Get client data before deletion for audit logging
       const client = await storage.getClient(req.params.id);
@@ -359,13 +362,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       // Log the deletion
       await createAuditLog(
         "deleted",
         "contact",
         req.params.id,
         client.name || client.email,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Contact record permanently deleted - ${client.name} (${client.email})`,
         { name: client.name, email: client.email, company: client.company },
         null,
@@ -378,8 +384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import clients from CSV
-  app.post("/api/clients/import", upload.single('file'), async (req, res) => {
+  // Import clients from CSV - SECURED
+  app.post("/api/clients/import", requireAuth(), requirePermission('clients', 'canCreate'), upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -402,6 +408,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               let errors = 0;
               const errorDetails: string[] = [];
 
+              const userId = getAuthenticatedUserIdOrFail(req, res);
+              if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+              
               for (const row of csvData) {
                 try {
                   // Map CSV columns to client fields
@@ -411,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     phone: row.phone || row.Phone,
                     company: row.company || row.Company || row['Business Name'],
                     status: row.status || row.Status || 'active',
-                    contactOwner: row.contactOwner || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+                    contactOwner: row.contactOwner || userId, // SECURE: Use authenticated user
                     address: row.address || row.Address,
                     city: row.city || row.City,
                     state: row.state || row.State,
@@ -438,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     "contact",
                     "bulk-import",
                     validatedData.name || validatedData.email,
-                    "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+                    userId, // SECURE: Use authenticated user ID only
                     "Contact imported from CSV",
                     null,
                     validatedData,
@@ -475,8 +484,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export clients to CSV
-  app.get("/api/clients/export", async (req, res) => {
+  // Export clients to CSV - SECURED
+  app.get("/api/clients/export", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const clients = await storage.getAllClientsForExport();
       
@@ -517,13 +526,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="clients-export-${new Date().toISOString().split('T')[0]}.csv"`);
       res.send(csvContent);
 
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       // Log the export
       await createAuditLog(
         "created",
         "export",
         "clients-export",
         "Clients Export",
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Exported ${clients.length} clients to CSV`,
         null,
         { count: clients.length },
@@ -535,8 +547,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Health Score routes
-  app.post("/api/clients/:clientId/health-scores", async (req, res) => {
+  // Client Health Score routes - SECURED
+  app.post("/api/clients/:clientId/health-scores", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     console.log('DEBUG - Health score POST route called with clientId:', req.params.clientId);
     console.log('DEBUG - Request body:', JSON.stringify(req.body, null, 2));
     try {
@@ -572,13 +584,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const healthScore = await storage.createClientHealthScore(completeData);
       
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       // Log the creation
       await createAuditLog(
         "created",
         "client_health_score",
         healthScore.id,
         `Health Score for ${healthScore.weekStartDate}`,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `New health score created for client ${clientId} with ${healthIndicator} status (${averageScore}/3.0)`,
         null,
         { totalScore, averageScore, healthIndicator },
@@ -605,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:clientId/health-scores", async (req, res) => {
+  app.get("/api/clients/:clientId/health-scores", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       const healthScores = await storage.getClientHealthScores(clientId);
@@ -616,7 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/health-scores/:id", async (req, res) => {
+  app.get("/api/health-scores/:id", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const healthScore = await storage.getClientHealthScore(req.params.id);
       if (!healthScore) {
@@ -629,7 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/health-scores/:id", async (req, res) => {
+  app.put("/api/health-scores/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       // Get the old health score data first for audit logging
       const oldHealthScore = await storage.getClientHealthScore(req.params.id);
@@ -669,13 +684,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const healthScore = await storage.updateClientHealthScore(req.params.id, updatedData);
       
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       // Log the update
       await createAuditLog(
         "updated",
         "client_health_score",
         healthScore.id,
         `Health Score for ${healthScore.weekStartDate}`,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Health score updated for week ${healthScore.weekStartDate}`,
         { totalScore: oldHealthScore.totalScore, averageScore: oldHealthScore.averageScore, healthIndicator: oldHealthScore.healthIndicator },
         { totalScore: healthScore.totalScore, averageScore: healthScore.averageScore, healthIndicator: healthScore.healthIndicator },
@@ -694,7 +712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/health-scores/:id", async (req, res) => {
+  app.delete("/api/health-scores/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       // Get health score data before deletion for audit logging
       const healthScore = await storage.getClientHealthScore(req.params.id);
@@ -704,13 +722,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.deleteClientHealthScore(req.params.id);
       
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       // Log the deletion
       await createAuditLog(
         "deleted",
         "client_health_score",
         healthScore.id,
         `Health Score for ${healthScore.weekStartDate}`,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Health score deleted for week ${healthScore.weekStartDate}`,
         { totalScore: healthScore.totalScore, averageScore: healthScore.averageScore, healthIndicator: healthScore.healthIndicator },
         null,
@@ -724,7 +745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:clientId/health-scores/current-week", async (req, res) => {
+  app.get("/api/clients/:clientId/health-scores/current-week", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -749,8 +770,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get client health status summary for highlighting
-  app.get("/api/clients/:clientId/health-status", async (req, res) => {
+  // Get client health status summary for highlighting - SECURED
+  app.get("/api/clients/:clientId/health-status", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -767,8 +788,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Health Scores Bulk API
-  app.get("/api/health-scores", async (req, res) => {
+  // Health Scores Bulk API - SECURED
+  app.get("/api/health-scores", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       // Extract and validate query parameters
       const {
@@ -860,8 +881,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Project routes
-  app.get("/api/projects", async (req, res) => {
+  // Project routes - SECURED
+  app.get("/api/projects", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
     try {
       const projects = await storage.getProjects();
       res.json(projects);
@@ -870,7 +891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
+  app.get("/api/projects/:id", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
     try {
       const project = await storage.getProject(req.params.id);
       if (!project) {
@@ -882,7 +903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:clientId/projects", async (req, res) => {
+  app.get("/api/clients/:clientId/projects", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
     try {
       const projects = await storage.getProjectsByClient(req.params.clientId);
       res.json(projects);
@@ -891,7 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects", async (req, res) => {
+  app.post("/api/projects", requireAuth(), requirePermission('projects', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertProjectSchema.parse(req.body);
       const project = await storage.createProject(validatedData);
@@ -905,7 +926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/projects/:id", async (req, res) => {
+  app.put("/api/projects/:id", requireAuth(), requirePermission('projects', 'canEdit'), async (req, res) => {
     try {
       const validatedData = insertProjectSchema.partial().parse(req.body);
       const project = await storage.updateProject(req.params.id, validatedData);
@@ -921,7 +942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/projects/:id", async (req, res) => {
+  app.delete("/api/projects/:id", requireAuth(), requirePermission('projects', 'canDelete'), async (req, res) => {
     try {
       const deleted = await storage.deleteProject(req.params.id);
       if (!deleted) {
@@ -1457,11 +1478,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk delete tasks - MUST come before individual task routes with parameters
-  app.delete("/api/tasks/bulk-delete", async (req, res) => {
+  // Bulk delete tasks - SECURED - MUST come before individual task routes with parameters
+  app.delete("/api/tasks/bulk-delete", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
     try {
       const { taskIds } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       if (!Array.isArray(taskIds) || taskIds.length === 0) {
         return res.status(400).json({ message: "Invalid or empty taskIds array" });
@@ -1577,11 +1599,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk update tasks - MUST come before individual task routes with parameters
-  app.put("/api/tasks/bulk-update", async (req, res) => {
+  // Bulk update tasks - SECURED - MUST come before individual task routes with parameters
+  app.put("/api/tasks/bulk-update", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
     try {
       const { taskIds, updates } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       if (!Array.isArray(taskIds) || taskIds.length === 0) {
         return res.status(400).json({ message: "Invalid or empty taskIds array" });
