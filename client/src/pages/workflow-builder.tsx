@@ -214,8 +214,8 @@ export default function WorkflowBuilderPage() {
     const timeoutId = setTimeout(() => {
       if (workflowData.name.trim()) {
         autoSaveMutation.mutate({
-          ...workflowData,
-          createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390"
+          ...workflowData
+          // createdBy will be set by backend from authenticated session
         });
       }
     }, 1000); // 1 second debounce
@@ -276,8 +276,8 @@ export default function WorkflowBuilderPage() {
     setIsSaving(true);
     
     createWorkflowMutation.mutate({
-      ...workflowData,
-      createdBy: "9788c16a-ba2a-40cb-af7b-26d2816d6390" // Using existing user ID (John Doe)
+      ...workflowData
+      // createdBy will be set by backend from authenticated session
     });
   };
 

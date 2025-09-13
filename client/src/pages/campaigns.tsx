@@ -501,7 +501,7 @@ export default function Campaigns() {
       previewText: formData.get("previewText") as string || "",
       tags,
       folderId: selectedFolder || undefined,
-      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Admin user ID
+      // createdBy will be set by the backend from authenticated user session
     };
     createEmailTemplateMutation.mutate(data);
   };
@@ -517,7 +517,7 @@ export default function Campaigns() {
       content: smsContent,
       tags,
       folderId: selectedSmsFolder || undefined,
-      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Admin user ID
+      // createdBy will be set by the backend from authenticated user session
     };
     createSmsTemplateMutation.mutate(data);
   };
@@ -603,7 +603,7 @@ export default function Campaigns() {
         previewText: emailTemplate.previewText || "",
         tags: emailTemplate.tags || [],
         folderId: emailTemplate.folderId,
-        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Admin user ID
+        // createdBy will be set by the backend from authenticated user session
       };
       createEmailTemplateMutation.mutate(data);
     } else {
@@ -613,7 +613,7 @@ export default function Campaigns() {
         content: smsTemplate.content,
         tags: smsTemplate.tags || [],
         folderId: smsTemplate.folderId,
-        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Admin user ID
+        // createdBy will be set by the backend from authenticated user session
       };
       createSmsTemplateMutation.mutate(data);
     }

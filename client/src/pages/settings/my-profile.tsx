@@ -53,8 +53,8 @@ export default function MyProfile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signatureEnabled, setSignatureEnabled] = useState(true);
   
-  // For demo purposes, using Brian's ID as current user - in real app this would come from session
-  const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+  // Get current user ID from authenticated session context
+  const currentUserId = null; // TODO: Replace with actual authenticated user context
   
   // Fetch current user's staff record
   const { data: currentUser, isLoading: userLoading } = useQuery<Staff>({

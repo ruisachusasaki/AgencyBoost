@@ -646,7 +646,7 @@ export class MemStorage implements IStorage {
       estimatedBudget: "5000.00",
       isActive: true,
       usageCount: 12,
-      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdBy: "system", // Sample data created by system initialization
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -661,7 +661,7 @@ export class MemStorage implements IStorage {
       estimatedBudget: "3500.00",
       isActive: true,
       usageCount: 8,
-      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdBy: "system", // Sample data created by system initialization
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -676,7 +676,7 @@ export class MemStorage implements IStorage {
       estimatedBudget: "15000.00",
       isActive: true,
       usageCount: 5,
-      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdBy: "system", // Sample data created by system initialization
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -691,7 +691,7 @@ export class MemStorage implements IStorage {
       estimatedBudget: "2500.00",
       isActive: true,
       usageCount: 15,
-      createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      createdBy: "system", // Sample data created by system initialization
       createdAt: new Date(),
       updatedAt: new Date(),
     };

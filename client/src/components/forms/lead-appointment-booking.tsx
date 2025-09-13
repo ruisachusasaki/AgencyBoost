@@ -124,7 +124,7 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
         location: data.location || undefined,
         startTime,
         endTime,
-        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user, should come from auth
+        // createdBy will be set by backend from authenticated user session
       };
 
       const isEditing = !!editingAppointment;

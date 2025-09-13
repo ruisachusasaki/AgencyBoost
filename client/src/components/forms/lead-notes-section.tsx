@@ -67,7 +67,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       const noteData: InsertLeadNote = {
         ...data,
         leadId,
-        authorId: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Should come from auth context
+        // authorId will be set by backend from authenticated user session
       };
 
       return await fetch("/api/lead-notes", {

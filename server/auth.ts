@@ -65,12 +65,20 @@ async function hasPermission(
   permission: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage'
 ): Promise<boolean> {
   try {
-    // Check if user is admin - for demo purposes, keep existing admin list
-    // In production, this would query roles from database
-    const adminUserIds = ["e56be30d-c086-446c-ada4-7ccef37ad7fb"];
+    // Check if user has admin role through proper database queries
+    const adminRoles = await db
+      .select({ roleId: userRoles.roleId, roleName: roles.name })
+      .from(userRoles)
+      .leftJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(
+        and(
+          eq(userRoles.userId, userId),
+          eq(roles.name, 'admin')
+        )
+      );
     
-    // Admin users have all permissions
-    if (adminUserIds.includes(userId)) {
+    // Users with admin role have all permissions
+    if (adminRoles.length > 0) {
       return true;
     }
     
@@ -172,10 +180,19 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
     return false;
   }
   
-  // For demo purposes, use hardcoded admin list
-  // In production, this would check roles in database
-  const adminUserIds = ["e56be30d-c086-446c-ada4-7ccef37ad7fb"];
-  return adminUserIds.includes(userId);
+  // Check if user has admin role through proper database queries
+  const adminRoles = await db
+    .select({ roleId: userRoles.roleId })
+    .from(userRoles)
+    .leftJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(
+      and(
+        eq(userRoles.userId, userId),
+        eq(roles.name, 'admin')
+      )
+    );
+  
+  return adminRoles.length > 0;
 }
 
 /**

@@ -100,28 +100,6 @@ async function createAuditLog(
   }
 }
 
-// Permission checking function
-async function hasPermission(userId: string, module: string, permission: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage'): Promise<boolean> {
-  try {
-    // For now, check if user is admin - in production this would check user roles from database
-    const adminUserIds = ["e56be30d-c086-446c-ada4-7ccef37ad7fb"]; // Default admin user
-    
-    // Admin users have all permissions
-    if (adminUserIds.includes(userId)) {
-      return true;
-    }
-    
-    // In a real implementation, this would:
-    // 1. Query user roles from userRoles table
-    // 2. Get permissions for those roles from permissions table
-    // 3. Check if any role has the required permission for the module
-    // For now, return false for non-admin users
-    return false;
-  } catch (error) {
-    console.error('Error checking permissions:', error);
-    return false;
-  }
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file uploads
@@ -956,7 +934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Project Template Routes - temporarily commented out until DbStorage implementation
   /*
-  app.get("/api/project-templates", async (req, res) => {
+  app.get("/api/project-templates", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
     try {
       const templates = await storage.getProjectTemplates();
       res.json(templates);
@@ -968,7 +946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   */
 
   /*
-  app.get("/api/project-templates/:id", async (req, res) => {
+  app.get("/api/project-templates/:id", requireAuth(), requirePermission('projects', 'canView'), async (req, res) => {
     try {
       const template = await storage.getProjectTemplate(req.params.id);
       if (!template) {
@@ -981,7 +959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/project-templates", async (req, res) => {
+  app.post("/api/project-templates", requireAuth(), requirePermission('projects', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertProjectTemplateSchema.parse(req.body);
       const template = await storage.createProjectTemplate(validatedData);
@@ -997,7 +975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   */
 
   /*
-  app.put("/api/project-templates/:id", async (req, res) => {
+  app.put("/api/project-templates/:id", requireAuth(), requirePermission('projects', 'canEdit'), async (req, res) => {
     try {
       const validatedData = insertProjectTemplateSchema.partial().parse(req.body);
       const template = await storage.updateProjectTemplate(req.params.id, validatedData);
@@ -1014,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/project-templates/:id", async (req, res) => {
+  app.delete("/api/project-templates/:id", requireAuth(), requirePermission('projects', 'canDelete'), async (req, res) => {
     try {
       const deleted = await storage.deleteProjectTemplate(req.params.id);
       if (!deleted) {
@@ -1028,7 +1006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create project from template
-  app.post("/api/project-templates/:id/create-project", async (req, res) => {
+  app.post("/api/project-templates/:id/create-project", requireAuth(), requirePermission('projects', 'canCreate'), async (req, res) => {
     try {
       const template = await storage.getProjectTemplate(req.params.id);
       if (!template) {
@@ -1425,7 +1403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/lead-pipeline-stages/:id", async (req, res) => {
+  app.put("/api/lead-pipeline-stages/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertLeadPipelineStagSchema.partial().parse(req.body);
       
@@ -1447,7 +1425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/lead-pipeline-stages/:id", async (req, res) => {
+  app.delete("/api/lead-pipeline-stages/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
     try {
       // Check if any leads are using this stage
       const leadsUsingStage = await db.select({ count: sql<number>`count(*)` })
@@ -1475,7 +1453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update stage order (for drag-and-drop reordering)
-  app.put("/api/lead-pipeline-stages/reorder", async (req, res) => {
+  app.put("/api/lead-pipeline-stages/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
     try {
       const { stageOrders } = req.body; // Array of {id, order}
       
@@ -1498,7 +1476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Move lead to different stage
-  app.put("/api/leads/:id/stage", async (req, res) => {
+  app.put("/api/leads/:id/stage", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
       const { stageId } = req.body;
       
@@ -1886,7 +1864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API endpoint to generate recurring task instances (can be called by cron job)
-  app.post("/api/tasks/generate-recurring", async (req, res) => {
+  app.post("/api/tasks/generate-recurring", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       // Find all recurring tasks that need new instances
       const recurringTasks = await db.select()
@@ -2274,7 +2252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:id/activities", async (req, res) => {
+  app.get("/api/tasks/:id/activities", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const activities = await db.select()
         .from(taskActivities)
@@ -2397,7 +2375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sub-task Hierarchy API (ClickUp-style up to 5 levels deep)
-  app.get("/api/tasks/:taskId/subtasks", async (req, res) => {
+  app.get("/api/tasks/:taskId/subtasks", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const subTasks = await db.select()
         .from(tasks)
@@ -2426,7 +2404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/root", async (req, res) => {
+  app.get("/api/tasks/root", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const rootTasks = await db.select()
         .from(tasks)
@@ -2440,7 +2418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:taskId/hierarchy", async (req, res) => {
+  app.get("/api/tasks/:taskId/hierarchy", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const { taskId } = req.params;
       
@@ -2466,7 +2444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:parentTaskId/subtasks", async (req, res) => {
+  app.post("/api/tasks/:parentTaskId/subtasks", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const { parentTaskId } = req.params;
       
@@ -2529,7 +2507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:taskId/parent", async (req, res) => {
+  app.get("/api/tasks/:taskId/parent", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const [task] = await db.select()
         .from(tasks)
@@ -2554,7 +2532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:taskId/path", async (req, res) => {
+  app.get("/api/tasks/:taskId/path", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const { taskId } = req.params;
       const path = [];
@@ -2912,7 +2890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Validate if adding a dependency would create a circular dependency
-  app.post("/api/dependencies/validate", async (req, res) => {
+  app.post("/api/dependencies/validate", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const { taskId, dependsOnTaskId } = req.body;
 
@@ -3321,7 +3299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Social Media Post routes - Database Storage
-  app.get("/api/social-media-posts", async (req, res) => {
+  app.get("/api/social-media-posts", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
       const { clientId, campaignId, status, accountId } = req.query;
       
@@ -3356,7 +3334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/social-media-posts/:id", async (req, res) => {
+  app.get("/api/social-media-posts/:id", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
       const [post] = await db.select()
         .from(socialMediaPosts)
@@ -3372,7 +3350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:clientId/social-media-posts", async (req, res) => {
+  app.get("/api/clients/:clientId/social-media-posts", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
       const posts = await db.select()
         .from(socialMediaPosts)
@@ -3386,7 +3364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/social-media-posts", async (req, res) => {
+  app.post("/api/social-media-posts", requireAuth(), requirePermission('social_media', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertSocialMediaPostSchema.parse(req.body);
       
@@ -3404,7 +3382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/social-media-posts/:id", async (req, res) => {
+  app.put("/api/social-media-posts/:id", requireAuth(), requirePermission('social_media', 'canEdit'), async (req, res) => {
     try {
       const validatedData = insertSocialMediaPostSchema.partial().parse(req.body);
       
@@ -3426,7 +3404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/social-media-posts/:id", async (req, res) => {
+  app.delete("/api/social-media-posts/:id", requireAuth(), requirePermission('social_media', 'canDelete'), async (req, res) => {
     try {
       const deletedRows = await db.delete(socialMediaPosts)
         .where(eq(socialMediaPosts.id, req.params.id));
@@ -3442,7 +3420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Social Media Template routes
-  app.get("/api/social-media-templates", async (req, res) => {
+  app.get("/api/social-media-templates", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
       const templates = await storage.getSocialMediaTemplates();
       res.json(templates);
@@ -3451,7 +3429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:clientId/social-media-templates", async (req, res) => {
+  app.get("/api/clients/:clientId/social-media-templates", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
       const templates = await storage.getSocialMediaTemplates();
       res.json(templates);
@@ -3460,7 +3438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/social-media-templates", async (req, res) => {
+  app.post("/api/social-media-templates", requireAuth(), requirePermission('social_media', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertSocialMediaTemplateSchema.parse(req.body);
       const template = await storage.createSocialMediaTemplate(validatedData);
@@ -3474,7 +3452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Template Folder routes
-  app.get("/api/template-folders", async (req, res) => {
+  app.get("/api/template-folders", requireAuth(), requirePermission('templates', 'canView'), async (req, res) => {
     try {
       const folders = await storage.getTemplateFolders();
       res.json(folders);
@@ -3483,7 +3461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/template-folders", async (req, res) => {
+  app.post("/api/template-folders", requireAuth(), requirePermission('templates', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTemplateFolderSchema.parse(req.body);
       const folder = await storage.createTemplateFolder(validatedData);
@@ -3496,7 +3474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/template-folders/:id", async (req, res) => {
+  app.delete("/api/template-folders/:id", requireAuth(), requirePermission('templates', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -3566,7 +3544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/email-templates/:id", async (req, res) => {
+  app.patch("/api/email-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const validatedData = insertEmailTemplateSchema.partial().parse(req.body);
       const template = await storage.updateEmailTemplate(req.params.id, validatedData);
@@ -3711,8 +3689,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reorder custom fields within a folder
-  app.put("/api/custom-fields/reorder", async (req, res) => {
+  // Reorder custom fields within a folder - SECURED
+  app.put("/api/custom-fields/reorder", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { fieldIds } = req.body;
       
@@ -3737,8 +3715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Custom Fields
-  app.get("/api/custom-fields", async (req, res) => {
+  // Custom Fields - SECURED
+  app.get("/api/custom-fields", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
       const { search } = req.query;
       
@@ -3766,7 +3744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/custom-fields", async (req, res) => {
+  app.post("/api/custom-fields", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const result = insertCustomFieldSchema.safeParse(req.body);
       if (!result.success) {
@@ -3793,7 +3771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/custom-fields/:id", async (req, res) => {
+  app.put("/api/custom-fields/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertCustomFieldSchema.partial().parse(req.body);
@@ -3818,7 +3796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/custom-fields/:id", async (req, res) => {
+  app.patch("/api/custom-fields/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertCustomFieldSchema.partial().parse(req.body);
@@ -3843,7 +3821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/custom-fields/:id", async (req, res) => {
+  app.delete("/api/custom-fields/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -3863,8 +3841,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tags routes
-  app.get("/api/tags", async (req, res) => {
+  // Tags routes - SECURED
+  app.get("/api/tags", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
       const tags = await storage.getTags();
       res.json(tags);
@@ -3874,7 +3852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tags/:id", async (req, res) => {
+  app.get("/api/tags/:id", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
       const tag = await storage.getTag(req.params.id);
       if (!tag) {
@@ -3887,7 +3865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tags", async (req, res) => {
+  app.post("/api/tags", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertTagSchema.parse(req.body);
       const tag = await storage.createTag(validatedData);
@@ -3901,7 +3879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/tags/:id", async (req, res) => {
+  app.put("/api/tags/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertTagSchema.partial().parse(req.body);
       const tag = await storage.updateTag(req.params.id, validatedData);
@@ -3918,7 +3896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tags/:id", async (req, res) => {
+  app.delete("/api/tags/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const deleted = await storage.deleteTag(req.params.id);
       if (!deleted) {
@@ -3931,8 +3909,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Workflow routes - Database Storage
-  app.get("/api/workflows", async (req, res) => {
+  // Workflow routes - Database Storage - SECURED
+  app.get("/api/workflows", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const { clientId, category, status } = req.query;
       
@@ -3963,7 +3941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/workflows/:id", async (req, res) => {
+  app.get("/api/workflows/:id", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const [workflow] = await db.select()
         .from(workflows)
@@ -3979,14 +3957,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/workflows", async (req, res) => {
+  app.post("/api/workflows", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertWorkflowSchema.parse(req.body);
       
-      // Add createdBy from session and ensure actions/triggers arrays
+      // Add createdBy from authenticated session and ensure actions/triggers arrays
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const dataWithCreatedBy = {
         ...validatedData,
-        createdBy: req.session?.userId || '9788c16a-ba2a-40cb-af7b-26d2816d6390',
+        createdBy: userId, // SECURE: Use authenticated user ID only
         actions: validatedData.actions || [],
         triggers: validatedData.triggers || []
       };
@@ -4018,7 +3999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/workflows/:id", async (req, res) => {
+  app.put("/api/workflows/:id", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       // Get the old workflow data first for audit logging
       const [oldWorkflow] = await db.select()
@@ -4040,13 +4021,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workflow not found" });
       }
       
-      // Create audit log
+      // Create audit log with authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "workflow",
         updatedWorkflow.id,
         updatedWorkflow.name,
-        req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Updated workflow: ${updatedWorkflow.name}`,
         { name: oldWorkflow.name, category: oldWorkflow.category, status: oldWorkflow.status },
         { name: updatedWorkflow.name, category: updatedWorkflow.category, status: updatedWorkflow.status },
@@ -4063,7 +4047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/workflows/:id", async (req, res) => {
+  app.delete("/api/workflows/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       // Get the workflow data before deletion for audit logging
       const [workflowToDelete] = await db.select()
@@ -4081,13 +4065,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workflow not found" });
       }
       
-      // Create audit log
+      // Create audit log with authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "deleted",
         "workflow",
         req.params.id,
         workflowToDelete.name,
-        req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Deleted workflow: ${workflowToDelete.name}`,
         { name: workflowToDelete.name, category: workflowToDelete.category, status: workflowToDelete.status },
         null,
@@ -4178,8 +4165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Task Categories routes
-  app.get("/api/task-categories", async (req, res) => {
+  // Task Categories routes - SECURED
+  app.get("/api/task-categories", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const categories = await storage.getTaskCategories();
       res.json(categories);
@@ -4188,7 +4175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/task-categories", async (req, res) => {
+  app.post("/api/task-categories", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTaskCategorySchema.parse(req.body);
       const category = await storage.createTaskCategory(validatedData);
@@ -4201,8 +4188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Automation Triggers routes
-  app.get("/api/automation-triggers", async (req, res) => {
+  // Automation Triggers routes - SECURED
+  app.get("/api/automation-triggers", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const { category } = req.query;
       let triggers;
@@ -4219,18 +4206,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/automation-triggers", async (req, res) => {
+  app.post("/api/automation-triggers", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertAutomationTriggerSchema.parse(req.body);
       const trigger = await storage.createAutomationTrigger(validatedData);
       
-      // Log the creation
+      // Log the creation with authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "created",
         "automation_trigger",
         trigger.id,
         trigger.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Created automation trigger: ${trigger.name}`,
         null,
         { name: trigger.name, type: trigger.type, category: trigger.category },
@@ -4246,7 +4236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/automation-triggers/:id", async (req, res) => {
+  app.get("/api/automation-triggers/:id", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const trigger = await storage.getAutomationTrigger(req.params.id);
       if (!trigger) {
@@ -4258,7 +4248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/automation-triggers/:id", async (req, res) => {
+  app.put("/api/automation-triggers/:id", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       // Get the old trigger data first for audit logging
       const oldTrigger = await storage.getAutomationTrigger(req.params.id);
@@ -4285,13 +4275,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         changes.push(`status ${validatedData.isActive ? 'activated' : 'deactivated'}`);
       }
       
-      // Log the update
+      // Log the update with authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "automation_trigger",
         trigger.id,
         trigger.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         changes.length > 0 ? `Updated ${changes.join(", ")}` : "Automation trigger updated",
         { name: oldTrigger.name, description: oldTrigger.description, isActive: oldTrigger.isActive },
         { name: trigger.name, description: trigger.description, isActive: trigger.isActive },
@@ -4307,7 +4300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/automation-triggers/:id", async (req, res) => {
+  app.delete("/api/automation-triggers/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       // Get trigger data before deletion for audit logging
       const trigger = await storage.getAutomationTrigger(req.params.id);
@@ -4320,13 +4313,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Automation trigger not found" });
       }
       
-      // Log the deletion
+      // Log the deletion with authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "deleted",
         "automation_trigger",
         req.params.id,
         trigger.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId, // SECURE: Use authenticated user ID only
         `Automation trigger permanently deleted - ${trigger.name} (${trigger.type})`,
         { name: trigger.name, type: trigger.type, category: trigger.category },
         null,
@@ -4339,8 +4335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize default automation triggers (one-time setup)
-  app.post("/api/automation-triggers/initialize", async (req, res) => {
+  // Initialize default automation triggers (one-time setup) - SECURED
+  app.post("/api/automation-triggers/initialize", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       // Check if triggers already exist
       const existingTriggers = await storage.getAutomationTriggers();
@@ -4806,13 +4802,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const trigger = await storage.createAutomationTrigger(triggerData);
         createdTriggers.push(trigger);
         
-        // Log the creation
+        // Log the creation with authenticated admin user
+        const adminUserId = getAuthenticatedUserIdOrFail(req, res);
+        if (!adminUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+        
         await createAuditLog(
           "created",
           "automation_trigger",
           trigger.id,
           trigger.name,
-          "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          adminUserId, // SECURE: Use authenticated admin ID only
           `System initialization: Created default automation trigger: ${trigger.name}`,
           null,
           { name: trigger.name, type: trigger.type, category: trigger.category },
@@ -4831,8 +4830,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Automation Actions routes
-  app.get("/api/automation-actions", async (req, res) => {
+  // Automation Actions routes - SECURED
+  app.get("/api/automation-actions", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const { category } = req.query;
       let actions;
@@ -4849,7 +4848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/automation-actions", async (req, res) => {
+  app.post("/api/automation-actions", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertAutomationActionSchema.parse(req.body);
       const action = await storage.createAutomationAction(validatedData);
@@ -4862,7 +4861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/automation-actions/:id", async (req, res) => {
+  app.put("/api/automation-actions/:id", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertAutomationActionSchema.parse(req.body);
@@ -4876,7 +4875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/automation-actions/:id", async (req, res) => {
+  app.delete("/api/automation-actions/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteAutomationAction(id);
@@ -4920,7 +4919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Object Storage endpoints for image uploads
 
-  app.get("/objects/:objectPath(*)", async (req, res) => {
+  app.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);
       const { ObjectStorageService } = await import("./objectStorage");
@@ -4942,8 +4941,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   
-  // Get annotations for a specific image file
-  app.get("/api/files/:fileId/annotations", async (req, res) => {
+  // Get annotations for a specific image file - SECURED
+  app.get("/api/files/:fileId/annotations", requireAuth(), async (req, res) => {
     try {
       // Check if file exists
       const fileCheck = await checkFileExists(req.params.fileId);
@@ -4966,8 +4965,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new image annotation
-  app.post("/api/files/:fileId/annotations", async (req, res) => {
+  // Create a new image annotation - SECURED
+  app.post("/api/files/:fileId/annotations", requireAuth(), async (req, res) => {
     try {
       // Check if file exists
       const fileCheck = await checkFileExists(req.params.fileId);
@@ -4975,7 +4974,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "File not found" });
       }
       
-      const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const mentions = req.body.mentions || [];
       
       const insertAnnotation = insertImageAnnotationSchema.parse({
@@ -5108,10 +5109,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update an image annotation
-  app.put("/api/annotations/:annotationId", async (req, res) => {
+  // Update an image annotation - SECURED
+  app.put("/api/annotations/:annotationId", requireAuth(), async (req, res) => {
     try {
-      const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       const mentions = req.body.mentions || [];
       
       const updateData = {
@@ -5155,7 +5158,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (fileToComment.length > 0 && fileToComment[0].taskId) {
             const taskId = fileToComment[0].taskId;
-            const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+            const userId = getAuthenticatedUserId(req);
+            if (!userId) {
+              console.log("No authenticated user for annotation update activity");
+              return;
+            }
             
             // Get user name for activity
             const userInfo = await db.select({
@@ -5244,8 +5251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete an image annotation
-  app.delete("/api/annotations/:annotationId", async (req, res) => {
+  // Delete an image annotation - SECURED
+  app.delete("/api/annotations/:annotationId", requireAuth(), async (req, res) => {
     try {
       // Direct database deletion
       const { db } = await import("./db");
@@ -5281,7 +5288,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (fileToComment.length > 0 && fileToComment[0].taskId) {
             const taskId = fileToComment[0].taskId;
-            const userId = req.session?.userId || "3ea1a15d-eff5-4385-a638-cb001e24a932";
+            const userId = getAuthenticatedUserId(req);
+            if (!userId) {
+              console.log("No authenticated user for annotation deletion activity");
+              return;
+            }
             
             // Get user name for activity
             const userInfo = await db.select({
@@ -5531,8 +5542,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Departments API
-  app.get("/api/departments", async (req, res) => {
+  // Departments API - SECURED
+  app.get("/api/departments", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {
       const departments = await storage.getDepartments();
       res.json(departments);
@@ -5542,7 +5553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/departments/:id", async (req, res) => {
+  app.get("/api/departments/:id", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {
       const department = await storage.getDepartment(req.params.id);
       if (!department) {
@@ -5555,18 +5566,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/departments", async (req, res) => {
+  app.post("/api/departments", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const insertData = insertDepartmentSchema.parse(req.body);
       const department = await storage.createDepartment(insertData);
       
       // Log the creation
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "created",
         "department",
         department.id,
         department.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `New department created: ${department.name}`,
         null,
         { name: department.name, description: department.description },
@@ -5583,7 +5597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/departments/:id", async (req, res) => {
+  app.put("/api/departments/:id", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
       const insertData = insertDepartmentSchema.partial().parse(req.body);
       const department = await storage.updateDepartment(req.params.id, insertData);
@@ -5593,12 +5607,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log the update
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "department",
         department.id,
         department.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Department updated: ${department.name}`,
         null,
         insertData,
@@ -5615,7 +5632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/departments/:id", async (req, res) => {
+  app.delete("/api/departments/:id", requireAuth(), requirePermission('departments', 'canDelete'), async (req, res) => {
     try {
       const department = await storage.getDepartment(req.params.id);
       if (!department) {
@@ -5628,12 +5645,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log the deletion
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "deleted",
         "department",
         req.params.id,
         department.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Department deleted: ${department.name}`,
         { name: department.name },
         null,
@@ -5648,7 +5668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Positions API
-  app.get("/api/positions", async (req, res) => {
+  app.get("/api/positions", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
       const positions = await storage.getPositions();
       res.json(positions);
@@ -5658,7 +5678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/positions/:id", async (req, res) => {
+  app.get("/api/positions/:id", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
       const position = await storage.getPosition(req.params.id);
       if (!position) {
@@ -5681,18 +5701,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/positions", async (req, res) => {
+  app.post("/api/positions", requireAuth(), requirePermission('departments', 'canCreate'), async (req, res) => {
     try {
       const insertData = insertPositionSchema.parse(req.body);
       const position = await storage.createPosition(insertData);
       
       // Log the creation
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "created",
         "position",
         position.id,
         position.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `New position created: ${position.name}`,
         null,
         { name: position.name, departmentId: position.departmentId, description: position.description },
@@ -5709,7 +5732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/positions/:id", async (req, res) => {
+  app.put("/api/positions/:id", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
       const insertData = insertPositionSchema.partial().parse(req.body);
       const position = await storage.updatePosition(req.params.id, insertData);
@@ -5719,12 +5742,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log the update
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "position",
         position.id,
         position.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Position updated: ${position.name}`,
         null,
         insertData,
@@ -5741,7 +5767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/positions/:id", async (req, res) => {
+  app.delete("/api/positions/:id", requireAuth(), requirePermission('departments', 'canDelete'), async (req, res) => {
     try {
       const position = await storage.getPosition(req.params.id);
       if (!position) {
@@ -5754,12 +5780,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log the deletion
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "deleted",
         "position",
         req.params.id,
         position.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Position deleted: ${position.name}`,
         { name: position.name },
         null,
@@ -5774,7 +5803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object storage routes for profile images
-  app.post("/api/objects/upload", async (req, res) => {
+  app.post("/api/objects/upload", requireAuth(), async (req, res) => {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
@@ -5786,7 +5815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/profile-images", async (req, res) => {
+  app.put("/api/profile-images", requireAuth(), async (req, res) => {
     console.log("Profile image request body:", req.body);
     if (!req.body.profileImageURL) {
       return res.status(400).json({ error: "profileImageURL is required" });
@@ -5807,7 +5836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/course-thumbnails", async (req, res) => {
+  app.put("/api/course-thumbnails", requireAuth(), async (req, res) => {
     if (!req.body.thumbnailImageURL) {
       return res.status(400).json({ error: "thumbnailImageURL is required" });
     }
@@ -5827,7 +5856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rich text editor image upload endpoint
-  app.put("/api/images", async (req, res) => {
+  app.put("/api/images", requireAuth(), async (req, res) => {
     if (!req.body.imageURL) {
       return res.status(400).json({ error: "imageURL is required" });
     }
@@ -5853,7 +5882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Business Profile API
-  app.get("/api/business-profile", async (req, res) => {
+  app.get("/api/business-profile", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
       const profile = await db.select().from(businessProfile).limit(1);
       
@@ -5882,7 +5911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/business-profile", async (req, res) => {
+  app.put("/api/business-profile", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const profileData = req.body;
       const existingProfile = await db.select().from(businessProfile).limit(1);
@@ -5912,7 +5941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get individual custom field folder by ID
-  app.get("/api/custom-field-folders/:id", async (req, res) => {
+  app.get("/api/custom-field-folders/:id", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
       const { id } = req.params;
       const [folder] = await db.select().from(customFieldFolders).where(eq(customFieldFolders.id, id));
@@ -5929,7 +5958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Custom Field Folders API with search
-  app.get("/api/custom-field-folders", async (req, res) => {
+  app.get("/api/custom-field-folders", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
       const { search } = req.query;
       
@@ -5968,7 +5997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/custom-field-folders", async (req, res) => {
+  app.post("/api/custom-field-folders", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { name } = req.body;
       
@@ -5995,7 +6024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reorder custom field folders (MUST be before /:id route)
-  app.put("/api/custom-field-folders/reorder", async (req, res) => {
+  app.put("/api/custom-field-folders/reorder", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { folderIds } = req.body;
       
@@ -6020,7 +6049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/custom-field-folders/:id", async (req, res) => {
+  app.patch("/api/custom-field-folders/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertCustomFieldFolderSchema.partial().parse(req.body);
@@ -6045,7 +6074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/custom-field-folders/:id", async (req, res) => {
+  app.delete("/api/custom-field-folders/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -6073,7 +6102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product Categories API
-  app.get("/api/product-categories", async (req, res) => {
+  app.get("/api/product-categories", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const categories = await db.select().from(productCategories).orderBy(asc(productCategories.name));
       res.json(categories);
@@ -6083,7 +6112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/product-categories", async (req, res) => {
+  app.post("/api/product-categories", requireAuth(), requirePermission('products', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertProductCategorySchema.parse(req.body);
       const [category] = await db.insert(productCategories).values(validatedData).returning();
@@ -6097,7 +6126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/product-categories/:id", async (req, res) => {
+  app.put("/api/product-categories/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertProductCategorySchema.partial().parse(req.body);
@@ -6122,7 +6151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/product-categories/:id", async (req, res) => {
+  app.delete("/api/product-categories/:id", requireAuth(), requirePermission('products', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -6157,7 +6186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get category reference for CSV import/export
-  app.get("/api/categories-reference", async (req, res) => {
+  app.get("/api/categories-reference", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const categories = await db.select({
         id: productCategories.id,
@@ -6172,7 +6201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products API with search and filtering
-  app.get("/api/products", async (req, res) => {
+  app.get("/api/products", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const { search, category, status } = req.query;
       
@@ -6221,7 +6250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/:id", async (req, res) => {
+  app.get("/api/products/:id", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const { id } = req.params;
       const [product] = await db.select({
@@ -6253,7 +6282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Products API - Get products for a specific client
-  app.get("/api/clients/:clientId/products", async (req, res) => {
+  app.get("/api/clients/:clientId/products", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -6325,7 +6354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add product or bundle to client
-  app.post("/api/clients/:clientId/products", async (req, res) => {
+  app.post("/api/clients/:clientId/products", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { clientId } = req.params;
       const { productId, price } = req.body;
@@ -6409,7 +6438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove product or bundle from client
-  app.delete("/api/clients/:clientId/products/:productId", async (req, res) => {
+  app.delete("/api/clients/:clientId/products/:productId", requireAuth(), requirePermission('products', 'canDelete'), async (req, res) => {
     try {
       const { clientId, productId } = req.params;
 
@@ -6451,7 +6480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get bundle products details with client-specific overrides
-  app.get("/api/product-bundles/:bundleId/products", async (req, res) => {
+  app.get("/api/product-bundles/:bundleId/products", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const { bundleId } = req.params;
       const { clientId } = req.query;
@@ -6504,7 +6533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update client bundle custom quantities with cost recalculation
-  app.patch("/api/clients/:clientId/bundles/:bundleId/quantities", async (req, res) => {
+  app.patch("/api/clients/:clientId/bundles/:bundleId/quantities", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { clientId, bundleId } = req.params;
       const { customQuantities } = req.body;
@@ -6560,7 +6589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", async (req, res) => {
+  app.post("/api/products", requireAuth(), requirePermission('products', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertProductSchema.parse(req.body);
       const [product] = await db.insert(products).values(validatedData).returning();
@@ -6575,7 +6604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import endpoint for products
-  app.post("/api/products/import", upload.single('file'), async (req, res) => {
+  app.post("/api/products/import", requireAuth(), requirePermission('products', 'canCreate'), upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -6702,7 +6731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/products/:id", async (req, res) => {
+  app.put("/api/products/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertProductSchema.partial().parse(req.body);
@@ -6727,7 +6756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/products/:id", async (req, res) => {
+  app.delete("/api/products/:id", requireAuth(), requirePermission('products', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -6748,7 +6777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product Bundles API
-  app.get("/api/product-bundles", async (req, res) => {
+  app.get("/api/product-bundles", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const { search, status } = req.query;
       
@@ -6798,7 +6827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/product-bundles/:id", async (req, res) => {
+  app.get("/api/product-bundles/:id", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -6840,7 +6869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/product-bundles", async (req, res) => {
+  app.post("/api/product-bundles", requireAuth(), requirePermission('products', 'canCreate'), async (req, res) => {
     try {
       const { products: bundleProductsData, ...bundleData } = req.body;
       
@@ -6870,7 +6899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/product-bundles/:id", async (req, res) => {
+  app.put("/api/product-bundles/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const { products: bundleProductsData, ...bundleData } = req.body;
@@ -6915,7 +6944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/product-bundles/:id", async (req, res) => {
+  app.delete("/api/product-bundles/:id", requireAuth(), requirePermission('products', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -7798,7 +7827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Notes endpoints
-  app.get("/api/clients/:clientId/notes", async (req, res) => {
+  app.get("/api/clients/:clientId/notes", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const clientId = req.params.clientId;
       
@@ -7830,11 +7859,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients/:clientId/notes", async (req, res) => {
+  app.post("/api/clients/:clientId/notes", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       const clientId = req.params.clientId;
       const { content } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!content?.trim()) {
         return res.status(400).json({ error: "Note content is required" });
@@ -7889,11 +7918,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Edit note endpoint (Admin only)
-  app.put("/api/clients/:clientId/notes/:noteId", async (req, res) => {
+  app.put("/api/clients/:clientId/notes/:noteId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       const { clientId, noteId } = req.params;
       const { content } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!content?.trim()) {
         return res.status(400).json({ error: "Note content is required" });
@@ -7974,10 +8003,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete note endpoint (Admin only)
-  app.delete("/api/clients/:clientId/notes/:noteId", async (req, res) => {
+  app.delete("/api/clients/:clientId/notes/:noteId", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       const { clientId, noteId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       // Check if user is admin using a simple role lookup
       const userWithRole = await db.select({
@@ -8035,7 +8064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === LEAD NOTES ===
-  app.get("/api/lead-notes/:leadId", async (req, res) => {
+  app.get("/api/lead-notes/:leadId", requireAuth(), requirePermission('leads', 'canView'), async (req, res) => {
     try {
       const { leadId } = req.params;
       const notes = await db.select()
@@ -8050,7 +8079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/lead-notes", async (req, res) => {
+  app.post("/api/lead-notes", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
       const validatedData = insertLeadNoteSchema.parse(req.body);
       const [note] = await db.insert(leadNotes).values(validatedData).returning();
@@ -8074,7 +8103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/lead-notes/:id", async (req, res) => {
+  app.patch("/api/lead-notes/:id", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertLeadNoteSchema.partial().parse(req.body);
@@ -8107,7 +8136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/lead-notes/:id", async (req, res) => {
+  app.delete("/api/lead-notes/:id", requireAuth(), requirePermission('leads', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -8139,7 +8168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === LEAD APPOINTMENTS ===
-  app.get("/api/lead-appointments/:leadId", async (req, res) => {
+  app.get("/api/lead-appointments/:leadId", requireAuth(), requirePermission('leads', 'canView'), async (req, res) => {
     try {
       const { leadId } = req.params;
       const appointments = await db.select({
@@ -8171,7 +8200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/lead-appointments", async (req, res) => {
+  app.post("/api/lead-appointments", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
       // Convert string dates to Date objects
       const requestData = {
@@ -8202,7 +8231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/lead-appointments/:id", async (req, res) => {
+  app.patch("/api/lead-appointments/:id", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -8245,7 +8274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/lead-appointments/:id", async (req, res) => {
+  app.delete("/api/lead-appointments/:id", requireAuth(), requirePermission('leads', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -8277,7 +8306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Tasks endpoints
-  app.get("/api/clients/:clientId/tasks", async (req, res) => {
+  app.get("/api/clients/:clientId/tasks", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const clientId = req.params.clientId;
       
@@ -8326,11 +8355,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients/:clientId/tasks", async (req, res) => {
+  app.post("/api/clients/:clientId/tasks", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const clientId = req.params.clientId;
       const { title, description, dueDate, assignedTo, status, isRecurring, recurringConfig } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!title?.trim()) {
         return res.status(400).json({ error: "Task title is required" });
@@ -8399,11 +8428,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
+  app.patch("/api/clients/:clientId/tasks/:taskId", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
     try {
       const { clientId, taskId } = req.params;
       const updateData = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!global.clientTasks?.[clientId]) {
         return res.status(404).json({ error: "Client not found or has no tasks" });
@@ -8452,11 +8481,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Full task update endpoint with detailed audit logging
-  app.put("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
+  app.put("/api/clients/:clientId/tasks/:taskId", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
     try {
       const { clientId, taskId } = req.params;
       const { title, description, dueDate, assignedTo, isRecurring, recurringConfig } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!title?.trim()) {
         return res.status(400).json({ error: "Task title is required" });
@@ -8547,10 +8576,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete client task route
-  app.delete("/api/clients/:clientId/tasks/:taskId", async (req, res) => {
+  app.delete("/api/clients/:clientId/tasks/:taskId", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
     try {
       const { clientId, taskId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       // Check if user has permission to delete tasks
       const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
@@ -8811,11 +8840,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/tasks/:taskId/comments/:commentId", async (req, res) => {
+  app.put("/api/tasks/:taskId/comments/:commentId", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
     try {
       const { taskId, commentId } = req.params;
       const { content, mentions } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!content?.trim()) {
         return res.status(400).json({ error: "Comment content is required" });
@@ -8870,10 +8899,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tasks/:taskId/comments/:commentId", async (req, res) => {
+  app.delete("/api/tasks/:taskId/comments/:commentId", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
     try {
       const { taskId, commentId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
 
       if (!global.taskComments?.[taskId]) {
         return res.status(404).json({ error: "Task comments not found" });
@@ -8957,11 +8986,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:taskId/comments/:commentId/reactions", async (req, res) => {
+  app.post("/api/tasks/:taskId/comments/:commentId/reactions", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const { taskId, commentId } = req.params;
       const { emoji } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       if (!emoji) {
         return res.status(400).json({ error: "Emoji is required" });
@@ -9110,7 +9139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test endpoint to view notifications for any staff member (dev only)
-  app.get("/api/notifications/staff/:staffId", async (req, res) => {
+  app.get("/api/notifications/staff/:staffId", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const staffId = req.params.staffId;
       
@@ -9190,7 +9219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Get upload URL for document
-  app.post("/api/documents/upload-url", async (req, res) => {
+  app.post("/api/documents/upload-url", requireAuth(), requirePermission('documents', 'canCreate'), async (req, res) => {
     try {
       const { fileName, fileType, fileSize, clientId } = req.body;
 
@@ -9231,7 +9260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register uploaded document in database
-  app.post("/api/documents", async (req, res) => {
+  app.post("/api/documents", requireAuth(), requirePermission('documents', 'canCreate'), async (req, res) => {
     try {
       const { fileName, fileType, fileSize, fileUrl, clientId } = req.body;
 
@@ -9260,8 +9289,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      // Get current user (defaulting to admin for demo)
-      const uploadedBy = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      // Get current user with proper authentication
+      const uploadedBy = getAuthenticatedUserIdOrFail(req, res);
+      if (!uploadedBy) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Normalize object path from upload URL
       const objectStorageService = new ObjectStorageService();
@@ -9305,7 +9335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get client documents with uploader information
-  app.get("/api/clients/:clientId/documents", async (req, res) => {
+  app.get("/api/clients/:clientId/documents", requireAuth(), requirePermission('documents', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -9348,12 +9378,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete document (Admin only)
-  app.delete("/api/documents/:id", async (req, res) => {
+  app.delete("/api/documents/:id", requireAuth(), requirePermission('documents', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
 
-      // Get current user (defaulting to admin for demo)
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      // Get current user with proper authentication
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if user has permission to delete documents (Admin only)
       const hasDeletePermission = await hasPermission(currentUserId, 'documents', 'canDelete');
@@ -9403,12 +9434,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Duplicate route removed - consolidated into the main objects route above
 
   // Temporary auth endpoint for demo purposes (returns admin user)
-  app.get("/api/auth/current-user", async (req, res) => {
+  app.get("/api/auth/current-user", requireAuth(), async (req, res) => {
     try {
-      // For demo purposes, return a mock admin user
-      // In a real app, this would check session/JWT and return actual user data
+      // Get authenticated user with proper validation
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // Return current user data based on session
       const mockUser = {
-        id: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        id: userId,
         role: "Admin",
         firstName: "System",
         lastName: "Administrator"
@@ -9422,7 +9456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== CALENDAR SYSTEM API ROUTES =====
 
   // Calendar Management Routes
-  app.get("/api/calendars", async (req, res) => {
+  app.get("/api/calendars", requireAuth(), requirePermission('calendars', 'canView'), async (req, res) => {
     try {
       const calendarsData = await db
         .select()
@@ -9436,7 +9470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/calendars", async (req, res) => {
+  app.post("/api/calendars", requireAuth(), requirePermission('calendars', 'canCreate'), async (req, res) => {
     try {
       // Extract assignedStaff from request body before validation
       const { assignedStaff, ...calendarData } = req.body;
@@ -9481,7 +9515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/calendars/:id", async (req, res) => {
+  app.get("/api/calendars/:id", requireAuth(), requirePermission('calendars', 'canView'), async (req, res) => {
     try {
       const [calendar] = await db
         .select()
@@ -9513,7 +9547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/calendars/by-url/:customUrl", async (req, res) => {
+  app.get("/api/calendars/by-url/:customUrl", requireAuth(), requirePermission('calendars', 'canView'), async (req, res) => {
     try {
       const [calendar] = await db
         .select()
@@ -9532,7 +9566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get lead appointments
-  app.get("/api/lead-appointments", async (req, res) => {
+  app.get("/api/lead-appointments", requireAuth(), requirePermission('leads', 'canView'), async (req, res) => {
     try {
       const { leadId } = req.query;
 
@@ -9581,7 +9615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get calendar appointments (modified to include lead appointments)
-  app.get("/api/calendar-appointments", async (req, res) => {
+  app.get("/api/calendar-appointments", requireAuth(), requirePermission('calendars', 'canView'), async (req, res) => {
     try {
       const { calendarId, staffId, startDate, endDate, includeLeadAppointments } = req.query;
 
@@ -10055,7 +10089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Generate OAuth authorization URL
-  app.get("/api/integrations/google-calendar/authorize", async (req, res) => {
+  app.get("/api/integrations/google-calendar/authorize", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const oauth2Client = createGoogleOAuth2Client();
       
@@ -10079,7 +10113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Handle OAuth callback
-  app.get("/api/integrations/google-calendar/callback", async (req, res) => {
+  app.get("/api/integrations/google-calendar/callback", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { code, state } = req.query;
       
@@ -10102,7 +10136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Store integration in database
-      const staffId = state as string || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const staffId = getAuthenticatedUserIdOrFail(req, res);
       
       const integrationData = {
         staffId,
@@ -10147,9 +10181,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Connect Google Calendar integration (for testing/reconnection)
-  app.post("/api/integrations/google-calendar/connect", async (req, res) => {
+  app.post("/api/integrations/google-calendar/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const staffId = getAuthenticatedUserIdOrFail(req, res);
+      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Generate auth URL
       const oauth2Client = createGoogleOAuth2Client();
@@ -10173,9 +10208,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Disconnect Google Calendar integration
-  app.post("/api/integrations/google-calendar/disconnect", async (req, res) => {
+  app.post("/api/integrations/google-calendar/disconnect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const staffId = getAuthenticatedUserIdOrFail(req, res);
+      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       await db
         .update(calendarIntegrations)
@@ -10196,9 +10232,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check Google Calendar connection status
-  app.get("/api/integrations/google-calendar/status", async (req, res) => {
+  app.get("/api/integrations/google-calendar/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
-      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const staffId = getAuthenticatedUserIdOrFail(req, res);
+      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const [integration] = await db
         .select()
@@ -10260,9 +10297,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sync Google Calendar events
-  app.post("/api/integrations/google-calendar/sync", async (req, res) => {
+  app.post("/api/integrations/google-calendar/sync", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const staffId = getAuthenticatedUserIdOrFail(req, res);
+      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const [integration] = await db
         .select()
@@ -10368,7 +10406,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error syncing Google Calendar:', error);
       
       // Log sync error
-      const staffId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const staffId = getAuthenticatedUserIdOrFail(req, res);
+      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       const [integration] = await db
         .select()
         .from(calendarIntegrations)
@@ -10393,7 +10432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Slack Integration Routes
   // Check Slack connection status
-  app.get("/api/integrations/slack/status", async (req, res) => {
+  app.get("/api/integrations/slack/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
       const slackBotToken = process.env.SLACK_BOT_TOKEN;
       const slackChannelId = process.env.SLACK_CHANNEL_ID;
@@ -10439,7 +10478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Send test message to Slack
-  app.post("/api/integrations/slack/test", async (req, res) => {
+  app.post("/api/integrations/slack/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const slackBotToken = process.env.SLACK_BOT_TOKEN;
       const slackChannelId = process.env.SLACK_CHANNEL_ID;
@@ -10504,7 +10543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Send message to Slack (for workflow automation)
-  app.post("/api/integrations/slack/send", async (req, res) => {
+  app.post("/api/integrations/slack/send", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { message, blocks } = req.body;
       const slackBotToken = process.env.SLACK_BOT_TOKEN;
@@ -10567,7 +10606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Connect Twilio SMS integration (supports multiple phone numbers)
-  app.post("/api/integrations/twilio/connect", async (req, res) => {
+  app.post("/api/integrations/twilio/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { accountSid, authToken, phoneNumber, name } = req.body;
       
@@ -10658,7 +10697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Disconnect Twilio SMS integration
-  app.post("/api/integrations/twilio/disconnect", async (req, res) => {
+  app.post("/api/integrations/twilio/disconnect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       await db
         .update(smsIntegrations)
@@ -10676,7 +10715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check Twilio SMS connection status (returns all phone numbers)
-  app.get("/api/integrations/twilio/status", async (req, res) => {
+  app.get("/api/integrations/twilio/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
       const integrations = await db
         .select()
@@ -10740,7 +10779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test Twilio SMS connection by sending a test message
-  app.post("/api/integrations/twilio/test", async (req, res) => {
+  app.post("/api/integrations/twilio/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { testPhoneNumber } = req.body;
       
@@ -10814,7 +10853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all Twilio phone numbers
-  app.get("/api/integrations/twilio/numbers", async (req, res) => {
+  app.get("/api/integrations/twilio/numbers", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
       const numbers = await db
         .select()
@@ -10843,7 +10882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete individual Twilio phone number
-  app.delete("/api/integrations/twilio/numbers/:id", async (req, res) => {
+  app.delete("/api/integrations/twilio/numbers/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -10877,7 +10916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update individual Twilio phone number
-  app.put("/api/integrations/twilio/numbers/:id", async (req, res) => {
+  app.put("/api/integrations/twilio/numbers/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
       const { name, phoneNumber } = req.body;
@@ -10956,7 +10995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Send SMS using connected Twilio integration
-  app.post("/api/integrations/twilio/send", async (req, res) => {
+  app.post("/api/integrations/twilio/send", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { to, message, fromNumber, clientId, templateId } = req.body;
       console.log('SMS Request received:', { to, fromNumber, clientId, message: message?.substring(0, 50) + '...' });
@@ -11030,12 +11069,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Create audit log for SMS sending
+        const userId = getAuthenticatedUserIdOrFail(req, res);
+        if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+        
         await createAuditLog(
           "created",
           "sms",
           smsMessage.sid,
           `SMS to ${to}`,
-          req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+          userId,
           `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
           null,
           { to, from: fallbackIntegration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
@@ -11072,12 +11114,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Create audit log for SMS sending
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "created",
         "sms",
         smsMessage.sid,
         `SMS to ${to}`,
-        req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
         null,
         { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
@@ -11100,7 +11145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Custom Field File Upload Routes
-  app.post("/api/custom-field-files/upload-url", async (req, res) => {
+  app.post("/api/custom-field-files/upload-url", requireAuth(), requirePermission('files', 'canCreate'), async (req, res) => {
     try {
       const { customFieldId, clientId, fileName, fileSize, fileType } = req.body;
       
@@ -11136,7 +11181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/custom-field-files", async (req, res) => {
+  app.post("/api/custom-field-files", requireAuth(), requirePermission('files', 'canCreate'), async (req, res) => {
     try {
       const data = req.body;
       
@@ -11144,7 +11189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       data.fileName = sanitizeFileName(data.fileName);
       
       // Add default uploadedBy (in a real app, this would come from session)
-      data.uploadedBy = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const authUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!authUserId) return;
+      data.uploadedBy = authUserId;
       
       const validatedData = insertCustomFieldFileUploadSchema.parse(data);
       
@@ -11174,7 +11221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/custom-field-files", async (req, res) => {
+  app.get("/api/custom-field-files", requireAuth(), requirePermission('files', 'canView'), async (req, res) => {
     try {
       const { clientId, customFieldId } = req.query as { clientId?: string; customFieldId?: string };
       
@@ -11195,7 +11242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/custom-field-files/:id/download", async (req, res) => {
+  app.get("/api/custom-field-files/:id/download", requireAuth(), requirePermission('files', 'canView'), async (req, res) => {
     try {
       const fileUploadResult = await db.select()
         .from(customFieldFileUploads)
@@ -11220,7 +11267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/custom-field-files/:id", async (req, res) => {
+  app.delete("/api/custom-field-files/:id", requireAuth(), requirePermission('files', 'canDelete'), async (req, res) => {
     try {
       const fileUploadResult = await db.select()
         .from(customFieldFileUploads)
@@ -11254,7 +11301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test route to bypass storage
-  app.get("/api/forms/test", async (req, res) => {
+  app.get("/api/forms/test", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
     try {
       console.log("Storage type:", storage.constructor.name);
       console.log("Has getForms?", typeof storage.getForms);
@@ -11267,7 +11314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form folders endpoints
-  app.get("/api/form-folders", async (req, res) => {
+  app.get("/api/form-folders", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
     try {
       const foldersResult = await db.select().from(formFolders).orderBy(asc(formFolders.order));
       res.json(foldersResult);
@@ -11277,7 +11324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/form-folders", async (req, res) => {
+  app.post("/api/form-folders", requireAuth(), requirePermission('forms', 'canCreate'), async (req, res) => {
     try {
       const folderData = insertFormFolderSchema.parse(req.body);
       const result = await db.insert(formFolders).values(folderData).returning();
@@ -11288,7 +11335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/form-folders/:id", async (req, res) => {
+  app.put("/api/form-folders/:id", requireAuth(), requirePermission('forms', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const folderData = insertFormFolderSchema.parse(req.body);
@@ -11308,7 +11355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/form-folders/:id", async (req, res) => {
+  app.delete("/api/form-folders/:id", requireAuth(), requirePermission('forms', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -11334,7 +11381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form Routes - Direct database operations (workaround for storage class compilation issue)
-  app.get("/api/forms", async (req, res) => {
+  app.get("/api/forms", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
     try {
       const formsResult = await db.select().from(forms).orderBy(desc(forms.createdAt));
       res.json(formsResult);
@@ -11344,7 +11391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/forms/:id", async (req, res) => {
+  app.get("/api/forms/:id", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
     try {
       const formResult = await db.select().from(forms).where(eq(forms.id, req.params.id)).limit(1);
       if (!formResult[0]) {
@@ -11364,7 +11411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get form fields for a specific form
-  app.get("/api/form-fields", async (req, res) => {
+  app.get("/api/form-fields", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
     try {
       const formId = req.query.formId as string;
       if (!formId) {
@@ -11390,7 +11437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forms", async (req, res) => {
+  app.post("/api/forms", requireAuth(), requirePermission('forms', 'canCreate'), async (req, res) => {
     try {
       const { fields, ...formData } = req.body;
       
@@ -11398,7 +11445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { updatedAt, createdAt, id, ...cleanFormData } = formData;
       const formToInsert = {
         ...cleanFormData,
-        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user ID
+        createdBy: userId
         status: cleanFormData.status || "draft"
       };
       
@@ -11425,7 +11472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/forms/:id", async (req, res) => {
+  app.put("/api/forms/:id", requireAuth(), requirePermission('forms', 'canEdit'), async (req, res) => {
     try {
       const { fields, ...formData } = req.body;
       
@@ -11503,7 +11550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/forms/:id", async (req, res) => {
+  app.delete("/api/forms/:id", requireAuth(), requirePermission('forms', 'canDelete'), async (req, res) => {
     try {
       // Delete form fields first (cascade delete)
       await db.delete(formFields).where(eq(formFields.formId, req.params.id));
@@ -11523,7 +11570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Duplicate form
-  app.post("/api/forms/:id/duplicate", async (req, res) => {
+  app.post("/api/forms/:id/duplicate", requireAuth(), requirePermission('forms', 'canCreate'), async (req, res) => {
     try {
       // Get the original form
       const originalForm = await db.select().from(forms).where(eq(forms.id, req.params.id)).limit(1);
@@ -11543,7 +11590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: `${originalForm[0].name} (Copy)`,
         createdAt: undefined,
         updatedAt: undefined,
-        createdBy: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // Default user ID
+        createdBy: userId
       };
 
       const formResult = await db.insert(forms).values(duplicatedForm).returning();
@@ -11568,7 +11615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Move form to folder
-  app.put("/api/forms/:id/move", async (req, res) => {
+  app.put("/api/forms/:id/move", requireAuth(), requirePermission('forms', 'canEdit'), async (req, res) => {
     try {
       const { folderId } = req.body;
       
@@ -11597,7 +11644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forms/:formId/submit", async (req, res) => {
+  app.post("/api/forms/:formId/submit", requireAuth(), async (req, res) => {
     try {
       const submissionResult = await db.insert(formSubmissions).values({
         formId: req.params.formId,
@@ -11616,7 +11663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload routes for task comments
-  app.get("/api/comments/upload-url", async (req, res) => {
+  app.get("/api/comments/upload-url", requireAuth(), async (req, res) => {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
@@ -11628,7 +11675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/comments/upload-url", async (req, res) => {
+  app.post("/api/comments/upload-url", requireAuth(), async (req, res) => {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
@@ -11643,7 +11690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Duplicate route removed - consolidated into the main objects route above
 
   // Add file to comment after upload
-  app.post("/api/comments/:commentId/files", async (req, res) => {
+  app.post("/api/comments/:commentId/files", requireAuth(), async (req, res) => {
     try {
       const { fileName, fileType, fileSize, fileUrl } = req.body;
       const commentId = req.params.commentId;
@@ -11689,7 +11736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Timer endpoints for global timer functionality
-  app.get("/api/time-entries/running", async (req, res) => {
+  app.get("/api/time-entries/running", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       // Check all tasks for incomplete time entries (running timers)
       const allTasks = await storage.getTasks();
@@ -11758,7 +11805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/task-statuses", async (req, res) => {
+  app.get("/api/task-statuses", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const statuses = await db.select()
         .from(taskStatuses)
@@ -11772,7 +11819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/task-statuses", async (req, res) => {
+  app.post("/api/task-statuses", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTaskStatusSchema.parse(req.body);
       const [newStatus] = await db.insert(taskStatuses)
@@ -11780,12 +11827,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
       
       // Log the creation
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "created",
         "task_status",
         newStatus.id,
         newStatus.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task status created: ${newStatus.name}`,
         null,
         { name: newStatus.name, value: newStatus.value, color: newStatus.color },
@@ -11814,13 +11864,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task status not found" });
       }
       
-      // Log the update
+      // Log the update  
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "task_status",
         updatedStatus.id,
         updatedStatus.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task status updated: ${updatedStatus.name}`,
         null,
         validatedData,
@@ -11858,12 +11911,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
       
       // Log the deletion
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "deleted",
         "task_status",
         req.params.id,
         statusToDelete.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task status deactivated: ${statusToDelete.name}`,
         { name: statusToDelete.name },
         null,
@@ -11896,12 +11952,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log the reorder operation
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "task_priority",
         "bulk",
         "Task Priorities",
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task priorities reordered`,
         null,
         { priorityCount: priorities.length },
@@ -11937,12 +11996,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
       
       // Log the creation
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "created",
         "task_priority",
         newPriority.id,
         newPriority.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task priority created: ${newPriority.name}`,
         null,
         { name: newPriority.name, value: newPriority.value, color: newPriority.color },
@@ -11959,7 +12021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/task-priorities/:id", async (req, res) => {
+  app.put("/api/task-priorities/:id", requireAuth(), requirePermission('tasks', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertTaskPrioritySchema.partial().parse(req.body);
       const [updatedPriority] = await db.update(taskPriorities)
@@ -11972,12 +12034,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log the update
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "updated",
         "task_priority",
         updatedPriority.id,
         updatedPriority.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task priority updated: ${updatedPriority.name}`,
         null,
         validatedData,
@@ -11994,7 +12059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/task-priorities/:id", async (req, res) => {
+  app.delete("/api/task-priorities/:id", requireAuth(), requirePermission('tasks', 'canManage'), async (req, res) => {
     try {
       const [priorityToDelete] = await db.select()
         .from(taskPriorities)
@@ -12015,12 +12080,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
       
       // Log the deletion
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
       await createAuditLog(
         "deleted",
         "task_priority",
         req.params.id,
         priorityToDelete.name,
-        "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+        userId,
         `Task priority deactivated: ${priorityToDelete.name}`,
         { name: priorityToDelete.name },
         null,
@@ -12035,7 +12103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task Settings Routes
-  app.get("/api/task-settings", async (req, res) => {
+  app.get("/api/task-settings", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const settings = await db.select().from(taskSettings);
       
@@ -12052,7 +12120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/task-settings", async (req, res) => {
+  app.post("/api/task-settings", requireAuth(), requirePermission('tasks', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertTaskSettingsSchema.parse(req.body);
       
@@ -12091,7 +12159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Workflows - Manage team-specific status workflows
-  app.get("/api/team-workflows", async (req, res) => {
+  app.get("/api/team-workflows", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const workflows = await db.select()
         .from(teamWorkflows)
@@ -12130,7 +12198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/team-workflows/:id", async (req, res) => {
+  app.get("/api/team-workflows/:id", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
       const [workflow] = await db.select()
         .from(teamWorkflows)
@@ -12167,7 +12235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/team-workflows", async (req, res) => {
+  app.post("/api/team-workflows", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
     try {
       const data = insertTeamWorkflowSchema.parse(req.body);
       
@@ -12185,7 +12253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/team-workflows/:id", async (req, res) => {
+  app.patch("/api/team-workflows/:id", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       const data = insertTeamWorkflowSchema.partial().parse(req.body);
       
@@ -12213,7 +12281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/team-workflows/:id", async (req, res) => {
+  app.delete("/api/team-workflows/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       // Get current workflow for audit log
       const [currentWorkflow] = await db.select()
@@ -12249,7 +12317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Workflow Statuses - Manage status order within workflows
-  app.post("/api/team-workflows/:workflowId/statuses", async (req, res) => {
+  app.post("/api/team-workflows/:workflowId/statuses", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       const { statusId, order, isRequired } = req.body;
       
@@ -12271,7 +12339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/team-workflow-statuses/:id", async (req, res) => {
+  app.patch("/api/team-workflow-statuses/:id", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       const { order, isRequired } = req.body;
       
@@ -12287,7 +12355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/team-workflow-statuses/:id", async (req, res) => {
+  app.delete("/api/team-workflow-statuses/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
     try {
       await db.delete(teamWorkflowStatuses)
         .where(eq(teamWorkflowStatuses.id, req.params.id));
@@ -12300,7 +12368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update team workflow statuses (replace all statuses for a workflow)
-  app.put("/api/team-workflows/:workflowId/statuses", async (req, res) => {
+  app.put("/api/team-workflows/:workflowId/statuses", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
     try {
       const { workflowId } = req.params;
       const { statuses } = req.body;
@@ -12338,7 +12406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Department workflow assignment
-  app.patch("/api/departments/:id/workflow", async (req, res) => {
+  app.patch("/api/departments/:id/workflow", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
       const { workflowId } = req.body;
       
@@ -12419,7 +12487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test endpoint for debugging
-  app.get("/api/hr/test-pending", async (req, res) => {
+  app.get("/api/hr/test-pending", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const result = await db.select()
         .from(timeOffRequests)
@@ -12490,7 +12558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Time Off Policies routes
-  app.get("/api/hr/time-off-policies", async (req, res) => {
+  app.get("/api/hr/time-off-policies", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const policies = await db.select().from(timeOffPolicies).orderBy(desc(timeOffPolicies.createdAt));
       res.json(policies);
@@ -12500,7 +12568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/hr/time-off-policies", async (req, res) => {
+  app.post("/api/hr/time-off-policies", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
       const [policy] = await db.insert(timeOffPolicies).values(req.body).returning();
       res.status(201).json(policy);
@@ -12510,7 +12578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/hr/time-off-policies/:id", async (req, res) => {
+  app.patch("/api/hr/time-off-policies/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
       const [policy] = await db.update(timeOffPolicies)
         .set(req.body)
@@ -12524,16 +12592,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete time off request (ADMINS ONLY)
-  app.delete("/api/hr/time-off-requests/:requestId", async (req, res) => {
+  app.delete("/api/hr/time-off-requests/:requestId", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const { requestId } = req.params;
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
 
-      // Check if current user is admin - ONLY ADMINS can delete
-      const isAdmin = await hasPermission(currentUserId, 'hr', 'canManage');
-      if (!isAdmin) {
-        return res.status(403).json({ error: "Only administrators can delete time off requests" });
-      }
+      // Admin check already enforced by requireAdmin() middleware
 
       // Get the request to verify it exists and is pending
       const [existingRequest] = await db.select()
@@ -12576,12 +12641,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve or reject time off request
-  app.put("/api/hr/time-off-requests/:requestId/approval", async (req, res) => {
+  app.put("/api/hr/time-off-requests/:requestId/approval", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const { requestId } = req.params;
       const { action, rejectionReason } = req.body;
-      // Use the same mock authentication as other endpoints
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
 
       if (!["approve", "reject"].includes(action)) {
         return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
@@ -12888,9 +12953,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/job-application-form-config", async (req, res) => {
+  app.put("/api/job-application-form-config", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Mock user for now
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
       const validatedData = insertJobApplicationFormConfigSchema.parse({
         ...req.body,
         updatedBy: currentUserId
@@ -12912,12 +12978,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/job-openings", async (req, res) => {
+  app.post("/api/job-openings", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
       console.log("POST /api/job-openings - Request body:", req.body);
-      // For now, use the same mock user pattern as other routes
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
-      console.log("Using mock user ID:", currentUserId);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
+      console.log("Using authenticated user ID:", currentUserId);
       
       const validatedData = insertJobOpeningSchema.parse({
         ...req.body,
@@ -12950,7 +13016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/job-openings/:id", async (req, res) => {
+  app.get("/api/job-openings/:id", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const hiringManager = alias(staff, 'hiring_manager');
       const creator = alias(staff, 'creator');
@@ -13003,10 +13069,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/job-openings/:id", async (req, res) => {
+  app.put("/api/job-openings/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
-      // For now, use the same mock user pattern as other routes
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
 
       const validatedData = insertJobOpeningSchema.partial().parse(req.body);
       
@@ -13052,10 +13118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/job-openings/:id/approve", async (req, res) => {
+  app.put("/api/job-openings/:id/approve", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      // For now, use the same mock user pattern as other routes
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
       const { action, rejectionReason } = req.body; // action: 'approve' | 'reject'
       
       console.log("Approval request:", { id: req.params.id, action, currentUserId });
@@ -13124,7 +13190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get departments for dropdown
-  app.get("/api/departments", async (req, res) => {
+  app.get("/api/departments", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
       const departmentList = await db.select({
         id: departments.id,
@@ -13144,7 +13210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get positions for a department
-  app.get("/api/departments/:departmentId/positions", async (req, res) => {
+  app.get("/api/departments/:departmentId/positions", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
       const { departmentId } = req.params;
       
@@ -13171,14 +13237,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Job Application Routes
-  app.get("/api/hr/job-applications", async (req, res) => {
+  app.get("/api/hr/job-applications", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      // Get current user ID (mock for now, in production this would come from authentication)
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Brian Bills ID
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
       
-      // Check if user is admin
-      const adminUserIds = ["e56be30d-c086-446c-ada4-7ccef37ad7fb"];
-      const isAdmin = adminUserIds.includes(currentUserId);
+      // Check if user is admin - use proper auth function
+      const isAdmin = await isCurrentUserAdmin(req);
       
       let applications;
       
@@ -13215,7 +13280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/hr/job-applications", async (req, res) => {
+  app.post("/api/hr/job-applications", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertJobApplicationSchema.parse(req.body);
       const [newApplication] = await db.insert(jobApplications).values(validatedData).returning();
@@ -13242,7 +13307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client Team Assignment Routes
   
   // Get team assignments for a client
-  app.get("/api/clients/:clientId/team", async (req, res) => {
+  app.get("/api/clients/:clientId/team", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -13275,11 +13340,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update team assignment for a client
-  app.put("/api/clients/:clientId/team/:position", async (req, res) => {
+  app.put("/api/clients/:clientId/team/:position", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       const { clientId, position } = req.params;
       const { staffId } = req.body;
-      const currentUserId = "e56be30d-c086-446c-ada4-7ccef37ad7fb"; // Mock user ID
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       if (staffId) {
         // Assign or reassign staff member to position
@@ -13345,7 +13411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Get assignment for a lesson
-  app.get("/api/training/lessons/:lessonId/assignment", async (req, res) => {
+  app.get("/api/training/lessons/:lessonId/assignment", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { lessonId } = req.params;
       
@@ -13364,11 +13430,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create or update assignment for a lesson
-  app.post("/api/training/lessons/:lessonId/assignment", async (req, res) => {
+  app.post("/api/training/lessons/:lessonId/assignment", requireAuth(), requirePermission('training', 'canCreate'), async (req, res) => {
     try {
       const { lessonId } = req.params;
       const { title, description, instructions, allowedFileTypes, maxFileSize, maxFiles, isRequired, templateFiles } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       // Check if assignment already exists
       const [existingAssignment] = await db.select().from(trainingAssignments)
@@ -13418,10 +13484,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get assignment submission for current user
-  app.get("/api/training/assignments/:assignmentId/submission", async (req, res) => {
+  app.get("/api/training/assignments/:assignmentId/submission", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { assignmentId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const [submission] = await db.select().from(trainingAssignmentSubmissions)
         .where(and(
@@ -13441,11 +13507,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit assignment
-  app.post("/api/training/assignments/:assignmentId/submit", async (req, res) => {
+  app.post("/api/training/assignments/:assignmentId/submit", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { assignmentId } = req.params;
       const { submissionText, files } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       // Get assignment details to find lesson and course
       const [assignment] = await db.select().from(trainingAssignments)
@@ -13511,7 +13577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all submissions for an assignment (instructor view)
-  app.get("/api/training/assignments/:assignmentId/submissions", async (req, res) => {
+  app.get("/api/training/assignments/:assignmentId/submissions", requireAuth(), requirePermission('training', 'canManage'), async (req, res) => {
     try {
       const { assignmentId } = req.params;
       
@@ -13543,11 +13609,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Grade assignment submission
-  app.put("/api/training/assignment-submissions/:submissionId/grade", async (req, res) => {
+  app.put("/api/training/assignment-submissions/:submissionId/grade", requireAuth(), requirePermission('training', 'canManage'), async (req, res) => {
     try {
       const { submissionId } = req.params;
       const { grade, feedback } = req.body;
-      const graderId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const graderId = getAuthenticatedUserIdOrFail(req, res);
+      if (!graderId) return; // Authentication failed
       
       const [updatedSubmission] = await db.update(trainingAssignmentSubmissions)
         .set({
@@ -13676,8 +13743,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Comment content is required" });
       }
       
-      // For now, use a default author ID - in a real app, this would come from the authenticated user
-      const defaultAuthorId = "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      // Get authenticated user ID for the comment author
+      const defaultAuthorId = getAuthenticatedUserIdOrFail(req, res);
+      if (!defaultAuthorId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // First, get the author's name
       const [author] = await db
@@ -13834,7 +13902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/knowledge-base/categories", async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       const { name, description, parentId, icon, color } = req.body;
       
       if (!name || name.trim() === '') {
@@ -13966,9 +14034,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/knowledge-base/articles/:id", async (req, res) => {
+  app.get("/api/knowledge-base/articles/:id", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const [article] = await db.select({
         id: knowledgeBaseArticles.id,
@@ -14017,9 +14085,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/knowledge-base/articles", async (req, res) => {
+  app.post("/api/knowledge-base/articles", requireAuth(), requirePermission('knowledge_base', 'canCreate'), async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       const { title, content, excerpt, categoryId, parentId, slug, featuredImage, tags, isPublic } = req.body;
       
       if (!title || title.trim() === '') {
@@ -14065,7 +14133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/knowledge-base/articles/:id", async (req, res) => {
+  app.put("/api/knowledge-base/articles/:id", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
     try {
       const { title, content, excerpt, categoryId, slug, featuredImage, tags, isPublic, status } = req.body;
       
@@ -14099,7 +14167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/knowledge-base/articles/:id", async (req, res) => {
+  app.delete("/api/knowledge-base/articles/:id", requireAuth(), requirePermission('knowledge_base', 'canDelete'), async (req, res) => {
     try {
       // Delete related data first
       await db.delete(knowledgeBaseViews).where(eq(knowledgeBaseViews.articleId, req.params.id));
@@ -14118,9 +14186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bookmarks API
-  app.get("/api/knowledge-base/bookmarks", async (req, res) => {
+  app.get("/api/knowledge-base/bookmarks", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const bookmarks = await db.select({
         id: knowledgeBaseBookmarks.id,
@@ -14141,9 +14209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/knowledge-base/articles/:articleId/bookmark", async (req, res) => {
+  app.post("/api/knowledge-base/articles/:articleId/bookmark", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       // Check if bookmark already exists
       const existing = await db.select({ id: knowledgeBaseBookmarks.id })
@@ -14173,9 +14241,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Likes API
-  app.post("/api/knowledge-base/articles/:articleId/like", async (req, res) => {
+  app.post("/api/knowledge-base/articles/:articleId/like", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       // Check if like already exists
       const existing = await db.select({ id: knowledgeBaseLikes.id })
@@ -14217,7 +14285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Comments API
-  app.get("/api/knowledge-base/articles/:articleId/comments", async (req, res) => {
+  app.get("/api/knowledge-base/articles/:articleId/comments", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
       const comments = await db.select({
         id: knowledgeBaseComments.id,
@@ -14360,14 +14428,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Register webhook routes for all HTTP methods
-  app.get("/api/webhooks/:webhookId", handleWebhook);
-  app.post("/api/webhooks/:webhookId", handleWebhook);
-  app.put("/api/webhooks/:webhookId", handleWebhook);
-  app.patch("/api/webhooks/:webhookId", handleWebhook);
-  app.delete("/api/webhooks/:webhookId", handleWebhook);
+  app.get("/api/webhooks/:webhookId", requireAuth(), requirePermission('webhooks', 'canView'), handleWebhook);
+  app.post("/api/webhooks/:webhookId", requireAuth(), requirePermission('webhooks', 'canEdit'), handleWebhook);
+  app.put("/api/webhooks/:webhookId", requireAuth(), requirePermission('webhooks', 'canEdit'), handleWebhook);
+  app.patch("/api/webhooks/:webhookId", requireAuth(), requirePermission('webhooks', 'canEdit'), handleWebhook);
+  app.delete("/api/webhooks/:webhookId", requireAuth(), requirePermission('webhooks', 'canDelete'), handleWebhook);
 
   // Webhook testing endpoint - allows you to test a webhook URL
-  app.get("/api/webhooks/:webhookId/test", async (req, res) => {
+  app.get("/api/webhooks/:webhookId/test", requireAuth(), requirePermission('webhooks', 'canView'), async (req, res) => {
     try {
       const webhookId = req.params.webhookId;
       
@@ -14421,7 +14489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TRAINING CATEGORIES =====
   
   // Get all training categories
-  app.get("/api/training/categories", async (req, res) => {
+  app.get("/api/training/categories", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const categories = await db.select().from(trainingCategories).orderBy(asc(trainingCategories.order), asc(trainingCategories.name));
       res.json(categories);
@@ -14432,7 +14500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create training category (Admin/Manager only)
-  app.post("/api/training/categories", async (req, res) => {
+  app.post("/api/training/categories", requireAuth(), requirePermission('training', 'canCreate'), async (req, res) => {
     try {
       const newCategory = insertTrainingCategorySchema.parse(req.body);
       const [category] = await db.insert(trainingCategories).values(newCategory).returning();
@@ -14448,7 +14516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update training category
-  app.put("/api/training/categories/:id", async (req, res) => {
+  app.put("/api/training/categories/:id", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const updates = insertTrainingCategorySchema.parse(req.body);
@@ -14474,7 +14542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete training category
-  app.delete("/api/training/categories/:id", async (req, res) => {
+  app.delete("/api/training/categories/:id", requireAuth(), requirePermission('training', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -14498,7 +14566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TRAINING COURSES =====
   
   // Get all training courses (with filtering and search)
-  app.get("/api/training/courses", async (req, res) => {
+  app.get("/api/training/courses", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { category, search, tags, difficulty, published } = req.query;
       
@@ -14567,10 +14635,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single training course with lessons
-  app.get("/api/training/courses/:id", async (req, res) => {
+  app.get("/api/training/courses/:id", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       
       // Get course details
@@ -14644,7 +14712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create training course (Admin/Manager only)
   app.post("/api/training/courses", async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       const newCourse = insertTrainingCourseSchema.parse({
         ...req.body,
         createdBy: userId
@@ -14690,7 +14758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updates = insertTrainingCourseSchema.partial().parse({
         ...bodyData,
-        updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
       const [oldCourse] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, id));
@@ -14741,7 +14809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/training/courses/:id/enroll", async (req, res) => {
     try {
       const { id: courseId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       // Check if course exists
       const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, courseId));
@@ -14791,7 +14859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's enrolled courses
   app.get("/api/training/my-courses", async (req, res) => {
     try {
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const enrolledCourses = await db.select({
         enrollmentId: trainingEnrollments.id,
@@ -14848,7 +14916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newModule = insertTrainingModuleSchema.parse({
         ...req.body,
         courseId,
-        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
       const [module] = await db.insert(trainingModules).values(newModule).returning();
@@ -14869,7 +14937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = insertTrainingModuleSchema.partial().parse({
         ...req.body,
-        updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
       const [oldModule] = await db.select().from(trainingModules).where(eq(trainingModules.id, id));
@@ -14930,7 +14998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({ 
             order: index + 1,
             updatedAt: new Date(),
-            updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+            updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
           })
           .where(and(eq(trainingModules.id, moduleId), eq(trainingModules.courseId, courseId)))
       ));
@@ -14948,7 +15016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TRAINING LESSONS =====
   
   // Get lessons for a course
-  app.get("/api/training/courses/:courseId/lessons", async (req, res) => {
+  app.get("/api/training/courses/:courseId/lessons", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { courseId } = req.params;
       const userId = req.session?.userId;
@@ -14986,7 +15054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reorder training lessons (must be BEFORE parameterized routes)
-  app.put("/api/training/lessons/reorder", async (req, res) => {
+  app.put("/api/training/lessons/reorder", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { lessonIds, moduleId } = req.body; // Array of lesson IDs in new order, optional moduleId
       
@@ -15018,7 +15086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updateData: any = {
           order: i + 1,
           updatedAt: new Date(),
-          updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+          updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
         };
         
         // If moduleId is provided, update the lesson's module
@@ -15042,7 +15110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single lesson with content
-  app.get("/api/training/lessons/:id", async (req, res) => {
+  app.get("/api/training/lessons/:id", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.session?.userId;
@@ -15095,13 +15163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create lesson (Admin/Manager only)
-  app.post("/api/training/courses/:courseId/lessons", async (req, res) => {
+  app.post("/api/training/courses/:courseId/lessons", requireAuth(), requirePermission('training', 'canCreate'), async (req, res) => {
     try {
       const { courseId } = req.params;
       const newLesson = insertTrainingLessonSchema.parse({
         ...req.body,
         courseId,
-        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
       const [lesson] = await db.insert(trainingLessons).values(newLesson).returning();
@@ -15117,7 +15185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update lesson
-  app.put("/api/training/lessons/:id", async (req, res) => {
+  app.put("/api/training/lessons/:id", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -15126,7 +15194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = insertTrainingLessonSchema.partial().parse({
         ...otherData,
         videoUrl: contentUrl || null, // Map contentUrl to videoUrl
-        updatedBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
       const [oldLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, id));
@@ -15150,7 +15218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete lesson
-  app.delete("/api/training/lessons/:id", async (req, res) => {
+  app.delete("/api/training/lessons/:id", requireAuth(), requirePermission('training', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -15172,7 +15240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update lesson lock status
-  app.put("/api/training/lessons/:id/lock", async (req, res) => {
+  app.put("/api/training/lessons/:id/lock", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { id: lessonId } = req.params;
       const { isLocked } = req.body;
@@ -15205,10 +15273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark lesson as incomplete (reset)
-  app.post("/api/training/lessons/:id/incomplete", async (req, res) => {
+  app.post("/api/training/lessons/:id/incomplete", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { id: lessonId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
       if (!lesson) {
@@ -15284,10 +15352,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark lesson as completed
-  app.post("/api/training/lessons/:id/complete", async (req, res) => {
+  app.post("/api/training/lessons/:id/complete", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
     try {
       const { id: lessonId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const [lesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, lessonId));
       if (!lesson) {
@@ -15364,10 +15432,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TRAINING ANALYTICS (Admin/Manager only) =====
   
   // Get training analytics dashboard
-  app.get("/api/training/analytics", async (req, res) => {
+  app.get("/api/training/analytics", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { courseId, userId } = req.query;
-      const currentUserId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Total courses and categories
       const [totalCourses] = await db.select({ count: sql<number>`count(*)` }).from(trainingCourses);
@@ -15478,7 +15547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TRAINING QUIZZES =====
   
   // Get quiz for a lesson
-  app.get("/api/training/lessons/:lessonId/quiz", async (req, res) => {
+  app.get("/api/training/lessons/:lessonId/quiz", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { lessonId } = req.params;
       
@@ -15502,7 +15571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create or update quiz for a lesson
-  app.post("/api/training/lessons/:lessonId/quiz", async (req, res) => {
+  app.post("/api/training/lessons/:lessonId/quiz", requireAuth(), requirePermission('training', 'canCreate'), async (req, res) => {
     try {
       const { lessonId } = req.params;
       const { title, description, passingScore, maxAttempts, timeLimit, shuffleQuestions, showCorrectAnswers, isRequired, questions } = req.body;
@@ -15543,7 +15612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shuffleQuestions,
           showCorrectAnswers,
           isRequired,
-          createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+          createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
         }).returning();
       }
       
@@ -15600,7 +15669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { quizId } = req.params;
       const { answers } = req.body;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const [quiz] = await db.select().from(trainingQuizzes).where(eq(trainingQuizzes.id, quizId));
       if (!quiz) {
@@ -15676,7 +15745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/training/quizzes/:quizId/attempts", async (req, res) => {
     try {
       const { quizId } = req.params;
-      const userId = req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb";
+      const userId = getAuthenticatedUserIdOrFail(req, res);
       
       const attempts = await db.select().from(trainingQuizAttempts)
         .where(and(eq(trainingQuizAttempts.quizId, quizId), eq(trainingQuizAttempts.userId, userId)))
@@ -15717,7 +15786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { type, title, description, url, fileName, fileSize } = insertTrainingLessonResourceSchema.parse({
         ...req.body,
         lessonId,
-        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
       // Get existing resources count for order
@@ -15734,7 +15803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName,
         fileSize,
         order: existingResources.length,
-        createdBy: req.session?.userId || "e56be30d-c086-446c-ada4-7ccef37ad7fb"
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
       }).returning();
       
       await createAuditLog("created", "training_lesson_resource", resource.id, resource.title, req.session?.userId,
@@ -16053,7 +16122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get health notification history for a client
-  app.get("/api/clients/:clientId/health-notifications", async (req, res) => {
+  app.get("/api/clients/:clientId/health-notifications", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
 

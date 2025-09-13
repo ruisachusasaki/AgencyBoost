@@ -103,7 +103,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
         totalDays,
         totalHours,
         reason: data.reason || null,
-        staffId: "e56be30d-c086-446c-ada4-7ccef37ad7fb", // TODO: Get from current user context
+        // staffId will be set by backend from authenticated user session
         dayHours: data.dayHours.map(day => ({
           date: day.date,
           hours: day.hours,

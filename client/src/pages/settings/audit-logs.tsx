@@ -33,9 +33,10 @@ export default function AuditLogs() {
   const userLookup: Record<string, string> = staff.reduce((acc: Record<string, string>, staffMember: any) => {
     acc[staffMember.id] = `${staffMember.firstName} ${staffMember.lastName}`;
     return acc;
-  }, {
-    "e56be30d-c086-446c-ada4-7ccef37ad7fb": "System Admin", // Default for system actions
   });
+  
+  // Add system fallback for unknown users
+  userLookup["system"] = "System Admin";
 
   // Transform audit logs to include user names
   const auditLogsWithUserNames = auditLogs.map(log => ({
@@ -52,7 +53,7 @@ export default function AuditLogs() {
       entityType: "contact",
       entityId: "client-1",
       entityName: "Sarah Johnson",
-      userId: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      userId: "system", // Sample audit log data
       userName: "System Admin",
       timestamp: new Date(Date.now() - 3600000).toLocaleString(), // 1 hour ago
       details: "New contact record created with email: sarah@techstartup.com",
@@ -67,7 +68,7 @@ export default function AuditLogs() {
       entityType: "contact",
       entityId: "client-1",
       entityName: "Sarah Johnson",
-      userId: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      userId: "system", // Sample audit log data
       userName: "System Admin",
       timestamp: new Date(Date.now() - 7200000).toLocaleString(), // 2 hours ago
       details: "Updated phone number from (555) 123-0000 to (555) 123-4567",
@@ -82,7 +83,7 @@ export default function AuditLogs() {
       entityType: "project",
       entityId: "proj-1",
       entityName: "Website Redesign",
-      userId: "e56be30d-c086-446c-ada4-7ccef37ad7fb",
+      userId: "system", // Sample audit log data
       userName: "System Admin", 
       timestamp: new Date(Date.now() - 10800000).toLocaleString(), // 3 hours ago
       details: "New project created for client Sarah Johnson with budget $15,000",
