@@ -11445,7 +11445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { updatedAt, createdAt, id, ...cleanFormData } = formData;
       const formToInsert = {
         ...cleanFormData,
-        createdBy: userId
+        createdBy: userId,
         status: cleanFormData.status || "draft"
       };
       

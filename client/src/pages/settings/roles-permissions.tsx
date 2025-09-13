@@ -8,11 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft } from "lucide-react";
+import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft, AlertTriangle, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { Role, Permission, InsertRole } from "@shared/schema";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RoleWithPermissions extends Role {
   userCount: number;
@@ -48,31 +49,44 @@ export default function RolesPermissions() {
     permissions: [] as PermissionFormData[]
   });
 
+  // Fetch current user data for admin check
+  const { data: currentUser, isLoading: loadingUser, error: userError } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    retry: false,
+    queryFn: async () => {
+      const response = await fetch('/api/auth/current-user', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required');
+        }
+        throw new Error('Failed to fetch current user');
+      }
+      return response.json();
+    },
+  });
+
+  // Check if user is admin - only admins can manage roles
+  const isAdmin = currentUser && ['Admin', 'admin'].includes(currentUser.role);
+
   // Available modules for permissions
   const modules = [
     "clients", "projects", "campaigns", "tasks", "invoices", 
     "leads", "workflows", "social_media", "reports", "settings", "staff", "roles"
   ];
 
-  // Fetch roles
+  // Fetch roles - only if user is admin
   const { data: roles = [], isLoading } = useQuery<RoleWithPermissions[]>({
     queryKey: ["/api/roles"],
+    enabled: isAdmin, // Only fetch if user is admin
+    retry: false,
   });
 
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: InsertRole & { permissions: PermissionFormData[] }) => {
-      const response = await fetch("/api/roles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(roleData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create role");
-      }
+      const response = await apiRequest("POST", "/api/roles", roleData);
       return response.json();
     },
     onSuccess: () => {
@@ -96,17 +110,7 @@ export default function RolesPermissions() {
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, ...roleData }: { id: string } & InsertRole & { permissions: PermissionFormData[] }) => {
-      const response = await fetch(`/api/roles/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(roleData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update role");
-      }
+      const response = await apiRequest("PUT", `/api/roles/${id}`, roleData);
       return response.json();
     },
     onSuccess: () => {
@@ -129,13 +133,7 @@ export default function RolesPermissions() {
   // Delete role mutation
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
-      const response = await fetch(`/api/roles/${roleId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to delete role");
-      }
+      const response = await apiRequest("DELETE", `/api/roles/${roleId}`);
       return response.json();
     },
     onSuccess: () => {
@@ -339,6 +337,82 @@ export default function RolesPermissions() {
     );
   };
 
+  // Show loading state while checking authentication
+  if (loadingUser) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Link to="/settings">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+            <p className="text-muted-foreground">Checking permissions...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication error
+  if (userError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Link to="/settings">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+          </div>
+        </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Authentication Error</AlertTitle>
+          <AlertDescription>
+            {userError.message === 'Authentication required' 
+              ? 'Please log in to access this page.'
+              : 'Unable to verify your identity. Please try refreshing the page or logging in again.'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show access denied for non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Link to="/settings">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+          </div>
+        </div>
+        <Alert variant="destructive">
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
+            You need administrator privileges to access role and permission management.
+            Please contact your system administrator for access.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show loading state for roles data
   if (isLoading) {
     return (
       <div className="space-y-6">
