@@ -51,6 +51,7 @@ Filter Preferences: Simplified filtering with only essential filters (search and
 - **GoHighLevel-Style Automation System**: Transformed entire automation trigger system from hard-coded definitions to fully API-driven, database-backed system with sophisticated filtering capabilities, including dynamic field integration, specific entity selection, and a consistent field-condition-value pattern. This includes triggers for Task Overdue Timing Controls, Dynamic Lead Pipeline Integration, Field Change Trigger System, Note Added Trigger System, and Inbound Webhook Trigger System.
 - **Rich Text Editor Enhancement**: Comprehensive Tiptap editor fixes for checklist and toggle functionality, including CSS Grid layout for checklists and a div-based structure for toggles.
 - **Client Team Assignment Feature**: Implemented comprehensive team assignment functionality with 10 specific positions and improved profile image display.
+- **Client Health Scoring System**: Comprehensive proactive client health monitoring with visual red/yellow highlighting based on 4-week consecutive poor health patterns, interactive sortable health score details tables, hover tooltips with health breakdowns, improvement trend recognition, and automated team notification system that alerts relevant team members (contact owners, team members, managers) when clients hit health thresholds with duplicate prevention and security controls.
 
 ### CSS Architecture Guidelines
 - **Problem**: Broad CSS selectors cause styling issues.
