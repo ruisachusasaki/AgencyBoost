@@ -25,7 +25,7 @@ Filter Preferences: Simplified filtering with only essential filters (search and
 
 ### Technical Implementations
 - **Data Models**: Relational schema for core entities (Clients, Projects, Campaigns, Leads, Tasks, Invoices).
-- **Authentication & Authorization**: Session-based authentication with role-based access control (Admin, Manager, User, Accounting) and granular permissions. Centralized middleware (`server/auth.ts`) handles authentication and permission checks (e.g., `requireAuth()`, `requirePermission()`, `requireAdmin()`).
+- **Authentication & Authorization**: Session-based authentication with role-based access control (Admin, Manager, User, Accounting) and granular permissions. Centralized middleware (`server/auth.ts`) handles authentication and permission checks (e.g., `requireAuth()`, `requirePermission()`, `requireAdmin()`). Development mode bypass creates mock admin session when NODE_ENV=development for full platform access during development.
 - **Data Management**: CRUD operations, audit logs, table sorting, pagination, CSV import/export.
 - **Customization**: Custom Field Management with drag-and-drop reordering, and Marketing Template Management with WYSIWYG editor.
 - **Task Management**: Dynamic project progress, hierarchical sub-task system (up to 5 levels), task dependencies (Finish to Start, Start to Start, Finish to Finish, Start to Finish), ClickUp-style recurring tasks, comprehensive bulk actions, and task status visibility controls.

@@ -6,14 +6,20 @@ import { eq, and } from 'drizzle-orm';
 /**
  * AUTHENTICATION & AUTHORIZATION MIDDLEWARE
  * 
- * Emergency security patch to fix 89 critical vulnerabilities where hardcoded 
- * admin fallbacks allowed complete system compromise without authentication.
+ * Provides secure authentication with development mode bypass.
  * 
- * This replaces dangerous patterns like:
- * const userId = req.session?.userId || "admin-id" 
+ * DEVELOPMENT MODE:
+ * - When NODE_ENV=development, creates mock admin session for full platform access
+ * - Bypasses all permission checks to allow testing and development
  * 
- * With secure authentication checks that fail safely.
+ * PRODUCTION MODE:
+ * - Strict authentication required - no fallbacks or bypasses
+ * - All permission checks enforced through database queries
  */
+
+// Development mode detection and mock user configuration
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const MOCK_ADMIN_USER_ID = 'dev-admin-00000000-0000-0000-0000-000000000000';
 
 // Extended Express Request interface with session
 declare global {
@@ -29,19 +35,43 @@ declare global {
 
 /**
  * Extract authenticated user ID from request session.
- * Returns undefined if no valid session exists.
- * NO FALLBACKS - fails safely if not authenticated.
+ * In development mode: returns mock admin user ID for full platform access.
+ * In production mode: returns session user ID or undefined if not authenticated.
  */
 export function getAuthenticatedUserId(req: Request): string | undefined {
+  // Development mode bypass - return mock admin user for full access
+  if (IS_DEVELOPMENT) {
+    return MOCK_ADMIN_USER_ID;
+  }
+  
+  // Production mode - strict session-based authentication
   return req.session?.userId;
 }
 
 /**
  * Middleware to require authentication.
- * Returns 401 if no valid session exists.
+ * In development mode: creates mock admin session and always passes.
+ * In production mode: returns 401 if no valid session exists.
  */
 export function requireAuth() {
   return (req: Request, res: Response, next: NextFunction) => {
+    // Development mode bypass - create mock admin session
+    if (IS_DEVELOPMENT) {
+      // Ensure session exists and set mock admin user
+      if (!req.session) {
+        req.session = {};
+      }
+      req.session.userId = MOCK_ADMIN_USER_ID;
+      req.session.user = {
+        id: MOCK_ADMIN_USER_ID,
+        name: 'Dev Admin',
+        role: 'admin',
+        email: 'dev-admin@localhost'
+      };
+      return next();
+    }
+    
+    // Production mode - strict authentication check
     const userId = getAuthenticatedUserId(req);
     
     if (!userId) {
@@ -64,6 +94,11 @@ async function hasPermission(
   module: string, 
   permission: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage'
 ): Promise<boolean> {
+  // Development mode bypass - mock admin user has all permissions
+  if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+    return true;
+  }
+  
   try {
     // Check if user has admin role through proper database queries
     const adminRoles = await db
@@ -152,10 +187,17 @@ export function requirePermission(module: string, permission: 'canView' | 'canCr
 
 /**
  * Get authenticated user ID with error handling.
- * Returns the user ID or throws an error with a 401 response.
+ * In development mode: returns mock admin user ID.
+ * In production mode: returns user ID or throws error with 401 response.
  * Use this in route handlers after requireAuth() middleware.
  */
 export function getAuthenticatedUserIdOrFail(req: Request, res: Response): string | null {
+  // Development mode bypass - return mock admin user
+  if (IS_DEVELOPMENT) {
+    return MOCK_ADMIN_USER_ID;
+  }
+  
+  // Production mode - strict authentication check
   const userId = getAuthenticatedUserId(req);
   
   if (!userId) {
@@ -171,7 +213,8 @@ export function getAuthenticatedUserIdOrFail(req: Request, res: Response): strin
 
 /**
  * Check if current user is admin.
- * For audit logging and special admin operations.
+ * In development mode: always returns true for mock admin user.
+ * In production mode: checks admin role through database queries.
  */
 export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
   const userId = getAuthenticatedUserId(req);
@@ -180,7 +223,12 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
     return false;
   }
   
-  // Check if user has admin role through proper database queries
+  // Development mode bypass - mock admin user is always admin
+  if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+    return true;
+  }
+  
+  // Production mode - check admin role through database queries
   const adminRoles = await db
     .select({ roleId: userRoles.roleId })
     .from(userRoles)
@@ -197,10 +245,28 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
 
 /**
  * Middleware for admin-only operations.
- * Requires both authentication and admin privileges.
+ * In development mode: creates mock admin session and always passes.
+ * In production mode: requires both authentication and admin privileges.
  */
 export function requireAdmin() {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Development mode bypass - create mock admin session
+    if (IS_DEVELOPMENT) {
+      // Ensure session exists and set mock admin user
+      if (!req.session) {
+        req.session = {};
+      }
+      req.session.userId = MOCK_ADMIN_USER_ID;
+      req.session.user = {
+        id: MOCK_ADMIN_USER_ID,
+        name: 'Dev Admin',
+        role: 'admin',
+        email: 'dev-admin@localhost'
+      };
+      return next();
+    }
+    
+    // Production mode - strict authentication and admin check
     const userId = getAuthenticatedUserId(req);
     
     if (!userId) {
@@ -225,7 +291,8 @@ export function requireAdmin() {
 
 /**
  * Get safe user context for audit logging.
- * Returns null if not authenticated - no fallbacks.
+ * In development mode: uses mock admin user ID.
+ * In production mode: returns null if not authenticated - no fallbacks.
  */
 export function getAuditContext(req: Request): { userId: string | null; ip: string; userAgent: string } {
   return {
@@ -237,9 +304,20 @@ export function getAuditContext(req: Request): { userId: string | null; ip: stri
 
 /**
  * Type-safe wrapper for audit logging that requires authentication.
- * Use this for operations that should only be performed by authenticated users.
+ * In development mode: returns mock admin user context.
+ * In production mode: requires authentication or returns null.
  */
 export function getAuthenticatedAuditContext(req: Request, res: Response): { userId: string; ip: string; userAgent: string } | null {
+  // Development mode bypass - return mock admin context
+  if (IS_DEVELOPMENT) {
+    return {
+      userId: MOCK_ADMIN_USER_ID,
+      ip: req.ip || req.connection?.remoteAddress || "127.0.0.1",
+      userAgent: req.get("User-Agent") || "Unknown"
+    };
+  }
+  
+  // Production mode - strict authentication check
   const userId = getAuthenticatedUserId(req);
   
   if (!userId) {
