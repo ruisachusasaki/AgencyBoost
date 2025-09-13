@@ -34,7 +34,7 @@ import {
   inputClientHealthScoreSchema, insertClientHealthScoreSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
-  clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions,
+  clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
@@ -15279,6 +15279,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error reordering lesson resources:', error);
       res.status(500).json({ error: "Failed to reorder lesson resources" });
+    }
+  });
+
+  // Health Notification System - Check and send alerts for poor client health
+  app.post("/api/health-notifications/check", async (req, res) => {
+    try {
+      // SECURITY: Require authenticated session - no admin fallback allowed
+      if (!req.session?.userId) {
+        return res.status(401).json({ 
+          error: "Authentication required", 
+          message: "You must be logged in to trigger health notifications." 
+        });
+      }
+
+      const userId = req.session.userId;
+      
+      // SECURITY: Check if authenticated user has permission to trigger health notifications
+      // Only managers and admins should be able to trigger system-wide health checks
+      const canManageNotifications = await hasPermission(userId, 'notifications', 'canManage');
+      if (!canManageNotifications) {
+        return res.status(403).json({ 
+          error: "Access denied", 
+          message: "You do not have permission to trigger health notifications. Manager or admin access required." 
+        });
+      }
+      
+      let notificationsCreated = 0;
+      let clientsChecked = 0;
+      const results = [];
+
+      // Get all clients that have health scores
+      const clientsWithHealth = await db.selectDistinct({ 
+        clientId: clientHealthScores.clientId 
+      })
+      .from(clientHealthScores);
+
+      for (const { clientId } of clientsWithHealth) {
+        clientsChecked++;
+
+        // Get client details for notification content
+        const [clientInfo] = await db.select({
+          id: clients.id,
+          name: clients.name,
+          email: clients.email,
+          contactOwner: clients.contactOwner
+        })
+        .from(clients)
+        .where(eq(clients.id, clientId))
+        .limit(1);
+
+        if (!clientInfo) continue;
+
+        // Get last 4 weeks of health scores for this client
+        const fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+        const healthScores = await db.select()
+          .from(clientHealthScores)
+          .where(
+            and(
+              eq(clientHealthScores.clientId, clientId),
+              sql`${clientHealthScores.weekStartDate} >= ${fourWeeksAgo.toISOString().split('T')[0]}`
+            )
+          )
+          .orderBy(desc(clientHealthScores.weekStartDate))
+          .limit(4);
+
+        if (healthScores.length < 4) {
+          continue; // Need at least 4 weeks of data
+        }
+
+        // Use existing health analysis logic (already imported at top of file)
+        const healthAnalysis = analyzeHealthStatus(
+          healthScores.map(score => ({
+            weekStart: score.weekStartDate,
+            healthIndicator: score.healthIndicator
+          }))
+        );
+
+        // Only send notifications if client needs highlighting (poor health)
+        if (!healthAnalysis.shouldHighlight) {
+          continue;
+        }
+
+        const alertType = healthAnalysis.highlightType === 'red' 
+          ? 'client_health_alert_red' 
+          : 'client_health_alert_yellow';
+
+        // Get team members to notify
+        const teamMembers = new Set<string>();
+
+        // 1. Add contact owner if exists
+        if (clientInfo.contactOwner) {
+          teamMembers.add(clientInfo.contactOwner);
+        }
+
+        // 2. Add all team members assigned to this client
+        const clientTeamMembers = await db.select({
+          staffId: clientTeamAssignments.staffId,
+          position: clientTeamAssignments.position
+        })
+        .from(clientTeamAssignments)
+        .where(eq(clientTeamAssignments.clientId, clientId));
+
+        for (const member of clientTeamMembers) {
+          teamMembers.add(member.staffId);
+        }
+
+        // 3. Add managers (staff with manager roles) - simplified for now
+        const managers = await db.select({ id: staff.id })
+          .from(staff)
+          .where(sql`${staff.position} ILIKE '%manager%' OR ${staff.position} ILIKE '%director%'`)
+          .limit(10); // Reasonable limit
+
+        for (const manager of managers) {
+          teamMembers.add(manager.id);
+        }
+
+        if (teamMembers.size === 0) {
+          continue; // No one to notify
+        }
+
+        // Create notification content
+        const title = `Client Health Alert: ${clientInfo.name} - ${healthAnalysis.highlightType?.toUpperCase()} Status`;
+        const message = `${clientInfo.name} has been in poor health for 4 consecutive weeks. ${healthAnalysis.reason} Immediate attention required.`;
+        const actionUrl = `/clients/${clientId}`;
+
+        // Create notifications for team members (with per-recipient duplicate prevention)
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        const notificationPromises = Array.from(teamMembers).map(async (staffId) => {
+          // Check if this specific team member was already notified about this client's health recently
+          const existingNotification = await db.select()
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.userId, staffId),
+                eq(notifications.type, alertType),
+                eq(notifications.entityType, "client"),
+                eq(notifications.entityId, clientId),
+                sql`${notifications.createdAt} >= ${oneWeekAgo.toISOString()}`
+              )
+            )
+            .limit(1);
+
+          // Skip if this specific recipient was already notified recently
+          if (existingNotification.length > 0) {
+            return null; // This recipient already notified recently
+          }
+
+          return db.insert(notifications).values({
+            userId: staffId,
+            type: alertType,
+            title,
+            message,
+            entityType: "client",
+            entityId: clientId,
+            priority: healthAnalysis.highlightType === 'red' ? 'high' : 'normal',
+            actionUrl,
+            actionText: 'View Client',
+            metadata: {
+              clientName: clientInfo.name,
+              healthStatus: healthAnalysis.highlightType,
+              reason: healthAnalysis.reason,
+              weeksCovered: healthScores.length
+            }
+          });
+        });
+
+        const completedNotifications = await Promise.all(notificationPromises);
+        const actualNotifications = completedNotifications.filter(notification => notification !== null);
+        notificationsCreated += actualNotifications.length;
+
+        results.push({
+          clientId,
+          clientName: clientInfo.name,
+          healthStatus: healthAnalysis.highlightType,
+          reason: healthAnalysis.reason,
+          recipientsNotified: teamMembers.size,
+          recipients: Array.from(teamMembers)
+        });
+
+        // Create audit log for health notification
+        await createAuditLog(
+          "created", 
+          "health_notification", 
+          clientId, 
+          `Health Alert for ${clientInfo.name}`,
+          userId,
+          `Created ${alertType} notification for ${clientInfo.name} - ${healthAnalysis.reason}`,
+          null,
+          {
+            healthStatus: healthAnalysis.highlightType,
+            recipientCount: teamMembers.size,
+            recipients: Array.from(teamMembers)
+          },
+          req
+        );
+      }
+
+      res.json({
+        success: true,
+        clientsChecked,
+        notificationsCreated,
+        results,
+        message: `Checked ${clientsChecked} clients, created ${notificationsCreated} health alert notifications`
+      });
+
+    } catch (error) {
+      console.error("Error checking client health notifications:", error);
+      res.status(500).json({ 
+        error: "Failed to check health notifications",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get health notification history for a client
+  app.get("/api/clients/:clientId/health-notifications", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+
+      const healthNotifications = await db.select()
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.entityType, "client"),
+            eq(notifications.entityId, clientId),
+            or(
+              eq(notifications.type, "client_health_alert_red"),
+              eq(notifications.type, "client_health_alert_yellow")
+            )
+          )
+        )
+        .orderBy(desc(notifications.createdAt));
+
+      res.json(healthNotifications);
+    } catch (error) {
+      console.error("Error fetching health notification history:", error);
+      res.status(500).json({ error: "Failed to fetch health notification history" });
     }
   });
 
