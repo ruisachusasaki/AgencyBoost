@@ -80,12 +80,12 @@ localPort = 44613
 externalPort = 6800
 
 [[ports]]
-localPort = 45105
-externalPort = 3002
+localPort = 44851
+externalPort = 8008
 
 [[ports]]
-localPort = 46337
-externalPort = 8008
+localPort = 45105
+externalPort = 3002
 
 [agent]
 integrations = ["javascript_object_storage:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_slack:1.0.0"]

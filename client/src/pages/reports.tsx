@@ -639,7 +639,7 @@ export default function Reports() {
   const processTimeDistributionData = (data: typeof timeTrackingData, type: 'users' | 'clients') => {
     if (!data) return [];
     
-    const items = type === 'users' ? data.userSummaries : data.clientBreakdowns;
+    const items = (type === 'users' ? data.userSummaries : data.clientBreakdowns) || [];
     const totalTime = data.grandTotal || 0;
     
     if (totalTime === 0) return [];
@@ -2143,7 +2143,7 @@ export default function Reports() {
                       <p>Loading time tracking data...</p>
                     </div>
                   </div>
-                ) : !timeTrackingData || timeTrackingData.clientBreakdowns.length === 0 ? (
+                ) : !timeTrackingData || !timeTrackingData.clientBreakdowns || timeTrackingData.clientBreakdowns.length === 0 ? (
                   <div className="p-8 text-center text-slate-500">
                     <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                     <p className="text-lg font-medium mb-2">No Time Data</p>
@@ -2162,8 +2162,8 @@ export default function Reports() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {timeTrackingData.clientBreakdowns.map((clientData, clientIndex) => 
-                          clientData.users.map((user, userIndex) => (
+                        {(timeTrackingData?.clientBreakdowns || []).map((clientData, clientIndex) => 
+                          (clientData?.users || []).map((user, userIndex) => (
                             <TableRow key={`${clientData.clientId}-${user.userId}`} data-testid={`row-user-client-${clientIndex}-${userIndex}`}>
                               <TableCell>
                                 <div className="font-medium text-slate-900" data-testid={`text-client-${clientIndex}-${userIndex}`}>
@@ -2190,7 +2190,7 @@ export default function Reports() {
                           ))
                         )}
                         {/* Client Totals */}
-                        {timeTrackingData.clientBreakdowns.map((clientData, index) => (
+                        {(timeTrackingData?.clientBreakdowns || []).map((clientData, index) => (
                           <TableRow key={`total-${clientData.clientId}`} className="border-t-2 border-slate-200 bg-slate-50">
                             <TableCell className="font-semibold" data-testid={`text-client-total-${index}`}>
                               {clientData.clientName} Total
@@ -2213,14 +2213,14 @@ export default function Reports() {
                             Grand Total
                           </TableCell>
                           <TableCell className="text-slate-500 text-sm">
-                            {timeTrackingData.userSummaries.length} user{timeTrackingData.userSummaries.length !== 1 ? 's' : ''}
+                            {timeTrackingData?.userSummaries?.length || 0} user{(timeTrackingData?.userSummaries?.length || 0) !== 1 ? 's' : ''}
                           </TableCell>
                           <TableCell></TableCell>
                           <TableCell className="text-right font-mono font-bold" data-testid="text-grand-total-hours">
-                            {(timeTrackingData.grandTotal / 3600).toFixed(2)}h
+                            {((timeTrackingData?.grandTotal || 0) / 3600).toFixed(2)}h
                           </TableCell>
                           <TableCell className="text-right font-bold">
-                            {timeTrackingData.clientBreakdowns.reduce((sum, client) => sum + client.tasksCount, 0)}
+                            {(timeTrackingData?.clientBreakdowns || []).reduce((sum, client) => sum + (client?.tasksCount || 0), 0)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -2262,7 +2262,7 @@ export default function Reports() {
                       <p>Loading client totals...</p>
                     </div>
                   </div>
-                ) : !timeTrackingData || timeTrackingData.clientBreakdowns.length === 0 ? (
+                ) : !timeTrackingData || !timeTrackingData.clientBreakdowns || timeTrackingData.clientBreakdowns.length === 0 ? (
                   <div className="p-8 text-center text-slate-500">
                     <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                     <p className="text-lg font-medium mb-2">No Time Data</p>
@@ -2281,28 +2281,28 @@ export default function Reports() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {timeTrackingData.clientBreakdowns
-                          .sort((a, b) => b.totalTime - a.totalTime)
+                        {(timeTrackingData?.clientBreakdowns || [])
+                          .sort((a, b) => (b?.totalTime || 0) - (a?.totalTime || 0))
                           .map((clientData, index) => {
-                            const avgHoursPerTask = clientData.tasksCount > 0 ? (clientData.totalTime / 3600) / clientData.tasksCount : 0;
+                            const avgHoursPerTask = (clientData?.tasksCount || 0) > 0 ? ((clientData?.totalTime || 0) / 3600) / (clientData?.tasksCount || 1) : 0;
                             return (
                               <TableRow key={clientData.clientId} data-testid={`row-admin-client-${index}`}>
                                 <TableCell>
                                   <div className="font-medium text-slate-900" data-testid={`text-admin-client-${index}`}>
-                                    {clientData.clientName}
+                                    {clientData?.clientName || 'Unknown Client'}
                                   </div>
                                   <div className="text-xs text-slate-500 mt-1">
-                                    {clientData.users.map(u => u.userName).join(', ')}
+                                    {(clientData?.users || []).map(u => u?.userName || 'Unknown User').join(', ')}
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right font-mono font-semibold" data-testid={`text-admin-hours-${index}`}>
-                                  {(clientData.totalTime / 3600).toFixed(2)}h
+                                  {((clientData?.totalTime || 0) / 3600).toFixed(2)}h
                                 </TableCell>
                                 <TableCell className="text-right font-semibold" data-testid={`text-admin-tasks-${index}`}>
-                                  {clientData.tasksCount}
+                                  {clientData?.tasksCount || 0}
                                 </TableCell>
                                 <TableCell className="text-right" data-testid={`text-admin-users-${index}`}>
-                                  {clientData.users.length}
+                                  {clientData?.users?.length || 0}
                                 </TableCell>
                                 <TableCell className="text-right font-mono text-sm" data-testid={`text-admin-avg-${index}`}>
                                   {avgHoursPerTask.toFixed(2)}h
@@ -2316,17 +2316,17 @@ export default function Reports() {
                             Grand Total
                           </TableCell>
                           <TableCell className="text-right font-mono font-bold" data-testid="text-admin-grand-total-hours">
-                            {(timeTrackingData.grandTotal / 3600).toFixed(2)}h
+                            {((timeTrackingData?.grandTotal || 0) / 3600).toFixed(2)}h
                           </TableCell>
                           <TableCell className="text-right font-bold">
-                            {timeTrackingData.clientBreakdowns.reduce((sum, client) => sum + client.tasksCount, 0)}
+                            {(timeTrackingData?.clientBreakdowns || []).reduce((sum, client) => sum + (client?.tasksCount || 0), 0)}
                           </TableCell>
                           <TableCell className="text-right font-bold">
-                            {timeTrackingData.userSummaries.length}
+                            {timeTrackingData?.userSummaries?.length || 0}
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm">
-                            {timeTrackingData.clientBreakdowns.length > 0 ? 
-                              (timeTrackingData.grandTotal / 3600 / timeTrackingData.clientBreakdowns.reduce((sum, client) => sum + client.tasksCount, 0)).toFixed(2) 
+                            {(timeTrackingData?.clientBreakdowns?.length || 0) > 0 ? 
+                              ((timeTrackingData?.grandTotal || 0) / 3600 / Math.max(1, (timeTrackingData?.clientBreakdowns || []).reduce((sum, client) => sum + (client?.tasksCount || 0), 0))).toFixed(2) 
                               : '0.00'}h
                           </TableCell>
                         </TableRow>
