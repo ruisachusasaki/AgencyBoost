@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -31,7 +32,14 @@ import {
   LineChart,
   Eye,
   EyeOff,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
+import { 
+  exportTimeTrackingData,
+  type TimeTrackingReportData,
+  type ExportFilters 
+} from "@shared/utils/csvExport";
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -106,6 +114,84 @@ export default function Reports() {
   });
   const [chartView, setChartView] = useState<"grid" | "tabs">("tabs");
   const [activeChart, setActiveChart] = useState("timeDistribution");
+
+  // CSV Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"detailed" | "user-summary" | "client-breakdown" | "admin-summary">("detailed");
+  const { toast } = useToast();
+
+  // CSV Export Handler
+  const handleCsvExport = async () => {
+    if (!timeTrackingData || isExporting) return;
+
+    // Check permissions for admin-only export formats
+    if (exportFormat === 'admin-summary' && !isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Admin summary export is only available to administrators.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    
+    try {
+      // Prepare export data and filters
+      const exportData: TimeTrackingReportData = {
+        tasks: timeTrackingData.tasks || [],
+        userSummaries: timeTrackingData.userSummaries || [],
+        clientBreakdowns: timeTrackingData.clientBreakdowns || [],
+        grandTotal: timeTrackingData.grandTotal || 0
+      };
+
+      const exportFilters: ExportFilters = {
+        dateFrom: timeTrackingFilters.dateFrom,
+        dateTo: timeTrackingFilters.dateTo,
+        userId: timeTrackingFilters.userId,
+        clientId: timeTrackingFilters.clientId,
+        reportType: taskReportType
+      };
+
+      // Prepare clients list for detailed exports
+      const clientsList = clients.map(client => ({
+        id: client.id,
+        name: client.name
+      }));
+
+      // Perform the export
+      exportTimeTrackingData(
+        exportFormat,
+        exportData,
+        exportFilters,
+        clientsList
+      );
+
+      // Show success message
+      const formatName = {
+        'detailed': 'Detailed Timesheet',
+        'user-summary': 'User Summary',
+        'client-breakdown': 'Client Breakdown',
+        'admin-summary': 'Admin Summary'
+      }[exportFormat];
+
+      toast({
+        title: "Export Successful",
+        description: `${formatName} has been downloaded successfully.`,
+        variant: "default"
+      });
+      
+    } catch (error) {
+      console.error('CSV Export Error:', error);
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "An error occurred while exporting the data.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<{clients: Client[]}>({
     queryKey: ["/api/clients"],
@@ -641,6 +727,14 @@ export default function Reports() {
       .sort((a, b) => b.hours - a.hours);
   };
 
+  // Helper function to toggle chart visibility
+  const toggleChart = (chartKey: string) => {
+    setChartsVisible(prev => ({
+      ...prev,
+      [chartKey]: !prev[chartKey]
+    }));
+  };
+
   // Chart color palettes
   const CHART_COLORS = [
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
@@ -872,13 +966,6 @@ export default function Reports() {
     );
   };
 
-  // Toggle chart visibility
-  const toggleChart = (chartKey: string) => {
-    setChartsVisible(prev => ({
-      ...prev,
-      [chartKey]: !prev[chartKey]
-    }));
-  };
 
   const handleExportReport = () => {
     const reportData = {
@@ -1825,6 +1912,45 @@ export default function Reports() {
                           {/* Note: Would need staff/users query here, using sample for now */}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                  
+                  {/* CSV Export Controls */}
+                  {(taskReportType === "by-user-client" || taskReportType === "admin-by-client" || taskReportType === "time-tracking") && (
+                    <div className="flex items-center gap-4 pl-4 border-l border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-slate-600">Export Format:</label>
+                        <Select value={exportFormat} onValueChange={(value: "detailed" | "user-summary" | "client-breakdown" | "admin-summary") => setExportFormat(value)}>
+                          <SelectTrigger className="w-44" data-testid="select-export-format">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="detailed">Detailed Timesheet</SelectItem>
+                            <SelectItem value="user-summary">User Summary</SelectItem>
+                            <SelectItem value="client-breakdown">Client Breakdown</SelectItem>
+                            {isAdmin && <SelectItem value="admin-summary">Admin Summary</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        onClick={handleCsvExport}
+                        disabled={isExporting || !timeTrackingData}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        size="sm"
+                        data-testid="button-export-csv"
+                      >
+                        {isExporting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Exporting...
+                          </>
+                        ) : (
+                          <>
+                            <FileSpreadsheet className="h-4 w-4 mr-2" />
+                            Export CSV
+                          </>
+                        )}
+                      </Button>
                     </div>
                   )}
                 </div>
