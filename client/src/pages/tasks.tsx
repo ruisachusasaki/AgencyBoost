@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2 } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
@@ -1118,10 +1118,12 @@ export default function Tasks() {
     const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
     const [bulkDueDateDialogOpen, setBulkDueDateDialogOpen] = useState(false);
     const [bulkPriorityDialogOpen, setBulkPriorityDialogOpen] = useState(false);
+    const [bulkClientDialogOpen, setBulkClientDialogOpen] = useState(false);
     const [tempAssignee, setTempAssignee] = useState("");
     const [tempStatus, setTempStatus] = useState("");
     const [tempDueDate, setTempDueDate] = useState("");
     const [tempPriority, setTempPriority] = useState("");
+    const [tempClient, setTempClient] = useState("");
 
     const handleBulkDelete = () => {
       if (confirm(`Are you sure you want to delete ${selectedTasks.size} selected tasks?`)) {
@@ -1167,6 +1169,16 @@ export default function Tasks() {
       });
       setBulkPriorityDialogOpen(false);
       setTempPriority("");
+    };
+
+    const handleBulkClient = () => {
+      if (!tempClient) return;
+      bulkUpdateMutation.mutate({
+        taskIds: Array.from(selectedTasks),
+        updates: { clientId: tempClient === "none" ? null : tempClient }
+      });
+      setBulkClientDialogOpen(false);
+      setTempClient("");
     };
 
     if (selectedTasks.size === 0) return null;
@@ -1316,6 +1328,43 @@ export default function Tasks() {
                   </Button>
                   <Button onClick={handleBulkPriority} disabled={!tempPriority}>
                     Update Priority
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={bulkClientDialogOpen} onOpenChange={setBulkClientDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-client">
+                <Building2 className="h-4 w-4 mr-1" />
+                Client
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Client for {selectedTasks.size} tasks</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempClient} onValueChange={setTempClient}>
+                  <SelectTrigger data-testid="select-bulk-client">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" data-testid="option-no-client">No Client</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id} data-testid={`option-client-${client.id}`}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkClientDialogOpen(false)} data-testid="button-cancel-bulk-client">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkClient} disabled={!tempClient} data-testid="button-update-bulk-client">
+                    Update Client
                   </Button>
                 </div>
               </div>
