@@ -3886,143 +3886,64 @@ export class MemStorage implements IStorage {
 export class DbStorage implements IStorage {
   // Clients
   async getClients(): Promise<Client[]> {
-    return await db.select({
-      id: clients.id,
-      name: clients.name,
-      email: clients.email,
-      phone: clients.phone,
-      company: clients.company,
-      position: clients.position,
-      status: clients.status,
-      contactType: clients.contactType,
-      contactSource: clients.contactSource,
-      address: clients.address,
-      address2: clients.address2,
-      city: clients.city,
-      state: clients.state,
-      zipCode: clients.zipCode,
-      country: clients.country,
-      leadSource: clients.leadSource,
-      referredBy: clients.referredBy,
-      socialProfiles: clients.socialProfiles,
-      tags: clients.tags,
-      notes: clients.notes,
-      customFields: clients.customFields,
-      lastContactedAt: clients.lastContactedAt,
-      nextFollowUpAt: clients.nextFollowUpAt,
-      leadScore: clients.leadScore,
-      lifetimeValue: clients.lifetimeValue,
-      totalRevenue: clients.totalRevenue,
-      pipelineStage: clients.pipelineStage,
-      assignedTo: clients.assignedTo,
-      teamId: clients.teamId,
-      isArchived: clients.isArchived,
-      createdAt: clients.createdAt,
-      updatedAt: clients.updatedAt
-    }).from(clients);
+    try {
+      const result = await db.select().from(clients);
+      return result;
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      return [];
+    }
   }
 
   async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
-    // Build the query with proper sorting
-    let query = db.select({
-      id: clients.id,
-      name: clients.name,
-      email: clients.email,
-      phone: clients.phone,
-      company: clients.company,
-      position: clients.position,
-      status: clients.status,
-      contactType: clients.contactType,
-      contactSource: clients.contactSource,
-      address: clients.address,
-      address2: clients.address2,
-      city: clients.city,
-      state: clients.state,
-      zipCode: clients.zipCode,
-      country: clients.country,
-      leadSource: clients.leadSource,
-      referredBy: clients.referredBy,
-      socialProfiles: clients.socialProfiles,
-      tags: clients.tags,
-      notes: clients.notes,
-      customFields: clients.customFields,
-      lastContactedAt: clients.lastContactedAt,
-      nextFollowUpAt: clients.nextFollowUpAt,
-      leadScore: clients.leadScore,
-      lifetimeValue: clients.lifetimeValue,
-      totalRevenue: clients.totalRevenue,
-      pipelineStage: clients.pipelineStage,
-      assignedTo: clients.assignedTo,
-      teamId: clients.teamId,
-      isArchived: clients.isArchived,
-      createdAt: clients.createdAt,
-      updatedAt: clients.updatedAt
-    }).from(clients);
-    
-    // Apply sorting
-    if (sortBy && sortOrder) {
-      if (sortBy === 'createdAt') {
-        query = sortOrder === 'desc' ? query.orderBy(desc(clients.createdAt)) : query.orderBy(asc(clients.createdAt));
-      } else if (sortBy === 'name') {
-        query = sortOrder === 'desc' ? query.orderBy(desc(clients.name)) : query.orderBy(asc(clients.name));
-      } else if (sortBy === 'email') {
-        query = sortOrder === 'desc' ? query.orderBy(desc(clients.email)) : query.orderBy(asc(clients.email));
+    try {
+      // Get total count
+      const totalResult = await db.select({ count: sql`count(*)` }).from(clients);
+      const total = Number(totalResult[0]?.count) || 0;
+      
+      // Build the query with sorting
+      let query = db.select().from(clients);
+      
+      if (sortBy) {
+        const column = clients[sortBy as keyof typeof clients];
+        if (column) {
+          if (sortOrder === 'desc') {
+            query = query.orderBy(desc(column));
+          } else {
+            query = query.orderBy(asc(column));
+          }
+        }
       } else {
-        // Default fallback to name if invalid sortBy
-        query = query.orderBy(asc(clients.name));
+        // Default sort by createdAt desc
+        query = query.orderBy(desc(clients.createdAt));
       }
-    } else {
-      // Default sorting by name
-      query = query.orderBy(asc(clients.name));
+      
+      // Add pagination
+      query = query.limit(limit).offset(offset);
+      
+      const clientsResult = await query;
+      
+      return {
+        clients: clientsResult,
+        total
+      };
+    } catch (error) {
+      console.error("Error fetching clients with pagination:", error);
+      return {
+        clients: [],
+        total: 0
+      };
     }
-    
-    const [clientsResult, totalResult] = await Promise.all([
-      query.limit(limit).offset(offset),
-      db.select({ count: sql<number>`count(*)` }).from(clients)
-    ]);
-    
-    return {
-      clients: clientsResult,
-      total: totalResult[0].count
-    };
   }
 
   async getClient(id: string): Promise<Client | undefined> {
-    const result = await db.select({
-      id: clients.id,
-      name: clients.name,
-      email: clients.email,
-      phone: clients.phone,
-      company: clients.company,
-      position: clients.position,
-      status: clients.status,
-      contactType: clients.contactType,
-      contactSource: clients.contactSource,
-      address: clients.address,
-      address2: clients.address2,
-      city: clients.city,
-      state: clients.state,
-      zipCode: clients.zipCode,
-      country: clients.country,
-      leadSource: clients.leadSource,
-      referredBy: clients.referredBy,
-      socialProfiles: clients.socialProfiles,
-      tags: clients.tags,
-      notes: clients.notes,
-      customFields: clients.customFields,
-      lastContactedAt: clients.lastContactedAt,
-      nextFollowUpAt: clients.nextFollowUpAt,
-      leadScore: clients.leadScore,
-      lifetimeValue: clients.lifetimeValue,
-      totalRevenue: clients.totalRevenue,
-      pipelineStage: clients.pipelineStage,
-      assignedTo: clients.assignedTo,
-      teamId: clients.teamId,
-      isArchived: clients.isArchived,
-      createdAt: clients.createdAt,
-      updatedAt: clients.updatedAt
-    }).from(clients).where(eq(clients.id, id));
-    return result[0];
+    try {
+      const result = await db.select().from(clients).where(eq(clients.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching client:", error);
+      return undefined;
+    }
   }
 
   async createClient(insertClient: InsertClient): Promise<Client> {

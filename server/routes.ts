@@ -1914,65 +1914,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let tasksList;
       if (conditions.length > 0) {
-        tasksList = await db.select({
-          id: tasks.id,
-          title: tasks.title,
-          description: tasks.description,
-          status: tasks.status,
-          priority: tasks.priority,
-          categoryId: tasks.categoryId,
-          workflowId: tasks.workflowId,
-          assignedTo: tasks.assignedTo,
-          clientId: tasks.clientId,
-          campaignId: tasks.campaignId,
-          dueDate: tasks.dueDate,
-          startDate: tasks.startDate,
-          dueTime: tasks.dueTime,
-          timeEstimate: tasks.timeEstimate,
-          timeTracked: tasks.timeTracked,
-          timeEntries: tasks.timeEntries,
-          parentTaskId: tasks.parentTaskId,
-          level: tasks.level,
-          position: tasks.position,
-          tags: tasks.tags,
-          attachments: tasks.attachments,
-          isRecurring: tasks.isRecurring,
-          recurrenceRule: tasks.recurrenceRule,
-          createdBy: tasks.createdBy,
-          createdAt: tasks.createdAt,
-          updatedAt: tasks.updatedAt,
-          completedAt: tasks.completedAt
-        }).from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt));
+        tasksList = await db.select().from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt));
       } else {
-        tasksList = await db.select({
-          id: tasks.id,
-          title: tasks.title,
-          description: tasks.description,
-          status: tasks.status,
-          priority: tasks.priority,
-          categoryId: tasks.categoryId,
-          workflowId: tasks.workflowId,
-          assignedTo: tasks.assignedTo,
-          clientId: tasks.clientId,
-          campaignId: tasks.campaignId,
-          dueDate: tasks.dueDate,
-          startDate: tasks.startDate,
-          dueTime: tasks.dueTime,
-          timeEstimate: tasks.timeEstimate,
-          timeTracked: tasks.timeTracked,
-          timeEntries: tasks.timeEntries,
-          parentTaskId: tasks.parentTaskId,
-          level: tasks.level,
-          position: tasks.position,
-          tags: tasks.tags,
-          attachments: tasks.attachments,
-          isRecurring: tasks.isRecurring,
-          recurrenceRule: tasks.recurrenceRule,
-          createdBy: tasks.createdBy,
-          createdAt: tasks.createdAt,
-          updatedAt: tasks.updatedAt,
-          completedAt: tasks.completedAt
-        }).from(tasks).orderBy(desc(tasks.createdAt));
+        tasksList = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
       }
       res.json(tasksList);
     } catch (error) {
@@ -5807,38 +5751,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Filter by department ID - lookup department name first
       if (departmentId && typeof departmentId === 'string') {
-        const [department] = await db.select({
-          id: departments.id,
-          name: departments.name,
-          description: departments.description,
-          managerId: departments.managerId,
-          budget: departments.budget,
-          headCount: departments.headCount,
-          isActive: departments.isActive,
-          createdAt: departments.createdAt,
-          updatedAt: departments.updatedAt
-        }).from(departments).where(eq(departments.id, departmentId));
+        const [department] = await db.select().from(departments).where(eq(departments.id, departmentId));
         if (department) {
           whereConditions.push(eq(staff.department, department.name));
         }
       }
       
-      const query = db.select({
-        id: staff.id,
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-        email: staff.email,
-        phone: staff.phone,
-        roleId: staff.roleId,
-        profileImagePath: staff.profileImagePath,
-        hireDate: staff.hireDate,
-        department: staff.department,
-        position: staff.position,
-        managerId: staff.managerId,
-        status: staff.status,
-        createdAt: staff.createdAt,
-        updatedAt: staff.updatedAt
-      }).from(staff).where(and(...whereConditions));
+      const query = db.select().from(staff).where(and(...whereConditions));
       const staffMembers = await query.orderBy(asc(staff.firstName));
       res.json(staffMembers);
     } catch (error) {
@@ -5849,22 +5768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/staff/:id", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {
-      const [staffMember] = await db.select({
-        id: staff.id,
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-        email: staff.email,
-        phone: staff.phone,
-        roleId: staff.roleId,
-        profileImagePath: staff.profileImagePath,
-        hireDate: staff.hireDate,
-        department: staff.department,
-        position: staff.position,
-        managerId: staff.managerId,
-        status: staff.status,
-        createdAt: staff.createdAt,
-        updatedAt: staff.updatedAt
-      }).from(staff).where(eq(staff.id, req.params.id));
+      const [staffMember] = await db.select().from(staff).where(eq(staff.id, req.params.id));
       
       if (!staffMember) {
         return res.status(404).json({ message: "Staff member not found" });
