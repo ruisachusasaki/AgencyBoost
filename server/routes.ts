@@ -5309,7 +5309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Staff/Users Management API - SECURED
-  app.get("/api/staff", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
+  app.get("/api/staff", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {
       const { search, departmentId } = req.query;
       let whereConditions = [eq(staff.isActive, true)];
