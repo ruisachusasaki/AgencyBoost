@@ -72,10 +72,6 @@ localPort = 41631
 externalPort = 8081
 
 [[ports]]
-localPort = 41753
-externalPort = 8008
-
-[[ports]]
 localPort = 43943
 externalPort = 3001
 
@@ -90,6 +86,10 @@ externalPort = 6800
 [[ports]]
 localPort = 45105
 externalPort = 3002
+
+[[ports]]
+localPort = 46015
+externalPort = 8008
 
 [agent]
 integrations = ["javascript_object_storage:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_slack:1.0.0"]
