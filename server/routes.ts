@@ -391,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client routes - SECURED
-  app.get("/api/clients", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
+  app.get("/api/clients", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -422,7 +422,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching clients:", error);
       console.error("Error details:", JSON.stringify(error, null, 2));
-      res.status(500).json({ message: "Failed to fetch clients", error: error instanceof Error ? error.message : String(error) });
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Enhanced error handling for common database/Drizzle issues
+      if (error instanceof Error) {
+        if (error.message.includes('Cannot convert undefined or null to object')) {
+          console.error('DRIZZLE ORM ERROR: Query builder received invalid parameters');
+          return res.status(500).json({ 
+            message: "Database query error - invalid parameters", 
+            error: "Query builder failed",
+            details: error.message 
+          });
+        }
+        if (error.message.includes('relation') && error.message.includes('does not exist')) {
+          console.error('DATABASE ERROR: Table/relation does not exist');
+          return res.status(500).json({ 
+            message: "Database schema error", 
+            error: "Required table not found",
+            details: error.message 
+          });
+        }
+        if (error.message.includes('connection')) {
+          console.error('DATABASE ERROR: Connection issue');
+          return res.status(500).json({ 
+            message: "Database connection error", 
+            error: "Unable to connect to database",
+            details: error.message 
+          });
+        }
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to fetch clients", 
+        error: error instanceof Error ? error.message : String(error),
+        type: error instanceof Error ? error.constructor.name : typeof error
+      });
     }
   });
 
@@ -1844,7 +1878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task routes - SECURED
-  app.get("/api/tasks", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
+  app.get("/api/tasks", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const { search, status, priority, assignedTo, clientId } = req.query;
       // projectId removed - projects no longer exist
@@ -1943,7 +1977,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(tasksList);
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      res.status(500).json({ message: "Failed to fetch tasks" });
+      console.error("Error details:", JSON.stringify(error, null, 2));
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Enhanced error handling for common database/Drizzle issues
+      if (error instanceof Error) {
+        if (error.message.includes('Cannot convert undefined or null to object')) {
+          console.error('DRIZZLE ORM ERROR: Query builder received invalid parameters');
+          return res.status(500).json({ 
+            message: "Database query error - invalid parameters", 
+            error: "Query builder failed",
+            details: error.message 
+          });
+        }
+        if (error.message.includes('relation') && error.message.includes('does not exist')) {
+          console.error('DATABASE ERROR: Table/relation does not exist');
+          return res.status(500).json({ 
+            message: "Database schema error", 
+            error: "Required table not found",
+            details: error.message 
+          });
+        }
+        if (error.message.includes('connection')) {
+          console.error('DATABASE ERROR: Connection issue');
+          return res.status(500).json({ 
+            message: "Database connection error", 
+            error: "Unable to connect to database",
+            details: error.message 
+          });
+        }
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to fetch tasks", 
+        error: error instanceof Error ? error.message : String(error),
+        type: error instanceof Error ? error.constructor.name : typeof error
+      });
     }
   });
 
