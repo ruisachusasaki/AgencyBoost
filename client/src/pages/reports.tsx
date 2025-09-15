@@ -25,6 +25,7 @@ import {
   ChevronUp,
   ChevronDown,
   Clock,
+  Timer,
 } from "lucide-react";
 import type { Client, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
 
@@ -50,6 +51,24 @@ export default function Reports() {
   const [taskPageSize, setTaskPageSize] = useState(20);
   const [taskSortField, setTaskSortField] = useState<string>("createdAt");
   const [taskSortOrder, setTaskSortOrder] = useState<"asc" | "desc">("desc");
+  
+  // Client breakdown specific state
+  const [clientBreakdownView, setClientBreakdownView] = useState("by-user-client");
+  const [userIdFilter, setUserIdFilter] = useState("all");
+  
+  // User authentication and role data
+  const { data: currentUser } = useQuery<{ id: string; name: string; email: string; role: string }>({
+    queryKey: ["/api/auth/current-user"],
+  });
+  
+  const { data: userPermissions } = useQuery<Record<string, { canView: boolean; canEdit: boolean; canDelete: boolean; canCreate: boolean }>>(
+    {
+      queryKey: ["/api/user-permissions"],
+    }
+  );
+  
+  // Check if current user is admin - use server-provided role only
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'Admin';
   
   // Task-specific time period controls
   const [taskDateRange, setTaskDateRange] = useState("this-week");
@@ -81,6 +100,82 @@ export default function Reports() {
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
   });
+  
+  // Time tracking data query for client breakdowns - fixed filter logic
+  const timeTrackingFilters = {
+    dateFrom: taskDateRange === "today" ? new Date().toISOString().split('T')[0] :
+              taskDateRange === "this-week" ? (() => {
+                const startOfWeek = new Date();
+                const dayOfWeek = startOfWeek.getDay();
+                const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                startOfWeek.setDate(startOfWeek.getDate() + diff);
+                return startOfWeek.toISOString().split('T')[0];
+              })() :
+              taskDateRange === "this-month" ? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0] :
+              taskDateRange === "custom" && customTaskDateFrom ? customTaskDateFrom :
+              new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    dateTo: taskDateRange === "today" ? new Date().toISOString().split('T')[0] :
+            taskDateRange === "this-week" ? (() => {
+              const endOfWeek = new Date();
+              const dayOfWeek = endOfWeek.getDay();
+              const diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+              endOfWeek.setDate(endOfWeek.getDate() + diff);
+              return endOfWeek.toISOString().split('T')[0];
+            })() :
+            taskDateRange === "this-month" ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0] :
+            taskDateRange === "custom" && customTaskDateTo ? customTaskDateTo :
+            new Date().toISOString().split('T')[0],
+    userId: userIdFilter !== "all" ? userIdFilter : undefined,
+    clientId: clientFilter !== "all" ? clientFilter : undefined,
+    reportType: taskReportType
+  };
+  
+  const { data: timeTrackingData, isLoading: timeTrackingLoading } = useQuery<{
+    tasks: any[];
+    userSummaries: Array<{
+      userId: string;
+      userName: string;
+      userRole: string;
+      totalTime: number;
+      tasksWorked: number;
+      dailyTotals: Record<string, number>;
+    }>;
+    clientBreakdowns: Array<{
+      clientId: string;
+      clientName: string;
+      totalTime: number;
+      tasksCount: number;
+      users: Array<{
+        userId: string;
+        userName: string;
+        userRole: string;
+        totalTime: number;
+        tasksWorked: number;
+        dailyTotals: Record<string, number>;
+      }>;
+    }>;
+    grandTotal: number;
+  }>(
+    {
+      queryKey: ["/api/reports/time-tracking", timeTrackingFilters],
+      queryFn: async ({ queryKey }) => {
+        const [, filters] = queryKey;
+        const response = await fetch("/api/reports/time-tracking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(filters)
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch time tracking data');
+        }
+        return response.json();
+      },
+      enabled: activeTab === "tasks" && 
+               ((taskReportType === "by-user-client") || 
+                (taskReportType === "admin-by-client" && isAdmin))
+    }
+  );
 
   // Health scores data fetching
   const healthFilters = {
@@ -1299,6 +1394,8 @@ export default function Reports() {
                       <SelectContent>
                         <SelectItem value="time-tracking">Time Tracking Report</SelectItem>
                         <SelectItem value="timesheet">Timesheet View</SelectItem>
+                        <SelectItem value="by-user-client">By User & Client</SelectItem>
+                        {isAdmin && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
                         <SelectItem value="productivity">Productivity Analysis</SelectItem>
                         <SelectItem value="workload">Workload Distribution</SelectItem>
                       </SelectContent>
@@ -1340,7 +1437,7 @@ export default function Reports() {
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-slate-600">Client:</label>
                     <Select value={clientFilter} onValueChange={setClientFilter}>
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-48" data-testid="select-client-filter">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1353,10 +1450,237 @@ export default function Reports() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {(taskReportType === "by-user-client" || taskReportType === "admin-by-client") && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-slate-600">User:</label>
+                      <Select value={userIdFilter} onValueChange={setUserIdFilter}>
+                        <SelectTrigger className="w-48" data-testid="select-user-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Users</SelectItem>
+                          {/* Note: Would need staff/users query here, using sample for now */}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardHeader>
           </Card>
+
+          {/* By User & Client View */}
+          {taskReportType === "by-user-client" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">Time by User & Client</h3>
+                  <div className="text-sm text-slate-500">
+                    Total: {timeTrackingData ? (timeTrackingData.grandTotal / 3600).toFixed(2) : '0.00'} hours
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {timeTrackingLoading ? (
+                  <div className="p-8 text-center text-slate-500">
+                    <div className="animate-pulse">
+                      <p>Loading time tracking data...</p>
+                    </div>
+                  </div>
+                ) : !timeTrackingData || timeTrackingData.clientBreakdowns.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">
+                    <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                    <p className="text-lg font-medium mb-2">No Time Data</p>
+                    <p className="text-sm">No time entries found for the selected period</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[180px]">Client</TableHead>
+                          <TableHead className="min-w-[150px]">User</TableHead>
+                          <TableHead className="min-w-[100px]">Role</TableHead>
+                          <TableHead className="text-right min-w-[100px]">Hours</TableHead>
+                          <TableHead className="text-right min-w-[80px]">Tasks</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {timeTrackingData.clientBreakdowns.map((clientData, clientIndex) => 
+                          clientData.users.map((user, userIndex) => (
+                            <TableRow key={`${clientData.clientId}-${user.userId}`} data-testid={`row-user-client-${clientIndex}-${userIndex}`}>
+                              <TableCell>
+                                <div className="font-medium text-slate-900" data-testid={`text-client-${clientIndex}-${userIndex}`}>
+                                  {clientData.clientName}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-slate-900" data-testid={`text-user-${clientIndex}-${userIndex}`}>
+                                  {user.userName}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {user.userRole}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-mono" data-testid={`text-hours-${clientIndex}-${userIndex}`}>
+                                {(user.totalTime / 3600).toFixed(2)}h
+                              </TableCell>
+                              <TableCell className="text-right" data-testid={`text-tasks-${clientIndex}-${userIndex}`}>
+                                {user.tasksWorked}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                        {/* Client Totals */}
+                        {timeTrackingData.clientBreakdowns.map((clientData, index) => (
+                          <TableRow key={`total-${clientData.clientId}`} className="border-t-2 border-slate-200 bg-slate-50">
+                            <TableCell className="font-semibold" data-testid={`text-client-total-${index}`}>
+                              {clientData.clientName} Total
+                            </TableCell>
+                            <TableCell className="text-slate-500 text-sm">
+                              {clientData.users.length} user{clientData.users.length !== 1 ? 's' : ''}
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell className="text-right font-mono font-semibold" data-testid={`text-client-hours-${index}`}>
+                              {(clientData.totalTime / 3600).toFixed(2)}h
+                            </TableCell>
+                            <TableCell className="text-right font-semibold" data-testid={`text-client-tasks-${index}`}>
+                              {clientData.tasksCount}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {/* Grand Total */}
+                        <TableRow className="border-t-2 border-slate-300 bg-slate-100">
+                          <TableCell className="font-bold" data-testid="text-grand-total-label">
+                            Grand Total
+                          </TableCell>
+                          <TableCell className="text-slate-500 text-sm">
+                            {timeTrackingData.userSummaries.length} user{timeTrackingData.userSummaries.length !== 1 ? 's' : ''}
+                          </TableCell>
+                          <TableCell></TableCell>
+                          <TableCell className="text-right font-mono font-bold" data-testid="text-grand-total-hours">
+                            {(timeTrackingData.grandTotal / 3600).toFixed(2)}h
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {timeTrackingData.clientBreakdowns.reduce((sum, client) => sum + client.tasksCount, 0)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Admin-Only Total by Client View - Proper Access Control */}
+          {taskReportType === "admin-by-client" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-slate-900">Total by Client (Admin)</h3>
+                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                      Admin Only
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    Total: {timeTrackingData ? (timeTrackingData.grandTotal / 3600).toFixed(2) : '0.00'} hours
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {!isAdmin ? (
+                  <div className="p-8 text-center text-slate-500" data-testid="admin-access-denied">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <div className="text-2xl">🔒</div>
+                    </div>
+                    <p className="text-lg font-medium mb-2">Access Restricted</p>
+                    <p className="text-sm">This view is only available to administrators</p>
+                  </div>
+                ) : timeTrackingLoading ? (
+                  <div className="p-8 text-center text-slate-500">
+                    <div className="animate-pulse">
+                      <p>Loading client totals...</p>
+                    </div>
+                  </div>
+                ) : !timeTrackingData || timeTrackingData.clientBreakdowns.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">
+                    <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                    <p className="text-lg font-medium mb-2">No Time Data</p>
+                    <p className="text-sm">No time entries found for the selected period</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[200px]">Client</TableHead>
+                          <TableHead className="text-right min-w-[120px]">Total Hours</TableHead>
+                          <TableHead className="text-right min-w-[100px]">Total Tasks</TableHead>
+                          <TableHead className="text-right min-w-[100px]">Users</TableHead>
+                          <TableHead className="text-right min-w-[120px]">Avg Hours/Task</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {timeTrackingData.clientBreakdowns
+                          .sort((a, b) => b.totalTime - a.totalTime)
+                          .map((clientData, index) => {
+                            const avgHoursPerTask = clientData.tasksCount > 0 ? (clientData.totalTime / 3600) / clientData.tasksCount : 0;
+                            return (
+                              <TableRow key={clientData.clientId} data-testid={`row-admin-client-${index}`}>
+                                <TableCell>
+                                  <div className="font-medium text-slate-900" data-testid={`text-admin-client-${index}`}>
+                                    {clientData.clientName}
+                                  </div>
+                                  <div className="text-xs text-slate-500 mt-1">
+                                    {clientData.users.map(u => u.userName).join(', ')}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-semibold" data-testid={`text-admin-hours-${index}`}>
+                                  {(clientData.totalTime / 3600).toFixed(2)}h
+                                </TableCell>
+                                <TableCell className="text-right font-semibold" data-testid={`text-admin-tasks-${index}`}>
+                                  {clientData.tasksCount}
+                                </TableCell>
+                                <TableCell className="text-right" data-testid={`text-admin-users-${index}`}>
+                                  {clientData.users.length}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-sm" data-testid={`text-admin-avg-${index}`}>
+                                  {avgHoursPerTask.toFixed(2)}h
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        {/* Grand Total Row */}
+                        <TableRow className="border-t-2 border-slate-300 bg-slate-100">
+                          <TableCell className="font-bold" data-testid="text-admin-grand-total-label">
+                            Grand Total
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold" data-testid="text-admin-grand-total-hours">
+                            {(timeTrackingData.grandTotal / 3600).toFixed(2)}h
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {timeTrackingData.clientBreakdowns.reduce((sum, client) => sum + client.tasksCount, 0)}
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {timeTrackingData.userSummaries.length}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {timeTrackingData.clientBreakdowns.length > 0 ? 
+                              (timeTrackingData.grandTotal / 3600 / timeTrackingData.clientBreakdowns.reduce((sum, client) => sum + client.tasksCount, 0)).toFixed(2) 
+                              : '0.00'}h
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* ClickUp-style Timesheet View */}
           {taskReportType === "timesheet" && (
