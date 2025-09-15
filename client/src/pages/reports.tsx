@@ -23,7 +23,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Clock,
 } from "lucide-react";
 import type { Client, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
 
@@ -40,6 +41,20 @@ export default function Reports() {
   const [showLatestOnly, setShowLatestOnly] = useState(false);
   const [healthSortField, setHealthSortField] = useState<string>("weekStartDate");
   const [healthSortOrder, setHealthSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Tasks-specific state
+  const [taskReportType, setTaskReportType] = useState("time-tracking");
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string[]>([]);
+  const [taskSearchTerm, setTaskSearchTerm] = useState("");
+  const [taskPage, setTaskPage] = useState(1);
+  const [taskPageSize, setTaskPageSize] = useState(20);
+  const [taskSortField, setTaskSortField] = useState<string>("createdAt");
+  const [taskSortOrder, setTaskSortOrder] = useState<"asc" | "desc">("desc");
+  
+  // Task-specific time period controls
+  const [taskDateRange, setTaskDateRange] = useState("this-week");
+  const [customTaskDateFrom, setCustomTaskDateFrom] = useState("");
+  const [customTaskDateTo, setCustomTaskDateTo] = useState("");
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<{clients: Client[]}>({
     queryKey: ["/api/clients"],
@@ -235,6 +250,90 @@ export default function Reports() {
     atRiskClients: healthScores.filter(h => h.healthIndicator === 'Red').slice(0, 5)
   };
 
+  // Get task date filter based on task-specific controls
+  const getTaskDateFilter = () => {
+    const now = new Date();
+    switch (taskDateRange) {
+      case "today": {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return { from: today, to: new Date() };
+      }
+      case "this-week": {
+        const startOfWeek = new Date(now);
+        const dayOfWeek = startOfWeek.getDay();
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1, Sunday = 0
+        startOfWeek.setDate(startOfWeek.getDate() + diff);
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return { from: startOfWeek, to: endOfWeek };
+      }
+      case "this-month": {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return { from: startOfMonth, to: endOfMonth };
+      }
+      case "custom": {
+        const from = customTaskDateFrom ? new Date(customTaskDateFrom) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const to = customTaskDateTo ? new Date(customTaskDateTo) : now;
+        return { from, to };
+      }
+      default:
+        return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), to: now };
+    }
+  };
+
+  // Filter tasks by task-specific date range
+  const filteredTasksByTimeRange = tasks.filter(task => {
+    if (activeTab !== "tasks") return true;
+    
+    const { from, to } = getTaskDateFilter();
+    const dateMatch = !task.createdAt || (new Date(task.createdAt) >= from && new Date(task.createdAt) <= to);
+    const clientMatch = clientFilter === "all" || task.clientId === clientFilter;
+    return dateMatch && clientMatch;
+  });
+
+  // Task analytics calculations - Fixed data model
+  const tasksWithTimeData = filteredTasksByTimeRange.filter(task => 
+    (task.timeEstimate && task.timeEstimate > 0) || (task.timeTracked && task.timeTracked > 0)
+  );
+
+  const taskAnalytics = {
+    totalTasks: filteredTasksByTimeRange.length,
+    tasksWithTimeTracking: tasksWithTimeData.length,
+    totalEstimatedHours: tasksWithTimeData.reduce((sum, task) => sum + (task.timeEstimate || 0), 0) / 60,
+    totalSpentHours: tasksWithTimeData.reduce((sum, task) => sum + (task.timeTracked || 0), 0) / 60,
+    avgTimePerTask: tasksWithTimeData.length > 0 ? 
+      (tasksWithTimeData.reduce((sum, task) => sum + (task.timeTracked || 0), 0) / tasksWithTimeData.length / 60).toFixed(2) : "0.00",
+    tasksOverEstimate: tasksWithTimeData.filter(task => 
+      task.timeTracked && task.timeEstimate && task.timeTracked > task.timeEstimate
+    ).length,
+    tasksUnderEstimate: tasksWithTimeData.filter(task => 
+      task.timeTracked && task.timeEstimate && task.timeTracked < task.timeEstimate
+    ).length,
+    statusBreakdown: {
+      pending: filteredTasksByTimeRange.filter(t => t.status === 'pending').length,
+      in_progress: filteredTasksByTimeRange.filter(t => t.status === 'in_progress').length,
+      completed: filteredTasksByTimeRange.filter(t => t.status === 'completed').length,
+      blocked: filteredTasksByTimeRange.filter(t => t.status === 'blocked').length,
+      cancelled: filteredTasksByTimeRange.filter(t => t.status === 'cancelled').length,
+    },
+    timeAccuracy: tasksWithTimeData.length > 0 ? 
+      (tasksWithTimeData.filter(task => 
+        task.timeTracked && task.timeEstimate && 
+        Math.abs(task.timeTracked - task.timeEstimate) <= (task.timeEstimate * 0.2)
+      ).length / tasksWithTimeData.length * 100).toFixed(1) : "0.0",
+    topTimeConsumers: [...tasksWithTimeData]
+      .sort((a, b) => (b.timeTracked || 0) - (a.timeTracked || 0))
+      .slice(0, 5)
+      .map(task => ({
+        ...task,
+        clientName: clients.find(c => c.id === task.clientId)?.name || 'Unknown Client'
+      }))
+  };
+
   // Health table sorting functions
   const handleHealthSort = (field: string) => {
     if (healthSortField === field) {
@@ -281,7 +380,7 @@ export default function Reports() {
   function calculateHealthTrend(scores: Array<ClientHealthScore & { clientName: string; clientEmail: string }>) {
     if (scores.length === 0) return { direction: 'stable', percentage: 0 };
     
-    const sortedScores = scores.sort((a, b) => 
+    const sortedScores = [...scores].sort((a, b) => 
       new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime()
     );
     
@@ -354,6 +453,37 @@ export default function Reports() {
           solutions: score.solutions
         }))
       } : null,
+      // Include task analytics data
+      taskAnalytics: activeTab === "tasks" ? {
+        ...taskAnalytics,
+        reportType: taskReportType,
+        tasksWithTimeTracking: tasksWithTimeData.map(task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          timeEstimate: task.timeEstimate,
+          timeTracked: task.timeTracked,
+          estimatedHours: task.timeEstimate ? (task.timeEstimate / 60).toFixed(2) : null,
+          actualHours: task.timeTracked ? (task.timeTracked / 60).toFixed(2) : null,
+          variance: task.timeEstimate && task.timeTracked ? 
+            ((task.timeTracked - task.timeEstimate) / task.timeEstimate * 100).toFixed(1) : null,
+          clientName: clients.find(c => c.id === task.clientId)?.name || 'Unknown Client',
+          assignedTo: task.assignedTo,
+          createdAt: task.createdAt,
+          dueDate: task.dueDate
+        })),
+        allFilteredTasks: filteredTasksByTimeRange.map(task => ({
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          priority: task.priority,
+          clientName: clients.find(c => c.id === task.clientId)?.name || 'Unknown Client',
+          createdAt: task.createdAt,
+          dueDate: task.dueDate
+        }))
+      } : null,
       generatedAt: new Date().toISOString()
     };
 
@@ -361,7 +491,8 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `crm-report-${new Date().toISOString().split('T')[0]}.json`;
+    const reportTypePrefix = activeTab === "health" ? "health" : activeTab === "tasks" ? `tasks-${taskReportType}` : "business";
+    a.download = `crm-${reportTypePrefix}-report-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -407,7 +538,8 @@ export default function Reports() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "overview", name: "Business Overview", icon: BarChart3, count: null },
-            { id: "health", name: "Client Health", icon: Heart, count: null }
+            { id: "health", name: "Client Health", icon: Heart, count: null },
+            { id: "tasks", name: "Tasks", icon: Clock, count: null }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -1143,6 +1275,557 @@ export default function Reports() {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Tasks Tab Content */}
+      {activeTab === "tasks" && (
+        <div className="space-y-6">
+          {/* Task Report Type Selection */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-slate-600" />
+                  <span className="text-sm font-medium text-slate-700">Report Type:</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">Type:</label>
+                    <Select value={taskReportType} onValueChange={setTaskReportType}>
+                      <SelectTrigger className="w-48" data-testid="select-task-report-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="time-tracking">Time Tracking Report</SelectItem>
+                        <SelectItem value="timesheet">Timesheet View</SelectItem>
+                        <SelectItem value="productivity">Productivity Analysis</SelectItem>
+                        <SelectItem value="workload">Workload Distribution</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">Time Period:</label>
+                    <Select value={taskDateRange} onValueChange={setTaskDateRange}>
+                      <SelectTrigger className="w-36" data-testid="select-task-date-range">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="this-week">This Week</SelectItem>
+                        <SelectItem value="this-month">This Month</SelectItem>
+                        <SelectItem value="custom">Custom Range</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {taskDateRange === "custom" && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={customTaskDateFrom}
+                        onChange={(e) => setCustomTaskDateFrom(e.target.value)}
+                        className="w-32"
+                        data-testid="input-custom-date-from"
+                      />
+                      <span className="text-sm text-slate-500">to</span>
+                      <Input
+                        type="date"
+                        value={customTaskDateTo}
+                        onChange={(e) => setCustomTaskDateTo(e.target.value)}
+                        className="w-32"
+                        data-testid="input-custom-date-to"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">Client:</label>
+                    <Select value={clientFilter} onValueChange={setClientFilter}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Clients</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* ClickUp-style Timesheet View */}
+          {taskReportType === "timesheet" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">Timesheet View</h3>
+                  <div className="flex items-center gap-2">
+                    <Select defaultValue="by-user-client">
+                      <SelectTrigger className="w-48" data-testid="select-timesheet-view">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="by-user-client">By User & Client</SelectItem>
+                        <SelectItem value="admin-by-client">Admin - Total by Client</SelectItem>
+                        <SelectItem value="detailed-entries">Detailed Time Entries</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {(() => {
+                  // Generate date range for columns
+                  const { from, to } = getTaskDateFilter();
+                  const dateRange = [];
+                  const currentDate = new Date(from);
+                  
+                  while (currentDate <= to) {
+                    dateRange.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                  }
+                  
+                  // Filter tasks for the timesheet - include tasks with timeEntries or timeTracked
+                  const timesheetTasks = filteredTasksByTimeRange.filter(task => {
+                    const hasTimeTracked = task.timeTracked && task.timeTracked > 0;
+                    const hasTimeEntries = Array.isArray(task.timeEntries) && task.timeEntries.length > 0;
+                    return hasTimeTracked || hasTimeEntries;
+                  });
+                  
+                  if (timesheetTasks.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-slate-500">
+                        <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                        <p className="text-lg font-medium mb-2">No Time Entries</p>
+                        <p className="text-sm">No tasks with time tracking found for the selected period</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[200px] sticky left-0 bg-white border-r border-slate-200 z-10">
+                              Task
+                            </TableHead>
+                            {dateRange.map((date) => (
+                              <TableHead key={date.toISOString()} className="text-center min-w-[100px] border-r border-slate-200">
+                                <div className="text-xs font-medium">
+                                  {date.toLocaleDateString('en-US', { 
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric' 
+                                  })}
+                                </div>
+                              </TableHead>
+                            ))}
+                            <TableHead className="text-center min-w-[80px] bg-slate-50 font-semibold">
+                              Total
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {timesheetTasks.map((task, taskIndex) => {
+                            const taskTotalMinutes = task.timeTracked || 0;
+                            const taskTotalHours = (taskTotalMinutes / 60).toFixed(2);
+                            const clientName = clients.find(c => c.id === task.clientId)?.name || 'Unknown Client';
+                            
+                            return (
+                              <TableRow key={task.id} data-testid={`timesheet-row-${taskIndex}`}>
+                                <TableCell className="sticky left-0 bg-white border-r border-slate-200 z-10">
+                                  <div className="space-y-1">
+                                    <p className="font-medium text-slate-900 text-sm" data-testid={`task-title-${taskIndex}`}>
+                                      {task.title}
+                                    </p>
+                                    <p className="text-xs text-slate-500">{clientName}</p>
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <Badge variant="outline" className={`
+                                        ${task.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                                          task.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                          task.status === 'pending' ? 'bg-gray-50 text-gray-700 border-gray-200' :
+                                          'bg-red-50 text-red-700 border-red-200'}
+                                      `}>
+                                        {task.status}
+                                      </Badge>
+                                      {task.priority && (
+                                        <Badge variant="outline" className={`
+                                          ${task.priority === 'high' ? 'bg-red-50 text-red-700 border-red-200' :
+                                            task.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                            'bg-green-50 text-green-700 border-green-200'}
+                                        `}>
+                                          {task.priority}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                {dateRange.map((date) => {
+                                  // Use actual timeEntries to get per-day values
+                                  const timeEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+                                  const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+                                  
+                                  // Find time entries for this specific date
+                                  const dayEntries = timeEntries.filter((entry: any) => {
+                                    if (entry.date) {
+                                      const entryDate = new Date(entry.date).toISOString().split('T')[0];
+                                      return entryDate === dateString;
+                                    }
+                                    return false;
+                                  });
+                                  
+                                  // Sum up time for this day
+                                  const dailyTimeMinutes = dayEntries.reduce((sum: number, entry: any) => {
+                                    return sum + (entry.duration || entry.minutes || 0);
+                                  }, 0);
+                                  
+                                  return (
+                                    <TableCell key={`${task.id}-${date.toISOString()}`} className="text-center border-r border-slate-200">
+                                      {dailyTimeMinutes > 0 && (
+                                        <div className="space-y-1">
+                                          <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium">
+                                            {(dailyTimeMinutes / 60).toFixed(1)}h
+                                          </div>
+                                          <div className="text-xs text-slate-400">
+                                            {dailyTimeMinutes}m
+                                          </div>
+                                          {dayEntries.length > 1 && (
+                                            <div className="text-xs text-slate-400">
+                                              {dayEntries.length} entries
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell className="text-center bg-slate-50 font-semibold" data-testid={`task-total-${taskIndex}`}>
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-semibold text-slate-900">
+                                      {taskTotalHours}h
+                                    </div>
+                                    <div className="text-xs text-slate-500">
+                                      {taskTotalMinutes}m
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {/* Totals Row */}
+                          <TableRow className="border-t-2 border-slate-300 bg-slate-50">
+                            <TableCell className="sticky left-0 bg-slate-100 border-r border-slate-200 z-10 font-semibold">
+                              Daily Totals
+                            </TableCell>
+                            {dateRange.map((date) => {
+                              const dateString = date.toISOString().split('T')[0];
+                              
+                              const dailyTotal = timesheetTasks.reduce((sum, task) => {
+                                const timeEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+                                const dayEntries = timeEntries.filter((entry: any) => {
+                                  if (entry.date) {
+                                    const entryDate = new Date(entry.date).toISOString().split('T')[0];
+                                    return entryDate === dateString;
+                                  }
+                                  return false;
+                                });
+                                
+                                const dailyTimeMinutes = dayEntries.reduce((entrySum: number, entry: any) => {
+                                  return entrySum + (entry.duration || entry.minutes || 0);
+                                }, 0);
+                                
+                                return sum + dailyTimeMinutes;
+                              }, 0);
+                              
+                              return (
+                                <TableCell key={`total-${date.toISOString()}`} className="text-center border-r border-slate-200 font-semibold bg-slate-100">
+                                  {dailyTotal > 0 && (
+                                    <div className="space-y-1">
+                                      <div className="text-sm font-semibold text-slate-700">
+                                        {(dailyTotal / 60).toFixed(1)}h
+                                      </div>
+                                      <div className="text-xs text-slate-500">
+                                        {dailyTotal.toFixed(0)}m
+                                      </div>
+                                    </div>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell className="text-center bg-slate-200 font-bold">
+                              <div className="space-y-1">
+                                <div className="text-sm font-bold text-slate-900">
+                                  {(timesheetTasks.reduce((sum, task) => sum + (task.timeTracked || 0), 0) / 60).toFixed(2)}h
+                                </div>
+                                <div className="text-xs text-slate-600">
+                                  Grand Total
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Time Tracking Report Content */}
+          {taskReportType === "time-tracking" && (
+            <div className="space-y-6">
+              {/* Time Tracking Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="shadow-sm border border-slate-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Total Tasks</p>
+                        <p className="text-3xl font-bold text-slate-900">{taskAnalytics.totalTasks}</p>
+                        <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
+                          <Activity className="h-3 w-3" />
+                          {taskAnalytics.tasksWithTimeTracking} with time data
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Target className="h-6 w-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border border-slate-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Estimated Hours</p>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {taskAnalytics.totalEstimatedHours.toFixed(1)}h
+                        </p>
+                        <p className="text-sm text-indigo-600 mt-1 flex items-center gap-1">
+                          <Timer className="h-3 w-3" />
+                          Planned time
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <Timer className="h-6 w-6 text-indigo-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border border-slate-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Actual Hours</p>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {taskAnalytics.totalSpentHours.toFixed(1)}h
+                        </p>
+                        <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Time logged
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Clock className="h-6 w-6 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border border-slate-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Time Accuracy</p>
+                        <p className="text-3xl font-bold text-slate-900">{taskAnalytics.timeAccuracy}%</p>
+                        <p className="text-sm text-purple-600 mt-1 flex items-center gap-1">
+                          <Target className="h-3 w-3" />
+                          Within 20% estimate
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Target className="h-6 w-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Time Tracking Analysis */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="shadow-sm border border-slate-200">
+                  <CardHeader className="border-b border-slate-200">
+                    <h3 className="text-lg font-semibold text-slate-900">Estimation Accuracy</h3>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Over Estimate</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                            {taskAnalytics.tasksOverEstimate}
+                          </Badge>
+                          <span className="text-sm text-slate-500">tasks</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Under Estimate</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                            {taskAnalytics.tasksUnderEstimate}
+                          </Badge>
+                          <span className="text-sm text-slate-500">tasks</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Average Time per Task</span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {taskAnalytics.avgTimePerTask}h
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border border-slate-200">
+                  <CardHeader className="border-b border-slate-200">
+                    <h3 className="text-lg font-semibold text-slate-900">Task Status Breakdown</h3>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      {Object.entries(taskAnalytics.statusBreakdown).map(([status, count]) => (
+                        <div key={status} className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600 capitalize">
+                            {status.replace('_', ' ')}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {count}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Top Time Consuming Tasks */}
+              <Card className="shadow-sm border border-slate-200">
+                <CardHeader className="border-b border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900">Top Time Consuming Tasks</h3>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {taskAnalytics.topTimeConsumers.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <p className="text-slate-500">No time tracking data available</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Task</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Estimated</TableHead>
+                          <TableHead>Actual</TableHead>
+                          <TableHead>Variance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {taskAnalytics.topTimeConsumers.map((task, index) => {
+                          const variance = task.timeEstimate && task.timeTracked ? 
+                            ((task.timeTracked - task.timeEstimate) / task.timeEstimate * 100).toFixed(1) : null;
+                          return (
+                            <TableRow key={task.id} data-testid={`row-top-task-${index}`}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium text-slate-900" data-testid={`text-task-title-${index}`}>
+                                    {task.title}
+                                  </p>
+                                  {task.description && (
+                                    <p className="text-xs text-slate-500 truncate max-w-xs">
+                                      {task.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm text-slate-900">{task.clientName}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs ${
+                                    task.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                                    task.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    task.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                    'bg-gray-50 text-gray-700 border-gray-200'
+                                  }`}
+                                  data-testid={`badge-task-status-${index}`}
+                                >
+                                  {task.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm text-slate-900">
+                                  {task.timeEstimate ? `${(task.timeEstimate / 60).toFixed(1)}h` : 'N/A'}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm text-slate-900">
+                                  {task.timeTracked ? `${(task.timeTracked / 60).toFixed(1)}h` : 'N/A'}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {variance ? (
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    parseFloat(variance) > 20 ? 'bg-red-100 text-red-700' :
+                                    parseFloat(variance) < -20 ? 'bg-orange-100 text-orange-700' :
+                                    'bg-green-100 text-green-700'
+                                  }`}>
+                                    {parseFloat(variance) > 0 ? '+' : ''}{variance}%
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-400">N/A</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Placeholder for other report types */}
+          {taskReportType === "productivity" && (
+            <Card className="shadow-sm border border-slate-200">
+              <CardContent className="p-8 text-center">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Productivity Analysis</h3>
+                <p className="text-slate-500">Coming soon - Detailed productivity metrics and analysis</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {taskReportType === "workload" && (
+            <Card className="shadow-sm border border-slate-200">
+              <CardContent className="p-8 text-center">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Workload Distribution</h3>
+                <p className="text-slate-500">Coming soon - Team workload distribution and capacity planning</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
