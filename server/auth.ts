@@ -133,7 +133,15 @@ export async function hasPermission(
     // 2. Check if any role has the required permission
     for (const userRole of userRolesList) {
       const rolePermissions = await db
-        .select()
+        .select({
+          id: permissions.id,
+          module: permissions.module,
+          canView: permissions.canView,
+          canCreate: permissions.canCreate,
+          canEdit: permissions.canEdit,
+          canDelete: permissions.canDelete,
+          canManage: permissions.canManage
+        })
         .from(permissions)
         .where(
           and(
@@ -230,7 +238,10 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
   
   // Production mode - check admin role through database queries
   const adminRoles = await db
-    .select({ roleId: userRoles.roleId })
+    .select({ 
+      roleId: userRoles.roleId,
+      roleName: roles.name 
+    })
     .from(userRoles)
     .leftJoin(roles, eq(userRoles.roleId, roles.id))
     .where(

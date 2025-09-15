@@ -3,7 +3,7 @@ import {
   // Projects removed from system
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
-  type Task, type InsertTask,
+  type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice,
   type User, type InsertUser,
   type AuditLog, type InsertAuditLog,
@@ -54,7 +54,7 @@ import {
   type Position, type InsertPosition, positions,
   type JobApplication, type InsertJobApplication, jobApplications,
   type JobOpening, type InsertJobOpening, jobOpenings,
-  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions
+  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -126,6 +126,12 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
+  
+  // Time Tracking Reports
+  getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData>;
+  getUserTimeEntries(userId: string, dateFrom: string, dateTo: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>>;
+  getRunningTimeEntries(): Promise<Array<{ taskId: string; userId: string; startTime: string }>>;
+  getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>>;
   
   // Sub-task hierarchy methods (ClickUp-style up to 5 levels deep)
   getSubTasks(parentTaskId: string): Promise<Task[]>;
@@ -2391,6 +2397,251 @@ export class MemStorage implements IStorage {
     return path;
   }
 
+  // Time Tracking Reports
+  async getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData> {
+    const { dateFrom, dateTo, userId, clientId, taskStatus, reportType } = filters;
+    
+    // Get all tasks with time entries in the date range
+    const allTasks = Array.from(this.tasks.values());
+    const filteredTasks = allTasks.filter(task => {
+      // Filter by user if specified
+      if (userId && task.assignedTo !== userId) return false;
+      
+      // Filter by client if specified  
+      if (clientId && task.clientId !== clientId) return false;
+      
+      // Filter by task status if specified
+      if (taskStatus && taskStatus.length > 0 && !taskStatus.includes(task.status)) return false;
+      
+      // Check if task has time entries in the date range
+      if (!task.timeEntries || task.timeEntries.length === 0) return false;
+      
+      const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        return entryDate >= dateFrom && entryDate <= dateTo;
+      });
+      
+      return hasEntriesInRange;
+    });
+    
+    // Process tasks and aggregate data
+    const tasksWithDetails = filteredTasks.map(task => {
+      const timeEntriesByDate: Record<string, import("@shared/schema").TimeEntry[]> = {};
+      
+      (task.timeEntries as any[]).forEach((entry: any) => {
+        if (!entry.startTime) return;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        if (entryDate >= dateFrom && entryDate <= dateTo) {
+          if (!timeEntriesByDate[entryDate]) {
+            timeEntriesByDate[entryDate] = [];
+          }
+          timeEntriesByDate[entryDate].push(entry as import("@shared/schema").TimeEntry);
+        }
+      });
+      
+      const totalTracked = Object.values(timeEntriesByDate)
+        .flat()
+        .reduce((sum, entry) => sum + (entry.duration || 0), 0);
+      
+      return {
+        ...task,
+        userInfo: undefined, // MemStorage doesn't have user info
+        clientInfo: undefined, // MemStorage doesn't have client info  
+        timeEntriesByDate,
+        totalTracked
+      };
+    });
+    
+    // Calculate user summaries
+    const userSummaries: import("@shared/schema").UserSummary[] = [];
+    const userTimeMap = new Map<string, any>();
+    
+    tasksWithDetails.forEach(task => {
+      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
+        entries.forEach(entry => {
+          if (!userTimeMap.has(entry.userId)) {
+            userTimeMap.set(entry.userId, {
+              userId: entry.userId,
+              userName: `User ${entry.userId}`,
+              userRole: 'User',
+              totalTime: 0,
+              tasksWorked: new Set(),
+              dailyTotals: {}
+            });
+          }
+          
+          const userData = userTimeMap.get(entry.userId);
+          userData.totalTime += entry.duration || 0;
+          userData.tasksWorked.add(task.id);
+          
+          if (!userData.dailyTotals[date]) {
+            userData.dailyTotals[date] = 0;
+          }
+          userData.dailyTotals[date] += entry.duration || 0;
+        });
+      });
+    });
+    
+    userTimeMap.forEach((userData, userId) => {
+      userSummaries.push({
+        userId,
+        userName: userData.userName,
+        userRole: userData.userRole,
+        totalTime: userData.totalTime,
+        tasksWorked: userData.tasksWorked.size,
+        dailyTotals: userData.dailyTotals
+      });
+    });
+    
+    // Calculate client breakdowns
+    const clientBreakdowns: import("@shared/schema").ClientBreakdown[] = [];
+    const clientTimeMap = new Map<string, any>();
+    
+    tasksWithDetails.forEach(task => {
+      if (!task.clientId) return;
+      
+      if (!clientTimeMap.has(task.clientId)) {
+        clientTimeMap.set(task.clientId, {
+          clientId: task.clientId,
+          clientName: `Client ${task.clientId}`,
+          totalTime: 0,
+          tasksCount: new Set(),
+          users: new Map()
+        });
+      }
+      
+      const clientData = clientTimeMap.get(task.clientId);
+      clientData.tasksCount.add(task.id);
+      
+      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
+        entries.forEach(entry => {
+          clientData.totalTime += entry.duration || 0;
+          
+          if (!clientData.users.has(entry.userId)) {
+            clientData.users.set(entry.userId, {
+              userId: entry.userId,
+              userName: `User ${entry.userId}`,
+              timeSpent: 0
+            });
+          }
+          
+          clientData.users.get(entry.userId).timeSpent += entry.duration || 0;
+        });
+      });
+    });
+    
+    clientTimeMap.forEach((clientData, clientId) => {
+      clientBreakdowns.push({
+        clientId,
+        clientName: clientData.clientName,
+        totalTime: clientData.totalTime,
+        tasksCount: clientData.tasksCount.size,
+        users: Array.from(clientData.users.values())
+      });
+    });
+    
+    // Calculate daily totals
+    const dailyTotals: Record<string, number> = {};
+    tasksWithDetails.forEach(task => {
+      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
+        if (!dailyTotals[date]) {
+          dailyTotals[date] = 0;
+        }
+        entries.forEach(entry => {
+          dailyTotals[date] += entry.duration || 0;
+        });
+      });
+    });
+    
+    const grandTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
+    
+    return {
+      tasks: tasksWithDetails,
+      userSummaries,
+      clientBreakdowns,
+      dailyTotals,
+      grandTotal
+    };
+  }
+  
+  async getUserTimeEntries(userId: string, dateFrom: string, dateTo: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
+    const allTasks = Array.from(this.tasks.values());
+    
+    return allTasks.filter(task => {
+      if (task.assignedTo !== userId) return false;
+      if (!task.timeEntries || task.timeEntries.length === 0) return false;
+      
+      // Check if task has time entries in the date range
+      const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        return entryDate >= dateFrom && entryDate <= dateTo;
+      });
+      
+      return hasEntriesInRange;
+    }).map(task => ({
+      ...task,
+      timeEntries: (task.timeEntries as any[]).filter((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        return entryDate >= dateFrom && entryDate <= dateTo;
+      }) as import("@shared/schema").TimeEntry[]
+    }));
+  }
+  
+  async getRunningTimeEntries(): Promise<Array<{ taskId: string; userId: string; startTime: string }>> {
+    const allTasks = Array.from(this.tasks.values());
+    const runningEntries: Array<{ taskId: string; userId: string; startTime: string }> = [];
+    
+    allTasks.forEach(task => {
+      if (!task.timeEntries || task.timeEntries.length === 0) return;
+      
+      (task.timeEntries as any[]).forEach((entry: any) => {
+        if (entry.isRunning) {
+          runningEntries.push({
+            taskId: task.id,
+            userId: entry.userId,
+            startTime: entry.startTime
+          });
+        }
+      });
+    });
+    
+    return runningEntries;
+  }
+  
+  async getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
+    const allTasks = Array.from(this.tasks.values());
+    
+    return allTasks.filter(task => {
+      // Filter by user if specified
+      if (userId && task.assignedTo !== userId) return false;
+      
+      // Filter by client if specified  
+      if (clientId && task.clientId !== clientId) return false;
+      
+      // Check if task has time entries
+      if (!task.timeEntries || task.timeEntries.length === 0) return false;
+      
+      // Check if task has time entries in the date range
+      const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        return entryDate >= dateFrom && entryDate <= dateTo;
+      });
+      
+      return hasEntriesInRange;
+    }).map(task => ({
+      ...task,
+      timeEntries: (task.timeEntries as any[]).filter((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        return entryDate >= dateFrom && entryDate <= dateTo;
+      }) as import("@shared/schema").TimeEntry[]
+    }));
+  }
+
   // Invoices
   async getInvoices(): Promise<Invoice[]> {
     return Array.from(this.invoices.values());
@@ -3007,17 +3258,44 @@ export class MemStorage implements IStorage {
 
   // Automation Triggers
   async getAutomationTriggers(): Promise<AutomationTrigger[]> {
-    const triggers = await db.select().from(automationTriggers).orderBy(asc(automationTriggers.createdAt));
+    const triggers = await db.select({
+      id: automationTriggers.id,
+      name: automationTriggers.name,
+      type: automationTriggers.type,
+      description: automationTriggers.description,
+      category: automationTriggers.category,
+      configSchema: automationTriggers.configSchema,
+      isActive: automationTriggers.isActive,
+      createdAt: automationTriggers.createdAt
+    }).from(automationTriggers).orderBy(asc(automationTriggers.createdAt));
     return triggers;
   }
 
   async getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined> {
-    const result = await db.select().from(automationTriggers).where(eq(automationTriggers.id, id)).limit(1);
+    const result = await db.select({
+      id: automationTriggers.id,
+      name: automationTriggers.name,
+      type: automationTriggers.type,
+      description: automationTriggers.description,
+      category: automationTriggers.category,
+      configSchema: automationTriggers.configSchema,
+      isActive: automationTriggers.isActive,
+      createdAt: automationTriggers.createdAt
+    }).from(automationTriggers).where(eq(automationTriggers.id, id)).limit(1);
     return result[0];
   }
 
   async getAutomationTriggersByCategory(category: string): Promise<AutomationTrigger[]> {
-    const triggers = await db.select().from(automationTriggers)
+    const triggers = await db.select({
+      id: automationTriggers.id,
+      name: automationTriggers.name,
+      type: automationTriggers.type,
+      description: automationTriggers.description,
+      category: automationTriggers.category,
+      configSchema: automationTriggers.configSchema,
+      isActive: automationTriggers.isActive,
+      createdAt: automationTriggers.createdAt
+    }).from(automationTriggers)
       .where(eq(automationTriggers.category, category))
       .orderBy(asc(automationTriggers.createdAt));
     return triggers;
@@ -3184,7 +3462,20 @@ export class MemStorage implements IStorage {
   // SMS Templates
   async getSmsTemplates(): Promise<SmsTemplate[]> {
     try {
-      const result = await db.select().from(smsTemplates);
+      const result = await db.select({
+        id: smsTemplates.id,
+        name: smsTemplates.name,
+        content: smsTemplates.content,
+        category: smsTemplates.category,
+        folderId: smsTemplates.folderId,
+        tags: smsTemplates.tags,
+        isPublic: smsTemplates.isPublic,
+        usageCount: smsTemplates.usageCount,
+        lastUsed: smsTemplates.lastUsed,
+        createdBy: smsTemplates.createdBy,
+        createdAt: smsTemplates.createdAt,
+        updatedAt: smsTemplates.updatedAt
+      }).from(smsTemplates);
       return result;
     } catch (error) {
       console.error("Error fetching SMS templates:", error);
@@ -3194,7 +3485,20 @@ export class MemStorage implements IStorage {
 
   async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> {
     try {
-      const result = await db.select().from(smsTemplates).where(eq(smsTemplates.id, id));
+      const result = await db.select({
+        id: smsTemplates.id,
+        name: smsTemplates.name,
+        content: smsTemplates.content,
+        category: smsTemplates.category,
+        folderId: smsTemplates.folderId,
+        tags: smsTemplates.tags,
+        isPublic: smsTemplates.isPublic,
+        usageCount: smsTemplates.usageCount,
+        lastUsed: smsTemplates.lastUsed,
+        createdBy: smsTemplates.createdBy,
+        createdAt: smsTemplates.createdAt,
+        updatedAt: smsTemplates.updatedAt
+      }).from(smsTemplates).where(eq(smsTemplates.id, id));
       return result[0];
     } catch (error) {
       console.error("Error fetching SMS template:", error);
@@ -3204,7 +3508,20 @@ export class MemStorage implements IStorage {
 
   async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> {
     try {
-      const result = await db.select().from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
+      const result = await db.select({
+        id: smsTemplates.id,
+        name: smsTemplates.name,
+        content: smsTemplates.content,
+        category: smsTemplates.category,
+        folderId: smsTemplates.folderId,
+        tags: smsTemplates.tags,
+        isPublic: smsTemplates.isPublic,
+        usageCount: smsTemplates.usageCount,
+        lastUsed: smsTemplates.lastUsed,
+        createdBy: smsTemplates.createdBy,
+        createdAt: smsTemplates.createdAt,
+        updatedAt: smsTemplates.updatedAt
+      }).from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
       return result;
     } catch (error) {
       console.error("Error fetching SMS templates by folder:", error);
@@ -3569,12 +3886,78 @@ export class MemStorage implements IStorage {
 export class DbStorage implements IStorage {
   // Clients
   async getClients(): Promise<Client[]> {
-    return await db.select().from(clients);
+    return await db.select({
+      id: clients.id,
+      name: clients.name,
+      email: clients.email,
+      phone: clients.phone,
+      company: clients.company,
+      position: clients.position,
+      status: clients.status,
+      contactType: clients.contactType,
+      contactSource: clients.contactSource,
+      address: clients.address,
+      address2: clients.address2,
+      city: clients.city,
+      state: clients.state,
+      zipCode: clients.zipCode,
+      country: clients.country,
+      leadSource: clients.leadSource,
+      referredBy: clients.referredBy,
+      socialProfiles: clients.socialProfiles,
+      tags: clients.tags,
+      notes: clients.notes,
+      customFields: clients.customFields,
+      lastContactedAt: clients.lastContactedAt,
+      nextFollowUpAt: clients.nextFollowUpAt,
+      leadScore: clients.leadScore,
+      lifetimeValue: clients.lifetimeValue,
+      totalRevenue: clients.totalRevenue,
+      pipelineStage: clients.pipelineStage,
+      assignedTo: clients.assignedTo,
+      teamId: clients.teamId,
+      isArchived: clients.isArchived,
+      createdAt: clients.createdAt,
+      updatedAt: clients.updatedAt
+    }).from(clients);
   }
 
   async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
     // Build the query with proper sorting
-    let query = db.select().from(clients);
+    let query = db.select({
+      id: clients.id,
+      name: clients.name,
+      email: clients.email,
+      phone: clients.phone,
+      company: clients.company,
+      position: clients.position,
+      status: clients.status,
+      contactType: clients.contactType,
+      contactSource: clients.contactSource,
+      address: clients.address,
+      address2: clients.address2,
+      city: clients.city,
+      state: clients.state,
+      zipCode: clients.zipCode,
+      country: clients.country,
+      leadSource: clients.leadSource,
+      referredBy: clients.referredBy,
+      socialProfiles: clients.socialProfiles,
+      tags: clients.tags,
+      notes: clients.notes,
+      customFields: clients.customFields,
+      lastContactedAt: clients.lastContactedAt,
+      nextFollowUpAt: clients.nextFollowUpAt,
+      leadScore: clients.leadScore,
+      lifetimeValue: clients.lifetimeValue,
+      totalRevenue: clients.totalRevenue,
+      pipelineStage: clients.pipelineStage,
+      assignedTo: clients.assignedTo,
+      teamId: clients.teamId,
+      isArchived: clients.isArchived,
+      createdAt: clients.createdAt,
+      updatedAt: clients.updatedAt
+    }).from(clients);
     
     // Apply sorting
     if (sortBy && sortOrder) {
@@ -3605,7 +3988,40 @@ export class DbStorage implements IStorage {
   }
 
   async getClient(id: string): Promise<Client | undefined> {
-    const result = await db.select().from(clients).where(eq(clients.id, id));
+    const result = await db.select({
+      id: clients.id,
+      name: clients.name,
+      email: clients.email,
+      phone: clients.phone,
+      company: clients.company,
+      position: clients.position,
+      status: clients.status,
+      contactType: clients.contactType,
+      contactSource: clients.contactSource,
+      address: clients.address,
+      address2: clients.address2,
+      city: clients.city,
+      state: clients.state,
+      zipCode: clients.zipCode,
+      country: clients.country,
+      leadSource: clients.leadSource,
+      referredBy: clients.referredBy,
+      socialProfiles: clients.socialProfiles,
+      tags: clients.tags,
+      notes: clients.notes,
+      customFields: clients.customFields,
+      lastContactedAt: clients.lastContactedAt,
+      nextFollowUpAt: clients.nextFollowUpAt,
+      leadScore: clients.leadScore,
+      lifetimeValue: clients.lifetimeValue,
+      totalRevenue: clients.totalRevenue,
+      pipelineStage: clients.pipelineStage,
+      assignedTo: clients.assignedTo,
+      teamId: clients.teamId,
+      isArchived: clients.isArchived,
+      createdAt: clients.createdAt,
+      updatedAt: clients.updatedAt
+    }).from(clients).where(eq(clients.id, id));
     return result[0];
   }
 
@@ -3864,12 +4280,334 @@ export class DbStorage implements IStorage {
   }
 
   async getAllClientsForExport(): Promise<Client[]> {
-    return await db.select().from(clients).orderBy(clients.createdAt);
+    return await db.select({
+      id: clients.id,
+      name: clients.name,
+      email: clients.email,
+      phone: clients.phone,
+      company: clients.company,
+      position: clients.position,
+      status: clients.status,
+      contactType: clients.contactType,
+      contactSource: clients.contactSource,
+      address: clients.address,
+      address2: clients.address2,
+      city: clients.city,
+      state: clients.state,
+      zipCode: clients.zipCode,
+      country: clients.country,
+      leadSource: clients.leadSource,
+      referredBy: clients.referredBy,
+      socialProfiles: clients.socialProfiles,
+      tags: clients.tags,
+      notes: clients.notes,
+      customFields: clients.customFields,
+      lastContactedAt: clients.lastContactedAt,
+      nextFollowUpAt: clients.nextFollowUpAt,
+      leadScore: clients.leadScore,
+      lifetimeValue: clients.lifetimeValue,
+      totalRevenue: clients.totalRevenue,
+      pipelineStage: clients.pipelineStage,
+      assignedTo: clients.assignedTo,
+      teamId: clients.teamId,
+      isArchived: clients.isArchived,
+      createdAt: clients.createdAt,
+      updatedAt: clients.updatedAt
+    }).from(clients).orderBy(clients.createdAt);
   }
 
   // For now, delegate other methods to memory storage until we need them
   // This allows the system to work while we migrate clients to database
   private memStorage = new MemStorage();
+
+  // Time Tracking Reports - Database Implementation
+  async getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData> {
+    const { dateFrom, dateTo, userId, clientId, taskStatus, reportType } = filters;
+    
+    // Build base query conditions
+    const conditions: any[] = [];
+    
+    // Add date range conditions for timeEntries (JSONB query)
+    // We'll filter tasks that have time entries within the date range
+    conditions.push(
+      sql`EXISTS (
+        SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
+        WHERE entry->>'startTime' IS NOT NULL
+        AND (entry->>'startTime')::date >= ${dateFrom}::date
+        AND (entry->>'startTime')::date <= ${dateTo}::date
+      )`
+    );
+    
+    // Filter by user if specified
+    if (userId) {
+      conditions.push(eq(tasks.assignedTo, userId));
+    }
+    
+    // Filter by client if specified
+    if (clientId) {
+      conditions.push(eq(tasks.clientId, clientId));
+    }
+    
+    // Filter by task status if specified
+    if (taskStatus && taskStatus.length > 0) {
+      conditions.push(sql`${tasks.status} IN (${sql.join(taskStatus.map(status => sql`${status}`), sql`, `)})`);
+    }
+    
+    // Get basic task data first to avoid complex join issues
+    const tasksQuery = db
+      .select()
+      .from(tasks)
+      .where(and(...conditions));
+    
+    const tasksData = await tasksQuery;
+    
+    // Process the results to format time entries by date
+    const tasksWithDetails = tasksData.map(task => {
+      const timeEntriesByDate: Record<string, import("@shared/schema").TimeEntry[]> = {};
+      
+      if (task.timeEntries && Array.isArray(task.timeEntries)) {
+        (task.timeEntries as any[]).forEach((entry: any) => {
+          if (!entry.startTime) return;
+          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          if (entryDate >= dateFrom && entryDate <= dateTo) {
+            if (!timeEntriesByDate[entryDate]) {
+              timeEntriesByDate[entryDate] = [];
+            }
+            timeEntriesByDate[entryDate].push(entry as import("@shared/schema").TimeEntry);
+          }
+        });
+      }
+      
+      const totalTracked = Object.values(timeEntriesByDate)
+        .flat()
+        .reduce((sum, entry) => sum + (entry.duration || 0), 0);
+      
+      return {
+        ...task,
+        userInfo: undefined, // Simplified - we'll get this info separately if needed
+        clientInfo: undefined, // Simplified - we'll get this info separately if needed  
+        timeEntriesByDate,
+        totalTracked
+      };
+    });
+    
+    // Calculate user summaries
+    const userSummaries: import("@shared/schema").UserSummary[] = [];
+    const userTimeMap = new Map<string, any>();
+    
+    tasksWithDetails.forEach(task => {
+      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
+        entries.forEach(entry => {
+          if (!userTimeMap.has(entry.userId)) {
+            userTimeMap.set(entry.userId, {
+              userId: entry.userId,
+              userName: task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`,
+              userRole: task.userInfo?.role || 'User',
+              department: task.userInfo ? tasksData.find(t => t.userId === entry.userId)?.userDepartment : undefined,
+              totalTime: 0,
+              tasksWorked: new Set(),
+              dailyTotals: {}
+            });
+          }
+          
+          const userData = userTimeMap.get(entry.userId);
+          userData.totalTime += entry.duration || 0;
+          userData.tasksWorked.add(task.id);
+          
+          if (!userData.dailyTotals[date]) {
+            userData.dailyTotals[date] = 0;
+          }
+          userData.dailyTotals[date] += entry.duration || 0;
+        });
+      });
+    });
+    
+    userTimeMap.forEach((userData, userId) => {
+      userSummaries.push({
+        userId,
+        userName: userData.userName,
+        userRole: userData.userRole,
+        department: userData.department,
+        totalTime: userData.totalTime,
+        tasksWorked: userData.tasksWorked.size,
+        dailyTotals: userData.dailyTotals
+      });
+    });
+    
+    // Calculate client breakdowns
+    const clientBreakdowns: import("@shared/schema").ClientBreakdown[] = [];
+    const clientTimeMap = new Map<string, any>();
+    
+    tasksWithDetails.forEach(task => {
+      if (!task.clientId) return;
+      
+      if (!clientTimeMap.has(task.clientId)) {
+        clientTimeMap.set(task.clientId, {
+          clientId: task.clientId,
+          clientName: task.clientInfo?.name || `Client ${task.clientId}`,
+          totalTime: 0,
+          tasksCount: new Set(),
+          users: new Map()
+        });
+      }
+      
+      const clientData = clientTimeMap.get(task.clientId);
+      clientData.tasksCount.add(task.id);
+      
+      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
+        entries.forEach(entry => {
+          clientData.totalTime += entry.duration || 0;
+          
+          if (!clientData.users.has(entry.userId)) {
+            clientData.users.set(entry.userId, {
+              userId: entry.userId,
+              userName: task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`,
+              timeSpent: 0
+            });
+          }
+          
+          clientData.users.get(entry.userId).timeSpent += entry.duration || 0;
+        });
+      });
+    });
+    
+    clientTimeMap.forEach((clientData, clientId) => {
+      clientBreakdowns.push({
+        clientId,
+        clientName: clientData.clientName,
+        totalTime: clientData.totalTime,
+        tasksCount: clientData.tasksCount.size,
+        users: Array.from(clientData.users.values())
+      });
+    });
+    
+    // Calculate daily totals
+    const dailyTotals: Record<string, number> = {};
+    tasksWithDetails.forEach(task => {
+      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
+        if (!dailyTotals[date]) {
+          dailyTotals[date] = 0;
+        }
+        entries.forEach(entry => {
+          dailyTotals[date] += entry.duration || 0;
+        });
+      });
+    });
+    
+    const grandTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
+    
+    return {
+      tasks: tasksWithDetails,
+      userSummaries,
+      clientBreakdowns,
+      dailyTotals,
+      grandTotal
+    };
+  }
+  
+  async getUserTimeEntries(userId: string, dateFrom: string, dateTo: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
+    // Query tasks assigned to the user that have time entries in the date range
+    const tasksData = await db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.assignedTo, userId),
+          sql`EXISTS (
+            SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
+            WHERE entry->>'startTime' IS NOT NULL
+            AND (entry->>'startTime')::date >= ${dateFrom}::date
+            AND (entry->>'startTime')::date <= ${dateTo}::date
+          )`
+        )
+      );
+    
+    // Filter time entries to only include those in the date range
+    return tasksData.map(task => ({
+      ...task,
+      timeEntries: task.timeEntries && Array.isArray(task.timeEntries) 
+        ? (task.timeEntries as any[]).filter((entry: any) => {
+            if (!entry.startTime) return false;
+            const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+            return entryDate >= dateFrom && entryDate <= dateTo;
+          }) as import("@shared/schema").TimeEntry[]
+        : []
+    }));
+  }
+  
+  async getRunningTimeEntries(): Promise<Array<{ taskId: string; userId: string; startTime: string }>> {
+    // Query tasks that have running time entries
+    const tasksData = await db
+      .select({
+        id: tasks.id,
+        timeEntries: tasks.timeEntries
+      })
+      .from(tasks)
+      .where(
+        sql`EXISTS (
+          SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
+          WHERE (entry->>'isRunning')::boolean = true
+        )`
+      );
+    
+    const runningEntries: Array<{ taskId: string; userId: string; startTime: string }> = [];
+    
+    tasksData.forEach(task => {
+      if (!task.timeEntries || !Array.isArray(task.timeEntries)) return;
+      
+      (task.timeEntries as any[]).forEach((entry: any) => {
+        if (entry.isRunning) {
+          runningEntries.push({
+            taskId: task.id,
+            userId: entry.userId,
+            startTime: entry.startTime
+          });
+        }
+      });
+    });
+    
+    return runningEntries;
+  }
+  
+  async getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
+    // Build conditions
+    const conditions: any[] = [
+      sql`EXISTS (
+        SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
+        WHERE entry->>'startTime' IS NOT NULL
+        AND (entry->>'startTime')::date >= ${dateFrom}::date
+        AND (entry->>'startTime')::date <= ${dateTo}::date
+      )`
+    ];
+    
+    // Filter by user if specified
+    if (userId) {
+      conditions.push(eq(tasks.assignedTo, userId));
+    }
+    
+    // Filter by client if specified  
+    if (clientId) {
+      conditions.push(eq(tasks.clientId, clientId));
+    }
+    
+    // Query tasks
+    const tasksData = await db
+      .select()
+      .from(tasks)
+      .where(and(...conditions));
+    
+    // Filter time entries to only include those in the date range
+    return tasksData.map(task => ({
+      ...task,
+      timeEntries: task.timeEntries && Array.isArray(task.timeEntries) 
+        ? (task.timeEntries as any[]).filter((entry: any) => {
+            if (!entry.startTime) return false;
+            const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+            return entryDate >= dateFrom && entryDate <= dateTo;
+          }) as import("@shared/schema").TimeEntry[]
+        : []
+    }));
+  }
 
 
   // Campaigns  
@@ -3958,12 +4696,30 @@ export class DbStorage implements IStorage {
 
   // Task Categories
   async getTaskCategories(): Promise<TaskCategory[]> {
-    const result = await db.select().from(taskCategories);
+    const result = await db.select({
+      id: taskCategories.id,
+      name: taskCategories.name,
+      description: taskCategories.description,
+      color: taskCategories.color,
+      icon: taskCategories.icon,
+      workflowId: taskCategories.workflowId,
+      isDefault: taskCategories.isDefault,
+      createdAt: taskCategories.createdAt
+    }).from(taskCategories);
     return result;
   }
 
   async getTaskCategory(id: string): Promise<TaskCategory | undefined> {
-    const result = await db.select().from(taskCategories).where(eq(taskCategories.id, id)).limit(1);
+    const result = await db.select({
+      id: taskCategories.id,
+      name: taskCategories.name,
+      description: taskCategories.description,
+      color: taskCategories.color,
+      icon: taskCategories.icon,
+      workflowId: taskCategories.workflowId,
+      isDefault: taskCategories.isDefault,
+      createdAt: taskCategories.createdAt
+    }).from(taskCategories).where(eq(taskCategories.id, id)).limit(1);
     return result[0];
   }
 
@@ -4015,12 +4771,30 @@ export class DbStorage implements IStorage {
 
   // Templates
   async getTemplateFolders(): Promise<TemplateFolder[]> {
-    const folders = await db.select().from(templateFolders);
+    const folders = await db.select({
+      id: templateFolders.id,
+      name: templateFolders.name,
+      description: templateFolders.description,
+      type: templateFolders.type,
+      parentId: templateFolders.parentId,
+      order: templateFolders.order,
+      createdAt: templateFolders.createdAt,
+      updatedAt: templateFolders.updatedAt
+    }).from(templateFolders);
     return folders;
   }
 
   async getTemplateFolder(id: string): Promise<TemplateFolder | undefined> {
-    const folder = await db.select().from(templateFolders).where(eq(templateFolders.id, id)).limit(1);
+    const folder = await db.select({
+      id: templateFolders.id,
+      name: templateFolders.name,
+      description: templateFolders.description,
+      type: templateFolders.type,
+      parentId: templateFolders.parentId,
+      order: templateFolders.order,
+      createdAt: templateFolders.createdAt,
+      updatedAt: templateFolders.updatedAt
+    }).from(templateFolders).where(eq(templateFolders.id, id)).limit(1);
     return folder[0];
   }
 
@@ -4056,16 +4830,61 @@ export class DbStorage implements IStorage {
   }
 
   async getEmailTemplates(): Promise<EmailTemplate[]> {
-    return await db.select().from(emailTemplates).orderBy(asc(emailTemplates.name));
+    return await db.select({
+      id: emailTemplates.id,
+      name: emailTemplates.name,
+      subject: emailTemplates.subject,
+      content: emailTemplates.content,
+      plainTextContent: emailTemplates.plainTextContent,
+      previewText: emailTemplates.previewText,
+      folderId: emailTemplates.folderId,
+      tags: emailTemplates.tags,
+      isPublic: emailTemplates.isPublic,
+      usageCount: emailTemplates.usageCount,
+      lastUsed: emailTemplates.lastUsed,
+      createdBy: emailTemplates.createdBy,
+      createdAt: emailTemplates.createdAt,
+      updatedAt: emailTemplates.updatedAt
+    }).from(emailTemplates).orderBy(asc(emailTemplates.name));
   }
   
   async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> {
-    const results = await db.select().from(emailTemplates).where(eq(emailTemplates.id, id));
+    const results = await db.select({
+      id: emailTemplates.id,
+      name: emailTemplates.name,
+      subject: emailTemplates.subject,
+      content: emailTemplates.content,
+      plainTextContent: emailTemplates.plainTextContent,
+      previewText: emailTemplates.previewText,
+      folderId: emailTemplates.folderId,
+      tags: emailTemplates.tags,
+      isPublic: emailTemplates.isPublic,
+      usageCount: emailTemplates.usageCount,
+      lastUsed: emailTemplates.lastUsed,
+      createdBy: emailTemplates.createdBy,
+      createdAt: emailTemplates.createdAt,
+      updatedAt: emailTemplates.updatedAt
+    }).from(emailTemplates).where(eq(emailTemplates.id, id));
     return results[0];
   }
   
   async getEmailTemplatesByFolder(folderId: string): Promise<EmailTemplate[]> {
-    return await db.select().from(emailTemplates).where(eq(emailTemplates.folderId, folderId));
+    return await db.select({
+      id: emailTemplates.id,
+      name: emailTemplates.name,
+      subject: emailTemplates.subject,
+      content: emailTemplates.content,
+      plainTextContent: emailTemplates.plainTextContent,
+      previewText: emailTemplates.previewText,
+      folderId: emailTemplates.folderId,
+      tags: emailTemplates.tags,
+      isPublic: emailTemplates.isPublic,
+      usageCount: emailTemplates.usageCount,
+      lastUsed: emailTemplates.lastUsed,
+      createdBy: emailTemplates.createdBy,
+      createdAt: emailTemplates.createdAt,
+      updatedAt: emailTemplates.updatedAt
+    }).from(emailTemplates).where(eq(emailTemplates.folderId, folderId));
   }
   
   async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
@@ -4090,17 +4909,53 @@ export class DbStorage implements IStorage {
   }
 
   async getSmsTemplates(): Promise<SmsTemplate[]> {
-    const result = await db.select().from(smsTemplates);
+    const result = await db.select({
+      id: smsTemplates.id,
+      name: smsTemplates.name,
+      content: smsTemplates.content,
+      folderId: smsTemplates.folderId,
+      tags: smsTemplates.tags,
+      isPublic: smsTemplates.isPublic,
+      usageCount: smsTemplates.usageCount,
+      lastUsed: smsTemplates.lastUsed,
+      createdBy: smsTemplates.createdBy,
+      createdAt: smsTemplates.createdAt,
+      updatedAt: smsTemplates.updatedAt
+    }).from(smsTemplates);
     return result;
   }
 
   async getSmsTemplate(id: string): Promise<SmsTemplate | undefined> {
-    const result = await db.select().from(smsTemplates).where(eq(smsTemplates.id, id)).limit(1);
+    const result = await db.select({
+      id: smsTemplates.id,
+      name: smsTemplates.name,
+      content: smsTemplates.content,
+      folderId: smsTemplates.folderId,
+      tags: smsTemplates.tags,
+      isPublic: smsTemplates.isPublic,
+      usageCount: smsTemplates.usageCount,
+      lastUsed: smsTemplates.lastUsed,
+      createdBy: smsTemplates.createdBy,
+      createdAt: smsTemplates.createdAt,
+      updatedAt: smsTemplates.updatedAt
+    }).from(smsTemplates).where(eq(smsTemplates.id, id)).limit(1);
     return result[0];
   }
 
   async getSmsTemplatesByFolder(folderId: string): Promise<SmsTemplate[]> {
-    return await db.select().from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
+    return await db.select({
+      id: smsTemplates.id,
+      name: smsTemplates.name,
+      content: smsTemplates.content,
+      folderId: smsTemplates.folderId,
+      tags: smsTemplates.tags,
+      isPublic: smsTemplates.isPublic,
+      usageCount: smsTemplates.usageCount,
+      lastUsed: smsTemplates.lastUsed,
+      createdBy: smsTemplates.createdBy,
+      createdAt: smsTemplates.createdAt,
+      updatedAt: smsTemplates.updatedAt
+    }).from(smsTemplates).where(eq(smsTemplates.folderId, folderId));
   }
 
   async createSmsTemplate(template: InsertSmsTemplate): Promise<SmsTemplate> {

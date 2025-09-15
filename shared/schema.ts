@@ -2941,3 +2941,69 @@ export type TrainingLessonResource = typeof trainingLessonResources.$inferSelect
 export type InsertTrainingLessonResource = z.infer<typeof insertTrainingLessonResourceSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one
+
+// Time Tracking Report Types
+export interface TimeEntry {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  startTime: string;
+  endTime?: string;
+  userId: string;
+  isRunning: boolean;
+  duration?: number; // in minutes
+}
+
+export interface UserSummary {
+  userId: string;
+  userName: string;
+  userRole: string;
+  department?: string;
+  totalTime: number;
+  tasksWorked: number;
+  dailyTotals: Record<string, number>;
+}
+
+export interface ClientBreakdown {
+  clientId: string;
+  clientName: string;
+  totalTime: number;
+  tasksCount: number;
+  users: Array<{
+    userId: string;
+    userName: string;
+    timeSpent: number;
+  }>;
+}
+
+export interface TimeTrackingReportData {
+  tasks: Array<Task & {
+    userInfo?: Staff;
+    clientInfo?: Client;
+    timeEntriesByDate: Record<string, TimeEntry[]>;
+    totalTracked: number;
+  }>;
+  userSummaries: UserSummary[];
+  clientBreakdowns: ClientBreakdown[];
+  dailyTotals: Record<string, number>;
+  grandTotal: number;
+}
+
+export interface TimeTrackingReportFilters {
+  dateFrom: string;
+  dateTo: string;
+  userId?: string; // For filtering specific users (managers can see their reports)
+  clientId?: string;
+  taskStatus?: string[];
+  reportType?: 'detailed' | 'summary';
+}
+
+// Time tracking report query validation schema
+export const timeTrackingReportFiltersSchema = z.object({
+  dateFrom: z.string().min(1, 'Start date is required'),
+  dateTo: z.string().min(1, 'End date is required'),
+  userId: z.string().optional(),
+  clientId: z.string().optional(),
+  taskStatus: z.array(z.string()).optional(),
+  reportType: z.enum(['detailed', 'summary']).optional().default('detailed'),
+});
