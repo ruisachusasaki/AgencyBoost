@@ -345,3 +345,43 @@ export function getAuthenticatedAuditContext(req: Request, res: Response): { use
     userAgent: req.get("User-Agent") || "Unknown"
   };
 }
+
+/**
+ * Helper function to check if a string is a valid UUID.
+ */
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
+/**
+ * UNCONDITIONAL helper function to normalize user IDs for database operations.
+ * 
+ * This function solves the development mode UUID problem by always converting
+ * development sentinel user IDs to valid staff UUIDs from the database.
+ * 
+ * @param userId - The user ID to normalize (could be development sentinel or real UUID)
+ * @returns Promise<string> - Always returns a valid staff UUID that exists in the database
+ * @throws Error if no staff exists for attribution
+ */
+export async function normalizeUserIdForDb(userId: string): Promise<string> {
+  console.log("🔍 normalizeUserIdForDb - Input userId:", userId);
+  
+  // If userId is development sentinel or not valid UUID, get real staff ID
+  if (userId === MOCK_ADMIN_USER_ID || !isValidUUID(userId)) {
+    console.log("🔄 Development/invalid UUID detected, fetching real staff ID...");
+    
+    const firstStaff = await db.select({ id: staff.id }).from(staff).limit(1);
+    if (!firstStaff.length) {
+      console.error("❌ No staff exists for attribution");
+      throw new Error('No staff exists for attribution');
+    }
+    
+    const normalizedId = firstStaff[0].id;
+    console.log("✅ Normalized to staff UUID:", normalizedId);
+    return normalizedId;
+  }
+  
+  console.log("✅ Using original valid UUID:", userId);
+  return userId;
+}

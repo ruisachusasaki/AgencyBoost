@@ -70,7 +70,8 @@ import {
   isCurrentUserAdmin,
   hasPermission,
   IS_DEVELOPMENT,
-  MOCK_ADMIN_USER_ID
+  MOCK_ADMIN_USER_ID,
+  normalizeUserIdForDb
 } from "./auth";
 
 // SECURE Helper function to create audit logs - NO HARDCODED FALLBACKS
@@ -8292,24 +8293,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content } = req.body;
       const userId = getAuthenticatedUserIdOrFail(req, res);
 
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+
       if (!content?.trim()) {
         return res.status(400).json({ error: "Note content is required" });
       }
 
-      // Get user info for the response
-      const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      console.log("📝 Creating client note - Original userId:", userId);
+
+      // Normalize the userId for database operations - ALWAYS runs, no conditionals
+      const databaseUserId = await normalizeUserIdForDb(userId);
+      console.log("🔄 Normalized databaseUserId for DB insert:", databaseUserId);
+
+      // Get user info using the normalized ID for the response
+      const userInfo = await db.select().from(staff).where(eq(staff.id, databaseUserId)).limit(1);
       const user = userInfo[0] || { firstName: "System", lastName: "User" };
+      console.log("👤 Found user info:", { firstName: user.firstName, lastName: user.lastName });
 
       // Insert note into database
       const newNoteData = {
         clientId: clientId,
         content: content.trim(),
-        createdById: userId,
+        createdById: databaseUserId, // Use normalized valid UUID for database
         isLocked: true // Notes are locked after creation as per schema
       };
 
+      console.log("💾 Inserting note with data:", { ...newNoteData, content: newNoteData.content.substring(0, 50) + '...' });
       const insertedNote = await db.insert(clientNotes).values(newNoteData).returning();
       const createdNote = insertedNote[0];
+      console.log("✅ Note created successfully with ID:", createdNote.id);
 
       // Create audit log
       await createAuditLog(
@@ -8317,7 +8329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "note", 
         createdNote.id,
         `Note for client ${clientId}`,
-        userId,
+        userId, // Use original userId for audit log
         `Created note: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`,
         null,
         { content, clientId },
@@ -8339,7 +8351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(noteResponse);
     } catch (error) {
-      console.error("Error creating client note:", error);
+      console.error("❌ Error creating client note:", error);
       res.status(500).json({ error: "Failed to create note" });
     }
   });
@@ -8355,18 +8367,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Note content is required" });
       }
 
-      // Check if user is admin using a simple role lookup
-      const userWithRole = await db.select({
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-        roleName: roles.name
-      })
-      .from(staff)
-      .leftJoin(roles, eq(staff.roleId, roles.id))
-      .where(eq(staff.id, userId))
-      .limit(1);
-      
-      const user = userWithRole[0];
+      // Check if user is admin - handle development user specially
+      let user;
+      if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+        // Development user is always considered admin
+        user = { firstName: "Dev", lastName: "Admin", roleName: "Admin" };
+      } else {
+        // Normal database lookup for production users
+        const userWithRole = await db.select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          roleName: roles.name
+        })
+        .from(staff)
+        .leftJoin(roles, eq(staff.roleId, roles.id))
+        .where(eq(staff.id, userId))
+        .limit(1);
+        
+        user = userWithRole[0];
+      }
       
       if (!user || user.roleName !== 'Admin') {
         return res.status(403).json({ error: "Only admins can edit notes" });
