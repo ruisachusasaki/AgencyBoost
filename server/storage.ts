@@ -4554,12 +4554,7 @@ export class DbStorage implements IStorage {
   async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
   async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }
 
-  // Smart Lists
-  async getSmartLists(userId: string, entityType?: string): Promise<SmartList[]> { return this.memStorage.getSmartLists(userId, entityType); }
-  async getSmartList(id: string): Promise<SmartList | undefined> { return this.memStorage.getSmartList(id); }
-  async createSmartList(smartList: InsertSmartList): Promise<SmartList> { return this.memStorage.createSmartList(smartList); }
-  async updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined> { return this.memStorage.updateSmartList(id, smartList); }
-  async deleteSmartList(id: string): Promise<boolean> { return this.memStorage.deleteSmartList(id); }
+  // Smart Lists - using database implementation at end of file
 
   // Invoices  
   async getInvoices(): Promise<Invoice[]> { return this.memStorage.getInvoices(); }
@@ -5078,6 +5073,87 @@ export class DbStorage implements IStorage {
   async createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> { return this.memStorage.createNotificationSettings(settings); }
   async updateNotificationSettings(id: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined> { return this.memStorage.updateNotificationSettings(id, settings); }
   async deleteNotificationSettings(id: string): Promise<boolean> { return this.memStorage.deleteNotificationSettings(id); }
+
+  // Smart Lists - Database Implementation  
+  async getSmartLists(userId: string, entityType?: string): Promise<SmartList[]> {
+    try {
+      let query = db.select().from(smartLists);
+      
+      // Filter by entity type if provided
+      if (entityType) {
+        query = query.where(eq(smartLists.entityType, entityType));
+      }
+      
+      const allLists = await query;
+      
+      // Filter by visibility permissions
+      return allLists.filter(list => {
+        // Universal lists are visible to everyone
+        if (list.visibility === 'universal') return true;
+        
+        // Personal lists are only visible to the creator
+        if (list.visibility === 'personal') return list.createdBy === userId;
+        
+        // Shared lists are visible to creator and shared users
+        if (list.visibility === 'shared') {
+          return list.createdBy === userId || (list.sharedWith && list.sharedWith.includes(userId));
+        }
+        
+        return false;
+      });
+    } catch (error) {
+      console.error("Error getting smart lists:", error);
+      return [];
+    }
+  }
+
+  async getSmartList(id: string): Promise<SmartList | undefined> {
+    try {
+      const result = await db.select().from(smartLists).where(eq(smartLists.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting smart list:", error);
+      return undefined;
+    }
+  }
+
+  async createSmartList(smartList: InsertSmartList): Promise<SmartList> {
+    try {
+      const result = await db.insert(smartLists).values({
+        ...smartList,
+        id: randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating smart list:", error);
+      throw error;
+    }
+  }
+
+  async updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined> {
+    try {
+      const result = await db.update(smartLists)
+        .set({ ...smartList, updatedAt: new Date() })
+        .where(eq(smartLists.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating smart list:", error);
+      return undefined;
+    }
+  }
+
+  async deleteSmartList(id: string): Promise<boolean> {
+    try {
+      await db.delete(smartLists).where(eq(smartLists.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting smart list:", error);
+      return false;
+    }
+  }
 }
 
 // For now, use a minimal working storage implementation
@@ -5512,86 +5588,6 @@ class MinimalStorage implements Partial<IStorage> {
     }
   }
 
-  // Smart Lists
-  async getSmartLists(userId: string, entityType?: string): Promise<SmartList[]> {
-    try {
-      let query = db.select().from(smartLists);
-      
-      // Filter by entity type if provided
-      if (entityType) {
-        query = query.where(eq(smartLists.entityType, entityType));
-      }
-      
-      const allLists = await query;
-      
-      // Filter by visibility permissions
-      return allLists.filter(list => {
-        // Universal lists are visible to everyone
-        if (list.visibility === 'universal') return true;
-        
-        // Personal lists are only visible to the creator
-        if (list.visibility === 'personal') return list.createdBy === userId;
-        
-        // Shared lists are visible to creator and shared users
-        if (list.visibility === 'shared') {
-          return list.createdBy === userId || (list.sharedWith && list.sharedWith.includes(userId));
-        }
-        
-        return false;
-      });
-    } catch (error) {
-      console.error("Error getting smart lists:", error);
-      return [];
-    }
-  }
-
-  async getSmartList(id: string): Promise<SmartList | undefined> {
-    try {
-      const result = await db.select().from(smartLists).where(eq(smartLists.id, id)).limit(1);
-      return result[0];
-    } catch (error) {
-      console.error("Error getting smart list:", error);
-      return undefined;
-    }
-  }
-
-  async createSmartList(smartList: InsertSmartList): Promise<SmartList> {
-    try {
-      const result = await db.insert(smartLists).values({
-        ...smartList,
-        id: randomUUID(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }).returning();
-      return result[0];
-    } catch (error) {
-      console.error("Error creating smart list:", error);
-      throw error;
-    }
-  }
-
-  async updateSmartList(id: string, smartList: Partial<InsertSmartList>): Promise<SmartList | undefined> {
-    try {
-      const result = await db.update(smartLists)
-        .set({ ...smartList, updatedAt: new Date() })
-        .where(eq(smartLists.id, id))
-        .returning();
-      return result[0];
-    } catch (error) {
-      console.error("Error updating smart list:", error);
-      return undefined;
-    }
-  }
-
-  async deleteSmartList(id: string): Promise<boolean> {
-    try {
-      await db.delete(smartLists).where(eq(smartLists.id, id));
-      return true;
-    } catch (error) {
-      console.error("Error deleting smart list:", error);
-      return false;
-    }
-  }
 }
 
 export const storage = new DbStorage();

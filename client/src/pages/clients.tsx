@@ -200,39 +200,18 @@ export default function Clients() {
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'Admin';
 
-  // Load saved Smart Lists after currentUser is available
+  // Load Smart Lists from database
+  const { data: smartListsData = [] } = useQuery<SmartList[]>({
+    queryKey: ['/api/smart-lists', { entityType: 'clients' }],
+    enabled: !!currentUser, // Only run query when currentUser is available
+  });
+
+  // Update savedSmartLists when data is fetched from database
   React.useEffect(() => {
-    if (!currentUser) return; // Wait for currentUser to be loaded
-    
-    const loadSavedSmartLists = () => {
-      try {
-        const saved = localStorage.getItem('smartLists');
-        if (saved) {
-          const lists = JSON.parse(saved) as SmartList[];
-          
-          // Migrate legacy Smart Lists to include proper user IDs and permission fields
-          const migrated = lists.map((list: any) => ({
-            ...list,
-            createdBy: list.createdBy || currentUser.id || 'current-user',
-            visibility: list.visibility || 'personal',
-            sharedWith: list.sharedWith || undefined,
-            createdAt: list.createdAt ? new Date(list.createdAt) : new Date(),
-            updatedAt: list.updatedAt ? new Date(list.updatedAt) : new Date()
-          }));
-          
-          setSavedSmartLists(migrated);
-          
-          // Save migrated version back to localStorage if changed
-          if (JSON.stringify(lists) !== JSON.stringify(migrated)) {
-            localStorage.setItem('smartLists', JSON.stringify(migrated));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load saved Smart Lists:', error);
-      }
-    };
-    loadSavedSmartLists();
-  }, [currentUser]);
+    if (smartListsData) {
+      setSavedSmartLists(smartListsData);
+    }
+  }, [smartListsData]);
 
   // Helper function to get contact owner display name
   const getContactOwnerName = (contactOwnerId: string | null) => {
