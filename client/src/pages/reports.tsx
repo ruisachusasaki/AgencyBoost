@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,29 @@ import {
   ChevronDown,
   Clock,
   Timer,
+  PieChart,
+  BarChart,
+  LineChart,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import {
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart as RechartsLineChart,
+  Line,
+  Area,
+  AreaChart,
+} from "recharts";
 import type { Client, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
 
 export default function Reports() {
@@ -74,6 +96,16 @@ export default function Reports() {
   const [taskDateRange, setTaskDateRange] = useState("this-week");
   const [customTaskDateFrom, setCustomTaskDateFrom] = useState("");
   const [customTaskDateTo, setCustomTaskDateTo] = useState("");
+
+  // Chart visualization state
+  const [chartsVisible, setChartsVisible] = useState<Record<string, boolean>>({
+    timeDistribution: true,
+    dailyTrend: true,
+    userPerformance: true,
+    clientWorkload: true,
+  });
+  const [chartView, setChartView] = useState<"grid" | "tabs">("tabs");
+  const [activeChart, setActiveChart] = useState("timeDistribution");
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<{clients: Client[]}>({
     queryKey: ["/api/clients"],
@@ -516,6 +548,337 @@ export default function Reports() {
       .sort((a, b) => b.avgScore - a.avgScore)
       .slice(0, 5);
   }
+
+  // Chart data processing functions
+  const processTimeDistributionData = (data: typeof timeTrackingData, type: 'users' | 'clients') => {
+    if (!data) return [];
+    
+    const items = type === 'users' ? data.userSummaries : data.clientBreakdowns;
+    const totalTime = data.grandTotal || 0;
+    
+    if (totalTime === 0) return [];
+    
+    // Convert to chart format
+    const chartData = items.map(item => ({
+      name: type === 'users' ? item.userName || 'Unknown User' : (item as any).clientName || 'Unknown Client',
+      value: (item.totalTime || 0) / 3600, // Convert seconds to hours
+      percentage: totalTime > 0 ? ((item.totalTime || 0) / totalTime * 100).toFixed(1) : '0.0'
+    }))
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value);
+    
+    // Group smaller items under "Other" if more than 6 items
+    if (chartData.length > 6) {
+      const top5 = chartData.slice(0, 5);
+      const others = chartData.slice(5);
+      const othersTotal = others.reduce((sum, item) => sum + item.value, 0);
+      const othersPercentage = others.reduce((sum, item) => sum + parseFloat(item.percentage), 0);
+      
+      return [
+        ...top5,
+        {
+          name: 'Other',
+          value: othersTotal,
+          percentage: othersPercentage.toFixed(1)
+        }
+      ];
+    }
+    
+    return chartData;
+  };
+
+  const processDailyTrendData = (data: typeof timeTrackingData) => {
+    if (!data) return [];
+    
+    const dailyTotals: Record<string, number> = {};
+    
+    // Aggregate daily totals from all users
+    data.userSummaries?.forEach(user => {
+      if (user.dailyTotals) {
+        Object.entries(user.dailyTotals).forEach(([date, seconds]) => {
+          if (!dailyTotals[date]) dailyTotals[date] = 0;
+          dailyTotals[date] += seconds || 0;
+        });
+      }
+    });
+    
+    // Convert to chart format
+    return Object.entries(dailyTotals)
+      .map(([date, seconds]) => ({
+        date,
+        displayDate: new Date(date).toLocaleDateString(),
+        hours: (seconds / 3600).toFixed(2),
+        value: Number((seconds / 3600).toFixed(2))
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  const processUserPerformanceData = (data: typeof timeTrackingData) => {
+    if (!data?.userSummaries) return [];
+    
+    return data.userSummaries
+      .filter(user => user.totalTime > 0)
+      .map(user => ({
+        name: user.userName || 'Unknown User',
+        hours: Number((user.totalTime / 3600).toFixed(2)),
+        tasks: user.tasksWorked || 0,
+        role: user.userRole || 'Unknown'
+      }))
+      .sort((a, b) => b.hours - a.hours);
+  };
+
+  const processClientWorkloadData = (data: typeof timeTrackingData) => {
+    if (!data?.clientBreakdowns) return [];
+    
+    return data.clientBreakdowns
+      .filter(client => client.totalTime > 0)
+      .map(client => ({
+        name: client.clientName || 'Unknown Client',
+        hours: Number((client.totalTime / 3600).toFixed(2)),
+        tasks: client.tasksCount || 0,
+        users: client.users?.length || 0
+      }))
+      .sort((a, b) => b.hours - a.hours);
+  };
+
+  // Chart color palettes
+  const CHART_COLORS = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+    '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
+  ];
+
+  // Custom chart components
+  const TimeDistributionChart = ({ data, title, type }: { 
+    data: ReturnType<typeof processTimeDistributionData>, 
+    title: string,
+    type: 'users' | 'clients' 
+  }) => {
+    if (!data || data.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-64 text-slate-500">
+          <div className="text-center">
+            <PieChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No time tracking data available</p>
+          </div>
+        </div>
+      );
+    }
+
+    const CustomTooltip = ({ active, payload }: any) => {
+      if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+          <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
+            <p className="font-medium text-slate-900">{data.name}</p>
+            <p className="text-sm text-slate-600">{data.value.toFixed(2)}h ({data.percentage}%)</p>
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <div className="space-y-4">
+        <h4 className="font-medium text-slate-700 text-center">{title}</h4>
+        <ResponsiveContainer width="100%" height={300}>
+          <RechartsPieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              fill="#8884d8"
+              dataKey="value"
+              label={({ name, percentage }) => `${name}: ${percentage}%`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+          </RechartsPieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+
+  const DailyTrendChart = ({ data }: { data: ReturnType<typeof processDailyTrendData> }) => {
+    if (!data || data.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-64 text-slate-500">
+          <div className="text-center">
+            <LineChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No daily time tracking data available</p>
+          </div>
+        </div>
+      );
+    }
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+          <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
+            <p className="font-medium text-slate-900">{data.displayDate}</p>
+            <p className="text-sm text-slate-600">{data.hours} hours logged</p>
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <div className="space-y-4">
+        <h4 className="font-medium text-slate-700">Daily Time Trend</h4>
+        <ResponsiveContainer width="100%" height={300}>
+          <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="displayDate" 
+              tick={{ fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis 
+              label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
+              tick={{ fontSize: 12 }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#3B82F6" 
+              strokeWidth={3}
+              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
+            />
+          </RechartsLineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+
+  const UserPerformanceChart = ({ data }: { data: ReturnType<typeof processUserPerformanceData> }) => {
+    if (!data || data.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-64 text-slate-500">
+          <div className="text-center">
+            <BarChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No user performance data available</p>
+          </div>
+        </div>
+      );
+    }
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+          <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
+            <p className="font-medium text-slate-900">{data.name}</p>
+            <p className="text-sm text-slate-600">{data.hours} hours logged</p>
+            <p className="text-sm text-slate-600">{data.tasks} tasks worked</p>
+            <p className="text-xs text-slate-500 capitalize">{data.role} role</p>
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <div className="space-y-4">
+        <h4 className="font-medium text-slate-700">User Performance Comparison</h4>
+        <ResponsiveContainer width="100%" height={300}>
+          <RechartsBarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis 
+              label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
+              tick={{ fontSize: 12 }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="hours" fill="#10B981" radius={[4, 4, 0, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              ))}
+            </Bar>
+          </RechartsBarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+
+  const ClientWorkloadChart = ({ data }: { data: ReturnType<typeof processClientWorkloadData> }) => {
+    if (!data || data.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-64 text-slate-500">
+          <div className="text-center">
+            <BarChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No client workload data available</p>
+          </div>
+        </div>
+      );
+    }
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+          <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
+            <p className="font-medium text-slate-900">{data.name}</p>
+            <p className="text-sm text-slate-600">{data.hours} hours logged</p>
+            <p className="text-sm text-slate-600">{data.tasks} tasks worked</p>
+            <p className="text-sm text-slate-600">{data.users} team members</p>
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <div className="space-y-4">
+        <h4 className="font-medium text-slate-700">Client Workload Distribution</h4>
+        <ResponsiveContainer width="100%" height={300}>
+          <RechartsBarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis 
+              label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
+              tick={{ fontSize: 12 }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="hours" fill="#3B82F6" radius={[4, 4, 0, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              ))}
+            </Bar>
+          </RechartsBarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+
+  // Toggle chart visibility
+  const toggleChart = (chartKey: string) => {
+    setChartsVisible(prev => ({
+      ...prev,
+      [chartKey]: !prev[chartKey]
+    }));
+  };
 
   const handleExportReport = () => {
     const reportData = {
@@ -1468,6 +1831,173 @@ export default function Reports() {
               </div>
             </CardHeader>
           </Card>
+
+          {/* Chart Visualization Interface */}
+          {(taskReportType === "by-user-client" || taskReportType === "admin-by-client") && timeTrackingData && (
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-slate-600" />
+                    <h3 className="text-lg font-semibold text-slate-900">Visual Analytics</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {/* Chart View Toggle */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-slate-600">Layout:</label>
+                      <Select value={chartView} onValueChange={(value: "grid" | "tabs") => setChartView(value)}>
+                        <SelectTrigger className="w-28" data-testid="select-chart-view">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tabs">Tabs</SelectItem>
+                          <SelectItem value="grid">Grid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Chart Visibility Controls */}
+                    <div className="flex items-center gap-2">
+                      {Object.entries(chartsVisible).map(([key, visible]) => (
+                        <Button
+                          key={key}
+                          variant={visible ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => toggleChart(key)}
+                          className="text-xs"
+                          data-testid={`button-toggle-${key}-chart`}
+                        >
+                          {visible ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                          {key === 'timeDistribution' ? 'Distribution' :
+                           key === 'dailyTrend' ? 'Daily Trend' :
+                           key === 'userPerformance' ? 'Users' : 'Clients'}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-6">
+                {timeTrackingLoading ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-6 bg-slate-200 rounded w-1/3 mb-4" />
+                        <div className="h-64 bg-slate-200 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {chartView === "tabs" ? (
+                      /* Tab-based Chart Layout */
+                      <div className="space-y-6">
+                        {/* Chart Navigation */}
+                        <div className="border-b border-slate-200">
+                          <nav className="-mb-px flex space-x-8">
+                            {[
+                              { id: "timeDistribution", name: "Time Distribution", icon: PieChart },
+                              { id: "dailyTrend", name: "Daily Trend", icon: LineChart },
+                              { id: "userPerformance", name: "User Performance", icon: BarChart },
+                              { id: "clientWorkload", name: "Client Workload", icon: BarChart3 }
+                            ].filter(chart => chartsVisible[chart.id]).map((chart) => {
+                              const Icon = chart.icon;
+                              return (
+                                <button
+                                  key={chart.id}
+                                  onClick={() => setActiveChart(chart.id)}
+                                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                                    activeChart === chart.id
+                                      ? "border-primary text-primary"
+                                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                                  }`}
+                                  data-testid={`tab-chart-${chart.id}`}
+                                >
+                                  <Icon className="h-4 w-4" />
+                                  {chart.name}
+                                </button>
+                              );
+                            })}
+                          </nav>
+                        </div>
+
+                        {/* Active Chart Content */}
+                        <div className="min-h-[400px]">
+                          {activeChart === "timeDistribution" && chartsVisible.timeDistribution && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                              <TimeDistributionChart 
+                                data={processTimeDistributionData(timeTrackingData, 'users')}
+                                title="Time Distribution by User"
+                                type="users"
+                              />
+                              <TimeDistributionChart 
+                                data={processTimeDistributionData(timeTrackingData, 'clients')}
+                                title="Time Distribution by Client"
+                                type="clients"
+                              />
+                            </div>
+                          )}
+
+                          {activeChart === "dailyTrend" && chartsVisible.dailyTrend && (
+                            <DailyTrendChart data={processDailyTrendData(timeTrackingData)} />
+                          )}
+
+                          {activeChart === "userPerformance" && chartsVisible.userPerformance && (
+                            <UserPerformanceChart data={processUserPerformanceData(timeTrackingData)} />
+                          )}
+
+                          {activeChart === "clientWorkload" && chartsVisible.clientWorkload && (
+                            <ClientWorkloadChart data={processClientWorkloadData(timeTrackingData)} />
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Grid-based Chart Layout */
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {chartsVisible.timeDistribution && (
+                          <Card className="p-4">
+                            <TimeDistributionChart 
+                              data={processTimeDistributionData(timeTrackingData, 'users')}
+                              title="Time Distribution by User"
+                              type="users"
+                            />
+                          </Card>
+                        )}
+                        
+                        {chartsVisible.timeDistribution && (
+                          <Card className="p-4">
+                            <TimeDistributionChart 
+                              data={processTimeDistributionData(timeTrackingData, 'clients')}
+                              title="Time Distribution by Client"
+                              type="clients"
+                            />
+                          </Card>
+                        )}
+
+                        {chartsVisible.dailyTrend && (
+                          <Card className="p-4 lg:col-span-2">
+                            <DailyTrendChart data={processDailyTrendData(timeTrackingData)} />
+                          </Card>
+                        )}
+
+                        {chartsVisible.userPerformance && (
+                          <Card className="p-4">
+                            <UserPerformanceChart data={processUserPerformanceData(timeTrackingData)} />
+                          </Card>
+                        )}
+
+                        {chartsVisible.clientWorkload && (
+                          <Card className="p-4">
+                            <ClientWorkloadChart data={processClientWorkloadData(timeTrackingData)} />
+                          </Card>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* By User & Client View */}
           {taskReportType === "by-user-client" && (
