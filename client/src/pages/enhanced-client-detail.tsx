@@ -328,6 +328,10 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     Red: boolean;
   }>({ Green: true, Yellow: true, Red: true });
 
+  // Pagination state management
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+
   // Calculate date range based on current filter (pure derivation to prevent infinite re-renders)
   const currentDateRange = useMemo(() => {
     const now = new Date();
@@ -425,6 +429,20 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
       new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime()
     );
   }, [healthScores, dateRangeFilter, currentDateRange, healthStatusFilters]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredHealthScores.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedHealthScores = filteredHealthScores.slice(startIndex, endIndex);
+  const totalItems = filteredHealthScores.length;
+  const showingStart = totalItems > 0 ? startIndex + 1 : 0;
+  const showingEnd = Math.min(endIndex, totalItems);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRangeFilter, currentDateRange, healthStatusFilters]);
 
   // Check if current week score exists
   const currentWeekScore = Array.isArray(healthScores) 
@@ -623,8 +641,15 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-gray-700">Health Score History</h3>
                 <div className="text-sm text-gray-500">
-                  {filteredHealthScores.length} of {Array.isArray(healthScores) ? healthScores.length : 0} score{Array.isArray(healthScores) && healthScores.length !== 1 ? 's' : ''} 
-                  {filteredHealthScores.length !== (Array.isArray(healthScores) ? healthScores.length : 0) ? ' (filtered)' : ''}
+                  {totalItems > 0 ? (
+                    <>
+                      Showing {showingStart}-{showingEnd} of {totalItems} score{totalItems !== 1 ? 's' : ''}
+                      {totalPages > 1 && ` (${totalPages} page${totalPages !== 1 ? 's' : ''})`}
+                      {totalItems !== (Array.isArray(healthScores) ? healthScores.length : 0) ? ' (filtered)' : ''}
+                    </>
+                  ) : (
+                    '0 scores'
+                  )}
                 </div>
               </div>
 
@@ -804,8 +829,8 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                 </div>
               ) : (
                 // Historical Scores
-                <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                  {filteredHealthScores.map((score) => {
+                <div className="space-y-4">
+                  {paginatedHealthScores.map((score) => {
                     const styling = getHealthIndicatorStyling(score.healthIndicator);
                     const weekDisplay = `${format(new Date(score.weekStartDate), 'M/d/yy')} - ${format(new Date(score.weekEndDate), 'M/d/yy')}`;
                     
@@ -906,6 +931,93 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                     );
                   })}
                 </div>
+              )}
+
+              {/* Pagination Controls */}
+              {totalItems > 0 && totalPages > 1 && (
+                <Card className="border border-gray-200 bg-gray-50 mt-6">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      {/* Items per page selector */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <Label className="text-gray-600">Show:</Label>
+                        <Select
+                          value={itemsPerPage.toString()}
+                          onValueChange={(value) => {
+                            setItemsPerPage(Number(value));
+                            setCurrentPage(1); // Reset to first page when changing page size
+                          }}
+                          data-testid="select-items-per-page"
+                        >
+                          <SelectTrigger className="w-20 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5">5</SelectItem>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <span className="text-gray-600">per page</span>
+                      </div>
+
+                      {/* Pagination summary and controls */}
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="h-8 px-2"
+                            data-testid="button-first-page"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            <ChevronLeft className="h-4 w-4 -ml-1" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="h-8 px-2"
+                            data-testid="button-previous-page"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="h-8 px-2"
+                            data-testid="button-next-page"
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="h-8 px-2"
+                            data-testid="button-last-page"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-4 w-4 -ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
