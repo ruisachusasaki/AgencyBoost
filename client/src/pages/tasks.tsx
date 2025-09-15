@@ -1676,19 +1676,20 @@ export default function Tasks() {
                     All Tasks
                   </TabsTrigger>
                   {getVisibleSmartLists().slice(0, maxVisibleTabs - 1).map((smartList) => (
-                    <TabsTrigger 
-                      key={smartList.id} 
-                      value={smartList.id} 
-                      className="whitespace-nowrap flex items-center gap-1"
-                      data-testid={`tab-smart-list-${smartList.id}`}
-                    >
-                      {smartList.name}
+                    <div key={smartList.id} className="relative flex items-center">
+                      <TabsTrigger 
+                        value={smartList.id} 
+                        className="whitespace-nowrap pr-6"
+                        data-testid={`tab-smart-list-${smartList.id}`}
+                      >
+                        {smartList.name}
+                      </TabsTrigger>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-4 w-4 p-0 ml-1 hover:bg-slate-100"
+                            className="absolute right-1 h-4 w-4 p-0 hover:bg-slate-100 z-10"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShareListId(smartList.id);
@@ -1709,7 +1710,7 @@ export default function Tasks() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TabsTrigger>
+                    </div>
                   ))}
                   {getVisibleSmartLists().length > maxVisibleTabs - 1 && (
                     <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
