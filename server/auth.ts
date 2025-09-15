@@ -18,8 +18,8 @@ import { eq, and } from 'drizzle-orm';
  */
 
 // Development mode detection and mock user configuration
-const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-const MOCK_ADMIN_USER_ID = 'dev-admin-00000000-0000-0000-0000-000000000000';
+export const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+export const MOCK_ADMIN_USER_ID = 'dev-admin-00000000-0000-0000-0000-000000000000';
 
 // Extended Express Request interface with session
 declare global {
@@ -89,7 +89,7 @@ export function requireAuth() {
  * Check if user has specific permission for a module.
  * Uses existing hasPermission logic but requires valid userId.
  */
-async function hasPermission(
+export async function hasPermission(
   userId: string, 
   module: string, 
   permission: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage'

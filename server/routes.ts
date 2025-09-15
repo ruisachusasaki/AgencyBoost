@@ -67,7 +67,10 @@ import {
   getAuthenticatedUserIdOrFail,
   getAuthenticatedAuditContext,
   getAuditContext,
-  isCurrentUserAdmin
+  isCurrentUserAdmin,
+  hasPermission,
+  IS_DEVELOPMENT,
+  MOCK_ADMIN_USER_ID
 } from "./auth";
 
 // SECURE Helper function to create audit logs - NO HARDCODED FALLBACKS
@@ -12442,6 +12445,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // Development mode: Mock admin user has no direct reports
+      if (IS_DEVELOPMENT && currentUserId === MOCK_ADMIN_USER_ID) {
+        res.json([]);
+        return;
+      }
       
       const directReports = await db.select()
         .from(staff)

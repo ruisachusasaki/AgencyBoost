@@ -165,7 +165,7 @@ export default function HRPage() {
   });
   
   const isManager = directReports.length > 0;
-  const isAdmin = (currentUser as any)?.role === 'admin'; // Removed hardcoded admin ID - use proper role checking
+  const isAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.id?.startsWith('dev-admin'); // Include dev admin detection
   const canViewAllData = isAdmin;
   const canManageJobOpenings = isManager || isAdmin;
   
