@@ -4549,7 +4549,11 @@ export class DbStorage implements IStorage {
   // Tasks
   async getTasks(): Promise<Task[]> { return this.memStorage.getTasks(); }
   async getTask(id: string): Promise<Task | undefined> { return this.memStorage.getTask(id); }
-  async getTasksByClient(clientId: string): Promise<Task[]> { return this.memStorage.getTasksByClient(clientId); }
+  async getTasksByClient(clientId: string): Promise<Task[]> {
+    // Query database directly for client tasks
+    const clientTasks = await db.select().from(tasks).where(eq(tasks.clientId, clientId));
+    return clientTasks;
+  }
   async createTask(task: InsertTask): Promise<Task> { return this.memStorage.createTask(task); }
   async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
   async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }

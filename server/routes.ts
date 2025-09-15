@@ -8756,43 +8756,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clientId = req.params.clientId;
       
-      // Query tasks from database that are assigned to this client
-      const clientTasks = await db.select({
-        id: tasks.id,
-        title: tasks.title,
-        description: tasks.description,
-        status: tasks.status,
-        priority: tasks.priority,
-        dueDate: tasks.dueDate,
-        startDate: tasks.startDate,
-        timeEstimate: tasks.timeEstimate,
-        timeTracked: tasks.timeTracked,
-        isRecurring: tasks.isRecurring,
-        recurringInterval: tasks.recurringInterval,
-        recurringUnit: tasks.recurringUnit,
-        recurringEndType: tasks.recurringEndType,
-        recurringEndDate: tasks.recurringEndDate,
-        recurringEndOccurrences: tasks.recurringEndOccurrences,
-        createIfOverdue: tasks.createIfOverdue,
-        completedAt: tasks.completedAt,
-        createdAt: tasks.createdAt,
-        assignedTo: tasks.assignedTo,
-        clientId: tasks.clientId,
-        projectId: null, // projects no longer exist
-        campaignId: tasks.campaignId,
-        workflowId: tasks.workflowId,
-        categoryId: tasks.categoryId,
-        assignedToUser: {
-          id: staff.id,
-          firstName: staff.firstName,
-          lastName: staff.lastName,
-          email: staff.email,
-        },
-      })
-      .from(tasks)
-      .leftJoin(staff, eq(tasks.assignedTo, staff.id))
-      .where(eq(tasks.clientId, clientId))
-      .orderBy(tasks.createdAt);
+      // Use appStorage abstraction to avoid Drizzle ORM issues
+      const clientTasks = await appStorage.getTasksByClient(clientId);
       
       res.json(clientTasks);
     } catch (error) {
