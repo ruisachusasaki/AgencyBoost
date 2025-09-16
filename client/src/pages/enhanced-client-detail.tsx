@@ -1453,6 +1453,7 @@ export default function EnhancedClientDetail() {
   ]);
   const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -6385,20 +6386,50 @@ export default function EnhancedClientDetail() {
                       Manage Tasks
                     </Button>
                   </div>
+
+                  {/* Show Completed Toggle */}
+                  <div className="flex items-center space-x-2 py-2">
+                    <Checkbox
+                      id="show-completed-tasks"
+                      checked={showCompletedTasks}
+                      onCheckedChange={(checked) => setShowCompletedTasks(!!checked)}
+                      className="h-4 w-4"
+                      data-testid="toggle-show-completed"
+                    />
+                    <label htmlFor="show-completed-tasks" className="text-sm text-gray-600 cursor-pointer">
+                      Show completed tasks
+                    </label>
+                  </div>
                   
                   <div className="space-y-3">
                     {tasksLoading ? (
                       <div className="text-center py-8 text-gray-500">
                         <div className="text-sm">Loading tasks...</div>
                       </div>
-                    ) : clientTasksData.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm">No tasks assigned to this client</p>
-                        <p className="text-xs text-gray-400">Tasks will appear here when assigned to this client</p>
-                      </div>
-                    ) : (
-                      clientTasksData.map((task: any) => {
+                    ) : (() => {
+                      // Filter tasks based on showCompletedTasks toggle
+                      const filteredTasks = showCompletedTasks 
+                        ? clientTasksData 
+                        : clientTasksData.filter((task: any) => task.status !== 'completed');
+                      
+                      return filteredTasks.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">
+                            {showCompletedTasks || clientTasksData.length === 0 
+                              ? "No tasks assigned to this client"
+                              : "No active tasks"
+                            }
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {showCompletedTasks || clientTasksData.length === 0
+                              ? "Tasks will appear here when assigned to this client"
+                              : `${clientTasksData.length} completed tasks hidden`
+                            }
+                          </p>
+                        </div>
+                      ) : (
+                        filteredTasks.map((task: any) => {
                         const isCompleted = task.status === 'completed';
                         const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
                         return (
