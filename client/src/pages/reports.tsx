@@ -291,7 +291,8 @@ export default function Reports() {
       },
       enabled: activeTab === "tasks" && 
                ((taskReportType === "by-user-client") || 
-                (taskReportType === "admin-by-client" && isAdmin))
+                (taskReportType === "admin-by-client" && isAdmin) ||
+                (taskReportType === "time-tracking"))
     }
   );
 
