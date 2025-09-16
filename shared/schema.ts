@@ -1248,6 +1248,10 @@ export const taskTemplates = pgTable("task_templates", {
   tags: text("tags").array(),
   isRecurring: boolean("is_recurring").default(false),
   recurrencePattern: jsonb("recurrence_pattern"),
+  
+  // Complete task structure for advanced templates
+  templateData: jsonb("template_data"), // Full task structure with sub-tasks and dependencies
+  
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
