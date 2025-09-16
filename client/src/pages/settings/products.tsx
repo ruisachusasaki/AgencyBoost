@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,6 +85,7 @@ export default function ProductsSettings() {
   const [isEditBundleOpen, setIsEditBundleOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<ProductBundle | null>(null);
   const [bundleProducts, setBundleProducts] = useState<Array<{productId: string}>>([]);
+  const [bundleProductSearch, setBundleProductSearch] = useState("");
   
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -205,6 +206,16 @@ export default function ProductsSettings() {
   });
 
   // Create bundle mutation
+  // Filter products for bundle selection with optimization
+  const filteredProductsForBundle = useMemo(() => {
+    const lcSearch = bundleProductSearch.trim().toLowerCase();
+    if (!lcSearch) return products;
+    return products.filter((product) => 
+      product.name.toLowerCase().includes(lcSearch) ||
+      (product.description && product.description.toLowerCase().includes(lcSearch))
+    );
+  }, [products, bundleProductSearch]);
+
   const createBundleMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await fetch("/api/product-bundles", {
@@ -219,6 +230,7 @@ export default function ProductsSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
       setIsCreateBundleOpen(false);
       setBundleProducts([]);
+      setBundleProductSearch("");
       toast({
         title: "Success",
         description: "Bundle created successfully",
@@ -751,7 +763,13 @@ export default function ProductsSettings() {
           </Dialog>
 
           {activeTab === "bundles" && (
-            <Dialog open={isCreateBundleOpen} onOpenChange={setIsCreateBundleOpen}>
+            <Dialog open={isCreateBundleOpen} onOpenChange={(open) => {
+              setIsCreateBundleOpen(open);
+              if (!open) {
+                setBundleProducts([]);
+                setBundleProductSearch("");
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
                   <Plus className="w-4 h-4 mr-2" />
@@ -796,6 +814,24 @@ export default function ProductsSettings() {
                       </Button>
                     </div>
                     
+                    {/* Product Search */}
+                    {bundleProducts.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="bundle-product-search">Search Products</Label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input
+                            id="bundle-product-search"
+                            placeholder="Search products by name..."
+                            value={bundleProductSearch}
+                            onChange={(e) => setBundleProductSearch(e.target.value)}
+                            className="pl-10"
+                            data-testid="input-bundle-product-search"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
                     {bundleProducts.map((bundleProduct, index) => (
                       <div key={index} className="flex gap-2 items-end">
                         <div className="flex-1">
@@ -808,7 +844,7 @@ export default function ProductsSettings() {
                               <SelectValue placeholder="Select product" />
                             </SelectTrigger>
                             <SelectContent>
-                              {products.map((product) => (
+                              {filteredProductsForBundle.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>
                                   {product.name} - ${product.cost || '0.00'} cost
                                 </SelectItem>
@@ -835,6 +871,7 @@ export default function ProductsSettings() {
                     <Button type="button" variant="outline" onClick={() => {
                       setIsCreateBundleOpen(false);
                       setBundleProducts([]);
+                      setBundleProductSearch("");
                     }}>
                       Cancel
                     </Button>
