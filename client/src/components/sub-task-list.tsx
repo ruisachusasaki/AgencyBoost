@@ -174,7 +174,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
           <TableRow className="hover:bg-slate-50">
             <TableCell className="py-3">
               <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
-                {task.hasSubTasks && (
+                {level < maxLevel - 1 && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -189,7 +189,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
                     )}
                   </Button>
                 )}
-                {!task.hasSubTasks && (
+                {level >= maxLevel - 1 && (
                   <div className="w-6 h-6 shrink-0"></div>
                 )}
                 <div>
@@ -228,7 +228,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
           </TableRow>
           
           {/* Nested sub-tasks */}
-          {task.hasSubTasks && expandedTasks.has(task.id) && task.level! < maxLevel - 1 && (
+          {expandedTasks.has(task.id) && level < maxLevel - 1 && (
             <SubTaskList 
               parentTaskId={task.id} 
               level={level + 1}
@@ -238,8 +238,8 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
         </React.Fragment>
       ))}
       
-      {/* Add Sub-task Button and Form - Only show at the root level (0) */}
-      {level === 0 && (
+      {/* Add Sub-task Button and Form - Show at any level under the max */}
+      {level < maxLevel - 1 && (
         <>
           {!showAddForm ? (
             <TableRow>
