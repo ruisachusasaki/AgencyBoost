@@ -205,76 +205,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Calculate user summaries
-      const userSummaries = [
-        {
-          userId: 'user-1',
-          userName: 'John Doe',
-          userRole: 'Developer',
-          totalTime: 69400, // Total seconds
-          tasksWorked: 2,
-          dailyTotals: {
-            '2024-01-15': 10800,
-            '2024-01-16': 16200,
-            '2024-06-15': 28800,
-            '2024-06-16': 14400
-          }
-        },
-        {
-          userId: 'user-2',
-          userName: 'Jane Smith',
-          userRole: 'Senior Developer',
-          totalTime: 28800,
-          tasksWorked: 1,
-          dailyTotals: {
-            '2024-01-17': 28800
-          }
-        }
-      ];
+      // Calculate user summaries from real data
+      const userMap = new Map();
       
-      // Calculate client breakdowns
-      const clientBreakdowns = [
-        {
-          clientId: 'client-1',
-          clientName: 'Acme Corp',
-          totalTime: 55800,
-          tasksCount: 2,
-          users: [
-            {
-              userId: 'user-1',
-              userName: 'John Doe',
-              userRole: 'Developer',
-              totalTime: 27000,
-              tasksWorked: 1,
+      tasksWithDetails.forEach(task => {
+        if (!task.timeEntries) return;
+        
+        task.timeEntries.forEach(entry => {
+          if (!entry.startTime || !entry.userId) return;
+          
+          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          if (entryDate < dateFrom || entryDate > dateTo) return;
+          
+          // Handle development mode user ID mapping
+          let effectiveUserId = entry.userId;
+          if (IS_DEVELOPMENT && entry.userId === 'current-user') {
+            effectiveUserId = authenticatedUserId;
+          }
+          
+          if (!userMap.has(effectiveUserId)) {
+            userMap.set(effectiveUserId, {
+              userId: effectiveUserId,
+              userName: entry.userName || 'Development User',
+              userRole: entry.userRole || 'User',
+              totalTime: 0,
+              tasksWorked: new Set(),
               dailyTotals: {}
-            },
-            {
-              userId: 'user-2',
-              userName: 'Jane Smith',
-              userRole: 'Senior Developer',
-              totalTime: 28800,
-              tasksWorked: 1,
-              dailyTotals: {}
-            }
-          ]
-        },
-        {
-          clientId: 'client-2',
-          clientName: 'Tech Startup',
-          totalTime: 43200,
-          tasksCount: 1,
-          users: [
-            {
-              userId: 'user-1',
-              userName: 'John Doe',
-              userRole: 'Developer',
-              totalTime: 43200,
-              tasksWorked: 1,
-              dailyTotals: {}
-            }
-          ]
+            });
+          }
+          
+          const user = userMap.get(effectiveUserId);
+          user.totalTime += entry.duration || 0;
+          user.tasksWorked.add(task.id);
+          user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (entry.duration || 0);
+        });
+      });
+      
+      const userSummaries = Array.from(userMap.values()).map(user => ({
+        ...user,
+        tasksWorked: user.tasksWorked.size
+      }));
+      
+      // Calculate client breakdowns from real data
+      const clientMap = new Map();
+      
+      tasksWithDetails.forEach(task => {
+        if (!task.clientId || !task.timeEntries) return;
+        
+        if (!clientMap.has(task.clientId)) {
+          clientMap.set(task.clientId, {
+            clientId: task.clientId,
+            clientName: task.clientName || 'Unknown Client',
+            totalTime: 0,
+            tasksCount: new Set(),
+            userMap: new Map()
+          });
         }
-      ];
+        
+        const client = clientMap.get(task.clientId);
+        client.tasksCount.add(task.id);
+        
+        task.timeEntries.forEach(entry => {
+          if (!entry.startTime || !entry.userId) return;
+          
+          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          if (entryDate < dateFrom || entryDate > dateTo) return;
+          
+          // Handle development mode user ID mapping
+          let effectiveUserId = entry.userId;
+          if (IS_DEVELOPMENT && entry.userId === 'current-user') {
+            effectiveUserId = authenticatedUserId;
+          }
+          
+          client.totalTime += entry.duration || 0;
+          
+          if (!client.userMap.has(effectiveUserId)) {
+            client.userMap.set(effectiveUserId, {
+              userId: effectiveUserId,
+              userName: entry.userName || 'Development User',
+              userRole: entry.userRole || 'User',
+              totalTime: 0,
+              tasksWorked: new Set(),
+              dailyTotals: {}
+            });
+          }
+          
+          const user = client.userMap.get(effectiveUserId);
+          user.totalTime += entry.duration || 0;
+          user.tasksWorked.add(task.id);
+          user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (entry.duration || 0);
+        });
+      });
+      
+      const clientBreakdowns = Array.from(clientMap.values()).map(client => ({
+        clientId: client.clientId,
+        clientName: client.clientName,
+        totalTime: client.totalTime,
+        tasksCount: client.tasksCount.size,
+        users: Array.from(client.userMap.values()).map(user => ({
+          ...user,
+          tasksWorked: user.tasksWorked.size
+        }))
+      }));
       
       // Calculate grand total
       const grandTotal = userSummaries.reduce((sum, user) => sum + user.totalTime, 0);
