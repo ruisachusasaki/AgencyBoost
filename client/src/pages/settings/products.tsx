@@ -91,6 +91,14 @@ export default function ProductsSettings() {
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   
+  // Form state for controlled Select components
+  const [createFormType, setCreateFormType] = useState("one_time");
+  const [createFormStatus, setCreateFormStatus] = useState("active");
+  const [createFormCategoryId, setCreateFormCategoryId] = useState("");
+  const [editFormType, setEditFormType] = useState("");
+  const [editFormStatus, setEditFormStatus] = useState("");
+  const [editFormCategoryId, setEditFormCategoryId] = useState("");
+  
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -164,7 +172,7 @@ export default function ProductsSettings() {
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/products/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/products/${id}`, "PUT", data),
     onSuccess: () => {
       // Invalidate all related queries to ensure real-time updates everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -375,14 +383,46 @@ export default function ProductsSettings() {
   const handleCreateProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    // Client-side validation
+    const name = (formData.get("name") as string)?.trim();
+    const price = formData.get("price") as string;
+    
+    if (!name) {
+      toast({
+        title: "Validation Error",
+        description: "Product name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!price || parseFloat(price) < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid price (0 or greater)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!createFormType) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a product type",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const data = {
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      price: formData.get("price") as string,
+      name,
+      description: (formData.get("description") as string)?.trim() || "",
+      price,
       cost: formData.get("cost") as string,
-      type: formData.get("type") as string,
-      categoryId: formData.get("categoryId") as string || undefined,
-      status: formData.get("status") as string,
+      type: createFormType,
+      categoryId: createFormCategoryId || undefined,
+      status: createFormStatus,
     };
     createProductMutation.mutate(data);
   };
@@ -392,21 +432,68 @@ export default function ProductsSettings() {
     if (!editingProduct) return;
     
     const formData = new FormData(e.currentTarget);
+    
+    // Client-side validation  
+    const name = (formData.get("name") as string)?.trim();
+    const price = formData.get("price") as string;
+    
+    if (!name) {
+      toast({
+        title: "Validation Error",
+        description: "Product name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!price || parseFloat(price) < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid price (0 or greater)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!editFormType) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a product type",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const data = {
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      price: formData.get("price") as string,
+      name,
+      description: (formData.get("description") as string)?.trim() || "",
+      price,
       cost: formData.get("cost") as string,
-      type: formData.get("type") as string,
-      categoryId: formData.get("categoryId") as string || undefined,
-      status: formData.get("status") as string,
+      type: editFormType,
+      categoryId: editFormCategoryId || undefined,
+      status: editFormStatus,
     };
     updateProductMutation.mutate({ id: editingProduct.id, data });
   };
 
   const openEditProduct = (product: Product) => {
     setEditingProduct(product);
+    setEditFormType(product.type);
+    setEditFormStatus(product.status);
+    setEditFormCategoryId(product.categoryId || "");
     setIsEditProductOpen(true);
+  };
+
+  const resetCreateProductForm = () => {
+    setCreateFormType("one_time");
+    setCreateFormStatus("active");
+    setCreateFormCategoryId("");
+  };
+
+  const resetEditProductForm = () => {
+    setEditFormType("");
+    setEditFormStatus("");
+    setEditFormCategoryId("");
   };
 
   const handleCreateBundle = (e: React.FormEvent<HTMLFormElement>) => {
@@ -707,7 +794,12 @@ export default function ProductsSettings() {
           </div>
           
           {activeTab === "products" && (
-            <Dialog open={isCreateProductOpen} onOpenChange={setIsCreateProductOpen}>
+            <Dialog open={isCreateProductOpen} onOpenChange={(open) => {
+              setIsCreateProductOpen(open);
+              if (!open) {
+                resetCreateProductForm();
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
                   <Plus className="w-4 h-4 mr-2" />
@@ -724,20 +816,26 @@ export default function ProductsSettings() {
                 <form onSubmit={handleCreateProduct} className="space-y-4">
                   <div>
                     <Label htmlFor="name">Product Name</Label>
-                    <Input id="name" name="name" required />
+                    <Input id="name" name="name" required data-testid="input-product-name" />
                   </div>
                   <div>
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" name="description" />
                   </div>
-                  <div>
-                    <Label htmlFor="cost">Cost (per unit)</Label>
-                    <Input id="cost" name="cost" type="number" step="0.01" placeholder="0.00" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="price">Price</Label>
+                      <Input id="price" name="price" type="number" step="0.01" placeholder="0.00" required data-testid="input-product-price" />
+                    </div>
+                    <div>
+                      <Label htmlFor="cost">Cost (per unit)</Label>
+                      <Input id="cost" name="cost" type="number" step="0.01" placeholder="0.00" />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="type">Type</Label>
-                      <Select name="type" required>
+                      <Select value={createFormType} onValueChange={setCreateFormType} required>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
@@ -749,7 +847,7 @@ export default function ProductsSettings() {
                     </div>
                     <div>
                       <Label htmlFor="status">Status</Label>
-                      <Select name="status" defaultValue="active">
+                      <Select value={createFormStatus} onValueChange={setCreateFormStatus}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -762,7 +860,7 @@ export default function ProductsSettings() {
                   </div>
                   <div>
                     <Label htmlFor="categoryId">Category</Label>
-                    <Select name="categoryId">
+                    <Select value={createFormCategoryId} onValueChange={setCreateFormCategoryId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -776,10 +874,17 @@ export default function ProductsSettings() {
                     </Select>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCreateProductOpen(false)}>
+                    <Button type="button" variant="outline" onClick={() => {
+                      setIsCreateProductOpen(false);
+                      resetCreateProductForm();
+                    }}>
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={createProductMutation.isPending}>
+                    <Button 
+                      type="submit" 
+                      disabled={createProductMutation.isPending || !createFormType}
+                      data-testid="button-create-product"
+                    >
                       {createProductMutation.isPending ? "Creating..." : "Create Product"}
                     </Button>
                   </div>
@@ -789,7 +894,13 @@ export default function ProductsSettings() {
           )}
 
           {/* Edit Product Dialog */}
-          <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+          <Dialog open={isEditProductOpen} onOpenChange={(open) => {
+            setIsEditProductOpen(open);
+            if (!open) {
+              resetEditProductForm();
+              setEditingProduct(null);
+            }
+          }}>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Edit Product</DialogTitle>
@@ -805,7 +916,8 @@ export default function ProductsSettings() {
                       id="edit-name" 
                       name="name" 
                       defaultValue={editingProduct.name}
-                      required 
+                      required
+                      data-testid="input-edit-product-name"
                     />
                   </div>
                   <div>
@@ -816,21 +928,36 @@ export default function ProductsSettings() {
                       defaultValue={editingProduct.description || ""}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="edit-cost">Cost (per unit)</Label>
-                    <Input 
-                      id="edit-cost" 
-                      name="cost" 
-                      type="number" 
-                      step="0.01" 
-                      defaultValue={editingProduct.cost || ""}
-                      placeholder="0.00"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-price">Price</Label>
+                      <Input 
+                        id="edit-price" 
+                        name="price" 
+                        type="number" 
+                        step="0.01" 
+                        defaultValue={editingProduct.price || ""}
+                        placeholder="0.00"
+                        required
+                        data-testid="input-edit-product-price"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-cost">Cost (per unit)</Label>
+                      <Input 
+                        id="edit-cost" 
+                        name="cost" 
+                        type="number" 
+                        step="0.01" 
+                        defaultValue={editingProduct.cost || ""}
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="edit-type">Type</Label>
-                      <Select name="type" defaultValue={editingProduct.type}>
+                      <Select value={editFormType} onValueChange={setEditFormType}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -842,7 +969,7 @@ export default function ProductsSettings() {
                     </div>
                     <div>
                       <Label htmlFor="edit-status">Status</Label>
-                      <Select name="status" defaultValue={editingProduct.status}>
+                      <Select value={editFormStatus} onValueChange={setEditFormStatus}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -855,7 +982,7 @@ export default function ProductsSettings() {
                   </div>
                   <div>
                     <Label htmlFor="edit-categoryId">Category</Label>
-                    <Select name="categoryId" defaultValue={editingProduct.categoryId || ""}>
+                    <Select value={editFormCategoryId} onValueChange={setEditFormCategoryId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -872,11 +999,19 @@ export default function ProductsSettings() {
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => setIsEditProductOpen(false)}
+                      onClick={() => {
+                        setIsEditProductOpen(false);
+                        resetEditProductForm();
+                        setEditingProduct(null);
+                      }}
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={updateProductMutation.isPending}>
+                    <Button 
+                      type="submit" 
+                      disabled={updateProductMutation.isPending || !editFormType}
+                      data-testid="button-update-product"
+                    >
                       {updateProductMutation.isPending ? "Updating..." : "Update Product"}
                     </Button>
                   </div>
