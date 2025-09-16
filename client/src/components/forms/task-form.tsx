@@ -891,7 +891,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading} data-testid="button-submit">
-            {isLoading ? (selectedTemplateId && selectedTemplateId !== "none" && selectedTemplateId !== "" ? "Creating from template..." : "Saving...") : task ? "Update Task" : "Create Task"}
+            {isLoading ? (templateId && templateId !== "none" && templateId !== "" ? "Creating from template..." : "Saving...") : task ? "Update Task" : "Create Task"}
           </Button>
         </div>
       </form>
