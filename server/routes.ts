@@ -1977,41 +1977,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user has permission to delete tasks
       const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
 
+      // Get all tasks to be deleted and their hierarchy info
+      const tasksToDelete = await db.select()
+        .from(tasks)
+        .where(inArray(tasks.id, taskIds));
+
+      // Track which tasks we've already deleted to avoid duplicates
+      const alreadyDeleted = new Set();
       let deletedCount = 0;
       const errors = [];
 
-      for (const taskId of taskIds) {
+      // Helper function to recursively get all descendant task IDs
+      const getAllDescendants = async (parentId: string): Promise<string[]> => {
+        const children = await db.select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.parentTaskId, parentId));
+        
+        let allDescendants = children.map(child => child.id);
+        
+        for (const child of children) {
+          const grandChildren = await getAllDescendants(child.id);
+          allDescendants = allDescendants.concat(grandChildren);
+        }
+        
+        return allDescendants;
+      };
+
+      // Helper function to delete a single task with all its related data
+      const deleteSingleTask = async (taskId: string, task: any) => {
+        if (alreadyDeleted.has(taskId)) {
+          return; // Already deleted
+        }
+
         try {
-          // Check if task exists and get its details
-          const taskToDelete = await db.select()
-            .from(tasks)
-            .where(eq(tasks.id, taskId))
-            .limit(1);
-
-          if (taskToDelete.length === 0) {
-            errors.push(`Task not found: ${taskId}`);
-            continue;
-          }
-
-          const task = taskToDelete[0];
-          const isTaskOwner = task.assignedTo === userId;
-
-          if (!canDelete && !isTaskOwner) {
-            errors.push(`Access denied for task: ${taskId}`);
-            continue;
-          }
-
-          // Delete sub-tasks first
-          const subTasks = await db.select()
-            .from(tasks)
-            .where(eq(tasks.parentTaskId, taskId));
-
-          if (subTasks.length > 0) {
-            for (const subTask of subTasks) {
-              await db.delete(tasks).where(eq(tasks.id, subTask.id));
-            }
-          }
-
           // Delete task dependencies
           await db.delete(taskDependencies).where(
             or(
@@ -2062,10 +2060,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req
           );
 
+          alreadyDeleted.add(taskId);
           deletedCount++;
         } catch (error) {
           console.error(`Error deleting task ${taskId}:`, error);
           errors.push(`Failed to delete task: ${taskId}`);
+        }
+      };
+
+      // Process each selected task
+      for (const task of tasksToDelete) {
+        try {
+          const isTaskOwner = task.assignedTo === userId;
+
+          if (!canDelete && !isTaskOwner) {
+            errors.push(`Access denied for task: ${task.id}`);
+            continue;
+          }
+
+          // Get all descendants of this task
+          const descendants = await getAllDescendants(task.id);
+          
+          // Delete all descendants first (deepest first)
+          const descendantTasks = await db.select()
+            .from(tasks)
+            .where(inArray(tasks.id, descendants))
+            .orderBy(desc(tasks.level)); // Order by level descending (deepest first)
+
+          for (const descendant of descendantTasks) {
+            await deleteSingleTask(descendant.id, descendant);
+          }
+
+          // Finally delete the parent task
+          await deleteSingleTask(task.id, task);
+
+        } catch (error) {
+          console.error(`Error processing task ${task.id}:`, error);
+          errors.push(`Failed to process task: ${task.id}`);
         }
       }
 
