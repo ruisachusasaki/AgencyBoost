@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
@@ -88,9 +88,28 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [editorSelection, setEditorSelection] = useState(0); // Force re-renders on selection changes
   const [htmlContent, setHtmlContent] = useState(content);
+  const [isLineHeightDropdownOpen, setIsLineHeightDropdownOpen] = useState(false);
+  const lineHeightDropdownRef = useRef<HTMLDivElement>(null);
   
   // Convert plain text content to HTML format
   const htmlFormattedContent = convertTextToHtml(content);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (lineHeightDropdownRef.current && !lineHeightDropdownRef.current.contains(event.target as Node)) {
+        setIsLineHeightDropdownOpen(false);
+      }
+    };
+
+    if (isLineHeightDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isLineHeightDropdownOpen]);
   
   const editor = useEditor({
     extensions: [
@@ -282,6 +301,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
 
   const setLineHeight = (height: string) => {
     setCurrentLineHeight(height);
+    setIsLineHeightDropdownOpen(false);
     editor.chain().focus().run();
   };
 
@@ -617,19 +637,21 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
         <div className="w-px h-6 bg-gray-300 mx-1" />
 
         {/* Line Spacing */}
-        <div className="relative group">
+        <div className="relative" ref={lineHeightDropdownRef}>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
+            onClick={() => setIsLineHeightDropdownOpen(!isLineHeightDropdownOpen)}
           >
             <AlignJustify className="h-4 w-4" />
           </Button>
           
           {/* Line Spacing Dropdown */}
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-[120px]">
-            <div className="p-1">
+          {isLineHeightDropdownOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+              <div className="p-1">
               <button
                 type="button"
                 onClick={() => setLineHeight('1.0')}
@@ -672,8 +694,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
               >
                 Double (2.0)
               </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
