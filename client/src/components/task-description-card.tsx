@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Task } from "@shared/schema";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 interface TaskDescriptionCardProps {
   task: Task;
@@ -15,6 +15,13 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [editValue, setEditValue] = useState(task.description || "");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Update edit value when task description changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(task.description || "");
+    }
+  }, [task.description, isEditing]);
   // Configure display limits
   const COLLAPSED_HEIGHT = 150; // pixels - increased for better text visibility
   const COLLAPSED_LINES = 6; // maximum lines to show when collapsed
@@ -39,16 +46,6 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const handleCancel = () => {
     setEditValue(task.description || "");
     setIsEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleCancel();
-    }
-    // Allow Ctrl/Cmd + Enter to save
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      handleSave();
-    }
   };
 
   // Strip HTML tags for length calculation
@@ -85,14 +82,14 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
       <CardContent className="group">
         {isEditing ? (
           <div className="space-y-3">
-            <Textarea
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              placeholder="Add a description for this task..."
-              className="min-h-[150px] resize-none"
-              onKeyDown={handleKeyDown}
-              data-testid="textarea-description"
-            />
+            <div data-testid="rich-text-description">
+              <RichTextEditor
+                content={editValue}
+                onChange={setEditValue}
+                placeholder="Add a description for this task..."
+                className="min-h-[200px] border rounded-lg"
+              />
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
