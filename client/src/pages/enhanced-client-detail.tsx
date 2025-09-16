@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -6389,11 +6390,10 @@ export default function EnhancedClientDetail() {
 
                   {/* Show Completed Toggle */}
                   <div className="flex items-center space-x-2 py-2">
-                    <Checkbox
+                    <Switch
                       id="show-completed-tasks"
                       checked={showCompletedTasks}
-                      onCheckedChange={(checked) => setShowCompletedTasks(!!checked)}
-                      className="h-4 w-4"
+                      onCheckedChange={setShowCompletedTasks}
                       data-testid="toggle-show-completed"
                     />
                     <label htmlFor="show-completed-tasks" className="text-sm text-gray-600 cursor-pointer">
