@@ -1977,127 +1977,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user has permission to delete tasks
       const canDelete = await hasPermission(userId, 'tasks', 'canDelete');
 
-      // Get all tasks to be deleted and their hierarchy info
-      const tasksToDelete = await db.select()
-        .from(tasks)
-        .where(inArray(tasks.id, taskIds));
-
-      // Track which tasks we've already deleted to avoid duplicates
-      const alreadyDeleted = new Set();
       let deletedCount = 0;
       const errors = [];
 
-      // Helper function to recursively get all descendant task IDs
-      const getAllDescendants = async (parentId: string): Promise<string[]> => {
-        const children = await db.select({ id: tasks.id })
+      try {
+        // Get all selected tasks and verify permissions
+        const selectedTasks = await db.select()
           .from(tasks)
-          .where(eq(tasks.parentTaskId, parentId));
-        
-        let allDescendants = children.map(child => child.id);
-        
-        for (const child of children) {
-          const grandChildren = await getAllDescendants(child.id);
-          allDescendants = allDescendants.concat(grandChildren);
-        }
-        
-        return allDescendants;
-      };
+          .where(inArray(tasks.id, taskIds));
 
-      // Helper function to delete a single task with all its related data
-      const deleteSingleTask = async (taskId: string, task: any) => {
-        if (alreadyDeleted.has(taskId)) {
-          return; // Already deleted
-        }
-
-        try {
-          // Delete task dependencies
-          await db.delete(taskDependencies).where(
-            or(
-              eq(taskDependencies.taskId, taskId),
-              eq(taskDependencies.dependsOnTaskId, taskId)
-            )
-          );
-
-          // Delete task comment files
-          const commentFilesToDelete = await db.select()
-            .from(commentFiles)
-            .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
-            .where(eq(taskComments.taskId, taskId));
-
-          for (const file of commentFilesToDelete) {
-            await db.delete(commentFiles).where(eq(commentFiles.id, file.comment_files.id));
-          }
-
-          // Delete task comment reactions
-          await db.delete(taskCommentReactions)
-            .where(sql`comment_id IN (SELECT id FROM task_comments WHERE task_id = ${taskId})`);
-
-          // Delete task comments
-          await db.delete(taskComments)
-            .where(eq(taskComments.taskId, taskId));
-
-          // Delete task activities
-          await db.delete(taskActivities)
-            .where(eq(taskActivities.taskId, taskId));
-
-          // Delete task attachments
-          await db.delete(taskAttachments)
-            .where(eq(taskAttachments.taskId, taskId));
-
-          // Delete the main task
-          await db.delete(tasks).where(eq(tasks.id, taskId));
-
-          // Create audit log
-          await createAuditLog(
-            "deleted",
-            "task",
-            taskId,
-            "Task",
-            userId,
-            "Task bulk deleted",
-            null,
-            null,
-            req
-          );
-
-          alreadyDeleted.add(taskId);
-          deletedCount++;
-        } catch (error) {
-          console.error(`Error deleting task ${taskId}:`, error);
-          errors.push(`Failed to delete task: ${taskId}`);
-        }
-      };
-
-      // Process each selected task
-      for (const task of tasksToDelete) {
-        try {
+        // Check permissions for each task
+        for (const task of selectedTasks) {
           const isTaskOwner = task.assignedTo === userId;
-
           if (!canDelete && !isTaskOwner) {
             errors.push(`Access denied for task: ${task.id}`);
-            continue;
+            return res.json({
+              message: `Access denied for some tasks`,
+              deletedCount: 0,
+              errors
+            });
           }
-
-          // Get all descendants of this task
-          const descendants = await getAllDescendants(task.id);
-          
-          // Delete all descendants first (deepest first)
-          const descendantTasks = await db.select()
-            .from(tasks)
-            .where(inArray(tasks.id, descendants))
-            .orderBy(desc(tasks.level)); // Order by level descending (deepest first)
-
-          for (const descendant of descendantTasks) {
-            await deleteSingleTask(descendant.id, descendant);
-          }
-
-          // Finally delete the parent task
-          await deleteSingleTask(task.id, task);
-
-        } catch (error) {
-          console.error(`Error processing task ${task.id}:`, error);
-          errors.push(`Failed to process task: ${task.id}`);
         }
+
+        // Build a complete list of ALL tasks that need to be deleted (selected tasks + all their descendants)
+        const allTasksToDelete = new Set<string>(taskIds);
+        
+        // Recursively find all descendants
+        const findAllDescendants = async (parentIds: string[]): Promise<void> => {
+          if (parentIds.length === 0) return;
+          
+          const children = await db.select({ id: tasks.id, parentTaskId: tasks.parentTaskId })
+            .from(tasks)
+            .where(inArray(tasks.parentTaskId, parentIds));
+          
+          const childIds: string[] = [];
+          for (const child of children) {
+            if (!allTasksToDelete.has(child.id)) {
+              allTasksToDelete.add(child.id);
+              childIds.push(child.id);
+            }
+          }
+          
+          // Recursively find grandchildren
+          if (childIds.length > 0) {
+            await findAllDescendants(childIds);
+          }
+        };
+
+        // Find all descendants of selected tasks
+        await findAllDescendants(taskIds);
+
+        // Get all tasks to delete with their levels, ordered by level (deepest first)
+        const tasksToDelete = await db.select()
+          .from(tasks)
+          .where(inArray(tasks.id, Array.from(allTasksToDelete)))
+          .orderBy(desc(tasks.level));
+
+        console.log(`Total tasks to delete (including descendants): ${tasksToDelete.length}`);
+
+        // Delete tasks in order (deepest level first to avoid foreign key constraints)
+        for (const task of tasksToDelete) {
+          try {
+            // Delete task dependencies
+            await db.delete(taskDependencies).where(
+              or(
+                eq(taskDependencies.taskId, task.id),
+                eq(taskDependencies.dependsOnTaskId, task.id)
+              )
+            );
+
+            // Delete task comment files
+            const commentFilesToDelete = await db.select()
+              .from(commentFiles)
+              .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+              .where(eq(taskComments.taskId, task.id));
+
+            for (const file of commentFilesToDelete) {
+              await db.delete(commentFiles).where(eq(commentFiles.id, file.comment_files.id));
+            }
+
+            // Delete task comment reactions
+            await db.delete(taskCommentReactions)
+              .where(sql`comment_id IN (SELECT id FROM task_comments WHERE task_id = ${task.id})`);
+
+            // Delete task comments
+            await db.delete(taskComments)
+              .where(eq(taskComments.taskId, task.id));
+
+            // Delete task activities
+            await db.delete(taskActivities)
+              .where(eq(taskActivities.taskId, task.id));
+
+            // Delete task attachments
+            await db.delete(taskAttachments)
+              .where(eq(taskAttachments.taskId, task.id));
+
+            // Delete the main task
+            await db.delete(tasks).where(eq(tasks.id, task.id));
+
+            // Create audit log
+            await createAuditLog(
+              "deleted",
+              "task",
+              task.id,
+              "Task",
+              userId,
+              "Task bulk deleted",
+              null,
+              null,
+              req
+            );
+
+            deletedCount++;
+          } catch (error) {
+            console.error(`Error deleting task ${task.id}:`, error);
+            errors.push(`Failed to delete task: ${task.id} - ${error.message}`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error in bulk delete:`, error);
+        errors.push(`Bulk delete failed: ${error.message}`);
       }
 
       console.log(`Bulk deletion completed - ${deletedCount} tasks deleted, ${errors.length} errors`);
