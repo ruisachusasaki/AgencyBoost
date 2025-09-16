@@ -1060,6 +1060,12 @@ export default function Tasks() {
     }
   };
 
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(Array.from(selectedTasks));
+    setIsBulkDeleteConfirmOpen(false);
+    setSelectedTasks(new Set());
+  };
+
   // Bulk actions helper functions
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -1139,12 +1145,6 @@ export default function Tasks() {
 
     const handleBulkDelete = () => {
       setIsBulkDeleteConfirmOpen(true);
-    };
-
-    const confirmBulkDelete = () => {
-      bulkDeleteMutation.mutate(Array.from(selectedTasks));
-      setIsBulkDeleteConfirmOpen(false);
-      setSelectedTasks(new Set());
     };
 
     const handleBulkAssignee = () => {
