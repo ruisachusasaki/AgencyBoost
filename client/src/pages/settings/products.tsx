@@ -86,6 +86,10 @@ export default function ProductsSettings() {
   const [editingBundle, setEditingBundle] = useState<ProductBundle | null>(null);
   const [bundleProducts, setBundleProducts] = useState<Array<{productId: string}>>([]);
   const [bundleProductSearch, setBundleProductSearch] = useState("");
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
+  const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
   
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -295,6 +299,74 @@ export default function ProductsSettings() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete bundle",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/product-categories", "POST", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      setIsCreateCategoryOpen(false);
+      toast({
+        title: "Success",
+        description: "Category created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update category mutation
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("/api/product-categories/" + id, "PUT", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] }); // Refresh products as they reference categories
+      setIsEditCategoryOpen(false);
+      setEditingCategory(null);
+      toast({
+        title: "Success",
+        description: "Category updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Check if category is in use before deleting
+      const productsUsingCategory = products.filter(product => product.categoryId === id);
+      if (productsUsingCategory.length > 0) {
+        throw new Error(`Cannot delete category. ${productsUsingCategory.length} product(s) are using this category.`);
+      }
+      return apiRequest("/api/product-categories/" + id, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      toast({
+        title: "Success",
+        description: "Category deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete category",
         variant: "destructive",
       });
     },
@@ -534,6 +606,40 @@ export default function ProductsSettings() {
     (bundle.description && bundle.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Category form handlers
+  const handleCreateCategory = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+    };
+    createCategoryMutation.mutate(data);
+  };
+
+  const handleEditCategory = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+    };
+    updateCategoryMutation.mutate({ id: editingCategory.id, data });
+  };
+
+  const openEditCategory = (category: ProductCategory) => {
+    setEditingCategory(category);
+    setIsEditCategoryOpen(true);
+  };
+
+  // Filter categories
+  const filteredCategories = categories.filter((category) =>
+    category.name.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+    (category.description && category.description.toLowerCase().includes(categorySearchTerm.toLowerCase()))
+  );
+
   return (
     <div className="space-y-6">
       {/* Back to Settings Button */}
@@ -561,7 +667,8 @@ export default function ProductsSettings() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "products", name: "Products", icon: Package, count: products.length },
-            { id: "bundles", name: "Bundles", icon: Package2, count: bundles.length }
+            { id: "bundles", name: "Bundles", icon: Package2, count: bundles.length },
+            { id: "categories", name: "Categories", icon: ShoppingCart, count: categories.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -587,8 +694,14 @@ export default function ProductsSettings() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder={`Search ${activeTab}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={activeTab === "categories" ? categorySearchTerm : searchTerm}
+              onChange={(e) => {
+                if (activeTab === "categories") {
+                  setCategorySearchTerm(e.target.value);
+                } else {
+                  setSearchTerm(e.target.value);
+                }
+              }}
               className="pl-9 w-80"
             />
           </div>
@@ -887,6 +1000,43 @@ export default function ProductsSettings() {
                     </Button>
                     <Button type="submit" disabled={createBundleMutation.isPending}>
                       {createBundleMutation.isPending ? "Creating..." : "Create Bundle"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {activeTab === "categories" && (
+            <Dialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" data-testid="button-create-category">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Category
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Category</DialogTitle>
+                  <DialogDescription>
+                    Add a new product category to organize your products
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateCategory} className="space-y-4">
+                  <div>
+                    <Label htmlFor="category-name">Category Name</Label>
+                    <Input id="category-name" name="name" required data-testid="input-category-name" />
+                  </div>
+                  <div>
+                    <Label htmlFor="category-description">Description</Label>
+                    <Textarea id="category-description" name="description" data-testid="input-category-description" />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsCreateCategoryOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createCategoryMutation.isPending} data-testid="button-save-category">
+                      {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
                     </Button>
                   </div>
                 </form>
@@ -1206,6 +1356,120 @@ export default function ProductsSettings() {
           </Card>
         )}
 
+        {/* Categories Tab */}
+        {activeTab === "categories" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                Product Categories
+              </CardTitle>
+              <CardDescription>
+                Manage product categories to organize your products and services
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {categories.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {categorySearchTerm ? "No categories found matching your search" : "No categories created yet"}
+                </div>
+              ) : filteredCategories.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No categories found matching your search
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Products</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCategories.map((category: ProductCategory) => {
+                      const productsInCategory = products.filter(product => product.categoryId === category.id);
+                      return (
+                        <TableRow key={category.id}>
+                          <TableCell>
+                            <div className="font-medium" data-testid={`text-category-name-${category.id}`}>
+                              {category.name}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-gray-600" data-testid={`text-category-description-${category.id}`}>
+                              {category.description || "-"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" data-testid={`text-category-count-${category.id}`}>
+                              {productsInCategory.length} {productsInCategory.length === 1 ? 'product' : 'products'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-500">
+                              {new Date(category.createdAt).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditCategory(category)}
+                                data-testid={`button-edit-category-${category.id}`}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    data-testid={`button-delete-category-${category.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{category.name}"? 
+                                      {productsInCategory.length > 0 && (
+                                        <span className="text-red-600 font-medium">
+                                          <br />Warning: {productsInCategory.length} product(s) are currently using this category.
+                                        </span>
+                                      )}
+                                      This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteCategoryMutation.mutate(category.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`button-confirm-delete-category-${category.id}`}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
       {/* Edit Bundle Dialog */}
       <Dialog open={isEditBundleOpen} onOpenChange={setIsEditBundleOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -1301,6 +1565,52 @@ export default function ProductsSettings() {
                 </Button>
                 <Button type="submit" disabled={updateBundleMutation.isPending}>
                   {updateBundleMutation.isPending ? "Updating..." : "Update Bundle"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>
+              Update category details
+            </DialogDescription>
+          </DialogHeader>
+          {editingCategory && (
+            <form onSubmit={handleEditCategory} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-category-name">Category Name</Label>
+                <Input 
+                  id="edit-category-name" 
+                  name="name" 
+                  defaultValue={editingCategory.name}
+                  required 
+                  data-testid="input-edit-category-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-category-description">Description</Label>
+                <Textarea 
+                  id="edit-category-description" 
+                  name="description" 
+                  defaultValue={editingCategory.description || ""}
+                  data-testid="input-edit-category-description"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsEditCategoryOpen(false);
+                  setEditingCategory(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateCategoryMutation.isPending} data-testid="button-update-category">
+                  {updateCategoryMutation.isPending ? "Updating..." : "Update Category"}
                 </Button>
               </div>
             </form>
