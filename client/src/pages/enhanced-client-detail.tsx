@@ -6500,8 +6500,10 @@ export default function EnhancedClientDetail() {
                             </div>
                           </div>
                         );
-                      })
-                    )}
+                        })
+                      );
+                    })()
+                    }
                   </div>
                 </div>
               )}
