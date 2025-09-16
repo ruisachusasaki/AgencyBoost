@@ -85,7 +85,7 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
         projectId: parentTask?.projectId || null,
       };
       console.log("Sending API request with:", requestData);
-      return apiRequest(`/api/tasks`, "POST", requestData);
+      return apiRequest("POST", `/api/tasks/${parentTaskId}/subtasks`, requestData);
     },
     onSuccess: (data) => {
       console.log("Sub-task created successfully:", data);
