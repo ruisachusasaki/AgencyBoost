@@ -142,95 +142,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create sample time tracking data directly in the endpoint
-      const sampleTasks = [
-        {
-          id: 'task-1',
-          title: 'Website Development',
-          description: 'Build responsive website',
-          status: 'completed',
-          priority: 'high',
-          assignedTo: 'user-1',
-          clientId: 'client-1',
-          timeEntries: [
-            {
-              id: 'entry-1',
-              userId: 'user-1',
-              startTime: '2024-01-15T09:00:00Z',
-              endTime: '2024-01-15T12:00:00Z',
-              duration: 10800, // 3 hours
-              description: 'Frontend development',
-              billable: true,
-              hourlyRate: 75
-            },
-            {
-              id: 'entry-2',
-              userId: 'user-1',
-              startTime: '2024-01-16T10:00:00Z',
-              endTime: '2024-01-16T14:30:00Z',
-              duration: 16200, // 4.5 hours
-              description: 'Backend integration',
-              billable: true,
-              hourlyRate: 75
-            }
-          ]
-        },
-        {
-          id: 'task-2',
-          title: 'Database Design',
-          description: 'Design and implement database schema',
-          status: 'in-progress',
-          priority: 'medium',
-          assignedTo: 'user-2',
-          clientId: 'client-1',
-          timeEntries: [
-            {
-              id: 'entry-3',
-              userId: 'user-2',
-              startTime: '2024-01-17T08:00:00Z',
-              endTime: '2024-01-17T16:00:00Z',
-              duration: 28800, // 8 hours
-              description: 'Schema design and implementation',
-              billable: true,
-              hourlyRate: 85
-            }
-          ]
-        },
-        {
-          id: 'task-3',
-          title: 'Mobile App Development',
-          description: 'iOS and Android app development',
-          status: 'not-started',
-          priority: 'low',
-          assignedTo: 'user-1',
-          clientId: 'client-2',
-          timeEntries: [
-            {
-              id: 'entry-4',
-              userId: 'user-1',
-              startTime: '2024-06-15T09:00:00Z',
-              endTime: '2024-06-15T17:00:00Z',
-              duration: 28800, // 8 hours
-              description: 'Initial app setup and structure',
-              billable: true,
-              hourlyRate: 90
-            },
-            {
-              id: 'entry-5',
-              userId: 'user-1',
-              startTime: '2024-06-16T09:00:00Z',
-              endTime: '2024-06-16T13:00:00Z',
-              duration: 14400, // 4 hours
-              description: 'UI development',
-              billable: true,
-              hourlyRate: 90
-            }
-          ]
-        }
-      ];
+      // Get actual time entries from the database
+      console.log("FETCHING REAL TIME ENTRIES FROM DATABASE...");
+      const realTimeEntries = await appStorage.getTimeEntriesByDateRange(
+        dateFrom, 
+        dateTo, 
+        userId, 
+        clientId
+      );
+      
+      console.log("REAL TIME ENTRIES FOUND:", realTimeEntries.length, "tasks");
+      
+      // Transform the real data to match the expected format
+      const actualTasks = realTimeEntries;
       
       // Filter tasks based on date range and other filters
-      const filteredTasks = sampleTasks.filter(task => {
+      const filteredTasks = actualTasks.filter(task => {
         // Filter by user if specified
         if (userId && task.assignedTo !== userId) return false;
         
