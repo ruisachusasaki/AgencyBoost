@@ -6399,27 +6399,46 @@ export default function EnhancedClientDetail() {
                       </div>
                     ) : (
                       clientTasksData.map((task: any) => {
+                        const isCompleted = task.status === 'completed';
                         const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
                         return (
                           <div 
                             key={task.id} 
-                            className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
-                            onClick={() => {
-                              // Navigate to the specific task details page
-                              window.location.href = `/tasks/${task.id}`;
-                            }}
+                            className="p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`w-3 h-3 rounded-full mt-1 ${task.status === 'completed' ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-gray-300'}`} />
+                              <Checkbox
+                                checked={isCompleted}
+                                onCheckedChange={(checked) => {
+                                  updateTaskStatusMutation.mutate({
+                                    taskId: task.id,
+                                    status: checked ? 'completed' : 'pending'
+                                  });
+                                }}
+                                className="mt-0.5"
+                                data-testid={`checkbox-task-${task.id}`}
+                              />
                               
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                  <h4 className={`font-medium text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'} ${isOverdue ? 'text-red-600' : ''}`}>
+                                  <h4 
+                                    className={`font-medium text-sm cursor-pointer hover:text-blue-600 ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'} ${isOverdue ? 'text-red-600' : ''}`}
+                                    onClick={() => {
+                                      // Navigate to the specific task details page
+                                      window.location.href = `/tasks/${task.id}`;
+                                    }}
+                                    data-testid={`link-task-${task.id}`}
+                                  >
                                     {task.title}
                                     {isOverdue && <span className="ml-2 text-red-500 text-xs">(Overdue)</span>}
                                   </h4>
                                   
-                                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                                  <ExternalLink 
+                                    className="h-3 w-3 text-gray-400 cursor-pointer hover:text-blue-600" 
+                                    onClick={() => {
+                                      window.location.href = `/tasks/${task.id}`;
+                                    }}
+                                  />
                                 </div>
                                 
                                 {task.description && (
@@ -6437,7 +6456,14 @@ export default function EnhancedClientDetail() {
                                       Assigned to: {staffData.find((s: any) => s.id === task.assignedTo)?.firstName} {staffData.find((s: any) => s.id === task.assignedTo)?.lastName}
                                     </span>
                                   )}
-                                  <span className="text-blue-600">Click to view task details →</span>
+                                  <span 
+                                    className="text-blue-600 cursor-pointer hover:underline"
+                                    onClick={() => {
+                                      window.location.href = `/tasks/${task.id}`;
+                                    }}
+                                  >
+                                    Click to view task details →
+                                  </span>
                                 </div>
                               </div>
                             </div>
