@@ -32,14 +32,14 @@ import {
   insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema,
   insertTrainingLessonResourceSchema,
   inputClientHealthScoreSchema, insertClientHealthScoreSchema,
-  insertSmartListSchema,
+  insertSmartListSchema, insertTaskTemplateSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
-  taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses,
+  taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
   jobOpenings, jobApplicationFormConfig, clientTeamAssignments,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks,
@@ -3353,6 +3353,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     return false;
   }
+
+  // Task Template routes - SECURED
+  
+  // Create task template from existing task
+  app.post("/api/task-templates/from-task/:taskId", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { taskId } = req.params;
+      const { name } = req.body;
+
+      // Fetch the root task
+      const [rootTask] = await db.select()
+        .from(tasks)
+        .where(eq(tasks.id, taskId));
+
+      if (!rootTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Recursive function to build task template data
+      const buildTaskTemplate = async (task: any): Promise<any> => {
+        // Get sub-tasks for this task
+        const subTasks = await db.select()
+          .from(tasks)
+          .where(eq(tasks.parentTaskId, task.id))
+          .orderBy(asc(tasks.createdAt));
+
+        // Build sub-task templates recursively
+        const subTaskTemplates = [];
+        for (const subTask of subTasks) {
+          const subTaskTemplate = await buildTaskTemplate(subTask);
+          subTaskTemplates.push(subTaskTemplate);
+        }
+
+        // Return template data excluding ephemeral data
+        return {
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          workflowId: task.workflowId,
+          clientId: task.clientId,
+          campaignId: task.campaignId,
+          timeEstimate: task.timeEstimate,
+          level: task.level,
+          subTasks: subTaskTemplates
+        };
+      };
+
+      // Build the complete template data structure
+      const templateData = await buildTaskTemplate(rootTask);
+
+      // Create the task template
+      const templateName = name || `${rootTask.title} Template`;
+      
+      const [newTemplate] = await db.insert(taskTemplates)
+        .values({
+          name: templateName,
+          description: `Template created from task: ${rootTask.title}`,
+          categoryId: rootTask.categoryId,
+          priority: rootTask.priority,
+          templateData: templateData,
+          createdBy: userId
+        })
+        .returning();
+
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "task_template",
+        newTemplate.id,
+        templateName,
+        userId,
+        `Created task template from task: ${rootTask.title}`,
+        null,
+        newTemplate,
+        req
+      );
+
+      res.json(newTemplate);
+    } catch (error) {
+      console.error("Error creating task template:", error);
+      res.status(500).json({ message: "Failed to create task template" });
+    }
+  });
+
+  // Get all task templates
+  app.get("/api/task-templates", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
+    try {
+      const templates = await db.select({
+        id: taskTemplates.id,
+        name: taskTemplates.name,
+        description: taskTemplates.description,
+        categoryId: taskTemplates.categoryId,
+        priority: taskTemplates.priority,
+        createdBy: taskTemplates.createdBy,
+        createdAt: taskTemplates.createdAt
+      })
+      .from(taskTemplates)
+      .orderBy(desc(taskTemplates.createdAt));
+
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching task templates:", error);
+      res.status(500).json({ message: "Failed to fetch task templates" });
+    }
+  });
+
+  // Instantiate a task template
+  app.post("/api/task-templates/:id/instantiate", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { id: templateId } = req.params;
+      const {
+        title,
+        clientId,
+        campaignId,
+        workflowId,
+        assigneeStrategy = 'clear',
+        dateStrategy = 'clear'
+      } = req.body;
+
+      // Fetch the template
+      const [template] = await db.select()
+        .from(taskTemplates)
+        .where(eq(taskTemplates.id, templateId));
+
+      if (!template) {
+        return res.status(404).json({ message: "Task template not found" });
+      }
+
+      // Map to store old template task IDs to new task IDs for dependency mapping
+      const idMapping = new Map<string, string>();
+
+      // Recursive function to create tasks from template data
+      const createTasksFromTemplate = async (templateData: any, parentTaskId?: string): Promise<string> => {
+        // Use a real staff UUID for development mode (known working UUID from database)
+        let normalizedUserId = userId;
+        if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+          normalizedUserId = '5c8e4629-fa7c-4ebe-9be9-6880d9bf7150'; // Real staff UUID from database
+        }
+
+        // Apply overrides for root task
+        const taskData: any = {
+          title: title && !parentTaskId ? title : templateData.title,
+          description: templateData.description,
+          status: templateData.status,
+          priority: templateData.priority,
+          categoryId: templateData.categoryId,
+          workflowId: workflowId || templateData.workflowId,
+          clientId: clientId || templateData.clientId,
+          campaignId: campaignId || templateData.campaignId,
+          timeEstimate: templateData.timeEstimate,
+          level: templateData.level,
+          parentTaskId: parentTaskId,
+          createdBy: normalizedUserId
+        };
+
+        // Handle assignee strategy
+        if (assigneeStrategy === 'assignToMe') {
+          taskData.assignedTo = normalizedUserId;
+        } else if (assigneeStrategy === 'keep' && templateData.assignedTo) {
+          // For keep strategy, use the original assignedTo if it's a valid UUID
+          if (templateData.assignedTo && templateData.assignedTo !== MOCK_ADMIN_USER_ID) {
+            taskData.assignedTo = templateData.assignedTo;
+          } else {
+            taskData.assignedTo = normalizedUserId;
+          }
+        }
+        // For 'clear' strategy, leave assignedTo undefined
+
+        // Handle date strategy 
+        if (dateStrategy === 'keep') {
+          if (templateData.dueDate) taskData.dueDate = templateData.dueDate;
+          if (templateData.startDate) taskData.startDate = templateData.startDate;
+        }
+        // For 'clear' strategy, leave dates undefined
+
+        // Debug logging before database insert
+        console.log("🐛 DEBUG: Task data before insert:", JSON.stringify(taskData, null, 2));
+        
+        // Create the task
+        const [newTask] = await db.insert(tasks)
+          .values(taskData)
+          .returning();
+
+        // Store ID mapping for potential dependency handling
+        idMapping.set(templateData.originalId || 'temp', newTask.id);
+
+        // Create sub-tasks recursively
+        if (templateData.subTasks && templateData.subTasks.length > 0) {
+          for (const subTaskTemplate of templateData.subTasks) {
+            await createTasksFromTemplate(subTaskTemplate, newTask.id);
+          }
+        }
+
+        return newTask.id;
+      };
+
+      // Create tasks from template
+      const rootTaskId = await createTasksFromTemplate(template.templateData);
+
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "task",
+        rootTaskId,
+        template.templateData.title,
+        userId,
+        `Created tasks from template: ${template.name}`,
+        null,
+        { templateId, rootTaskId },
+        req
+      );
+
+      res.json({ 
+        success: true, 
+        rootTaskId,
+        message: "Tasks created successfully from template"
+      });
+    } catch (error) {
+      console.error("Error instantiating task template:", error);
+      res.status(500).json({ message: "Failed to create tasks from template" });
+    }
+  });
 
   // Invoice routes - Database Storage - SECURED
   app.get("/api/invoices", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {

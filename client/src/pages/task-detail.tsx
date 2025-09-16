@@ -6,8 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Task, Client, Campaign, Staff } from "@shared/schema";
 import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
@@ -21,6 +27,14 @@ import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useTimer } from "@/contexts/TimerContext";
 
+// Template form schema
+const templateFormSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  description: z.string().optional(),
+});
+
+type TemplateFormData = z.infer<typeof templateFormSchema>;
+
 export default function TaskDetail() {
   const { taskId } = useParams();
   const [location, setLocation] = useLocation();
@@ -30,7 +44,40 @@ export default function TaskDetail() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [timeEstimateUnit, setTimeEstimateUnit] = useState<"minutes" | "hours">("minutes");
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
+
+  // Template form
+  const templateForm = useForm<TemplateFormData>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  // Template mutation
+  const createTemplateMutation = useMutation({
+    mutationFn: async (data: TemplateFormData) => {
+      return await apiRequest("POST", `/api/task-templates/from-task/${taskId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
+      toast({
+        title: "Template Created",
+        description: "Task template has been created successfully.",
+      });
+      templateForm.reset();
+      setShowTemplateModal(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to create template. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: task, isLoading } = useQuery<Task>({
     queryKey: [`/api/tasks/${taskId}`],
@@ -414,16 +461,28 @@ export default function TaskDetail() {
         
         <div className="flex items-center gap-2">
           {(userPermissions as any)?.tasks?.canDelete && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleDeleteTask}
-              disabled={deleteTaskMutation.isPending}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowTemplateModal(true)}
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                data-testid="save-task-template"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Save as Template
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDeleteTask}
+                disabled={deleteTaskMutation.isPending}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -807,6 +866,77 @@ export default function TaskDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Save as Template Modal */}
+      <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Save Task as Template</DialogTitle>
+          </DialogHeader>
+          
+          <Form {...templateForm}>
+            <form onSubmit={templateForm.handleSubmit(data => createTemplateMutation.mutate(data))}>
+              <div className="space-y-4 py-4">
+                <FormField
+                  control={templateForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Template Name *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={`${task?.title} Template`}
+                          {...field}
+                          data-testid="template-name-input"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={templateForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Describe what this template is for..."
+                          rows={3}
+                          {...field}
+                          data-testid="template-description-input"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowTemplateModal(false)}
+                  disabled={createTemplateMutation.isPending}
+                  data-testid="template-cancel-button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createTemplateMutation.isPending}
+                  data-testid="template-save-button"
+                >
+                  {createTemplateMutation.isPending ? "Creating..." : "Create Template"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
