@@ -152,7 +152,7 @@ export default function ProductsSettings() {
 
   // Create product mutation
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/products", "POST", data),
+    mutationFn: (data: any) => apiRequest("POST", "/api/products", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsCreateProductOpen(false);
@@ -172,7 +172,7 @@ export default function ProductsSettings() {
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/products/${id}`, "PUT", data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/products/${id}`, data),
     onSuccess: () => {
       // Invalidate all related queries to ensure real-time updates everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -200,7 +200,7 @@ export default function ProductsSettings() {
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/products/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
@@ -314,7 +314,7 @@ export default function ProductsSettings() {
 
   // Create category mutation
   const createCategoryMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/product-categories", "POST", data),
+    mutationFn: (data: any) => apiRequest("POST", "/api/product-categories", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
       setIsCreateCategoryOpen(false);
@@ -334,7 +334,7 @@ export default function ProductsSettings() {
 
   // Update category mutation
   const updateCategoryMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("/api/product-categories/" + id, "PUT", data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", "/api/product-categories/" + id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] }); // Refresh products as they reference categories
@@ -362,7 +362,7 @@ export default function ProductsSettings() {
       if (productsUsingCategory.length > 0) {
         throw new Error(`Cannot delete category. ${productsUsingCategory.length} product(s) are using this category.`);
       }
-      return apiRequest("/api/product-categories/" + id, "DELETE");
+      return apiRequest("DELETE", "/api/product-categories/" + id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
