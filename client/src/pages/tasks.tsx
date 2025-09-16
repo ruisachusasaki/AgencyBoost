@@ -105,6 +105,11 @@ export default function Tasks() {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
   const maxVisibleTabs = 4; // Show "All Tasks" + up to 3 smart lists, then "More"
   
+  // Confirmation dialog state
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -1043,8 +1048,15 @@ export default function Tasks() {
   };
 
   const handleDeleteTask = (id: string) => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      deleteTaskMutation.mutate(id);
+    setTaskToDelete(id);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      deleteTaskMutation.mutate(taskToDelete);
+      setTaskToDelete(null);
+      setIsDeleteConfirmOpen(false);
     }
   };
 
@@ -1126,9 +1138,13 @@ export default function Tasks() {
     const [tempClient, setTempClient] = useState("");
 
     const handleBulkDelete = () => {
-      if (confirm(`Are you sure you want to delete ${selectedTasks.size} selected tasks?`)) {
-        bulkDeleteMutation.mutate(Array.from(selectedTasks));
-      }
+      setIsBulkDeleteConfirmOpen(true);
+    };
+
+    const confirmBulkDelete = () => {
+      bulkDeleteMutation.mutate(Array.from(selectedTasks));
+      setIsBulkDeleteConfirmOpen(false);
+      setSelectedTasks(new Set());
     };
 
     const handleBulkAssignee = () => {
@@ -2276,6 +2292,67 @@ export default function Tasks() {
               data-testid="button-save-smart-list-confirm"
             >
               {saveSmartListMutation.isPending ? "Saving..." : "Save Smart List"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Task Delete Confirmation */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this task? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteConfirmOpen(false);
+                setTaskToDelete(null);
+              }}
+              data-testid="button-cancel-task-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteTask}
+              disabled={deleteTaskMutation.isPending}
+              data-testid="button-confirm-task-delete"
+            >
+              {deleteTaskMutation.isPending ? "Deleting..." : "Delete Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <Dialog open={isBulkDeleteConfirmOpen} onOpenChange={setIsBulkDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Tasks</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedTasks.size} selected tasks? This action cannot be undone and will also delete any subtasks.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteConfirmOpen(false)}
+              data-testid="button-cancel-bulk-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-confirm-bulk-delete"
+            >
+              {bulkDeleteMutation.isPending ? "Deleting..." : `Delete ${selectedTasks.size} Tasks`}
             </Button>
           </DialogFooter>
         </DialogContent>
