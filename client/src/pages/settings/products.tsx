@@ -409,9 +409,19 @@ export default function ProductsSettings() {
       return { totalCost: 0 };
     }
 
-    // Each product is 1 unit in base bundle - only calculate cost now
+    // Each product is 1 unit in base bundle - calculate total cost
     const totalCost = bundle.products.reduce((sum, product) => {
-      return sum + parseFloat(product.productCost || "0");
+      // Handle various formats of productCost (string, number, null, undefined)
+      const cost = product.productCost 
+        ? (typeof product.productCost === 'string' 
+            ? parseFloat(product.productCost) 
+            : Number(product.productCost))
+        : 0;
+      
+      // Ensure we have a valid number (not NaN)
+      const validCost = isNaN(cost) ? 0 : cost;
+      
+      return sum + validCost;
     }, 0);
 
     return { totalCost };
