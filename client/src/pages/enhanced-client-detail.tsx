@@ -6472,10 +6472,6 @@ export default function EnhancedClientDetail() {
                                   />
                                 </div>
                                 
-                                {task.description && (
-                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{task.description}</p>
-                                )}
-                                
                                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                                   {task.dueDate && (
                                     <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
