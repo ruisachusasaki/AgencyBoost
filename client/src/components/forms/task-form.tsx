@@ -9,8 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Flag, Repeat } from "lucide-react";
-import { insertTaskSchema, type Task, type InsertTask, type Client, type Staff, type TaskPriority, type TaskCategory } from "@shared/schema";
+import { Flag, Repeat, FileText, Users, CalendarDays } from "lucide-react";
+import { insertTaskSchema, type Task, type InsertTask, type Client, type Staff, type TaskPriority, type TaskCategory, type TaskTemplate } from "@shared/schema";
+import { z } from "zod";
 
 // TeamWorkflow type with statuses included
 type TeamWorkflowWithStatuses = {
@@ -36,6 +37,20 @@ type TeamWorkflowWithStatuses = {
   }[];
 };
 import { useState, useEffect } from "react";
+
+// Create extended form schema that includes template fields
+const taskFormSchema = insertTaskSchema.extend({
+  templateId: z.string().optional(),
+});
+
+type TaskFormData = z.infer<typeof taskFormSchema>;
+
+// Additional form data for template selection and overrides
+type TemplateFormData = {
+  templateId?: string;
+  assigneeStrategy?: 'keep' | 'clear' | 'assignToMe';
+  dateStrategy?: 'clear' | 'keep';
+};
 
 interface TaskFormProps {
   task?: Task | null;
@@ -74,15 +89,22 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     queryKey: ["/api/team-workflows"],
   });
 
+  // Fetch task templates
+  const { data: taskTemplates = [] } = useQuery<TaskTemplate[]>({
+    queryKey: ["/api/task-templates"],
+  });
+
   // Get default values from settings
   const defaultPriority = taskPriorities.find((p: TaskPriority) => p.isDefault)?.value || taskPriorities[0]?.value || "normal";
   const defaultCategory = taskCategories.find((c: TaskCategory) => c.isDefault)?.id || "";
   const defaultStatus = taskStatuses.find((s: any) => s.isDefault)?.value || "todo";
 
   const [isRecurringEnabled, setIsRecurringEnabled] = useState(task?.isRecurring || false);
+  const [assigneeStrategy, setAssigneeStrategy] = useState<'keep' | 'clear' | 'assignToMe'>('clear');
+  const [dateStrategy, setDateStrategy] = useState<'clear' | 'keep'>('clear');
 
-  const form = useForm<InsertTask>({
-    resolver: zodResolver(insertTaskSchema),
+  const form = useForm<TaskFormData>({
+    resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: task?.title || "",
       description: task?.description || "",
@@ -103,8 +125,13 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       recurringEndDate: task?.recurringEndDate ? new Date(task.recurringEndDate) : null,
       recurringEndOccurrences: task?.recurringEndOccurrences || 10,
       createIfOverdue: task?.createIfOverdue || false,
+      // Template-related fields (only for create mode)
+      templateId: "",
     },
   });
+
+  // Watch template selection to show/hide override options (AFTER form is defined)
+  const watchedTemplateId = form.watch('templateId');
 
   // Reset form when task or teamWorkflows data changes (important for edit mode)
   useEffect(() => {
@@ -175,6 +202,69 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
     },
   });
 
+  // Template instantiation mutation
+  const instantiateTemplateMutation = useMutation({
+    mutationFn: async (data: {
+      templateId: string;
+      title?: string;
+      clientId?: string;
+      workflowId?: string;
+      assigneeStrategy: string;
+      dateStrategy: string;
+    }) => {
+      const response = await apiRequest("POST", `/api/task-templates/${data.templateId}/instantiate`, {
+        title: data.title,
+        clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
+        workflowId: data.workflowId && data.workflowId !== "none" ? data.workflowId : null,
+        assigneeStrategy: data.assigneeStrategy,
+        dateStrategy: data.dateStrategy,
+      });
+      return response;
+    },
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      // Provide better feedback about created tasks
+      const taskCount = response?.tasks?.length || response?.createdTasks?.length || 1;
+      toast({
+        title: "Tasks created from template",
+        description: `Successfully created ${taskCount} task${taskCount > 1 ? 's' : ''} from the template.`,
+      });
+      
+      // Clear the form after successful template instantiation
+      form.reset({
+        title: "",
+        description: "",
+        categoryId: form.getValues("categoryId") || "",
+        workflowId: "",
+        status: form.getValues("status") || "todo",
+        priority: form.getValues("priority") || "normal",
+        assignedTo: null,
+        startDate: null,
+        dueDate: null,
+        clientId: "",
+        isRecurring: false,
+        recurringInterval: 1,
+        recurringUnit: "days",
+        recurringEndType: "never",
+        recurringEndDate: null,
+        recurringEndOccurrences: 10,
+        createIfOverdue: false,
+        templateId: "",
+      });
+      
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      console.error("Template instantiation error:", error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to create tasks from template. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const selectedClientId = form.watch("clientId");
   // Projects removed - no longer filter by client
   
@@ -184,26 +274,69 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
 
   const onSubmit = (data: any) => {
-    // Clean up empty string IDs and "none" values
-    const cleanData = {
-      ...data,
-      clientId: data.clientId && data.clientId !== "none" && data.clientId !== "" ? data.clientId : null,
-      // projectId removed
-      assignedTo: data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "" ? data.assignedTo : null,
-      categoryId: data.categoryId && data.categoryId !== "" ? data.categoryId : null,
-      workflowId: data.workflowId && data.workflowId !== "" ? data.workflowId : null,
-      startDate: data.startDate ? new Date(data.startDate) : null,
-      dueDate: data.dueDate ? new Date(data.dueDate) : null,
-    };
-
+    // If editing an existing task, don't allow template selection - exclude templateId
     if (task) {
+      const { templateId, ...taskData } = data;
+      const cleanData = {
+        ...taskData,
+        clientId: taskData.clientId && taskData.clientId !== "none" && taskData.clientId !== "" ? taskData.clientId : null,
+        assignedTo: taskData.assignedTo && taskData.assignedTo !== "unassigned" && taskData.assignedTo !== "" ? taskData.assignedTo : null,
+        categoryId: taskData.categoryId && taskData.categoryId !== "" ? taskData.categoryId : null,
+        workflowId: taskData.workflowId && taskData.workflowId !== "" ? taskData.workflowId : null,
+        startDate: taskData.startDate ? new Date(taskData.startDate) : null,
+        dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+      };
       updateTaskMutation.mutate(cleanData);
+      return;
+    }
+
+    // For new tasks, check if template is selected
+    if (data.templateId && data.templateId !== "" && data.templateId !== "none") {
+      // Use template instantiation
+      instantiateTemplateMutation.mutate({
+        templateId: data.templateId,
+        title: data.title || undefined,
+        clientId: data.clientId || undefined,
+        workflowId: data.workflowId || undefined,
+        assigneeStrategy,
+        dateStrategy,
+      });
     } else {
+      // Regular task creation - exclude templateId from data sent to API
+      const { templateId, ...taskData } = data;
+      const cleanData = {
+        ...taskData,
+        clientId: taskData.clientId && taskData.clientId !== "none" && taskData.clientId !== "" ? taskData.clientId : null,
+        assignedTo: taskData.assignedTo && taskData.assignedTo !== "unassigned" && taskData.assignedTo !== "" ? taskData.assignedTo : null,
+        categoryId: taskData.categoryId && taskData.categoryId !== "" ? taskData.categoryId : null,
+        workflowId: taskData.workflowId && taskData.workflowId !== "" ? taskData.workflowId : null,
+        startDate: taskData.startDate ? new Date(taskData.startDate) : null,
+        dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+      };
       createTaskMutation.mutate(cleanData);
     }
   };
 
-  const isLoading = createTaskMutation.isPending || updateTaskMutation.isPending;
+  const isLoading = createTaskMutation.isPending || updateTaskMutation.isPending || instantiateTemplateMutation.isPending;
+  
+  // Handle template selection changes
+  const handleTemplateChange = (templateId: string) => {
+    form.setValue('templateId', templateId);
+    
+    // If a template is selected, populate form with template data for preview
+    if (templateId && templateId !== "none" && templateId !== "") {
+      const selectedTemplate = taskTemplates.find(t => t.id === templateId);
+      if (selectedTemplate) {
+        // Optionally pre-fill some fields from template for preview
+        if (selectedTemplate.priority) {
+          form.setValue('priority', selectedTemplate.priority);
+        }
+        if (selectedTemplate.categoryId) {
+          form.setValue('categoryId', selectedTemplate.categoryId);
+        }
+      }
+    }
+  };
 
   return (
     <Form {...form}>
@@ -216,12 +349,99 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             <FormItem>
               <FormLabel>Task Title *</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Task title" />
+                <Input {...field} placeholder="Task title" data-testid="input-task-title" />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* Template Selection - Only show for new tasks */}
+        {!task && (
+          <div className="space-y-4 border-l-4 border-blue-200 pl-4 bg-blue-50 dark:bg-blue-950 p-4 rounded">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-blue-600" />
+              <h3 className="font-medium text-blue-800 dark:text-blue-200">Create from Template</h3>
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="templateId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Task Template</FormLabel>
+                  <Select onValueChange={handleTemplateChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="template-select">
+                        <SelectValue placeholder="Create from scratch or select a template" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Create from scratch</SelectItem>
+                      {taskTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{template.name}</span>
+                            {template.description && (
+                              <span className="text-xs text-muted-foreground">{template.description}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Template Override Options */}
+            {watchedTemplateId && watchedTemplateId !== "none" && watchedTemplateId !== "" && (
+              <div className="space-y-4 mt-4 pt-4 border-t border-blue-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Template Override Options</span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Assignee Strategy */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3 w-3 text-blue-600" />
+                      <label className="text-sm font-medium">Assignee Strategy</label>
+                    </div>
+                    <Select value={assigneeStrategy} onValueChange={(value: 'keep' | 'clear' | 'assignToMe') => setAssigneeStrategy(value)}>
+                      <SelectTrigger data-testid="assignee-strategy">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="clear">Clear assignees</SelectItem>
+                        <SelectItem value="keep">Keep template assignees</SelectItem>
+                        <SelectItem value="assignToMe">Assign to me</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Date Strategy */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-3 w-3 text-blue-600" />
+                      <label className="text-sm font-medium">Date Strategy</label>
+                    </div>
+                    <Select value={dateStrategy} onValueChange={(value: 'clear' | 'keep') => setDateStrategy(value)}>
+                      <SelectTrigger data-testid="date-strategy">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="clear">Clear dates</SelectItem>
+                        <SelectItem value="keep">Keep template dates</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 2. Description */}
         <FormField
@@ -671,7 +891,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading} data-testid="button-submit">
-            {isLoading ? "Saving..." : task ? "Update Task" : "Create Task"}
+            {isLoading ? (selectedTemplateId && selectedTemplateId !== "none" && selectedTemplateId !== "" ? "Creating from template..." : "Saving...") : task ? "Update Task" : "Create Task"}
           </Button>
         </div>
       </form>
