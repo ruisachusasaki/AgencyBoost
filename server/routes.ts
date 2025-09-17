@@ -502,7 +502,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertClientSchema.partial().parse(req.body);
-      const client = await appStorage.updateClient(req.params.id, validatedData);
+      
+      // Remove undefined values and check if there are valid fields to update
+      const filteredData = Object.fromEntries(
+        Object.entries(validatedData).filter(([key, value]) => value !== undefined)
+      );
+      
+      if (Object.keys(filteredData).length === 0) {
+        return res.status(400).json({ message: "No valid client fields to update" });
+      }
+      
+      const client = await appStorage.updateClient(req.params.id, filteredData);
       
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
