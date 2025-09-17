@@ -2415,8 +2415,11 @@ export default function Reports() {
                       <Calendar className="h-4 w-4" />
                       <span className="font-medium">
                         {(() => {
-                          const startDate = new Date(timeTrackingFilters.dateFrom);
-                          const endDate = new Date(timeTrackingFilters.dateTo);
+                          // Fix timezone issue by parsing dates as local dates
+                          const startParts = timeTrackingFilters.dateFrom.split('-');
+                          const endParts = timeTrackingFilters.dateTo.split('-');
+                          const startDate = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
+                          const endDate = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2]));
                           const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                           const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                           return `${startStr}–${endStr}`;
