@@ -14,7 +14,8 @@ import {
   Calendar,
   Layers,
   UserCheck,
-  Zap
+  Zap,
+  Contact
 } from "lucide-react";
 
 const settingsNavigation = [
@@ -22,6 +23,7 @@ const settingsNavigation = [
   { name: "My Profile", href: "/settings/my-profile", icon: User },
   { name: "Staff", href: "/settings/staff", icon: Users },
   { name: "HR Settings", href: "/settings/hr-settings", icon: UserCheck },
+  { name: "Clients", href: "/settings/clients", icon: Contact },
   { name: "Roles & Permissions", href: "/settings/roles-permissions", icon: Shield },
   { name: "Permission Audit", href: "/settings/permission-audit", icon: ShieldCheck },
   { name: "Calendar Settings", href: "/calendar-settings", icon: Calendar },
@@ -76,6 +78,7 @@ function getSettingDescription(name: string): string {
     "My Profile": "Update your personal profile and preferences",
     "Staff": "Manage team members and user accounts",
     "HR Settings": "Configure time off categories and HR policies",
+    "Clients": "Configure client settings and management options",
     "Roles & Permissions": "Create custom roles and set permissions",
     "Permission Audit": "Track permission changes and role assignments",
     "Calendar Settings": "Configure calendar availability and booking pages",

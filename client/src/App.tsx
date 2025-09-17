@@ -46,6 +46,7 @@ import FormsTest from "@/pages/forms-test";
 import HRPage from "@/pages/hr";
 import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
+import ClientsSettings from "@/pages/settings/clients";
 import CareersPage from "@/pages/careers";
 import KnowledgeBase from "@/pages/knowledge-base";
 import ArticleView from "@/pages/article-view";
@@ -102,6 +103,7 @@ function Router() {
       <Route path="/settings/staff/:id" component={StaffDetail} />
       <Route path="/settings/teams/:id" component={TeamDetail} />
       <Route path="/settings/hr-settings" component={HRSettings} />
+      <Route path="/settings/clients" component={ClientsSettings} />
       <Route path="/settings/roles-permissions" component={RolesPermissions} />
       <Route path="/settings/permission-audit" component={PermissionAudit} />
       <Route path="/settings/integrations" component={Integrations} />
