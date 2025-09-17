@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 interface TimeEntry {
   id: string;
@@ -37,6 +38,11 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const [currentTimer, setCurrentTimer] = useState<TimeEntry | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const { toast } = useToast();
+
+  // Fetch current user data for proper user ID association
+  const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
 
   const isTimerRunning = !!currentTimer;
 
@@ -119,7 +125,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
       taskId,
       taskTitle,
       startTime: now,
-      userId: 'current-user',
+      userId: currentUser?.id || 'current-user',
       isRunning: true
     };
 
