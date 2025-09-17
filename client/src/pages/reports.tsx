@@ -245,8 +245,8 @@ export default function Reports() {
     queryKey: ["/api/invoices"],
   });
   
-  // Time tracking data query for client breakdowns - fixed filter logic
-  const timeTrackingFilters = {
+  // Time tracking data query for client breakdowns - fixed filter logic with memoization
+  const timeTrackingFilters = useMemo(() => ({
     dateFrom: taskDateRange === "today" ? new Date().toISOString().split('T')[0] :
               taskDateRange === "this-week" ? (() => {
                 const startOfWeek = new Date();
@@ -272,7 +272,7 @@ export default function Reports() {
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
     reportType: taskReportType
-  };
+  }), [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType]);
   
   const { data: timeTrackingData, isLoading: timeTrackingLoading } = useQuery<{
     tasks: any[];
