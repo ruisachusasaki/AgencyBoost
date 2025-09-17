@@ -75,10 +75,27 @@ function escapeCsvField(value: string | number | undefined | null): string {
 }
 
 /**
- * Formats duration from seconds to decimal hours
+ * Formats duration from seconds to decimal hours or friendly format
  */
-function formatHours(seconds: number): string {
-  return (seconds / 3600).toFixed(2);
+function formatHours(seconds: number, mode: 'friendly' | 'decimal' = 'decimal'): string {
+  if (mode === 'decimal') {
+    return (seconds / 3600).toFixed(2);
+  }
+  
+  // Friendly format
+  const minutes = seconds / 60;
+  if (minutes < 60) {
+    return `${Math.round(minutes)}m`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.round(minutes % 60);
+  
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  
+  return `${hours}h ${remainingMinutes}m`;
 }
 
 /**
@@ -101,7 +118,8 @@ function formatTime(dateString: string): string {
 export function generateDetailedTimesheetCSV(
   data: TimeTrackingReportData,
   filters: ExportFilters,
-  clientsList: Array<{id: string; name: string}> = []
+  clientsList: Array<{id: string; name: string}> = [],
+  timeFormat: 'friendly' | 'decimal' = 'decimal'
 ): string {
   const headers = [
     'Date',
@@ -143,7 +161,7 @@ export function generateDetailedTimesheetCSV(
           task.description || '',
           formatTime(entry.startTime),
           formatTime(entry.endTime),
-          formatHours(entry.duration),
+          formatHours(entry.duration, timeFormat),
           entry.billable ? 'Yes' : 'No',
           entry.hourlyRate?.toString() || '',
           entry.description || '',
@@ -157,7 +175,7 @@ export function generateDetailedTimesheetCSV(
   // Add summary row
   rows.push([]);
   rows.push(['SUMMARY']);
-  rows.push(['Total Hours', '', '', '', '', '', '', '', formatHours(data.grandTotal)]);
+  rows.push(['Total Hours', '', '', '', '', '', '', '', formatHours(data.grandTotal, timeFormat)]);
   rows.push(['Report Period', `${filters.dateFrom} to ${filters.dateTo}`]);
   rows.push(['Generated At', new Date().toISOString().replace('T', ' ').slice(0, 19)]);
   
@@ -170,7 +188,8 @@ export function generateDetailedTimesheetCSV(
  */
 export function generateUserSummaryCSV(
   data: TimeTrackingReportData,
-  filters: ExportFilters
+  filters: ExportFilters,
+  timeFormat: 'friendly' | 'decimal' = 'decimal'
 ): string {
   const headers = [
     'User Name',
@@ -199,17 +218,17 @@ export function generateUserSummaryCSV(
     
     // Create daily breakdown string
     const dailyBreakdown = dailyEntries
-      .map(([date, seconds]) => `${formatDate(date)}:${formatHours(seconds)}h`)
+      .map(([date, seconds]) => `${formatDate(date)}:${formatHours(seconds, timeFormat)}`)
       .join('; ');
     
     rows.push([
       user.userName,
       user.userRole,
-      formatHours(user.totalTime),
+      formatHours(user.totalTime, timeFormat),
       user.tasksWorked.toString(),
       avgHoursPerTask,
       mostActiveDay.date !== 'N/A' ? 
-        `${formatDate(mostActiveDay.date)} (${formatHours(mostActiveDay.seconds)}h)` : 'N/A',
+        `${formatDate(mostActiveDay.date)} (${formatHours(mostActiveDay.seconds, timeFormat)})` : 'N/A',
       dailyBreakdown
     ]);
   });
@@ -230,7 +249,8 @@ export function generateUserSummaryCSV(
  */
 export function generateClientBreakdownCSV(
   data: TimeTrackingReportData,
-  filters: ExportFilters
+  filters: ExportFilters,
+  timeFormat: 'friendly' | 'decimal' = 'decimal'
 ): string {
   const headers = [
     'Client Name',
@@ -255,12 +275,12 @@ export function generateClientBreakdownCSV(
       .join('; ');
     
     const userHoursDetail = client.users
-      .map(user => `${user.userName}:${formatHours(user.totalTime)}h`)
+      .map(user => `${user.userName}:${formatHours(user.totalTime, timeFormat)}`)
       .join('; ');
     
     rows.push([
       client.clientName,
-      formatHours(client.totalTime),
+      formatHours(client.totalTime, timeFormat),
       client.tasksCount.toString(),
       client.users.length.toString(),
       avgHoursPerTask,
@@ -286,7 +306,8 @@ export function generateClientBreakdownCSV(
 export function generateAdminSummaryCSV(
   data: TimeTrackingReportData,
   filters: ExportFilters,
-  clientsList: Array<{id: string; name: string}> = []
+  clientsList: Array<{id: string; name: string}> = [],
+  timeFormat: 'friendly' | 'decimal' = 'decimal'
 ): string {
   const headers = [
     'Metric Type',
@@ -299,7 +320,7 @@ export function generateAdminSummaryCSV(
   rows.push(headers);
   
   // Overall metrics
-  rows.push(['Overview', 'Total Hours Logged', formatHours(data.grandTotal), '']);
+  rows.push(['Overview', 'Total Hours Logged', formatHours(data.grandTotal, timeFormat), '']);
   rows.push(['Overview', 'Total Tasks', data.tasks.length.toString(), '']);
   rows.push(['Overview', 'Total Users', data.userSummaries.length.toString(), '']);
   rows.push(['Overview', 'Total Clients', data.clientBreakdowns.length.toString(), '']);
@@ -312,9 +333,9 @@ export function generateAdminSummaryCSV(
     client.totalTime > max.totalTime ? client : max, data.clientBreakdowns[0] || { totalTime: 0, clientName: 'None' });
   
   rows.push(['Top Performers', 'Most Active User', topUser?.userName || 'None', 
-    `${formatHours(topUser?.totalTime || 0)} hours`]);
+    `${formatHours(topUser?.totalTime || 0, timeFormat)}`]);
   rows.push(['Top Performers', 'Highest Client Hours', topClient?.clientName || 'None', 
-    `${formatHours(topClient?.totalTime || 0)} hours`]);
+    `${formatHours(topClient?.totalTime || 0, timeFormat)}`]);
   
   rows.push([]);
   
@@ -322,7 +343,7 @@ export function generateAdminSummaryCSV(
   rows.push(['USER BREAKDOWN']);
   rows.push(['User', 'Role', 'Hours', 'Tasks']);
   data.userSummaries.forEach(user => {
-    rows.push(['User Detail', user.userName, formatHours(user.totalTime), user.tasksWorked.toString()]);
+    rows.push(['User Detail', user.userName, formatHours(user.totalTime, timeFormat), user.tasksWorked.toString()]);
   });
   
   rows.push([]);
@@ -331,7 +352,7 @@ export function generateAdminSummaryCSV(
   rows.push(['CLIENT BREAKDOWN']);
   rows.push(['Client', 'Hours', 'Tasks', 'Users']);
   data.clientBreakdowns.forEach(client => {
-    rows.push(['Client Detail', client.clientName, formatHours(client.totalTime), 
+    rows.push(['Client Detail', client.clientName, formatHours(client.totalTime, timeFormat), 
       client.tasksCount.toString(), client.users.length.toString()]);
   });
   
@@ -379,29 +400,30 @@ export function exportTimeTrackingData(
   exportType: 'detailed' | 'user-summary' | 'client-breakdown' | 'admin-summary',
   data: TimeTrackingReportData,
   filters: ExportFilters,
-  clientsList: Array<{id: string; name: string}> = []
+  clientsList: Array<{id: string; name: string}> = [],
+  timeFormat: 'friendly' | 'decimal' = 'decimal'
 ): void {
   let csvContent: string;
   let filename: string;
   
   switch (exportType) {
     case 'detailed':
-      csvContent = generateDetailedTimesheetCSV(data, filters, clientsList);
+      csvContent = generateDetailedTimesheetCSV(data, filters, clientsList, timeFormat);
       filename = generateExportFilename('detailed-timesheet', filters.dateFrom, filters.dateTo);
       break;
       
     case 'user-summary':
-      csvContent = generateUserSummaryCSV(data, filters);
+      csvContent = generateUserSummaryCSV(data, filters, timeFormat);
       filename = generateExportFilename('user-summary', filters.dateFrom, filters.dateTo);
       break;
       
     case 'client-breakdown':
-      csvContent = generateClientBreakdownCSV(data, filters);
+      csvContent = generateClientBreakdownCSV(data, filters, timeFormat);
       filename = generateExportFilename('client-breakdown', filters.dateFrom, filters.dateTo);
       break;
       
     case 'admin-summary':
-      csvContent = generateAdminSummaryCSV(data, filters, clientsList);
+      csvContent = generateAdminSummaryCSV(data, filters, clientsList, timeFormat);
       filename = generateExportFilename('admin-summary', filters.dateFrom, filters.dateTo);
       break;
       
