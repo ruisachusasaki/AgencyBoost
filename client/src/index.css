@@ -1309,3 +1309,151 @@ button[role="switch"],
   color: #3b82f6;
   text-decoration: underline;
 }
+
+/* ========================================
+   MODERN DATE PICKER STYLING
+   ======================================== */
+
+/* Modern Date Input Styling */
+input[type="date"] {
+  /* Base styling matches system Input component */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  
+  /* Enhanced visual styling */
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: hsl(var(--foreground));
+  
+  /* Smooth transitions */
+  transition: all 0.2s ease-in-out;
+  
+  /* Proper sizing */
+  height: 2.5rem;
+  width: 100%;
+  
+  /* Enhanced typography */
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: 0.025em;
+}
+
+/* Focus state - matches system primary color */
+input[type="date"]:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+  background: hsl(var(--background));
+}
+
+/* Hover state */
+input[type="date"]:hover:not(:focus) {
+  border-color: hsl(var(--border));
+  background: hsl(var(--muted) / 0.5);
+}
+
+/* Disabled state */
+input[type="date"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+/* Calendar picker indicator (the calendar icon) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3e%3cpath fill-rule='evenodd' d='M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z' clip-rule='evenodd'/%3e%3c/svg%3e");
+  background-size: 1rem 1rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease-in-out;
+  margin-left: 0.25rem;
+}
+
+/* Calendar icon hover state */
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235ebbaa'%3e%3cpath fill-rule='evenodd' d='M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z' clip-rule='evenodd'/%3e%3c/svg%3e");
+}
+
+/* Firefox specific styling */
+input[type="date"]::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* Enhanced placeholder styling for better UX */
+input[type="date"]:invalid {
+  color: hsl(var(--muted-foreground));
+}
+
+input[type="date"]:valid {
+  color: hsl(var(--foreground));
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3e%3cpath fill-rule='evenodd' d='M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z' clip-rule='evenodd'/%3e%3c/svg%3e");
+  }
+  
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235ebbaa'%3e%3cpath fill-rule='evenodd' d='M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z' clip-rule='evenodd'/%3e%3c/svg%3e");
+  }
+}
+
+/* Enhanced sizing variants for specific use cases */
+input[type="date"].date-compact {
+  height: 2rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+input[type="date"].date-large {
+  height: 3rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+}
+
+/* Form integration - matches shadcn Form component styling */
+[data-radix-form-field] input[type="date"] {
+  width: 100%;
+}
+
+/* Date picker in modal/dialog contexts */
+[data-radix-dialog-content] input[type="date"],
+[data-radix-popover-content] input[type="date"] {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+/* Error state styling */
+input[type="date"][aria-invalid="true"] {
+  border-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 2px hsl(var(--destructive) / 0.2);
+}
+
+input[type="date"][aria-invalid="true"]:focus {
+  border-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 2px hsl(var(--destructive) / 0.2);
+}
+
+/* Success state styling */
+input[type="date"][data-valid="true"] {
+  border-color: hsl(142, 76%, 36%);
+}
+
+input[type="date"][data-valid="true"]:focus {
+  border-color: hsl(142, 76%, 36%);
+  box-shadow: 0 0 0 2px hsl(142, 76%, 36% / 0.2);
+}
