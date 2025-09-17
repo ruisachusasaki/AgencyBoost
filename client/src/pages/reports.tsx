@@ -1195,6 +1195,25 @@ export default function Reports() {
                   </SelectContent>
                 </Select>
               </div>
+              {/* User Filter - only show for timesheet view */}
+              {taskReportType === "timesheet" && (
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-600">Filter by User:</label>
+                  <Select value={userIdFilter} onValueChange={setUserIdFilter}>
+                    <SelectTrigger className="w-48" data-testid="select-user-filter">
+                      <SelectValue placeholder="All Users" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Users</SelectItem>
+                      {(timeTrackingData?.userSummaries || []).map((user) => (
+                        <SelectItem key={user.userId} value={user.userId}>
+                          {user.userName || 'Unknown User'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -2391,30 +2410,6 @@ export default function Reports() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900">Timesheet View</h3>
-                  <div className="flex items-center gap-4">
-                    {/* User Filter Dropdown */}
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="user-filter" className="text-sm font-medium text-slate-600">
-                        Filter by User:
-                      </Label>
-                      <Select 
-                        value={userIdFilter} 
-                        onValueChange={setUserIdFilter}
-                      >
-                        <SelectTrigger className="w-48" data-testid="select-user-filter">
-                          <SelectValue placeholder="All Users" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Users</SelectItem>
-                          {(timeTrackingData?.userSummaries || []).map((user) => (
-                            <SelectItem key={user.userId} value={user.userId}>
-                              {user.userName || 'Unknown User'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
