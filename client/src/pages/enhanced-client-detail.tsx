@@ -3624,7 +3624,7 @@ export default function EnhancedClientDetail() {
               const briefSectionConfigs = [
                 { key: 'briefBackground', title: 'Background', icon: FileText, placeholder: 'Add background information about the client...' },
                 { key: 'briefObjectives', title: 'Objectives/Goals', icon: Target, placeholder: 'Define client objectives and goals...' },
-                { key: 'briefBrandInfo', title: 'Brand Info', icon: Tag, placeholder: 'Add brand information, guidelines, messaging...' },
+                { key: 'briefBrandInfo', title: 'Brand Info', icon: TagIcon, placeholder: 'Add brand information, guidelines, messaging...' },
                 { key: 'briefAudienceInfo', title: 'Audience Info', icon: Users, placeholder: 'Describe the target audience and demographics...' },
                 { key: 'briefProductsServices', title: 'Products/Services', icon: Package, placeholder: 'List and describe key products or services...' },
                 { key: 'briefCompetitors', title: 'Competitors', icon: Activity, placeholder: 'Identify competitors and competitive analysis...' },
