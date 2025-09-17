@@ -2414,13 +2414,13 @@ export default function Reports() {
                     <div className="flex items-center gap-2 text-sm text-slate-600" data-testid="text-timesheet-date-range">
                       <Calendar className="h-4 w-4" />
                       <span className="font-medium">
-                        {useMemo(() => {
+                        {(() => {
                           const startDate = new Date(timeTrackingFilters.dateFrom);
                           const endDate = new Date(timeTrackingFilters.dateTo);
                           const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                           const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                           return `${startStr}–${endStr}`;
-                        }, [timeTrackingFilters.dateFrom, timeTrackingFilters.dateTo])}
+                        })()}
                       </span>
                     </div>
                   </div>
