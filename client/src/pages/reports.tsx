@@ -1195,25 +1195,6 @@ export default function Reports() {
                   </SelectContent>
                 </Select>
               </div>
-              {/* User Filter - only show for timesheet view */}
-              {taskReportType === "timesheet" && (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-slate-600">Filter by User:</label>
-                  <Select value={userIdFilter} onValueChange={setUserIdFilter}>
-                    <SelectTrigger className="w-48" data-testid="select-user-filter">
-                      <SelectValue placeholder="All Users" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Users</SelectItem>
-                      {(timeTrackingData?.userSummaries || []).map((user) => (
-                        <SelectItem key={user.userId} value={user.userId}>
-                          {user.userName || 'Unknown User'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           </div>
         </CardHeader>
@@ -1966,6 +1947,25 @@ export default function Reports() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Filter by User - show for timesheet view */}
+                  {taskReportType === "timesheet" && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-slate-600">Filter by User:</label>
+                      <Select value={userIdFilter} onValueChange={setUserIdFilter}>
+                        <SelectTrigger className="w-48" data-testid="select-user-filter">
+                          <SelectValue placeholder="All Users" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Users</SelectItem>
+                          {(timeTrackingData?.userSummaries || []).map((user) => (
+                            <SelectItem key={user.userId} value={user.userId}>
+                              {user.userName || 'Unknown User'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   {(taskReportType === "by-user-client" || taskReportType === "admin-by-client") && (
                     <div className="flex items-center gap-2">
                       <label className="text-sm text-slate-600">User:</label>
