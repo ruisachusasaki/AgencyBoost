@@ -1791,34 +1791,7 @@ export default function Reports() {
           {/* Health Scores Table */}
           <Card className="shadow-sm border border-slate-200">
             <CardHeader className="border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">Health Score Details</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600">
-                    Page {healthPagination?.page || 1} of {healthPagination?.totalPages || 1}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setHealthPage(Math.max(1, healthPage - 1))}
-                      disabled={!healthPagination?.hasPrevious}
-                      data-testid="button-health-prev-page"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setHealthPage(healthPage + 1)}
-                      disabled={!healthPagination?.hasNext}
-                      data-testid="button-health-next-page"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Health Score Details</h3>
             </CardHeader>
             <CardContent className="p-0">
               {healthScoresLoading ? (
@@ -1919,6 +1892,85 @@ export default function Reports() {
               )}
             </CardContent>
           </Card>
+
+          {/* Health Scores Rich Pagination */}
+          {healthPagination && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">Items per page:</span>
+                  <Select value={healthPageSize.toString()} onValueChange={(value) => {
+                    setHealthPageSize(Number(value));
+                    setHealthPage(1); // Reset to first page when changing page size
+                  }}>
+                    <SelectTrigger className="w-20" data-testid="select-health-page-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-gray-600" data-testid="text-health-showing">
+                  Showing {((healthPagination.page - 1) * healthPagination.limit) + 1} to {Math.min(healthPagination.page * healthPagination.limit, healthPagination.total)} of {healthPagination.total} health scores
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHealthPage(Math.max(1, healthPage - 1))}
+                  disabled={!healthPagination.hasPrevious}
+                  data-testid="button-health-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, healthPagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (healthPagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (healthPagination.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (healthPagination.page >= healthPagination.totalPages - 2) {
+                      pageNum = healthPagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = healthPagination.page - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === healthPagination.page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setHealthPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                        data-testid={`button-health-page-${pageNum}`}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHealthPage(Math.min(healthPagination.totalPages, healthPage + 1))}
+                  disabled={!healthPagination.hasNext}
+                  data-testid="button-health-next-page"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
