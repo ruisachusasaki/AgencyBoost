@@ -256,7 +256,7 @@ export default function Reports() {
                 return startOfWeek.toISOString().split('T')[0];
               })() :
               taskDateRange === "this-month" ? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0] :
-              taskDateRange === "custom" && customTaskDateFrom ? customTaskDateFrom :
+              (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateFrom ? customTaskDateFrom :
               new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     dateTo: taskDateRange === "today" ? new Date().toISOString().split('T')[0] :
             taskDateRange === "this-week" ? (() => {
@@ -267,7 +267,7 @@ export default function Reports() {
               return endOfWeek.toISOString().split('T')[0];
             })() :
             taskDateRange === "this-month" ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0] :
-            taskDateRange === "custom" && customTaskDateTo ? customTaskDateTo :
+            (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateTo ? customTaskDateTo :
             new Date().toISOString().split('T')[0],
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
