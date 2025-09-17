@@ -2409,7 +2409,21 @@ export default function Reports() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">Timesheet View</h3>
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-semibold text-slate-900">Timesheet View</h3>
+                    <div className="flex items-center gap-2 text-sm text-slate-600" data-testid="text-timesheet-date-range">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">
+                        {(() => {
+                          const startDate = new Date(timeTrackingFilters.dateFrom);
+                          const endDate = new Date(timeTrackingFilters.dateTo);
+                          const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                          return `${startStr}–${endStr}`;
+                        })()} 
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -2425,28 +2439,87 @@ export default function Reports() {
                     currentDate.setDate(currentDate.getDate() + 1);
                   }
                   
-                  // Get filtered users based on userIdFilter
+                  // Dynamic left column logic: Users vs Tasks
+                  const isAllUsers = userIdFilter === "all";
                   const allUsers = timeTrackingData?.userSummaries || [];
-                  const filteredUsers = userIdFilter === "all" ? allUsers : 
-                    allUsers.filter(user => user.userId === userIdFilter);
+                  const allTasks = timeTrackingData?.tasks || [];
                   
-                  if (filteredUsers.length === 0) {
+                  let rows: Array<{
+                    id: string;
+                    name: string;
+                    subtitle?: string;
+                    detail?: string;
+                    dailyTotals: Record<string, number>;
+                    total: number;
+                  }> = [];
+                  
+                  if (isAllUsers) {
+                    // Show users (current behavior)
+                    const filteredUsers = allUsers;
+                    rows = filteredUsers.map(user => ({
+                      id: user.userId,
+                      name: user.userName || 'Unknown User',
+                      subtitle: user.userRole || 'Unknown Role', 
+                      detail: `${user.tasksWorked || 0} tasks`,
+                      dailyTotals: user.dailyTotals || {},
+                      total: user.totalTime || 0
+                    }));
+                  } else {
+                    // Show tasks for the selected user
+                    const selectedUser = allUsers.find(user => user.userId === userIdFilter);
+                    const userTasks = allTasks.filter(task => {
+                      // Filter tasks that have time entries for this user
+                      return task.timeEntries?.some((entry: any) => entry.userId === userIdFilter);
+                    });
+                    
+                    rows = userTasks.map(task => {
+                      // Calculate daily totals for this task by this user
+                      const taskDailyTotals: Record<string, number> = {};
+                      let taskTotal = 0;
+                      
+                      if (task.timeEntries) {
+                        task.timeEntries.forEach((entry: any) => {
+                          if (entry.userId === userIdFilter) {
+                            const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+                            const minutes = entry.duration || 0; // Assuming duration in minutes
+                            taskDailyTotals[entryDate] = (taskDailyTotals[entryDate] || 0) + minutes;
+                            taskTotal += minutes;
+                          }
+                        });
+                      }
+                      
+                      return {
+                        id: task.id,
+                        name: task.title,
+                        subtitle: task.status || 'No Status',
+                        detail: task.clientName || 'No Client',
+                        dailyTotals: taskDailyTotals,
+                        total: taskTotal
+                      };
+                    });
+                  }
+                  
+                  if (rows.length === 0) {
                     return (
                       <div className="p-8 text-center text-slate-500">
                         <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                         <p className="text-lg font-medium mb-2">No Time Data</p>
-                        <p className="text-sm">No users with time tracking found for the selected period</p>
+                        <p className="text-sm">
+                          {isAllUsers 
+                            ? "No users with time tracking found for the selected period" 
+                            : "No tasks with time tracking found for the selected user"}
+                        </p>
                       </div>
                     );
                   }
                   
-                  // Calculate column totals
+                  // Calculate column totals based on rows
                   const columnTotals: Record<string, number> = {};
                   dateRange.forEach(date => {
                     const dateString = date.toISOString().split('T')[0];
-                    columnTotals[dateString] = filteredUsers.reduce((sum, user) => {
-                      const dailyTime = user.dailyTotals?.[dateString] || 0;
-                      return sum + dailyTime; // dailyTotals is in seconds
+                    columnTotals[dateString] = rows.reduce((sum, row) => {
+                      const dailyTime = row.dailyTotals?.[dateString] || 0;
+                      return sum + dailyTime;
                     }, 0);
                   });
                   
@@ -2461,8 +2534,8 @@ export default function Reports() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="min-w-[200px] sticky left-0 bg-white border-r-2 border-slate-300 z-10 font-semibold">
-                              User
+                            <TableHead className="min-w-[200px] sticky left-0 bg-white border-r-2 border-slate-300 z-10 font-semibold" data-testid="header-left-col-label">
+                              {isAllUsers ? "User" : "Task"}
                             </TableHead>
                             {dateRange.map((date) => {
                               const dateString = date.toISOString().split('T')[0];
@@ -2491,38 +2564,34 @@ export default function Reports() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredUsers.map((user, userIndex) => {
-                            // Calculate user's total time
-                            const userTotal = user.totalTime || 0; // totalTime is in seconds
-                            
+                          {rows.map((row, rowIndex) => {
                             return (
-                              <TableRow key={user.userId} data-testid={`timesheet-user-row-${userIndex}`}>
+                              <TableRow key={row.id} data-testid={`timesheet-row-${rowIndex}`}>
                                 <TableCell className="sticky left-0 bg-white border-r-2 border-slate-300 z-10">
                                   <div className="space-y-1">
-                                    <p className="font-medium text-slate-900 text-sm" data-testid={`user-name-${userIndex}`}>
-                                      {user.userName || 'Unknown User'}
+                                    <p className="font-medium text-slate-900 text-sm" data-testid={`row-name-${rowIndex}`}>
+                                      {row.name}
                                     </p>
                                     <p className="text-xs text-slate-500 capitalize">
-                                      {user.userRole || 'Unknown Role'}
+                                      {row.subtitle}
                                     </p>
                                     <p className="text-xs text-slate-400">
-                                      {user.tasksWorked || 0} tasks
+                                      {row.detail}
                                     </p>
                                   </div>
                                 </TableCell>
                                 {dateRange.map((date) => {
                                   const dateString = date.toISOString().split('T')[0];
                                   const isToday = dateString === today;
-                                  const dailyTimeSeconds = user.dailyTotals?.[dateString] || 0;
-                                  const dailyTimeMinutes = dailyTimeSeconds; // API returns minutes directly
+                                  const dailyTimeMinutes = row.dailyTotals?.[dateString] || 0;
                                   
                                   return (
                                     <TableCell 
-                                      key={`${user.userId}-${date.toISOString()}`} 
+                                      key={`${row.id}-${date.toISOString()}`} 
                                       className={`text-center border-r border-slate-200 py-3 ${
                                         isToday ? 'bg-blue-50' : ''
                                       }`}
-                                      data-testid={`time-cell-${userIndex}-${dateString}`}
+                                      data-testid={`time-cell-${rowIndex}-${dateString}`}
                                     >
                                       {dailyTimeMinutes > 0 ? (
                                         <div className="inline-flex items-center justify-center">
@@ -2536,10 +2605,10 @@ export default function Reports() {
                                     </TableCell>
                                   );
                                 })}
-                                <TableCell className="text-center bg-slate-100 border-l-2 border-slate-300 font-semibold" data-testid={`user-total-${userIndex}`}>
+                                <TableCell className="text-center bg-slate-100 border-l-2 border-slate-300 font-semibold" data-testid={`row-total-${rowIndex}`}>
                                   <div className="space-y-1">
                                     <div className="text-sm font-semibold text-slate-900">
-                                      {formatDuration(userTotal, timeDisplayMode)}
+                                      {formatDuration(row.total, timeDisplayMode)}
                                     </div>
                                     <div className="text-xs text-slate-500">
                                       {user.tasksWorked || 0} tasks
