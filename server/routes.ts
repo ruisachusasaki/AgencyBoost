@@ -142,12 +142,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Fix for dev-admin users - treat them as "All Users"
+      let effectiveUserId = userId;
+      if (IS_DEVELOPMENT && userId === authenticatedUserId) {
+        effectiveUserId = undefined; // Show all data for dev-admin
+      }
+      
       // Get actual time entries from the database
       console.log("FETCHING REAL TIME ENTRIES FROM DATABASE...");
       const realTimeEntries = await appStorage.getTimeEntriesByDateRange(
         dateFrom, 
         dateTo, 
-        userId, 
+        effectiveUserId, 
         clientId
       );
       
@@ -158,8 +164,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter tasks based on date range and other filters
       const filteredTasks = actualTasks.filter(task => {
-        // Filter by user if specified
-        if (userId && task.assignedTo !== userId) return false;
+        // Filter by user if specified - use entry-level filtering instead of task-level
+        if (effectiveUserId) {
+          const hasUserEntries = task.timeEntries?.some(entry => entry.userId === effectiveUserId);
+          if (!hasUserEntries) return false;
+        }
         
         // Filter by client if specified
         if (clientId && task.clientId !== clientId) return false;
