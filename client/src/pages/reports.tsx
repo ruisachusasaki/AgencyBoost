@@ -587,32 +587,84 @@ export default function Reports() {
     setHealthPage(1);
   };
 
+  // Task table sorting functions
+  const handleTaskSort = (field: string) => {
+    if (taskSortField === field) {
+      // Toggle sort order if clicking same field
+      setTaskSortOrder(taskSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with default desc order
+      setTaskSortField(field);
+      setTaskSortOrder("desc");
+    }
+  };
 
-  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+
+  // Generic sortable header component
+  const SortableHeader = ({ 
+    field, 
+    children, 
+    sortField, 
+    sortOrder, 
+    onSort,
+    className = ""
+  }: { 
+    field: string; 
+    children: React.ReactNode; 
+    sortField: string;
+    sortOrder: "asc" | "desc";
+    onSort: (field: string) => void;
+    className?: string;
+  }) => (
     <TableHead 
-      className="cursor-pointer hover:bg-muted/50 transition-colors" 
-      onClick={() => handleHealthSort(field)}
+      className={`cursor-pointer hover:bg-muted/50 transition-colors ${className}`}
+      onClick={() => onSort(field)}
     >
       <div className="flex items-center justify-between">
         {children}
         <div className="flex flex-col ml-2">
           <ChevronUp 
             className={`h-3 w-3 ${
-              healthSortField === field && healthSortOrder === 'asc' 
+              sortField === field && sortOrder === 'asc' 
                 ? 'text-primary' 
                 : 'text-muted-foreground/40'
             }`} 
           />
           <ChevronDown 
             className={`h-3 w-3 -mt-1 ${
-              healthSortField === field && healthSortOrder === 'desc' 
-                ? 'text-primary' 
+              sortField === field && sortOrder === 'desc' 
+                ? 'text-primary'
                 : 'text-muted-foreground/40'
-            }`} 
+            }`}
           />
         </div>
       </div>
     </TableHead>
+  );
+
+  // Health-specific sortable header
+  const HealthSortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <SortableHeader
+      field={field}
+      sortField={healthSortField}
+      sortOrder={healthSortOrder}
+      onSort={handleHealthSort}
+    >
+      {children}
+    </SortableHeader>
+  );
+
+  // Task-specific sortable header  
+  const TaskSortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+    <SortableHeader
+      field={field}
+      sortField={taskSortField}
+      sortOrder={taskSortOrder}
+      onSort={handleTaskSort}
+      className={className}
+    >
+      {children}
+    </SortableHeader>
   );
 
   // Helper functions for health analytics
@@ -1783,10 +1835,10 @@ export default function Reports() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <SortableHeader field="clientName">Client</SortableHeader>
-                      <SortableHeader field="weekStartDate">Week</SortableHeader>
-                      <SortableHeader field="healthIndicator">Health Status</SortableHeader>
-                      <SortableHeader field="averageScore">Score</SortableHeader>
+                      <HealthSortableHeader field="clientName">Client</HealthSortableHeader>
+                      <HealthSortableHeader field="weekStartDate">Week</HealthSortableHeader>
+                      <HealthSortableHeader field="healthIndicator">Health Status</HealthSortableHeader>
+                      <HealthSortableHeader field="averageScore">Score</HealthSortableHeader>
                       <TableHead>Goals</TableHead>
                       <TableHead>Fulfillment</TableHead>
                       <TableHead>Relationship</TableHead>
@@ -2830,16 +2882,44 @@ export default function Reports() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Task</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Estimated</TableHead>
-                          <TableHead>Actual</TableHead>
-                          <TableHead>Variance</TableHead>
+                          <TaskSortableHeader field="title">Task</TaskSortableHeader>
+                          <TaskSortableHeader field="clientName">Client</TaskSortableHeader>
+                          <TaskSortableHeader field="status">Status</TaskSortableHeader>
+                          <TaskSortableHeader field="timeEstimate">Estimated</TaskSortableHeader>
+                          <TaskSortableHeader field="timeTracked">Actual</TaskSortableHeader>
+                          <TaskSortableHeader field="variance">Variance</TaskSortableHeader>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {taskAnalytics.topTimeConsumers.map((task, index) => {
+                        {[...taskAnalytics.topTimeConsumers]
+                          .sort((a, b) => {
+                            // Apply sorting based on current sort field and order
+                            const getValue = (task: any, field: string) => {
+                              switch (field) {
+                                case 'title': return task.title || '';
+                                case 'clientName': return task.clientName || '';
+                                case 'status': return task.status || '';
+                                case 'timeEstimate': return task.timeEstimate || 0;
+                                case 'timeTracked': return task.timeTracked || 0;
+                                case 'variance': 
+                                  if (!task.timeEstimate || !task.timeTracked) return 0;
+                                  return ((task.timeTracked - task.timeEstimate) / task.timeEstimate * 100);
+                                default: return '';
+                              }
+                            };
+                            
+                            const aValue = getValue(a, taskSortField);
+                            const bValue = getValue(b, taskSortField);
+                            
+                            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                              const comparison = aValue.localeCompare(bValue);
+                              return taskSortOrder === 'asc' ? comparison : -comparison;
+                            } else {
+                              const comparison = Number(aValue) - Number(bValue);
+                              return taskSortOrder === 'asc' ? comparison : -comparison;
+                            }
+                          })
+                          .map((task, index) => {
                           const variance = task.timeEstimate && task.timeTracked ? 
                             ((task.timeTracked - task.timeEstimate) / task.timeEstimate * 100).toFixed(1) : null;
                           return (
