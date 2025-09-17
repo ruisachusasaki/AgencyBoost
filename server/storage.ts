@@ -4493,10 +4493,11 @@ export class DbStorage implements IStorage {
   async getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
     console.log(`🔍 getTimeEntriesByDateRange called with userId: ${userId}`);
     
-    // For dev-admin users, fall back to memory storage to avoid UUID issues
+    // For dev-admin users, ignore the userId filter to show all data
+    let effectiveUserId = userId;
     if (userId && userId.startsWith('dev-admin-')) {
-      console.log(`🚀 Using memory storage for dev-admin user: ${userId}`);
-      return this.memStorage.getTimeEntriesByDateRange(dateFrom, dateTo, userId, clientId);
+      console.log(`🚀 Dev-admin user detected, showing all time data instead of filtering by: ${userId}`);
+      effectiveUserId = undefined; // Don't filter by user - show all data
     }
     
     // Build conditions
@@ -4510,8 +4511,8 @@ export class DbStorage implements IStorage {
     ];
     
     // Filter by user if specified
-    if (userId) {
-      conditions.push(eq(tasks.assignedTo, userId));
+    if (effectiveUserId) {
+      conditions.push(eq(tasks.assignedTo, effectiveUserId));
     }
     
     // Filter by client if specified  
