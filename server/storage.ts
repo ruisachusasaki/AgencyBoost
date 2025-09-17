@@ -4491,6 +4491,14 @@ export class DbStorage implements IStorage {
   }
   
   async getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
+    console.log(`🔍 getTimeEntriesByDateRange called with userId: ${userId}`);
+    
+    // For dev-admin users, fall back to memory storage to avoid UUID issues
+    if (userId && userId.startsWith('dev-admin-')) {
+      console.log(`🚀 Using memory storage for dev-admin user: ${userId}`);
+      return this.memStorage.getTimeEntriesByDateRange(dateFrom, dateTo, userId, clientId);
+    }
+    
     // Build conditions
     const conditions: any[] = [
       sql`EXISTS (
@@ -4501,8 +4509,8 @@ export class DbStorage implements IStorage {
       )`
     ];
     
-    // Filter by user if specified - skip invalid dev-admin IDs
-    if (userId && !userId.startsWith('dev-admin-')) {
+    // Filter by user if specified
+    if (userId) {
       conditions.push(eq(tasks.assignedTo, userId));
     }
     
