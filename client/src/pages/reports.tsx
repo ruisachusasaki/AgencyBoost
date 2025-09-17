@@ -2575,10 +2575,10 @@ export default function Reports() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-slate-600">Total Tasks</p>
-                            <p className="text-3xl font-bold text-slate-900">{timeTrackingData?.tasks?.length || 0}</p>
+                            <p className="text-3xl font-bold text-slate-900">{timeTrackingData?.data?.tasks?.length || 0}</p>
                             <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
                               <Activity className="h-3 w-3" />
-                              {timeTrackingData?.tasks?.filter(t => t.timeTracked > 0)?.length || 0} with time data
+                              {timeTrackingData?.data?.tasks?.filter(t => t.timeTracked > 0)?.length || 0} with time data
                             </p>
                           </div>
                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -2614,7 +2614,7 @@ export default function Reports() {
                       <div>
                         <p className="text-sm font-medium text-slate-600">Actual Hours</p>
                         <p className="text-3xl font-bold text-slate-900">
-                          {taskAnalytics.totalSpentHours.toFixed(1)}h
+                          {timeTrackingData?.data?.grandTotal ? (timeTrackingData.data.grandTotal / 60).toFixed(1) : '0.0'}h
                         </p>
                         <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
