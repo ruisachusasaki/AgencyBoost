@@ -2611,7 +2611,7 @@ export default function Reports() {
                                       {formatDuration(row.total, timeDisplayMode)}
                                     </div>
                                     <div className="text-xs text-slate-500">
-                                      {user.tasksWorked || 0} tasks
+                                      {isAllUsers ? `${Object.keys(row.dailyTotals).length} days` : `${Object.keys(row.dailyTotals).length} days`}
                                     </div>
                                   </div>
                                 </TableCell>
