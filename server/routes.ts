@@ -572,11 +572,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         changes.push(`Calls DND ${status}`);
       }
 
+      // Get current authenticated user - SECURE (needed for all audit logging)
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+
       // Create separate audit logs for DND changes due to their critical nature
       if (dndChanges.length > 0) {
-        // Get current authenticated user - SECURE
-        const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-        if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
         
         // Get staff name for audit log
         const staffResult = await db.select({
