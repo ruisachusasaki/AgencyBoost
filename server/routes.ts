@@ -227,14 +227,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (entryDate < dateFrom || entryDate > dateTo) return;
           
           // Handle development mode user ID mapping
-          let effectiveUserId = entry.userId;
+          let resolvedEntryUserId = entry.userId;
           if (IS_DEVELOPMENT && entry.userId === 'current-user') {
-            effectiveUserId = authenticatedUserId;
+            resolvedEntryUserId = authenticatedUserId;
           }
           
-          if (!userMap.has(effectiveUserId)) {
-            userMap.set(effectiveUserId, {
-              userId: effectiveUserId,
+          // Filter by effectiveUserId if specified
+          if (effectiveUserId && resolvedEntryUserId !== effectiveUserId) {
+            return; // Skip this entry if it doesn't match the user filter
+          }
+          
+          if (!userMap.has(resolvedEntryUserId)) {
+            userMap.set(resolvedEntryUserId, {
+              userId: resolvedEntryUserId,
               userName: entry.userName || 'Development User',
               userRole: entry.userRole || 'User',
               totalTime: 0,
@@ -243,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          const user = userMap.get(effectiveUserId);
+          const user = userMap.get(resolvedEntryUserId);
           user.totalTime += entry.duration || 0;
           user.tasksWorked.add(task.id);
           user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (entry.duration || 0);
@@ -281,16 +286,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (entryDate < dateFrom || entryDate > dateTo) return;
           
           // Handle development mode user ID mapping
-          let effectiveUserId = entry.userId;
+          let resolvedEntryUserId = entry.userId;
           if (IS_DEVELOPMENT && entry.userId === 'current-user') {
-            effectiveUserId = authenticatedUserId;
+            resolvedEntryUserId = authenticatedUserId;
+          }
+          
+          // Filter by effectiveUserId if specified
+          if (effectiveUserId && resolvedEntryUserId !== effectiveUserId) {
+            return; // Skip this entry if it doesn't match the user filter
           }
           
           client.totalTime += entry.duration || 0;
           
-          if (!client.userMap.has(effectiveUserId)) {
-            client.userMap.set(effectiveUserId, {
-              userId: effectiveUserId,
+          if (!client.userMap.has(resolvedEntryUserId)) {
+            client.userMap.set(resolvedEntryUserId, {
+              userId: resolvedEntryUserId,
               userName: entry.userName || 'Development User',
               userRole: entry.userRole || 'User',
               totalTime: 0,
@@ -299,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          const user = client.userMap.get(effectiveUserId);
+          const user = client.userMap.get(resolvedEntryUserId);
           user.totalTime += entry.duration || 0;
           user.tasksWorked.add(task.id);
           user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (entry.duration || 0);
