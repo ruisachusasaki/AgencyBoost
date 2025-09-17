@@ -290,8 +290,17 @@ export const clients = pgTable("clients", {
   paymentTerms: text("payment_terms"), // due_upon_receipt, net_7, net_30
   upsideBonus: decimal("upside_bonus", { precision: 5, scale: 2 }),
   
+  // Client Brief Sections - 8 separate fields for comprehensive client information
+  briefBackground: text("brief_background"), // Background
+  briefObjectives: text("brief_objectives"), // Objectives/Goals
+  briefBrandInfo: text("brief_brand_info"), // Brand Info
+  briefAudienceInfo: text("brief_audience_info"), // Audience Info
+  briefProductsServices: text("brief_products_services"), // Products/Services
+  briefCompetitors: text("brief_competitors"), // Competitors
+  briefMarketingTech: text("brief_marketing_tech"), // Marketing Tech
+  briefMiscellaneous: text("brief_miscellaneous"), // Miscellaneous
+
   // Important Resources URLs
-  clientBrief: text("client_brief"),
   growthOsDashboard: text("growth_os_dashboard"),
   storyBrand: text("story_brand"),
   styleGuide: text("style_guide"),

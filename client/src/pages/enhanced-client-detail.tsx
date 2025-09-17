@@ -1712,13 +1712,23 @@ export default function EnhancedClientDetail() {
   // Communication tabs state
   const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
 
-  // Client Brief state
-  const [isEditingBrief, setIsEditingBrief] = useState(false);
-  const [briefContent, setBriefContent] = useState("");
+  // Client Brief state - 8 separate sections
+  const [briefSections, setBriefSections] = useState({
+    briefBackground: "",
+    briefObjectives: "",
+    briefBrandInfo: "",
+    briefAudienceInfo: "",
+    briefProductsServices: "",
+    briefCompetitors: "",
+    briefMarketingTech: "",
+    briefMiscellaneous: ""
+  });
+  const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
 
-  // Update client brief mutation
-  const updateClientBriefMutation = useMutation({
-    mutationFn: async (briefData: { notes: string }) => {
+  // Update client brief section mutation
+  const updateClientBriefSectionMutation = useMutation({
+    mutationFn: async ({ section, content }: { section: string; content: string }) => {
+      const briefData = { [section]: content };
       const response = await fetch(`/api/clients/${clientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1726,7 +1736,7 @@ export default function EnhancedClientDetail() {
       });
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(`Failed to update client brief: ${error}`);
+        throw new Error(`Failed to update ${section}: ${error}`);
       }
       
       // Get response text
@@ -1751,19 +1761,23 @@ export default function EnhancedClientDetail() {
         throw new Error('Invalid JSON response from server');
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
       toast({
         title: "Success",
-        description: "Client brief updated successfully",
+        description: "Client brief section updated successfully",
       });
-      setIsEditingBrief(false);
+      setEditingSections(prev => {
+        const next = new Set(prev);
+        next.delete(variables.section);
+        return next;
+      });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
       console.error('Client brief update error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update client brief",
+        description: error.message || `Failed to update ${variables.section}`,
         variant: "destructive",
       });
     },
@@ -1807,10 +1821,19 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId,
   });
 
-  // Initialize brief content from client data
+  // Initialize brief sections from client data
   useEffect(() => {
     if (client) {
-      setBriefContent(client.notes || "");
+      setBriefSections({
+        briefBackground: client.briefBackground || client.notes || "", // Migrate existing notes to background
+        briefObjectives: client.briefObjectives || "",
+        briefBrandInfo: client.briefBrandInfo || "",
+        briefAudienceInfo: client.briefAudienceInfo || "",
+        briefProductsServices: client.briefProductsServices || "",
+        briefCompetitors: client.briefCompetitors || "",
+        briefMarketingTech: client.briefMarketingTech || "",
+        briefMiscellaneous: client.briefMiscellaneous || ""
+      });
     }
   }, [client]);
 
@@ -3596,76 +3619,121 @@ export default function EnhancedClientDetail() {
 
           {/* Middle Column - Client Brief & Communication */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Client Brief */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Client Brief
-                  </h2>
-                  {!isEditingBrief ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingBrief(true)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setIsEditingBrief(false);
-                          if (client) {
-                            setBriefContent(client.notes || "");
-                          }
-                        }}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          updateClientBriefMutation.mutate({ notes: briefContent });
-                        }}
-                        disabled={updateClientBriefMutation.isPending}
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {updateClientBriefMutation.isPending ? "Saving..." : "Save"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isEditingBrief ? (
-                  <div className="border rounded-md">
-                    <RichTextEditor
-                      content={briefContent}
-                      onChange={(content) => setBriefContent(content)}
-                      placeholder="Add client brief notes, project details, or important information..."
-                      className="min-h-[200px]"
-                    />
-                  </div>
-                ) : (
-                  <div className="min-h-[120px]">
-                    {briefContent ? (
-                      <div 
-                        className="prose prose-sm max-w-none text-gray-700"
-                        dangerouslySetInnerHTML={{ __html: briefContent }}
-                      />
-                    ) : (
-                      <p className="text-gray-500 italic">No client brief added yet. Click Edit to add important client information, project details, or notes.</p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Client Brief Sections */}
+            {(() => {
+              const briefSectionConfigs = [
+                { key: 'briefBackground', title: 'Background', icon: FileText, placeholder: 'Add background information about the client...' },
+                { key: 'briefObjectives', title: 'Objectives/Goals', icon: Target, placeholder: 'Define client objectives and goals...' },
+                { key: 'briefBrandInfo', title: 'Brand Info', icon: Tag, placeholder: 'Add brand information, guidelines, messaging...' },
+                { key: 'briefAudienceInfo', title: 'Audience Info', icon: Users, placeholder: 'Describe the target audience and demographics...' },
+                { key: 'briefProductsServices', title: 'Products/Services', icon: Package, placeholder: 'List and describe key products or services...' },
+                { key: 'briefCompetitors', title: 'Competitors', icon: Activity, placeholder: 'Identify competitors and competitive analysis...' },
+                { key: 'briefMarketingTech', title: 'Marketing Tech', icon: Zap, placeholder: 'List marketing technology and tools used...' },
+                { key: 'briefMiscellaneous', title: 'Miscellaneous', icon: Archive, placeholder: 'Add any additional information...' }
+              ];
+              
+              return briefSectionConfigs.map((config) => {
+                const isEditing = editingSections.has(config.key);
+                const IconComponent = config.icon;
+                
+                return (
+                  <Card key={config.key} data-testid={`card-brief-${config.key}`}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                          <IconComponent className="h-5 w-5 text-primary" />
+                          {config.title}
+                        </h2>
+                        {!isEditing ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingSections(prev => new Set([...prev, config.key]));
+                            }}
+                            data-testid={`button-edit-${config.key}`}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingSections(prev => {
+                                  const next = new Set(prev);
+                                  next.delete(config.key);
+                                  return next;
+                                });
+                                // Reset to original content
+                                if (client) {
+                                  setBriefSections(prev => ({
+                                    ...prev,
+                                    [config.key]: client[config.key] || ""
+                                  }));
+                                }
+                              }}
+                              data-testid={`button-cancel-${config.key}`}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                updateClientBriefSectionMutation.mutate({
+                                  section: config.key,
+                                  content: briefSections[config.key]
+                                });
+                              }}
+                              disabled={updateClientBriefSectionMutation.isPending}
+                              data-testid={`button-save-${config.key}`}
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              {updateClientBriefSectionMutation.isPending ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {isEditing ? (
+                        <div className="border rounded-md">
+                          <RichTextEditor
+                            content={briefSections[config.key]}
+                            onChange={(content) => {
+                              setBriefSections(prev => ({
+                                ...prev,
+                                [config.key]: content
+                              }));
+                            }}
+                            placeholder={config.placeholder}
+                            className="min-h-[200px]"
+                            data-testid={`editor-${config.key}`}
+                          />
+                        </div>
+                      ) : (
+                        <div className="min-h-[120px]">
+                          {briefSections[config.key] ? (
+                            <div 
+                              className="prose prose-sm max-w-none text-gray-700"
+                              dangerouslySetInnerHTML={{ __html: briefSections[config.key] }}
+                              data-testid={`content-${config.key}`}
+                            />
+                          ) : (
+                            <p className="text-gray-500 italic" data-testid={`placeholder-${config.key}`}>
+                              No {config.title.toLowerCase()} added yet. Click Edit to add {config.title.toLowerCase()} information.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
 
 
 

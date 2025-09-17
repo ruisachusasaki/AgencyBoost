@@ -1,6 +1,54 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
+
+/**
+ * Startup migration to ensure client brief columns exist
+ * Adds 8 brief columns to clients table and backfills brief_background with existing client_brief data
+ */
+async function ensureClientBriefColumns() {
+  try {
+    log("Running startup migration: ensureClientBriefColumns");
+    
+    // Add all 8 brief columns to clients table (idempotent with IF NOT EXISTS)
+    await db.execute(sql`
+      ALTER TABLE clients 
+      ADD COLUMN IF NOT EXISTS brief_background text,
+      ADD COLUMN IF NOT EXISTS brief_objectives text,
+      ADD COLUMN IF NOT EXISTS brief_brand_info text,
+      ADD COLUMN IF NOT EXISTS brief_audience_info text,
+      ADD COLUMN IF NOT EXISTS brief_products_services text,
+      ADD COLUMN IF NOT EXISTS brief_competitors text,
+      ADD COLUMN IF NOT EXISTS brief_marketing_tech text,
+      ADD COLUMN IF NOT EXISTS brief_miscellaneous text;
+    `);
+    
+    // Backfill brief_background with existing client_brief data (if client_brief column exists)
+    try {
+      await db.execute(sql`
+        UPDATE clients 
+        SET brief_background = COALESCE(brief_background, client_brief) 
+        WHERE brief_background IS NULL AND client_brief IS NOT NULL;
+      `);
+      log("Successfully backfilled brief_background from client_brief data");
+    } catch (backfillError: any) {
+      // client_brief column might not exist, which is fine
+      if (backfillError.code === '42703') {
+        log("client_brief column not found - skipping backfill (normal for new installations)");
+      } else {
+        log(`Backfill warning: ${backfillError.message}`);
+      }
+    }
+    
+    log("Client brief columns migration completed successfully");
+  } catch (error: any) {
+    log(`Migration error: ${error.message}`);
+    // Don't crash the server if migration fails - log warning and continue
+    log("WARNING: Client brief columns migration failed - server will continue but brief sections may not work correctly");
+  }
+}
 
 const app = express();
 app.use(express.json());
@@ -37,6 +85,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Run startup migrations before setting up routes
+  await ensureClientBriefColumns();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
