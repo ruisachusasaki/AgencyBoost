@@ -2562,25 +2562,31 @@ export default function Reports() {
           {/* Time Tracking Report Content */}
           {taskReportType === "time-tracking" && (
             <div className="space-y-6">
-              {/* Time Tracking Key Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="shadow-sm border border-slate-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Total Tasks</p>
-                        <p className="text-3xl font-bold text-slate-900">{taskAnalytics.totalTasks}</p>
-                        <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
-                          <Activity className="h-3 w-3" />
-                          {taskAnalytics.tasksWithTimeTracking} with time data
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Target className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              {timeTrackingLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-slate-500">Loading time tracking data...</div>
+                </div>
+              ) : (
+                <>
+                  {/* Time Tracking Key Metrics */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <Card className="shadow-sm border border-slate-200">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600">Total Tasks</p>
+                            <p className="text-3xl font-bold text-slate-900">{timeTrackingData?.tasks?.length || 0}</p>
+                            <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
+                              <Activity className="h-3 w-3" />
+                              {timeTrackingData?.tasks?.filter(t => t.timeTracked > 0)?.length || 0} with time data
+                            </p>
+                          </div>
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Target className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
                 <Card className="shadow-sm border border-slate-200">
                   <CardContent className="p-6">
@@ -2786,6 +2792,8 @@ export default function Reports() {
                   )}
                 </CardContent>
               </Card>
+              </>
+            )}
             </div>
           )}
 
