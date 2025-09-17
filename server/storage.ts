@@ -4501,8 +4501,8 @@ export class DbStorage implements IStorage {
       )`
     ];
     
-    // Filter by user if specified
-    if (userId) {
+    // Filter by user if specified - skip invalid dev-admin IDs
+    if (userId && !userId.startsWith('dev-admin-')) {
       conditions.push(eq(tasks.assignedTo, userId));
     }
     
