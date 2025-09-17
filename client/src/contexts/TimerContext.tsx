@@ -119,13 +119,23 @@ export function TimerProvider({ children }: TimerProviderProps) {
       return;
     }
 
+    // Don't start timer if user data isn't loaded yet
+    if (!currentUser?.id) {
+      toast({
+        title: "Please Wait",
+        description: "Loading user information...",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const now = new Date().toISOString();
     const timeEntry: TimeEntry = {
       id: Date.now().toString(),
       taskId,
       taskTitle,
       startTime: now,
-      userId: currentUser?.id || 'current-user',
+      userId: currentUser.id,
       isRunning: true
     };
 
@@ -133,9 +143,17 @@ export function TimerProvider({ children }: TimerProviderProps) {
     setElapsedTime(0);
 
     try {
-      // Save the time entry to the database
+      // Fetch existing task to get current time entries
+      const taskResponse = await fetch(`/api/tasks/${taskId}`);
+      const task = await taskResponse.json();
+      
+      // Merge new time entry with existing ones (don't overwrite!)
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const mergedTimeEntries = [...existingEntries, timeEntry];
+
+      // Save the time entry to the database with proper merge
       await apiRequest("PUT", `/api/tasks/${taskId}`, {
-        timeEntries: [timeEntry] // The backend will handle merging with existing entries
+        timeEntries: mergedTimeEntries // Now properly appending instead of overwriting
       });
 
       toast({
