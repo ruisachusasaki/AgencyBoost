@@ -30,7 +30,6 @@ import MyProfile from "@/pages/settings/my-profile";
 import Staff from "@/pages/settings/staff";
 import StaffDetail from "@/pages/settings/staff-detail";
 import TeamDetail from "@/pages/settings/team-detail";
-import Support from "@/pages/settings/support";
 import RolesPermissions from "@/pages/settings/roles-permissions";
 import Integrations from "@/pages/settings/integrations";
 import CustomFields from "@/pages/settings/custom-fields";
@@ -102,7 +101,6 @@ function Router() {
       <Route path="/settings/staff" component={Staff} />
       <Route path="/settings/staff/:id" component={StaffDetail} />
       <Route path="/settings/teams/:id" component={TeamDetail} />
-      <Route path="/settings/support" component={Support} />
       <Route path="/settings/hr-settings" component={HRSettings} />
       <Route path="/settings/roles-permissions" component={RolesPermissions} />
       <Route path="/settings/permission-audit" component={PermissionAudit} />

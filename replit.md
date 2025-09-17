@@ -9,6 +9,7 @@ Bundle architecture preference: Collection-based bundles.
 UX Organization: Project Templates integrated as tabs under Projects section rather than separate navigation.
 Checkbox Design: Bulk action checkboxes should be square, task completion checkboxes should be circular.
 Filter Preferences: Simplified filtering with only essential filters (search and department, not position) for time off reports.
+Settings Organization: Removed Settings > Support section (old ticketing system feature no longer needed).
 
 ## System Architecture
 

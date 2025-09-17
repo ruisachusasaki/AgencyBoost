@@ -495,11 +495,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/clients/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
-      console.log("DEBUG - Client update request:", {
-        clientId: req.params.id,
-        requestBody: req.body
-      });
-      
       // Get the old client data first for audit logging
       const oldClient = await appStorage.getClient(req.params.id);
       if (!oldClient) {
@@ -507,21 +502,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertClientSchema.partial().parse(req.body);
-      console.log("DEBUG - Validated data:", validatedData);
       
       // Remove undefined values and check if there are valid fields to update
       const filteredData = Object.fromEntries(
         Object.entries(validatedData).filter(([key, value]) => value !== undefined)
       );
-      console.log("DEBUG - Filtered data:", filteredData);
       
       if (Object.keys(filteredData).length === 0) {
-        console.log("DEBUG - No valid fields to update");
         return res.status(400).json({ message: "No valid client fields to update" });
       }
       
       const client = await appStorage.updateClient(req.params.id, filteredData);
-      console.log("DEBUG - Update result:", client ? "SUCCESS" : "FAILED");
       
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
