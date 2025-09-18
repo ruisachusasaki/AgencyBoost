@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -1723,11 +1723,12 @@ export default function EnhancedClientDetail() {
   const [editingContent, setEditingContent] = useState<Record<string, string>>({});
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
 
-  // Icon mapping for dynamic brief sections
+  // Icon mapping for dynamic brief sections - fallback to FileText for unknown icons
   const iconMap: Record<string, any> = {
     FileText, Target, TagIcon, Users, Package, Activity, Zap, Archive,
     Briefcase, Globe, Mail, Phone, MapPin, Calendar, Edit, Clock,
-    ShoppingCart, CreditCard, Hash, CornerDownRight, User, UserCircle
+    ShoppingCart, CreditCard, Hash, CornerDownRight, User, UserCircle,
+    Heart, Star, TrendingUp
   };
 
   // Update client brief section mutation - now uses hybrid API

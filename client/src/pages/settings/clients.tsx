@@ -96,6 +96,10 @@ export default function ClientsSettings() {
       apiRequest('PUT', `/api/client-brief-sections/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
+      // Also invalidate all client brief data to update icons on client detail pages
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0]?.toString().includes('/brief')
+      });
       setIsEditDialogOpen(false);
       setEditingSection(null);
       toast({ title: "Section updated successfully" });
