@@ -4608,6 +4608,36 @@ export default function EnhancedClientDetail() {
                                   </p>
                                 )}
                               </div>
+                              
+                              {/* Edit/Delete Actions */}
+                              <div className="flex items-center gap-2 ml-3">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // TODO: Implement edit appointment functionality
+                                    console.log('Edit appointment:', appointment.id);
+                                  }}
+                                  className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                                  data-testid={`button-edit-appointment-${appointment.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
+                                      // TODO: Implement delete appointment functionality
+                                      console.log('Delete appointment:', appointment.id);
+                                    }
+                                  }}
+                                  className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+                                  data-testid={`button-delete-appointment-${appointment.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         ))}
