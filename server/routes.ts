@@ -6802,27 +6802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      // Get the old staff data first for audit logging
-      const [oldStaff] = await db.select({
-        id: staff.id,
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-        email: staff.email,
-        phone: staff.phone,
-        roleId: staff.roleId,
-        profileImagePath: staff.profileImagePath,
-        hireDate: staff.hireDate,
-        department: staff.department,
-        position: staff.position,
-        managerId: staff.managerId,
-        status: staff.status,
-        birthdate: staff.birthdate,
-        emergencyContactName: staff.emergencyContactName,
-        emergencyContactPhone: staff.emergencyContactPhone,
-        emergencyContactRelationship: staff.emergencyContactRelationship,
-        createdAt: staff.createdAt,
-        updatedAt: staff.updatedAt
-      }).from(staff).where(eq(staff.id, req.params.id));
+      // Get the old staff data first for audit logging  
+      const [oldStaff] = await db.select().from(staff).where(eq(staff.id, req.params.id));
       if (!oldStaff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
