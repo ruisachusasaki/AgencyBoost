@@ -630,7 +630,7 @@ export default function MyProfile() {
                     </div>
                     
                     <div className="border-t pt-4">
-                      <h4 className="text-sm font-medium mb-3">Emergency Contact</h4>
+                      <h4 className="text-lg font-semibold mb-3">Emergency Contact</h4>
                       <div className="space-y-4">
                         <FormField
                           control={personalForm.control}
