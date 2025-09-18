@@ -3993,8 +3993,8 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {clientData.activities && clientData.activities.length > 0 ? (
-                    clientData.activities.map((activity, index) => (
+                  {client?.activities && client.activities.length > 0 ? (
+                    client.activities.map((activity, index) => (
                       <div key={index} className="border-l-2 border-gray-200 pl-4 pb-4">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium text-gray-900">{activity.title}</h4>
@@ -4022,8 +4022,8 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {clientData.communications && clientData.communications.length > 0 ? (
-                    clientData.communications.map((comm, index) => (
+                  {client?.communications && client.communications.length > 0 ? (
+                    client.communications.map((comm, index) => (
                       <div key={index} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-gray-900">{comm.type}</span>
@@ -4086,7 +4086,7 @@ export default function EnhancedClientDetail() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {clientData.notes?.slice(0, 3).map((note, index) => (
+                      {clientNotes?.slice(0, 3).map((note, index) => (
                         <div key={index} className="p-3 border rounded-lg">
                           <p className="text-sm text-gray-700">{note.content.substring(0, 100)}...</p>
                           <p className="text-xs text-gray-500 mt-1">{note.date}</p>
