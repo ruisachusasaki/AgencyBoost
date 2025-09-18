@@ -1810,7 +1810,15 @@ export default function EnhancedClientDetail() {
       briefSections.forEach((section: any) => {
         contentMap[section.id] = section.value || "";
       });
-      setEditingContent(contentMap);
+      
+      // Only update editingContent if it's actually different
+      setEditingContent(prevContent => {
+        const hasChanges = Object.keys(contentMap).some(key => 
+          prevContent[key] !== contentMap[key]
+        ) || Object.keys(prevContent).length !== Object.keys(contentMap).length;
+        
+        return hasChanges ? contentMap : prevContent;
+      });
     }
   }, [briefSections]);
 
@@ -2689,11 +2697,19 @@ export default function EnhancedClientDetail() {
   // Initialize sections with calculatedSections when they're first available
   useEffect(() => {
     if (calculatedSections.length > 0 && !sectionsInitialized.current) {
-      setSections(calculatedSections.map(section => ({
+      const newSections = calculatedSections.map(section => ({
         ...section,
         isOpen: false  // All sections closed by default
-      })));
-      sectionsInitialized.current = true;
+      }));
+      
+      // Only set sections if they're actually different
+      setSections(prevSections => {
+        if (prevSections.length === 0 && newSections.length > 0) {
+          sectionsInitialized.current = true;
+          return newSections;
+        }
+        return prevSections;
+      });
     }
   }, [calculatedSections]);
 
@@ -4701,17 +4717,15 @@ export default function EnhancedClientDetail() {
       </Tabs>
       
       {/* Appointment Modal */}
-      {isAppointmentModalOpen && (
-        <AppointmentModal
-          isOpen={isAppointmentModalOpen}
-          onClose={() => setIsAppointmentModalOpen(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
-            setIsAppointmentModalOpen(false);
-          }}
-          clientId={clientId!}
-        />
-      )}
+      <AppointmentModal
+        open={isAppointmentModalOpen}
+        onOpenChange={setIsAppointmentModalOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+          setIsAppointmentModalOpen(false);
+        }}
+        clientId={clientId!}
+      />
     </div>
   );
 };
