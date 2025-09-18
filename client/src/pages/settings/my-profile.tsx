@@ -27,6 +27,9 @@ import { z } from "zod";
 // Form schemas for different tabs
 const personalInfoSchema = z.object({
   birthdate: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhone: z.string().optional(),
+  emergencyContactRelationship: z.string().optional(),
 });
 
 const addressSchema = z.object({
@@ -97,6 +100,9 @@ export default function MyProfile() {
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
       birthdate: currentUser?.birthdate || "",
+      emergencyContactName: currentUser?.emergencyContactName || "",
+      emergencyContactPhone: currentUser?.emergencyContactPhone || "",
+      emergencyContactRelationship: currentUser?.emergencyContactRelationship || "",
     },
   });
 
@@ -160,6 +166,9 @@ export default function MyProfile() {
     if (currentUser) {
       personalForm.reset({
         birthdate: currentUser.birthdate || "",
+        emergencyContactName: currentUser.emergencyContactName || "",
+        emergencyContactPhone: currentUser.emergencyContactPhone || "",
+        emergencyContactRelationship: currentUser.emergencyContactRelationship || "",
       });
       addressForm.reset({
         address: currentUser.address || "",
@@ -588,6 +597,67 @@ export default function MyProfile() {
                         </FormItem>
                       )}
                     />
+                    
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-medium mb-3">Emergency Contact</h4>
+                      <div className="space-y-4">
+                        <FormField
+                          control={personalForm.control}
+                          name="emergencyContactName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Emergency Contact Person Name</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder="Full name" 
+                                  data-testid="input-emergency-contact-name"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={personalForm.control}
+                          name="emergencyContactPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Emergency Contact Phone Number</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="tel" 
+                                  placeholder="(555) 123-4567" 
+                                  data-testid="input-emergency-contact-phone"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={personalForm.control}
+                          name="emergencyContactRelationship"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Relationship with Emergency Contact</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder="e.g., Spouse, Parent, Sibling" 
+                                  data-testid="input-emergency-contact-relationship"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    
                     <Button type="submit" disabled={updateStaffMutation.isPending}>
                       {updateStaffMutation.isPending ? "Saving..." : "Save Personal Information"}
                     </Button>
