@@ -54,6 +54,8 @@ import {
   type Position, type InsertPosition, positions,
   type JobApplication, type InsertJobApplication, jobApplications,
   type JobOpening, type InsertJobOpening, jobOpenings,
+  type ClientBriefSection, type InsertClientBriefSection, clientBriefSections,
+  type ClientBriefValue, type InsertClientBriefValue, clientBriefValues,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -96,6 +98,18 @@ export interface IStorage {
     limit: number;
   }>;
   
+  // Client Brief Sections
+  listBriefSections(): Promise<ClientBriefSection[]>;
+  getBriefSection(id: string): Promise<ClientBriefSection | undefined>;
+  getBriefSectionByKey(key: string): Promise<ClientBriefSection | undefined>;
+  createBriefSection(section: InsertClientBriefSection): Promise<ClientBriefSection>;
+  updateBriefSection(id: string, section: Partial<InsertClientBriefSection>): Promise<ClientBriefSection | undefined>;
+  deleteBriefSection(id: string): Promise<boolean>;
+  reorderBriefSections(sectionIds: string[]): Promise<void>;
+  
+  // Client Brief Values - Hybrid core/custom data
+  getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>>;
+  setClientBriefValue(clientId: string, sectionId: string, value: string): Promise<void>;
   
   // Campaigns
   getCampaigns(): Promise<Campaign[]>;
@@ -3879,6 +3893,168 @@ export class MemStorage implements IStorage {
   async deleteSmartList(id: string): Promise<boolean> {
     return this.smartLists.delete(id);
   }
+
+  // Client Brief Sections implementation for MemStorage
+  private clientBriefSections: Map<string, ClientBriefSection> = new Map();
+  private clientBriefValues: Map<string, ClientBriefValue> = new Map();
+
+  async listBriefSections(): Promise<ClientBriefSection[]> {
+    const sections = Array.from(this.clientBriefSections.values());
+    return sections.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  }
+
+  async getBriefSection(id: string): Promise<ClientBriefSection | undefined> {
+    return this.clientBriefSections.get(id);
+  }
+
+  async getBriefSectionByKey(key: string): Promise<ClientBriefSection | undefined> {
+    return Array.from(this.clientBriefSections.values()).find(section => section.key === key);
+  }
+
+  async createBriefSection(section: InsertClientBriefSection): Promise<ClientBriefSection> {
+    const id = randomUUID();
+    const newSection: ClientBriefSection = {
+      ...section,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.clientBriefSections.set(id, newSection);
+    return newSection;
+  }
+
+  async updateBriefSection(id: string, sectionData: Partial<InsertClientBriefSection>): Promise<ClientBriefSection | undefined> {
+    const existing = this.clientBriefSections.get(id);
+    if (!existing) return undefined;
+
+    const updated: ClientBriefSection = {
+      ...existing,
+      ...sectionData,
+      updatedAt: new Date(),
+    };
+    this.clientBriefSections.set(id, updated);
+    return updated;
+  }
+
+  async deleteBriefSection(id: string): Promise<boolean> {
+    return this.clientBriefSections.delete(id);
+  }
+
+  async reorderBriefSections(sectionIds: string[]): Promise<void> {
+    sectionIds.forEach((id, index) => {
+      const section = this.clientBriefSections.get(id);
+      if (section) {
+        section.displayOrder = index;
+        section.updatedAt = new Date();
+        this.clientBriefSections.set(id, section);
+      }
+    });
+  }
+
+  async getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>> {
+    const sections = await this.listBriefSections();
+    const client = await this.getClient(clientId);
+    
+    return sections.map(section => {
+      let value = undefined;
+      
+      // Get value from core client data if it's a core section
+      if (client && section.key) {
+        switch (section.key) {
+          case 'background':
+            value = client.briefBackground || undefined;
+            break;
+          case 'objectives':
+            value = client.briefObjectives || undefined;
+            break;
+          case 'brand_info':
+            value = client.briefBrandInfo || undefined;
+            break;
+          case 'audience_info':
+            value = client.briefAudienceInfo || undefined;
+            break;
+          case 'products_services':
+            value = client.briefProductsServices || undefined;
+            break;
+          case 'competitors':
+            value = client.briefCompetitors || undefined;
+            break;
+          case 'marketing_tech':
+            value = client.briefMarketingTech || undefined;
+            break;
+          case 'miscellaneous':
+            value = client.briefMiscellaneous || undefined;
+            break;
+        }
+      }
+
+      // If no core value, check custom values
+      if (!value) {
+        const briefValueKey = `${clientId}-${section.id}`;
+        const briefValue = this.clientBriefValues.get(briefValueKey);
+        value = briefValue?.value;
+      }
+
+      return {
+        ...section,
+        value
+      };
+    });
+  }
+
+  async setClientBriefValue(clientId: string, sectionId: string, value: string): Promise<void> {
+    const section = await this.getBriefSection(sectionId);
+    if (!section) return;
+
+    // If it's a core section, update client directly
+    if (section.key && section.isCoreSection) {
+      const client = await this.getClient(clientId);
+      if (client) {
+        const updateData: Partial<InsertClient> = {};
+        
+        switch (section.key) {
+          case 'background':
+            updateData.briefBackground = value;
+            break;
+          case 'objectives':
+            updateData.briefObjectives = value;
+            break;
+          case 'brand_info':
+            updateData.briefBrandInfo = value;
+            break;
+          case 'audience_info':
+            updateData.briefAudienceInfo = value;
+            break;
+          case 'products_services':
+            updateData.briefProductsServices = value;
+            break;
+          case 'competitors':
+            updateData.briefCompetitors = value;
+            break;
+          case 'marketing_tech':
+            updateData.briefMarketingTech = value;
+            break;
+          case 'miscellaneous':
+            updateData.briefMiscellaneous = value;
+            break;
+        }
+        
+        await this.updateClient(clientId, updateData);
+      }
+    } else {
+      // Custom section, store in clientBriefValues
+      const briefValueKey = `${clientId}-${sectionId}`;
+      const briefValue: ClientBriefValue = {
+        id: randomUUID(),
+        clientId,
+        sectionId,
+        value,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.clientBriefValues.set(briefValueKey, briefValue);
+    }
+  }
 }
 
 // Database storage implementation using PostgreSQL
@@ -5167,6 +5343,241 @@ export class DbStorage implements IStorage {
       return false;
     }
   }
+
+  // Client Brief Sections Management
+  async listBriefSections(): Promise<ClientBriefSection[]> {
+    try {
+      return await db.select()
+        .from(clientBriefSections)
+        .orderBy(asc(clientBriefSections.displayOrder), asc(clientBriefSections.createdAt));
+    } catch (error) {
+      console.error("Error listing brief sections:", error);
+      return [];
+    }
+  }
+
+  async getBriefSection(id: string): Promise<ClientBriefSection | undefined> {
+    try {
+      const result = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting brief section:", error);
+      throw error;
+    }
+  }
+
+  async getBriefSectionByKey(key: string): Promise<ClientBriefSection | undefined> {
+    try {
+      const result = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.key, key))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting brief section by key:", error);
+      throw error;
+    }
+  }
+
+  async createBriefSection(section: InsertClientBriefSection): Promise<ClientBriefSection> {
+    try {
+      const result = await db.insert(clientBriefSections).values(section).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating brief section:", error);
+      throw error;
+    }
+  }
+
+  async updateBriefSection(id: string, sectionData: Partial<InsertClientBriefSection>): Promise<ClientBriefSection | undefined> {
+    try {
+      const result = await db.update(clientBriefSections)
+        .set({ ...sectionData, updatedAt: new Date() })
+        .where(eq(clientBriefSections.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating brief section:", error);
+      throw error;
+    }
+  }
+
+  async deleteBriefSection(id: string): Promise<boolean> {
+    try {
+      // First check if it's a core section (shouldn't be deleted)
+      const section = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.id, id))
+        .limit(1);
+      
+      if (section.length === 0) return false;
+      
+      if (section[0].isCoreSection) {
+        throw new Error("Cannot delete core client brief section");
+      }
+      
+      await db.delete(clientBriefSections).where(eq(clientBriefSections.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting brief section:", error);
+      throw error;
+    }
+  }
+
+  async reorderBriefSections(sectionIds: string[]): Promise<void> {
+    try {
+      // Update display order for each section
+      const promises = sectionIds.map((id, index) =>
+        db.update(clientBriefSections)
+          .set({ displayOrder: index, updatedAt: new Date() })
+          .where(eq(clientBriefSections.id, id))
+      );
+      
+      await Promise.all(promises);
+    } catch (error) {
+      console.error("Error reordering brief sections:", error);
+      throw error;
+    }
+  }
+
+  async getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>> {
+    try {
+      // Get all sections ordered by display order
+      const sections = await this.listBriefSections();
+      
+      // Get client data for core sections
+      const client = await this.getClient(clientId);
+      
+      // Get custom section values
+      const customValues = await db.select()
+        .from(clientBriefValues)
+        .where(eq(clientBriefValues.clientId, clientId));
+      
+      return sections.map(section => {
+        let value = undefined;
+        
+        // Get value from core client data if it's a core section
+        if (client && section.key && section.isCoreSection) {
+          switch (section.key) {
+            case 'background':
+              value = client.briefBackground || undefined;
+              break;
+            case 'objectives':
+              value = client.briefObjectives || undefined;
+              break;
+            case 'brand_info':
+              value = client.briefBrandInfo || undefined;
+              break;
+            case 'audience_info':
+              value = client.briefAudienceInfo || undefined;
+              break;
+            case 'products_services':
+              value = client.briefProductsServices || undefined;
+              break;
+            case 'competitors':
+              value = client.briefCompetitors || undefined;
+              break;
+            case 'marketing_tech':
+              value = client.briefMarketingTech || undefined;
+              break;
+            case 'miscellaneous':
+              value = client.briefMiscellaneous || undefined;
+              break;
+          }
+        }
+
+        // If no core value, check custom values
+        if (!value) {
+          const customValue = customValues.find(cv => cv.sectionId === section.id);
+          value = customValue?.value;
+        }
+
+        return {
+          ...section,
+          value
+        };
+      });
+    } catch (error) {
+      console.error("Error getting client brief:", error);
+      throw error;
+    }
+  }
+
+  async setClientBriefValue(clientId: string, sectionId: string, value: string): Promise<void> {
+    try {
+      const section = await this.getBriefSection(sectionId);
+      if (!section) {
+        throw new Error("Section not found");
+      }
+
+      // If it's a core section, update client directly
+      if (section.key && section.isCoreSection) {
+        const updateData: Partial<InsertClient> = {};
+        
+        switch (section.key) {
+          case 'background':
+            updateData.briefBackground = value;
+            break;
+          case 'objectives':
+            updateData.briefObjectives = value;
+            break;
+          case 'brand_info':
+            updateData.briefBrandInfo = value;
+            break;
+          case 'audience_info':
+            updateData.briefAudienceInfo = value;
+            break;
+          case 'products_services':
+            updateData.briefProductsServices = value;
+            break;
+          case 'competitors':
+            updateData.briefCompetitors = value;
+            break;
+          case 'marketing_tech':
+            updateData.briefMarketingTech = value;
+            break;
+          case 'miscellaneous':
+            updateData.briefMiscellaneous = value;
+            break;
+        }
+        
+        await this.updateClient(clientId, updateData);
+      } else {
+        // Custom section, store in clientBriefValues
+        const existing = await db.select()
+          .from(clientBriefValues)
+          .where(and(
+            eq(clientBriefValues.clientId, clientId),
+            eq(clientBriefValues.sectionId, sectionId)
+          ))
+          .limit(1);
+        
+        if (existing.length > 0) {
+          // Update existing value
+          await db.update(clientBriefValues)
+            .set({ value, updatedAt: new Date() })
+            .where(and(
+              eq(clientBriefValues.clientId, clientId),
+              eq(clientBriefValues.sectionId, sectionId)
+            ));
+        } else {
+          // Insert new value
+          await db.insert(clientBriefValues).values({
+            clientId,
+            sectionId,
+            value,
+            updatedAt: new Date()
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error setting client brief value:", error);
+      throw error;
+    }
+  }
 }
 
 // For now, use a minimal working storage implementation
@@ -5597,6 +6008,200 @@ class MinimalStorage implements Partial<IStorage> {
       return result[0];
     } catch (error) {
       console.error("Error creating job application:", error);
+      throw error;
+    }
+  }
+
+  // Client Brief Sections Management
+  async listBriefSections(): Promise<ClientBriefSection[]> {
+    try {
+      return await db.select()
+        .from(clientBriefSections)
+        .orderBy(asc(clientBriefSections.displayOrder), asc(clientBriefSections.createdAt));
+    } catch (error) {
+      console.error("Error listing brief sections:", error);
+      return [];
+    }
+  }
+
+  async getBriefSection(id: string): Promise<ClientBriefSection | undefined> {
+    try {
+      const result = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting brief section:", error);
+      throw error;
+    }
+  }
+
+  async getBriefSectionByKey(key: string): Promise<ClientBriefSection | undefined> {
+    try {
+      const result = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.key, key))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting brief section by key:", error);
+      throw error;
+    }
+  }
+
+  async createBriefSection(section: InsertClientBriefSection): Promise<ClientBriefSection> {
+    try {
+      const result = await db.insert(clientBriefSections).values(section).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating brief section:", error);
+      throw error;
+    }
+  }
+
+  async updateBriefSection(id: string, sectionData: Partial<InsertClientBriefSection>): Promise<ClientBriefSection | undefined> {
+    try {
+      const result = await db.update(clientBriefSections)
+        .set({ ...sectionData, updatedAt: new Date() })
+        .where(eq(clientBriefSections.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating brief section:", error);
+      throw error;
+    }
+  }
+
+  async deleteBriefSection(id: string): Promise<boolean> {
+    try {
+      // First check if it's a core section (shouldn't be deleted)
+      const section = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.id, id))
+        .limit(1);
+      
+      if (section.length === 0) return false;
+      if (section[0].scope === 'core') {
+        throw new Error("Core sections cannot be deleted");
+      }
+
+      // Delete related values first
+      await db.delete(clientBriefValues).where(eq(clientBriefValues.sectionId, id));
+      
+      // Delete the section
+      const result = await db.delete(clientBriefSections).where(eq(clientBriefSections.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting brief section:", error);
+      throw error;
+    }
+  }
+
+  async reorderBriefSections(sectionIds: string[]): Promise<void> {
+    try {
+      // Update display order for each section
+      for (let i = 0; i < sectionIds.length; i++) {
+        await db.update(clientBriefSections)
+          .set({ displayOrder: i, updatedAt: new Date() })
+          .where(eq(clientBriefSections.id, sectionIds[i]));
+      }
+    } catch (error) {
+      console.error("Error reordering brief sections:", error);
+      throw error;
+    }
+  }
+
+  // Client Brief Values - Hybrid core/custom data
+  async getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>> {
+    try {
+      // Get all sections ordered by display order
+      const sections = await this.listBriefSections();
+      
+      // Get client data for core sections
+      const client = await this.getClient(clientId);
+      
+      // Get custom section values
+      const customValues = await db.select()
+        .from(clientBriefValues)
+        .where(eq(clientBriefValues.clientId, clientId));
+      
+      // Create a map of custom values by sectionId
+      const customValueMap = new Map(
+        customValues.map(cv => [cv.sectionId, cv.value])
+      );
+      
+      // Merge core and custom data
+      return sections.map(section => {
+        let value: string | undefined;
+        
+        if (section.scope === 'core' && client) {
+          // Core sections: get value from client table columns
+          value = client[section.key as keyof Client] as string;
+        } else {
+          // Custom sections: get value from clientBriefValues table
+          value = customValueMap.get(section.id) || undefined;
+        }
+        
+        return {
+          ...section,
+          value
+        };
+      });
+    } catch (error) {
+      console.error("Error getting client brief:", error);
+      return [];
+    }
+  }
+
+  async setClientBriefValue(clientId: string, sectionId: string, value: string): Promise<void> {
+    try {
+      // Get the section to determine if it's core or custom
+      const section = await db.select()
+        .from(clientBriefSections)
+        .where(eq(clientBriefSections.id, sectionId))
+        .limit(1);
+      
+      if (section.length === 0) {
+        throw new Error("Section not found");
+      }
+      
+      if (section[0].scope === 'core') {
+        // Core section: update client table column
+        const updateData = { [section[0].key]: value };
+        await db.update(clients)
+          .set(updateData)
+          .where(eq(clients.id, clientId));
+      } else {
+        // Custom section: upsert into clientBriefValues table
+        const existing = await db.select()
+          .from(clientBriefValues)
+          .where(and(
+            eq(clientBriefValues.clientId, clientId),
+            eq(clientBriefValues.sectionId, sectionId)
+          ))
+          .limit(1);
+        
+        if (existing.length > 0) {
+          // Update existing value
+          await db.update(clientBriefValues)
+            .set({ value, updatedAt: new Date() })
+            .where(and(
+              eq(clientBriefValues.clientId, clientId),
+              eq(clientBriefValues.sectionId, sectionId)
+            ));
+        } else {
+          // Insert new value
+          await db.insert(clientBriefValues).values({
+            clientId,
+            sectionId,
+            value,
+            updatedAt: new Date()
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error setting client brief value:", error);
       throw error;
     }
   }

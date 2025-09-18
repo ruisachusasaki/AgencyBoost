@@ -356,8 +356,35 @@ export const clientHealthScores = pgTable("client_health_scores", {
   }
 }));
 
+// Client Brief Sections - Configuration for dynamic brief sections (core + custom)
+export const clientBriefSections = pgTable("client_brief_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(), // unique slug identifier (e.g., 'briefBackground', 'custom_section_1')
+  title: text("title").notNull(), // display title (e.g., 'Background', 'Custom Section')
+  placeholder: text("placeholder"), // placeholder text for input fields
+  icon: text("icon").notNull().default("FileText"), // lucide-react icon name
+  displayOrder: integer("display_order").notNull().default(0), // order for display
+  isEnabled: boolean("is_enabled").notNull().default(true), // can be disabled without deletion
+  scope: text("scope").notNull().default("custom"), // 'core' (existing 8 sections) or 'custom' (user-created)
+  type: text("type").notNull().default("text"), // 'text' or 'rich_text'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
-
+// Client Brief Values - Stores values for custom sections (core sections use client table columns)
+export const clientBriefValues = pgTable("client_brief_values", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  sectionId: varchar("section_id").notNull().references(() => clientBriefSections.id),
+  value: text("value"), // text content for the section
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate values for same client and section
+  uniqueClientSection: {
+    columns: [table.clientId, table.sectionId],
+    unique: true
+  }
+}));
 
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -892,8 +919,16 @@ export const insertClientHealthScoreSchema = createInsertSchema(clientHealthScor
   updatedAt: true,
 });
 
+export const insertClientBriefSectionSchema = createInsertSchema(clientBriefSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
-
+export const insertClientBriefValueSchema = createInsertSchema(clientBriefValues).omit({
+  id: true,
+  updatedAt: true,
+});
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
@@ -1126,8 +1161,11 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 
+export type ClientBriefSection = typeof clientBriefSections.$inferSelect;
+export type InsertClientBriefSection = z.infer<typeof insertClientBriefSectionSchema>;
 
-
+export type ClientBriefValue = typeof clientBriefValues.$inferSelect;
+export type InsertClientBriefValue = z.infer<typeof insertClientBriefValueSchema>;
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;

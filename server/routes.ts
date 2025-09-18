@@ -33,6 +33,7 @@ import {
   insertTrainingLessonResourceSchema,
   inputClientHealthScoreSchema, insertClientHealthScoreSchema,
   insertSmartListSchema, insertTaskTemplateSchema,
+  insertClientBriefSectionSchema, insertClientBriefValueSchema,
   users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -854,6 +855,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Export error:", error);
       res.status(500).json({ message: "Failed to export clients", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Client Brief Section routes - SECURED
+  app.get("/api/client-brief-sections", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const sections = await appStorage.listBriefSections();
+      res.json(sections);
+    } catch (error) {
+      console.error("Error fetching client brief sections:", error);
+      res.status(500).json({ message: "Failed to fetch client brief sections" });
+    }
+  });
+
+  app.post("/api/client-brief-sections", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validatedData = insertClientBriefSectionSchema.parse(req.body);
+      
+      // Validate key uniqueness before creation
+      if (validatedData.key) {
+        const existingSection = await appStorage.getBriefSectionByKey(validatedData.key);
+        if (existingSection) {
+          return res.status(400).json({ 
+            message: "Section key must be unique", 
+            field: "key",
+            error: "DUPLICATE_KEY"
+          });
+        }
+      }
+      
+      const section = await appStorage.createBriefSection(validatedData);
+
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "client_brief_section",
+        section.id,
+        section.title,
+        userId,
+        `Created new client brief section: ${section.title}`,
+        null,
+        { title: section.title, key: section.key, scope: section.scope },
+        req
+      );
+
+      res.status(201).json(section);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating client brief section:", error);
+      res.status(500).json({ message: "Failed to create client brief section" });
+    }
+  });
+
+  app.put("/api/client-brief-sections/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validatedData = insertClientBriefSectionSchema.partial().parse(req.body);
+      
+      // Check if this is a core section and prevent modification of critical fields
+      const existingSection = await appStorage.getBriefSection(req.params.id);
+      if (!existingSection) {
+        return res.status(404).json({ message: "Client brief section not found" });
+      }
+      
+      if (existingSection.scope === 'core') {
+        // Prevent modification of key and scope for core sections
+        if (validatedData.key && validatedData.key !== existingSection.key) {
+          return res.status(400).json({ message: "Cannot modify key field for core sections" });
+        }
+        if (validatedData.scope && validatedData.scope !== existingSection.scope) {
+          return res.status(400).json({ message: "Cannot modify scope field for core sections" });
+        }
+        // Remove key and scope from update data to be safe
+        const { key, scope, ...safeUpdateData } = validatedData;
+        validatedData = safeUpdateData;
+      }
+
+      const section = await appStorage.updateBriefSection(req.params.id, validatedData);
+
+      if (!section) {
+        return res.status(404).json({ message: "Client brief section not found" });
+      }
+
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "client_brief_section",
+        section.id,
+        section.title,
+        userId,
+        `Updated client brief section: ${section.title}`,
+        null,
+        validatedData,
+        req
+      );
+
+      res.json(section);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating client brief section:", error);
+      res.status(500).json({ message: "Failed to update client brief section" });
+    }
+  });
+
+  app.delete("/api/client-brief-sections/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const success = await appStorage.deleteBriefSection(req.params.id);
+
+      if (!success) {
+        return res.status(404).json({ message: "Client brief section not found" });
+      }
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "client_brief_section",
+        req.params.id,
+        "Client Brief Section",
+        userId,
+        `Deleted client brief section with ID: ${req.params.id}`,
+        null,
+        null,
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Core sections cannot be deleted")) {
+        return res.status(400).json({ message: "Core sections cannot be deleted, only disabled" });
+      }
+      console.error("Error deleting client brief section:", error);
+      res.status(500).json({ message: "Failed to delete client brief section" });
+    }
+  });
+
+  app.put("/api/client-brief-sections/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { sectionIds } = req.body;
+      if (!Array.isArray(sectionIds)) {
+        return res.status(400).json({ message: "sectionIds must be an array" });
+      }
+
+      await appStorage.reorderBriefSections(sectionIds);
+
+      // Log the reorder
+      await createAuditLog(
+        "updated",
+        "client_brief_sections",
+        "reorder",
+        "Client Brief Sections Order",
+        userId,
+        `Reordered client brief sections`,
+        null,
+        { sectionIds },
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error reordering client brief sections:", error);
+      res.status(500).json({ message: "Failed to reorder client brief sections" });
+    }
+  });
+
+  // Client Brief Data routes - Hybrid core/custom data access
+  app.get("/api/clients/:id/brief", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const briefData = await appStorage.getClientBrief(req.params.id);
+      res.json(briefData);
+    } catch (error) {
+      console.error("Error fetching client brief data:", error);
+      res.status(500).json({ message: "Failed to fetch client brief data" });
+    }
+  });
+
+  app.put("/api/clients/:id/brief/:sectionId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { value } = req.body;
+      if (typeof value !== 'string') {
+        return res.status(400).json({ message: "Value must be a string" });
+      }
+
+      await appStorage.setClientBriefValue(req.params.id, req.params.sectionId, value);
+
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "client_brief_value",
+        `${req.params.id}-${req.params.sectionId}`,
+        "Client Brief Value",
+        userId,
+        `Updated client brief value for client ${req.params.id}, section ${req.params.sectionId}`,
+        null,
+        { clientId: req.params.id, sectionId: req.params.sectionId, value },
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Section not found")) {
+        return res.status(404).json({ message: "Client brief section not found" });
+      }
+      console.error("Error setting client brief value:", error);
+      res.status(500).json({ message: "Failed to set client brief value" });
     }
   });
 
