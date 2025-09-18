@@ -3,6 +3,28 @@ import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uu
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// SECURITY: UUID generation with fallback for maximum compatibility
+// Uses gen_random_uuid() if available, otherwise falls back to Node.js crypto.randomUUID()
+const uuidDefault = sql`COALESCE(
+  (SELECT gen_random_uuid()), 
+  ('${sql.placeholder('fallback_uuid')}'::uuid)
+)`;
+
+// Helper function to ensure UUID generation always works
+function getSecureUUID() {
+  try {
+    // Try to use crypto.randomUUID for fallback
+    return crypto.randomUUID();
+  } catch {
+    // Ultimate fallback - generate a UUID-like string
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+}
+
 // Users table for CRM users/admins
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

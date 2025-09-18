@@ -76,6 +76,7 @@ import {
   normalizeUserIdForDb
 } from "./auth";
 
+
 // SECURE Helper function to create audit logs - NO HARDCODED FALLBACKS
 async function createAuditLog(
   action: "created" | "updated" | "deleted",
@@ -89,12 +90,15 @@ async function createAuditLog(
   req?: any
 ) {
   try {
+    // SECURITY FIX: Convert "system" userId to proper UUID for database
+    const normalizedUserId = userId === "system" ? await normalizeUserIdForDb(userId) : userId;
+    
     await db.insert(auditLogs).values({
       action,
       entityType,
       entityId,
       entityName,
-      userId,
+      userId: normalizedUserId,
       details,
       oldValues: oldValues ? oldValues : null,
       newValues: newValues ? newValues : null,
@@ -117,6 +121,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
   });
 
+  // SECURITY: Rate limiting for login attempts - in-memory store
+  const loginAttempts = new Map<string, { count: number; firstAttempt: number; blocked: number }>();
+  const MAX_LOGIN_ATTEMPTS = 5;
+  const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+  const BLOCK_DURATION = 15 * 60 * 1000; // 15 minutes block
+  
+  function isRateLimited(ip: string): boolean {
+    const now = Date.now();
+    const attempt = loginAttempts.get(ip);
+    
+    if (!attempt) {
+      return false;
+    }
+    
+    // If currently blocked, check if block period expired
+    if (attempt.blocked && (now - attempt.blocked) < BLOCK_DURATION) {
+      return true;
+    }
+    
+    // If block period expired, reset
+    if (attempt.blocked && (now - attempt.blocked) >= BLOCK_DURATION) {
+      loginAttempts.delete(ip);
+      return false;
+    }
+    
+    // If window expired, reset
+    if ((now - attempt.firstAttempt) >= RATE_LIMIT_WINDOW) {
+      loginAttempts.delete(ip);
+      return false;
+    }
+    
+    return attempt.count >= MAX_LOGIN_ATTEMPTS;
+  }
+  
+  function recordLoginAttempt(ip: string, success: boolean = false) {
+    const now = Date.now();
+    const attempt = loginAttempts.get(ip);
+    
+    if (success && attempt) {
+      // Clear attempts on successful login
+      loginAttempts.delete(ip);
+      return;
+    }
+    
+    if (!attempt) {
+      loginAttempts.set(ip, { count: 1, firstAttempt: now, blocked: 0 });
+      return;
+    }
+    
+    // Increment failed attempt count
+    attempt.count++;
+    
+    // If exceeded max attempts, block the IP
+    if (attempt.count >= MAX_LOGIN_ATTEMPTS) {
+      attempt.blocked = now;
+      console.warn(`SECURITY: IP ${ip} blocked for ${BLOCK_DURATION/1000/60} minutes due to ${MAX_LOGIN_ATTEMPTS} failed login attempts`);
+    }
+  }
+
   // ===== AUTHENTICATION ROUTES =====
   
   // Login schema
@@ -125,31 +188,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     password: z.string().min(1)
   });
 
-  // POST /api/auth/login - Authenticate user and create session
+  // POST /api/auth/login - Authenticate user and create session (HARDENED)
   app.post("/api/auth/login", async (req, res) => {
+    const clientIp = req.ip || req.connection?.remoteAddress || "unknown";
+    const userAgent = req.get("User-Agent") || "Unknown";
+    
     try {
+      // SECURITY: Check rate limiting first
+      if (isRateLimited(clientIp)) {
+        console.warn(`SECURITY: Rate-limited login attempt from IP: ${clientIp}`);
+        await createAuditLog(
+          "created",
+          "login_security",
+          "rate-limit-block",
+          "Rate Limited Login Attempt",
+          "system",
+          `Rate-limited login attempt from IP: ${clientIp}`,
+          null,
+          { ip: clientIp, userAgent },
+          req
+        );
+        return res.status(429).json({ 
+          error: "Too many login attempts",
+          message: "Please wait 15 minutes before trying again"
+        });
+      }
+      
       const { email, password } = loginSchema.parse(req.body);
+      
+      // SECURITY: Validate input parameters
+      if (!email || !password) {
+        recordLoginAttempt(clientIp, false);
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
       
       // Find auth user by email
       const authUser = await appStorage.getAuthUserByEmail(email);
       if (!authUser) {
+        recordLoginAttempt(clientIp, false);
+        console.warn(`SECURITY: Login attempt for non-existent user: ${email} from IP: ${clientIp}`);
+        await createAuditLog(
+          "created",
+          "login_security",
+          "invalid-user",
+          "Login Attempt for Non-existent User",
+          "system",
+          `Login attempt for non-existent user: ${email} from IP: ${clientIp}`,
+          null,
+          { email, ip: clientIp, userAgent },
+          req
+        );
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
       // Check if auth user is active
       if (!authUser.isActive) {
+        recordLoginAttempt(clientIp, false);
+        console.warn(`SECURITY: Login attempt for deactivated user: ${email} from IP: ${clientIp}`);
+        await createAuditLog(
+          "created",
+          "login_security",
+          "deactivated-user",
+          "Login Attempt for Deactivated User",
+          "system",
+          `Login attempt for deactivated user: ${email} from IP: ${clientIp}`,
+          null,
+          { email, ip: clientIp, userAgent },
+          req
+        );
         return res.status(401).json({ error: "Account is deactivated" });
       }
       
-      // Verify password
-      const passwordMatches = await bcrypt.compare(password, authUser.passwordHash);
+      // SECURITY: Guard against null/empty passwordHash before bcrypt.compare
+      if (!authUser.passwordHash || authUser.passwordHash.trim() === '') {
+        recordLoginAttempt(clientIp, false);
+        console.error(`SECURITY: User ${email} has null/empty password hash - potential data corruption`);
+        await createAuditLog(
+          "created",
+          "login_security",
+          "null-password-hash",
+          "Null Password Hash Detected",
+          "system",
+          `User ${email} has null/empty password hash`,
+          null,
+          { email, ip: clientIp, userAgent },
+          req
+        );
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      // Verify password with enhanced error handling
+      let passwordMatches = false;
+      try {
+        passwordMatches = await bcrypt.compare(password, authUser.passwordHash);
+      } catch (bcryptError) {
+        recordLoginAttempt(clientIp, false);
+        console.error(`SECURITY: bcrypt.compare failed for user ${email}:`, bcryptError);
+        await createAuditLog(
+          "created",
+          "login_security",
+          "bcrypt-error",
+          "Password Verification Error",
+          "system",
+          `bcrypt.compare failed for user ${email}: ${bcryptError instanceof Error ? bcryptError.message : "Unknown error"}`,
+          null,
+          { email, ip: clientIp, userAgent, error: bcryptError instanceof Error ? bcryptError.message : "Unknown error" },
+          req
+        );
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
       if (!passwordMatches) {
+        recordLoginAttempt(clientIp, false);
+        console.warn(`SECURITY: Failed login attempt for user: ${email} from IP: ${clientIp}`);
+        await createAuditLog(
+          "created",
+          "login_security",
+          "invalid-password",
+          "Failed Login Attempt",
+          "system",
+          `Failed login attempt for user: ${email} from IP: ${clientIp}`,
+          null,
+          { email, ip: clientIp, userAgent },
+          req
+        );
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
       // Get staff information
       const staffUser = await db.select().from(staff).where(eq(staff.id, authUser.userId)).limit(1);
       if (!staffUser.length) {
+        recordLoginAttempt(clientIp, false);
+        console.error(`SECURITY: Auth user ${authUser.id} has no corresponding staff record`);
         return res.status(401).json({ error: "User not found" });
       }
       
@@ -178,6 +348,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update last login
       await appStorage.updateLastLogin(authUser.id);
       
+      // SECURITY: Record successful login and clear rate limiting
+      recordLoginAttempt(clientIp, true);
+      console.log(`SECURITY: Successful login for user: ${email} from IP: ${clientIp}`);
+      await createAuditLog(
+        "created",
+        "login_security",
+        "successful-login",
+        "Successful Login",
+        authUser.userId,
+        `Successful login for user: ${email} from IP: ${clientIp}`,
+        null,
+        { email, ip: clientIp, userAgent },
+        req
+      );
+      
       res.json({ 
         success: true, 
         user: {
@@ -190,11 +375,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
+      // SECURITY: Record login errors and increment rate limiting
+      recordLoginAttempt(clientIp, false);
       console.error("Login error:", error);
+      
+      await createAuditLog(
+        "created",
+        "login_security",
+        "login-error",
+        "Login System Error",
+        "system",
+        `Login system error from IP: ${clientIp} - ${error instanceof Error ? error.message : "Unknown error"}`,
+        null,
+        { ip: clientIp, userAgent, error: error instanceof Error ? error.message : "Unknown error" },
+        req
+      );
+      
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid request format" });
       }
-      res.status(500).json({ error: "Login failed" });
+      
+      // SECURITY: Don't expose internal errors, return generic message
+      return res.status(401).json({ error: "Invalid credentials" });
     }
   });
 
@@ -242,19 +444,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bootstrap route schema
+  // Bootstrap route schema - requires secure token
   const bootstrapSchema = z.object({
+    token: z.string().min(1),
     password: z.string().min(8).max(100)
   });
 
-  // GET /api/auth/bootstrap - Check if Joe needs to set initial password
+  // GET /api/auth/bootstrap - Check if Joe needs to set initial password (SECURED)
   app.get("/api/auth/bootstrap", async (req, res) => {
     try {
+      // SECURITY: Require bootstrap token for status check
+      const providedToken = req.query.token as string;
+      const expectedToken = process.env.BOOTSTRAP_TOKEN;
+      
+      if (!expectedToken) {
+        console.error("SECURITY WARNING: BOOTSTRAP_TOKEN not configured");
+        return res.status(503).json({ error: "Bootstrap not available - contact administrator" });
+      }
+      
+      if (!providedToken || providedToken !== expectedToken) {
+        console.error("SECURITY: Unauthorized bootstrap status check attempt from IP:", req.ip);
+        return res.status(401).json({ error: "Unauthorized access to bootstrap" });
+      }
+      
       const joeUserId = "030e554b-c0bc-446e-9538-e351f3d17b10";
       const authUser = await db.select().from(authUsers).where(eq(authUsers.userId, joeUserId)).limit(1);
       
+      // SECURITY: If bootstrap already completed, don't allow further access
+      if (authUser.length > 0) {
+        console.log("SECURITY: Bootstrap already completed, denying access");
+        return res.status(410).json({ 
+          needsBootstrap: false,
+          message: "Bootstrap already completed" 
+        });
+      }
+      
       res.json({ 
-        needsBootstrap: authUser.length === 0 
+        needsBootstrap: true
       });
       
     } catch (error) {
@@ -263,33 +489,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/auth/bootstrap - Set Joe's initial password
+
+  // POST /api/auth/bootstrap - Set Joe's initial password (SECURED)
   app.post("/api/auth/bootstrap", async (req, res) => {
     try {
-      const { password } = bootstrapSchema.parse(req.body);
+      const { token, password } = bootstrapSchema.parse(req.body);
       const joeUserId = "030e554b-c0bc-446e-9538-e351f3d17b10";
       const joeEmail = "joe@themediaoptimizers.com";
       
-      // Debug: Check storage object
-      console.log("appStorage import result:", typeof appStorage);
-      if (appStorage) {
-        console.log("appStorage object:", appStorage);
-        console.log("appStorage methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(appStorage)));
-        console.log("Has getAuthUserByEmail?", typeof appStorage.getAuthUserByEmail);
-      } else {
-        console.log("ERROR: appStorage is undefined - storage module failed to load");
+      // SECURITY: Verify bootstrap token
+      const expectedToken = process.env.BOOTSTRAP_TOKEN;
+      if (!expectedToken) {
+        console.error("SECURITY WARNING: BOOTSTRAP_TOKEN not configured");
+        return res.status(503).json({ error: "Bootstrap not available - contact administrator" });
       }
       
-      // Check if auth user already exists
+      if (token !== expectedToken) {
+        console.error("SECURITY: Invalid bootstrap token attempt from IP:", req.ip);
+        // Create security audit log
+        await createAuditLog(
+          "created",
+          "bootstrap_security",
+          "bootstrap-invalid-token",
+          "Invalid Bootstrap Token Attempt",
+          "system", // System-level security event
+          `Invalid bootstrap token attempt from IP: ${req.ip}`,
+          null,
+          { ip: req.ip, userAgent: req.get("User-Agent") },
+          req
+        );
+        return res.status(401).json({ error: "Invalid bootstrap token" });
+      }
+      
+      // SECURITY: Check if auth user already exists (auto-disable after first use)
       const existingAuthUser = await appStorage.getAuthUserByEmail(joeEmail);
       if (existingAuthUser) {
-        return res.status(400).json({ error: "Bootstrap already completed" });
+        console.log("SECURITY: Bootstrap already completed, denying access");
+        // Create security audit log for attempted re-bootstrap
+        await createAuditLog(
+          "created",
+          "bootstrap_security",
+          "bootstrap-already-completed",
+          "Attempted Re-Bootstrap",
+          "system",
+          `Attempted bootstrap after completion from IP: ${req.ip}`,
+          null,
+          { ip: req.ip, userAgent: req.get("User-Agent") },
+          req
+        );
+        return res.status(410).json({ error: "Bootstrap already completed" });
       }
       
-      // Hash password
+      // Hash password with high cost factor for admin account
       const passwordHash = await bcrypt.hash(password, 12);
       
-      // Create auth user
+      // Create auth user using appStorage
       const authUser = await appStorage.createAuthUser({
         userId: joeUserId,
         email: joeEmail,
@@ -297,13 +551,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true
       });
       
+      // SECURITY: Create audit log for successful bootstrap
+      await createAuditLog(
+        "created",
+        "bootstrap_security",
+        "bootstrap-success",
+        "Bootstrap Completed Successfully",
+        joeUserId,
+        `Bootstrap completed successfully for admin user: ${joeEmail}`,
+        null,
+        { userId: joeUserId, email: joeEmail },
+        req
+      );
+      
+      console.log("SECURITY: Bootstrap completed successfully - endpoint auto-disabled");
+      
       res.json({ 
         success: true,
-        message: "Initial password set successfully"
+        message: "Initial password set successfully - bootstrap is now disabled"
       });
       
     } catch (error) {
       console.error("Bootstrap error:", error);
+      
+      // Create audit log for bootstrap failures
+      await createAuditLog(
+        "created",
+        "bootstrap_security",
+        "bootstrap-error",
+        "Bootstrap Error",
+        "system",
+        `Bootstrap failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        null,
+        { ip: req.ip, error: error instanceof Error ? error.message : "Unknown error" },
+        req
+      );
+      
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
           error: "Invalid request format",

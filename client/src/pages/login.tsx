@@ -63,10 +63,7 @@ export default function LoginPage() {
 
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: (data: LoginFormData) => apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    mutationFn: (data: LoginFormData) => apiRequest('POST', '/api/auth/login', data),
     onSuccess: (response) => {
       toast({
         title: "Welcome!",
@@ -89,10 +86,7 @@ export default function LoginPage() {
 
   // Bootstrap mutation
   const bootstrapMutation = useMutation({
-    mutationFn: (data: BootstrapFormData) => apiRequest('/api/auth/bootstrap', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    mutationFn: (data: BootstrapFormData) => apiRequest('POST', '/api/auth/bootstrap', data),
     onSuccess: () => {
       toast({
         title: "Success!",

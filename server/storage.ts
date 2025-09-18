@@ -2092,53 +2092,6 @@ export class MemStorage implements IStorage {
     return this.clients.delete(id);
   }
 
-  // Authentication methods
-  async getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
-    const authUserArray = Array.from(this.authUsers.values());
-    return authUserArray.find(user => user.email.toLowerCase() === email.toLowerCase());
-  }
-
-  async createAuthUser(authUser: InsertAuthUser): Promise<AuthUser> {
-    const id = randomUUID();
-    const now = new Date();
-    const newAuthUser: AuthUser = {
-      id,
-      email: authUser.email.toLowerCase(),
-      passwordHash: authUser.passwordHash || null,
-      firstName: authUser.firstName || null,
-      lastName: authUser.lastName || null,
-      isActive: authUser.isActive !== undefined ? authUser.isActive : true,
-      lastLogin: authUser.lastLogin || null,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.authUsers.set(id, newAuthUser);
-    return newAuthUser;
-  }
-
-  async updateLastLogin(authUserId: string): Promise<void> {
-    const authUser = this.authUsers.get(authUserId);
-    if (authUser) {
-      const updatedUser = {
-        ...authUser,
-        lastLogin: new Date(),
-        updatedAt: new Date()
-      };
-      this.authUsers.set(authUserId, updatedUser);
-    }
-  }
-
-  async setPasswordHash(authUserId: string, passwordHash: string): Promise<void> {
-    const authUser = this.authUsers.get(authUserId);
-    if (authUser) {
-      const updatedUser = {
-        ...authUser,
-        passwordHash,
-        updatedAt: new Date()
-      };
-      this.authUsers.set(authUserId, updatedUser);
-    }
-  }
 
 
 
@@ -4111,11 +4064,63 @@ export class MemStorage implements IStorage {
       this.clientBriefValues.set(briefValueKey, briefValue);
     }
   }
+
 }
 
 // Database storage implementation using PostgreSQL
 
 export class DbStorage implements IStorage {
+  
+  constructor() {
+    // Initialize auth methods as instance properties to ensure accessibility
+    this.getAuthUserByEmail = async (email: string): Promise<AuthUser | undefined> => {
+      try {
+        const result = await db.select().from(authUsers).where(eq(authUsers.email, email.toLowerCase()));
+        return result[0];
+      } catch (error) {
+        console.error("Error fetching auth user:", error);
+        return undefined;
+      }
+    };
+
+    this.createAuthUser = async (authUser: InsertAuthUser): Promise<AuthUser> => {
+      try {
+        const result = await db.insert(authUsers).values({
+          ...authUser,
+          email: authUser.email.toLowerCase(),
+          id: sql`gen_random_uuid()`,
+          createdAt: new Date(),
+        }).returning();
+        return result[0];
+      } catch (error) {
+        console.error("Error creating auth user:", error);
+        throw error;
+      }
+    };
+
+    this.updateLastLogin = async (authUserId: string): Promise<void> => {
+      try {
+        await db.update(authUsers)
+          .set({ lastLogin: new Date() })
+          .where(eq(authUsers.id, authUserId));
+      } catch (error) {
+        console.error("Error updating last login:", error);
+        throw error;
+      }
+    };
+
+    this.setPasswordHash = async (authUserId: string, passwordHash: string): Promise<void> => {
+      try {
+        await db.update(authUsers)
+          .set({ passwordHash })
+          .where(eq(authUsers.id, authUserId));
+      } catch (error) {
+        console.error("Error setting password hash:", error);
+        throw error;
+      }
+    };
+  }
+
   // Clients
   async getClients(): Promise<Client[]> {
     try {
@@ -4469,9 +4474,8 @@ export class DbStorage implements IStorage {
     }).from(clients).orderBy(clients.createdAt);
   }
 
-  // For now, delegate other methods to memory storage until we need them
-  // This allows the system to work while we migrate clients to database
-  private memStorage = new MemStorage();
+  // SECURITY: MemStorage fallback REMOVED for security compliance
+  // All methods must use database storage for data consistency and security
 
   // Time Tracking Reports - Database Implementation
   async getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData> {
@@ -5284,33 +5288,122 @@ export class DbStorage implements IStorage {
   async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> { return this.memStorage.updateProduct(id, product); }
   async deleteProduct(id: string): Promise<boolean> { return this.memStorage.deleteProduct(id); }
 
-  // Audit Logs
-  async getAuditLogs(): Promise<AuditLog[]> { return this.memStorage.getAuditLogs(); }
-  async getAuditLog(id: string): Promise<AuditLog | undefined> { return this.memStorage.getAuditLog(id); }
-  async getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]> { return this.memStorage.getAuditLogsByEntity(entityType, entityId); }
-  async getAuditLogsByUser(userId: string): Promise<AuditLog[]> { return this.memStorage.getAuditLogsByUser(userId); }
-  async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> { return this.memStorage.createAuditLog(auditLog); }
+  // SECURITY: Audit Logs - MUST use database for security compliance
+  async getAuditLogs(): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+  }
+  async getAuditLog(id: string): Promise<AuditLog | undefined> {
+    const result = await db.select().from(auditLogs).where(eq(auditLogs.id, id)).limit(1);
+    return result[0];
+  }
+  async getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
+      .orderBy(desc(auditLogs.createdAt));
+  }
+  async getAuditLogsByUser(userId: string): Promise<AuditLog[]> {
+    return await db.select().from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.createdAt));
+  }
+  async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> {
+    const [newAuditLog] = await db.insert(auditLogs).values({
+      id: randomUUID(),
+      ...auditLog,
+      createdAt: new Date()
+    }).returning();
+    return newAuditLog;
+  }
 
-  // Roles and Permissions  
-  async getRoles(): Promise<Role[]> { return this.memStorage.getRoles(); }
-  async getRole(id: string): Promise<Role | undefined> { return this.memStorage.getRole(id); }
-  async createRole(role: InsertRole): Promise<Role> { return this.memStorage.createRole(role); }
-  async updateRole(id: string, role: Partial<InsertRole>): Promise<Role | undefined> { return this.memStorage.updateRole(id, role); }
-  async deleteRole(id: string): Promise<boolean> { return this.memStorage.deleteRole(id); }
+  // SECURITY: Roles and Permissions - MUST use database for security compliance
+  async getRoles(): Promise<Role[]> {
+    return await db.select().from(roles).orderBy(roles.name);
+  }
+  async getRole(id: string): Promise<Role | undefined> {
+    const result = await db.select().from(roles).where(eq(roles.id, id)).limit(1);
+    return result[0];
+  }
+  async createRole(role: InsertRole): Promise<Role> {
+    const [newRole] = await db.insert(roles).values({
+      id: randomUUID(),
+      ...role,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newRole;
+  }
+  async updateRole(id: string, role: Partial<InsertRole>): Promise<Role | undefined> {
+    const [updatedRole] = await db.update(roles)
+      .set({ ...role, updatedAt: new Date() })
+      .where(eq(roles.id, id))
+      .returning();
+    return updatedRole;
+  }
+  async deleteRole(id: string): Promise<boolean> {
+    const result = await db.delete(roles).where(eq(roles.id, id));
+    return result.rowCount > 0;
+  }
 
-  async getPermissions(): Promise<Permission[]> { return this.memStorage.getPermissions(); }
-  async getPermission(id: string): Promise<Permission | undefined> { return this.memStorage.getPermission(id); }
-  async createPermission(permission: InsertPermission): Promise<Permission> { return this.memStorage.createPermission(permission); }
-  async updatePermission(id: string, permission: Partial<InsertPermission>): Promise<Permission | undefined> { return this.memStorage.updatePermission(id, permission); }
-  async deletePermission(id: string): Promise<boolean> { return this.memStorage.deletePermission(id); }
+  async getPermissions(): Promise<Permission[]> {
+    return await db.select().from(permissions).orderBy(permissions.module, permissions.roleId);
+  }
+  async getPermission(id: string): Promise<Permission | undefined> {
+    const result = await db.select().from(permissions).where(eq(permissions.id, id)).limit(1);
+    return result[0];
+  }
+  async createPermission(permission: InsertPermission): Promise<Permission> {
+    const [newPermission] = await db.insert(permissions).values({
+      id: randomUUID(),
+      ...permission,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newPermission;
+  }
+  async updatePermission(id: string, permission: Partial<InsertPermission>): Promise<Permission | undefined> {
+    const [updatedPermission] = await db.update(permissions)
+      .set({ ...permission, updatedAt: new Date() })
+      .where(eq(permissions.id, id))
+      .returning();
+    return updatedPermission;
+  }
+  async deletePermission(id: string): Promise<boolean> {
+    const result = await db.delete(permissions).where(eq(permissions.id, id));
+    return result.rowCount > 0;
+  }
 
-  async getUserRoles(): Promise<UserRole[]> { return this.memStorage.getUserRoles(); }
-  async getUserRole(id: string): Promise<UserRole | undefined> { return this.memStorage.getUserRole(id); }
-  async getUserRolesByUser(userId: string): Promise<UserRole[]> { return this.memStorage.getUserRolesByUser(userId); }
-  async getUserRolesByRole(roleId: string): Promise<UserRole[]> { return this.memStorage.getUserRolesByRole(roleId); }
-  async createUserRole(userRole: InsertUserRole): Promise<UserRole> { return this.memStorage.createUserRole(userRole); }
-  async updateUserRole(id: string, userRole: Partial<InsertUserRole>): Promise<UserRole | undefined> { return this.memStorage.updateUserRole(id, userRole); }
-  async deleteUserRole(id: string): Promise<boolean> { return this.memStorage.deleteUserRole(id); }
+  async getUserRoles(): Promise<UserRole[]> {
+    return await db.select().from(userRoles).orderBy(userRoles.userId, userRoles.roleId);
+  }
+  async getUserRole(id: string): Promise<UserRole | undefined> {
+    const result = await db.select().from(userRoles).where(eq(userRoles.id, id)).limit(1);
+    return result[0];
+  }
+  async getUserRolesByUser(userId: string): Promise<UserRole[]> {
+    return await db.select().from(userRoles).where(eq(userRoles.userId, userId));
+  }
+  async getUserRolesByRole(roleId: string): Promise<UserRole[]> {
+    return await db.select().from(userRoles).where(eq(userRoles.roleId, roleId));
+  }
+  async createUserRole(userRole: InsertUserRole): Promise<UserRole> {
+    const [newUserRole] = await db.insert(userRoles).values({
+      id: randomUUID(),
+      ...userRole,
+      createdAt: new Date()
+    }).returning();
+    return newUserRole;
+  }
+  async updateUserRole(id: string, userRole: Partial<InsertUserRole>): Promise<UserRole | undefined> {
+    const [updatedUserRole] = await db.update(userRoles)
+      .set({ ...userRole, updatedAt: new Date() })
+      .where(eq(userRoles.id, id))
+      .returning();
+    return updatedUserRole;
+  }
+  async deleteUserRole(id: string): Promise<boolean> {
+    const result = await db.delete(userRoles).where(eq(userRoles.id, id));
+    return result.rowCount > 0;
+  }
 
   // Notifications
   async getNotificationSettings(): Promise<NotificationSettings[]> { return this.memStorage.getNotificationSettings(); }
@@ -6262,52 +6355,9 @@ class MinimalStorage implements Partial<IStorage> {
     }
   }
 
-  // Authentication methods
-  async getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
-    try {
-      const result = await db.select().from(authUsers).where(eq(authUsers.email, email.toLowerCase()));
-      return result[0];
-    } catch (error) {
-      console.error("Error fetching auth user:", error);
-      return undefined;
-    }
-  }
-
-  async createAuthUser(authUser: InsertAuthUser): Promise<AuthUser> {
-    try {
-      const result = await db.insert(authUsers).values({
-        ...authUser,
-        email: authUser.email.toLowerCase(),
-        id: sql`gen_random_uuid()`,
-        createdAt: new Date(),
-      }).returning();
-      return result[0];
-    } catch (error) {
-      console.error("Error creating auth user:", error);
-      throw error;
-    }
-  }
-
-  async updateLastLogin(authUserId: string): Promise<void> {
-    try {
-      await db.update(authUsers)
-        .set({ lastLogin: new Date() })
-        .where(eq(authUsers.id, authUserId));
-    } catch (error) {
-      console.error("Error updating last login:", error);
-      throw error;
-    }
-  }
-
-  async setPasswordHash(authUserId: string, passwordHash: string): Promise<void> {
-    try {
-      await db.update(authUsers)
-        .set({ passwordHash })
-        .where(eq(authUsers.id, authUserId));
-    } catch (error) {
-      console.error("Error setting password hash:", error);
-      throw error;
-    }
+  // Test method to debug class loading
+  testMethod(): string {
+    return "Test method works!";
   }
 
 }
