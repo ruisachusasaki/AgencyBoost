@@ -2329,6 +2329,33 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Delete appointment mutation
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const response = await fetch(`/api/appointments/${appointmentId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete appointment');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+      toast({
+        title: "Success",
+        description: "Appointment deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete appointment",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create comment mutation
   const createCommentMutation = useMutation({
     mutationFn: async ({ taskId, content, mentions }: { taskId: string; content: string; mentions: string[] }) => {
@@ -4615,8 +4642,8 @@ export default function EnhancedClientDetail() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    // TODO: Implement edit appointment functionality
-                                    console.log('Edit appointment:', appointment.id);
+                                    setEditingAppointment(appointment);
+                                    setIsAppointmentModalOpen(true);
                                   }}
                                   className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
                                   data-testid={`button-edit-appointment-${appointment.id}`}
@@ -4628,8 +4655,7 @@ export default function EnhancedClientDetail() {
                                   size="sm"
                                   onClick={() => {
                                     if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
-                                      // TODO: Implement delete appointment functionality
-                                      console.log('Delete appointment:', appointment.id);
+                                      deleteAppointmentMutation.mutate(appointment.id);
                                     }
                                   }}
                                   className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
@@ -4749,14 +4775,22 @@ export default function EnhancedClientDetail() {
       {/* Appointment Modal */}
       <AppointmentModal
         open={isAppointmentModalOpen}
-        onOpenChange={setIsAppointmentModalOpen}
+        onOpenChange={(open) => {
+          setIsAppointmentModalOpen(open);
+          if (!open) {
+            setEditingAppointment(null);
+          }
+        }}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
           setIsAppointmentModalOpen(false);
+          setEditingAppointment(null);
         }}
         clientId={clientId!}
         clientName={client?.name}
         clientEmail={client?.email}
+        appointmentId={editingAppointment?.id}
+        existingAppointment={editingAppointment}
       />
     </div>
   );
