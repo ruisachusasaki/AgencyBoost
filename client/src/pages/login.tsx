@@ -23,6 +23,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 // Bootstrap form schema
 const bootstrapSchema = z.object({
+  token: z.string().min(1, "Bootstrap token is required"),
   password: z.string()
     .min(8, "Password must be at least 8 characters long")
     .max(100, "Password must be less than 100 characters")
@@ -40,7 +41,7 @@ export default function LoginPage() {
   
   // Check if bootstrap is needed
   const { data: bootstrapStatus, isLoading: isCheckingBootstrap } = useQuery({
-    queryKey: ['/api/auth/bootstrap'],
+    queryKey: ['/api/auth/bootstrap-status'],
     retry: 1
   });
 
@@ -57,6 +58,7 @@ export default function LoginPage() {
   const bootstrapForm = useForm<BootstrapFormData>({
     resolver: zodResolver(bootstrapSchema),
     defaultValues: {
+      token: "",
       password: ""
     }
   });
@@ -140,7 +142,23 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={bootstrapForm.handleSubmit(onBootstrapSubmit)} className="space-y-4">
               <div>
-                <Label htmlFor="bootstrap-password">Password</Label>
+                <Label htmlFor="bootstrap-token">Bootstrap Token</Label>
+                <Input
+                  id="bootstrap-token"
+                  type="password"
+                  placeholder="Enter your bootstrap token"
+                  data-testid="input-bootstrap-token"
+                  {...bootstrapForm.register("token")}
+                />
+                {bootstrapForm.formState.errors.token && (
+                  <p className="text-sm text-red-600 mt-1" data-testid="error-bootstrap-token">
+                    {bootstrapForm.formState.errors.token.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="bootstrap-password">New Password</Label>
                 <div className="relative">
                   <Input
                     id="bootstrap-password"

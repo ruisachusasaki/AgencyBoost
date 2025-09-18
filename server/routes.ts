@@ -450,6 +450,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     password: z.string().min(8).max(100)
   });
 
+  // GET /api/auth/bootstrap-status - Public endpoint to check if bootstrap is needed (NO TOKEN REQUIRED)
+  app.get("/api/auth/bootstrap-status", async (req, res) => {
+    try {
+      const joeUserId = "030e554b-c0bc-446e-9538-e351f3d17b10";
+      const authUser = await db.select().from(authUsers).where(eq(authUsers.userId, joeUserId)).limit(1);
+      
+      // Check if bootstrap token is configured
+      const expectedToken = process.env.BOOTSTRAP_TOKEN;
+      if (!expectedToken) {
+        console.error("SECURITY WARNING: BOOTSTRAP_TOKEN not configured");
+        return res.json({ 
+          needsBootstrap: false,
+          error: "Bootstrap not available - contact administrator" 
+        });
+      }
+      
+      // If no auth user exists for Joe, bootstrap is needed
+      const needsBootstrap = authUser.length === 0;
+      
+      res.json({ 
+        needsBootstrap
+      });
+      
+    } catch (error) {
+      console.error("Bootstrap status check error:", error);
+      res.status(500).json({ error: "Failed to check bootstrap status" });
+    }
+  });
+
   // GET /api/auth/bootstrap - Check if Joe needs to set initial password (SECURED)
   app.get("/api/auth/bootstrap", async (req, res) => {
     try {
