@@ -918,7 +918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const validatedData = insertClientBriefSectionSchema.partial().parse(req.body);
+      let validatedData = insertClientBriefSectionSchema.partial().parse(req.body);
       
       // Check if this is a core section and prevent modification of critical fields
       const existingSection = await appStorage.getBriefSection(req.params.id);
