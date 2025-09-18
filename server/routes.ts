@@ -6832,14 +6832,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const [updatedStaff] = await db
+      // Two-step approach to avoid Drizzle returning() bug
+      const [result] = await db
         .update(staff)
         .set({
           ...cleanedBody,
           updatedAt: new Date()
         })
         .where(eq(staff.id, req.params.id))
-        .returning(getTableColumns(staff));
+        .returning({ id: staff.id });
+      
+      if (!result) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      
+      // Get the updated record
+      const [updatedStaff] = await db
+        .select()
+        .from(staff)
+        .where(eq(staff.id, result.id));
       
       if (!updatedStaff) {
         return res.status(404).json({ message: "Staff member not found" });
