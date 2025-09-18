@@ -4551,15 +4551,49 @@ export default function EnhancedClientDetail() {
                         size="sm" 
                         variant="outline"
                         onClick={() => setIsAppointmentModalOpen(true)}
+                        data-testid="button-add-appointment"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-sm">No appointments scheduled</p>
-                      <p className="text-xs text-gray-400">Schedule an appointment to get started</p>
-                    </div>
+                    {appointmentsLoading ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-sm">Loading appointments...</div>
+                      </div>
+                    ) : clientAppointmentsData && clientAppointmentsData.length > 0 ? (
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {clientAppointmentsData.map((appointment: any) => (
+                          <div key={appointment.id} className="p-3 border border-gray-200 rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm text-gray-900">
+                                  {appointment.title}
+                                </h4>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                  {appointment.date && (
+                                    <span>Date: {new Date(appointment.date).toLocaleDateString()}</span>
+                                  )}
+                                  {appointment.time && (
+                                    <span>Time: {appointment.time}</span>
+                                  )}
+                                </div>
+                                {appointment.description && (
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {appointment.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm">No appointments scheduled</p>
+                        <p className="text-xs text-gray-400">Schedule an appointment to get started</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -4592,6 +4626,19 @@ export default function EnhancedClientDetail() {
           </TabsContent>
 
       </Tabs>
+      
+      {/* Appointment Modal */}
+      {isAppointmentModalOpen && (
+        <AppointmentModal
+          isOpen={isAppointmentModalOpen}
+          onClose={() => setIsAppointmentModalOpen(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+            setIsAppointmentModalOpen(false);
+          }}
+          clientId={clientId!}
+        />
+      )}
     </div>
   );
 };
