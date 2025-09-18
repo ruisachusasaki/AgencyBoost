@@ -10840,22 +10840,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Duplicate route removed - consolidated into the main objects route above
 
-  // Temporary auth endpoint for demo purposes (returns admin user)
+  // Get current authenticated user data
   app.get("/api/auth/current-user", requireAuth(), async (req, res) => {
     try {
       // Get authenticated user with proper validation
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      // Return current user data based on session
-      const mockUser = {
-        id: userId,
-        role: "Admin",
-        firstName: "System",
-        lastName: "Administrator"
-      };
-      res.json(mockUser);
+      // Get actual user data from database
+      const userData = await db.select({
+        id: staff.id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email,
+        role: staff.role
+      }).from(staff).where(eq(staff.id, userId)).limit(1);
+      
+      if (userData.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json(userData[0]);
     } catch (error) {
+      console.error('Error getting current user:', error);
       res.status(500).json({ message: "Failed to get current user" });
     }
   });

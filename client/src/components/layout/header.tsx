@@ -203,6 +203,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const pageName = pageNames[location] || "Page";
 
+  // Fetch current user data
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    retry: 1
+  });
+
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -238,9 +244,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <NotificationButton />
           
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-slate-700 hidden sm:block">Sarah Johnson</span>
+            <span className="text-sm font-medium text-slate-700 hidden sm:block">
+              {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
+            </span>
             <div className="w-8 h-8 bg-slate-300 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-slate-600">SJ</span>
+              <span className="text-sm font-medium text-slate-600">
+                {currentUser 
+                  ? `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}` 
+                  : 'U'}
+              </span>
             </div>
           </div>
         </div>
