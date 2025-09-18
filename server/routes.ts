@@ -6816,6 +6816,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         position: staff.position,
         managerId: staff.managerId,
         status: staff.status,
+        birthdate: staff.birthdate,
+        emergencyContactName: staff.emergencyContactName,
+        emergencyContactPhone: staff.emergencyContactPhone,
+        emergencyContactRelationship: staff.emergencyContactRelationship,
         createdAt: staff.createdAt,
         updatedAt: staff.updatedAt
       }).from(staff).where(eq(staff.id, req.params.id));
