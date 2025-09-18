@@ -4602,15 +4602,80 @@ export default function EnhancedClientDetail() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Documents</h3>
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      <DocumentUploader clientId={clientId!} />
                     </div>
-                    <div className="text-center py-8 text-gray-500">
-                      <Upload className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-sm">No documents uploaded</p>
-                      <p className="text-xs text-gray-400">Upload a document to get started</p>
+                    
+                    {/* Search bar */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Search documents..."
+                        value={searchDocuments}
+                        onChange={(e) => setSearchDocuments(e.target.value)}
+                        className="pl-10"
+                        data-testid="input-search-documents"
+                      />
                     </div>
+
+                    {documentsLoading ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-sm">Loading documents...</div>
+                      </div>
+                    ) : clientDocuments && clientDocuments.length > 0 ? (
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {clientDocuments
+                          .filter((doc: any) => 
+                            !searchDocuments || 
+                            doc.fileName?.toLowerCase().includes(searchDocuments.toLowerCase()) ||
+                            doc.fileType?.toLowerCase().includes(searchDocuments.toLowerCase())
+                          )
+                          .map((document: any) => (
+                            <div key={document.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-3 flex-1">
+                                  <div className="flex-shrink-0 mt-1">
+                                    <FileText className="h-5 w-5 text-gray-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-sm text-gray-900 truncate">
+                                      {document.fileName}
+                                    </h4>
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                      {document.fileSize && (
+                                        <span>{Math.round(document.fileSize / 1024)} KB</span>
+                                      )}
+                                      {document.uploadedAt && (
+                                        <span>Uploaded {new Date(document.uploadedAt).toLocaleDateString()}</span>
+                                      )}
+                                      {document.uploadedBy && (
+                                        <span>by {document.uploadedBy}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 ml-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm" 
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+                                    onClick={() => window.open(document.filePath || document.fileUrl, '_blank')}
+                                    title="View document"
+                                    data-testid={`button-view-document-${document.id}`}
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Upload className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm">No documents uploaded</p>
+                        <p className="text-xs text-gray-400">Upload a document to get started</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
