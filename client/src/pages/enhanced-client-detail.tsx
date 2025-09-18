@@ -4682,7 +4682,6 @@ export default function EnhancedClientDetail() {
                 {/* Team Section */}
                 {activeHubSection === "team" && (
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-gray-900">Team Assignment</h3>
                     <TeamAssignmentSection clientId={clientId!} />
                   </div>
                 )}

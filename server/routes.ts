@@ -14230,11 +14230,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId, position } = req.params;
       const { staffId } = req.body;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      const rawCurrentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawCurrentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // Normalize currentUserId for database operations
+      const currentUserId = await normalizeUserIdForDb(rawCurrentUserId);
       
       if (staffId) {
-        // Assign or reassign staff member to position
+        // Normalize the staffId to handle dev-admin and other UUID formats
+        let normalizedStaffId;
+        try {
+          normalizedStaffId = await normalizeUserIdForDb(staffId);
+        } catch (error) {
+          console.error("Error normalizing staffId:", error);
+          return res.status(400).json({ 
+            error: "Invalid staffId", 
+            message: "Unable to process the provided staffId" 
+          });
+        }
+        
+        // Validate that we have a valid normalized staffId
+        if (!normalizedStaffId) {
+          return res.status(400).json({ 
+            error: "Invalid staffId", 
+            message: "The provided staffId is not a valid UUID format" 
+          });
+        }
+        
+        // Verify the normalized staff exists and is active
+        const staffMember = await db
+          .select({ 
+            id: staff.id, 
+            firstName: staff.firstName, 
+            lastName: staff.lastName,
+            isActive: staff.isActive 
+          })
+          .from(staff)
+          .where(eq(staff.id, normalizedStaffId))
+          .limit(1);
+        
+        if (staffMember.length === 0) {
+          return res.status(404).json({ 
+            error: "Staff member not found", 
+            message: "The specified staff member does not exist" 
+          });
+        }
+        
+        if (staffMember[0].isActive === false) {
+          return res.status(400).json({ 
+            error: "Staff member inactive", 
+            message: "Cannot assign an inactive staff member to this position" 
+          });
+        }
+        
+        // Assign or reassign staff member to position using normalized staffId
         const existingAssignment = await db
           .select()
           .from(clientTeamAssignments)
@@ -14247,11 +14296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(1);
         
         if (existingAssignment.length > 0) {
-          // Update existing assignment
+          // Update existing assignment with normalized staffId
           const [updatedAssignment] = await db
             .update(clientTeamAssignments)
             .set({
-              staffId,
+              staffId: normalizedStaffId,
               assignedBy: currentUserId,
               updatedAt: new Date(),
             })
@@ -14260,12 +14309,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           res.json(updatedAssignment);
         } else {
-          // Create new assignment
+          // Create new assignment with normalized staffId
           const [newAssignment] = await db
             .insert(clientTeamAssignments)
             .values({
               clientId,
-              staffId,
+              staffId: normalizedStaffId,
               position,
               assignedBy: currentUserId,
             })
@@ -14288,6 +14337,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error updating team assignment:", error);
+      
+      // Enhanced error handling for UUID-related issues
+      if (error instanceof Error && error.message.includes('invalid input syntax for type uuid')) {
+        return res.status(400).json({ 
+          error: "Invalid UUID format", 
+          message: "The provided staffId is not in valid UUID format" 
+        });
+      }
+      
       res.status(500).json({ error: "Failed to update team assignment" });
     }
   });
