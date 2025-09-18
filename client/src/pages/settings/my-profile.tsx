@@ -53,8 +53,12 @@ export default function MyProfile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signatureEnabled, setSignatureEnabled] = useState(true);
   
-  // Get current user ID from authenticated session context
-  const currentUserId = null; // TODO: Replace with actual authenticated user context
+  // Get current user from authenticated session
+  const { data: authUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
+  
+  const currentUserId = authUser?.id;
   
   // Fetch current user's staff record
   const { data: currentUser, isLoading: userLoading } = useQuery<Staff>({
@@ -63,6 +67,7 @@ export default function MyProfile() {
       const response = await apiRequest("GET", `/api/staff/${currentUserId}`);
       return await response.json();
     },
+    enabled: !!currentUserId, // Only fetch when we have a user ID
   });
 
   // Fetch time off requests for HR tab
