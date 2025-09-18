@@ -19,7 +19,7 @@ import { eq, and } from 'drizzle-orm';
 
 // Development mode detection and mock user configuration
 export const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-export const MOCK_ADMIN_USER_ID = 'dev-admin-00000000-0000-0000-0000-000000000000';
+export const MOCK_ADMIN_USER_ID = '00000000-0000-4000-8000-000000000000';
 
 // Extended Express Request interface with session
 declare global {

@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Simple authentication - no external dependencies
       const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-      let authenticatedUserId = 'dev-admin-00000000-0000-0000-0000-000000000000';
+      let authenticatedUserId = '00000000-0000-4000-8000-000000000000';
       
       if (!IS_DEVELOPMENT && (!req.session || !req.session.userId)) {
         return res.status(401).json({ error: "Authentication required" });
