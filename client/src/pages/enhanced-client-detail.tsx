@@ -1728,7 +1728,8 @@ export default function EnhancedClientDetail() {
     FileText, Target, TagIcon, Users, Package, Activity, Zap, Archive,
     Briefcase, Globe, Mail, Phone, MapPin, Calendar, Edit, Clock,
     ShoppingCart, CreditCard, Hash, CornerDownRight, User, UserCircle,
-    Heart, Star, TrendingUp
+    Heart, Star, TrendingUp, ShoppingBag, Monitor, FileX, PenTool, Palette,
+    Coffee, Lightbulb, Rocket, Contact, Settings
   };
 
   // Update client brief section mutation - now uses hybrid API
