@@ -82,6 +82,13 @@ export default function ClientsSettings() {
       apiRequest('POST', '/api/client-brief-sections', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
+      // Also invalidate client brief data
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.includes('/api/clients/') && key.includes('/brief');
+        }
+      });
       setIsCreateDialogOpen(false);
       toast({ title: "Section created successfully" });
     },
@@ -96,9 +103,12 @@ export default function ClientsSettings() {
       apiRequest('PUT', `/api/client-brief-sections/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
-      // Also invalidate all client brief data to update icons on client detail pages
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0]?.toString().includes('/brief')
+      // Also invalidate all client brief data to update icons on client detail pages  
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.includes('/api/clients/') && key.includes('/brief');
+        }
       });
       setIsEditDialogOpen(false);
       setEditingSection(null);
@@ -115,6 +125,13 @@ export default function ClientsSettings() {
       apiRequest('DELETE', `/api/client-brief-sections/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
+      // Also invalidate client brief data
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.includes('/api/clients/') && key.includes('/brief');
+        }
+      });
       setIsDeleteDialogOpen(false);
       setSectionToDelete(null);
       toast({ title: "Section deleted successfully" });
@@ -130,6 +147,13 @@ export default function ClientsSettings() {
       apiRequest('PUT', '/api/client-brief-sections/reorder', { sectionIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
+      // Also invalidate client brief data
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.includes('/api/clients/') && key.includes('/brief');
+        }
+      });
       toast({ title: "Sections reordered successfully" });
     },
     onError: (error: any) => {
