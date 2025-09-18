@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TimerProvider } from "@/contexts/TimerContext";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
+import LoginPage from "@/pages/login";
+import AuthGate from "@/components/AuthGate";
 import Clients from "@/pages/clients";
 import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 
@@ -63,65 +65,523 @@ import EditLesson from "@/pages/training/edit-lesson";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/clients" component={Clients} />
-      <Route path="/clients/:id" component={EnhancedClientDetail} />
-
-      <Route path="/marketing" component={Campaigns} />
-      <Route path="/leads" component={Leads} />
-      <Route path="/tasks" component={Tasks} />
-      <Route path="/tasks/:taskId" component={TaskDetail} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/social-media" component={SocialMedia} />
-      <Route path="/workflows" component={Workflows} />
-      <Route path="/workflows/build" component={WorkflowBuilder} />
-      <Route path="/hr" component={HRPage} />
-      <Route path="/hr/applicant/:id" component={ApplicantDetailPage} />
-      <Route path="/training" component={Training} />
-      <Route path="/training/analytics" component={TrainingAnalytics} />
-      <Route path="/training/courses/:id" component={CourseDetail} />
-      <Route path="/training/lessons/:id" component={LessonDetail} />
-      <Route path="/training/courses/:id/edit" component={EditCourse} />
-      <Route path="/training/courses/:id/lessons" component={LessonManagement} />
-      <Route path="/training/courses/:id/lessons/create" component={CreateLesson} />
-      <Route path="/training/courses/:courseId/lessons/:id/edit" component={EditLesson} />
-      <Route path="/training/create" component={CreateCourse} />
-      <Route path="/resources" component={KnowledgeBase} />
-      <Route path="/resources/articles/:id" component={ArticleView} />
-      <Route path="/calendar" component={CalendarMain} />
-      <Route path="/calendar/settings" component={CalendarSettings} />
-      <Route path="/calendar-settings" component={CalendarSettings} />
-      <Route path="/settings/calendar-settings" component={CalendarSettings} />
-      <Route path="/settings/calendar/:id/edit" component={CalendarEdit} />
+      {/* Public routes - no authentication required */}
+      <Route path="/login" component={LoginPage} />
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/settings/business-profile" component={BusinessProfile} />
-      <Route path="/settings/my-profile" component={MyProfile} />
-      <Route path="/settings/staff" component={Staff} />
-      <Route path="/settings/staff/:id" component={StaffDetail} />
-      <Route path="/settings/teams/:id" component={TeamDetail} />
-      <Route path="/settings/hr-settings" component={HRSettings} />
-      <Route path="/settings/clients" component={ClientsSettings} />
-      <Route path="/settings/roles-permissions" component={RolesPermissions} />
-      <Route path="/settings/permission-audit" component={PermissionAudit} />
-      <Route path="/settings/integrations" component={Integrations} />
-      <Route path="/settings/custom-fields" component={CustomFields} />
-      <Route path="/settings/custom-fields/:id/edit" component={EditFolder} />
-      <Route path="/settings/tags" component={Tags} />
-      <Route path="/settings/products" component={Products} />
-      <Route path="/settings/tasks" component={TasksSettings} />
-      <Route path="/settings/automation-triggers" component={AutomationTriggers} />
-      <Route path="/settings/audit-logs" component={AuditLogs} />
-      <Route path="/form-builder">
-        {() => <FormBuilder />}
-      </Route>
-      <Route path="/form-builder/:id">
-        {(params) => <FormBuilder formId={params.id} />}
-      </Route>
-      <Route path="/forms-test" component={FormsTest} />
       <Route path="/careers" component={CareersPage} />
+      
+      {/* Protected routes - authentication required */}
+      <Route path="/">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/clients">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Clients />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/clients/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <EnhancedClientDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+
+      <Route path="/marketing">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Campaigns />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/leads">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Leads />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/tasks">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Tasks />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/tasks/:taskId">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <TaskDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/invoices">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Invoices />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/reports">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Reports />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/social-media">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <SocialMedia />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/workflows">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Workflows />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/workflows/build">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <WorkflowBuilder />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/hr">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <HRPage />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/hr/applicant/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <ApplicantDetailPage />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Training />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/analytics">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <TrainingAnalytics />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/courses/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <CourseDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/lessons/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <LessonDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/courses/:id/edit">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <EditCourse />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/courses/:id/lessons">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <LessonManagement />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/courses/:id/lessons/create">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <CreateLesson />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/courses/:courseId/lessons/:id/edit">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <EditLesson />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/training/create">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <CreateCourse />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/resources">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <KnowledgeBase />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/resources/articles/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <ArticleView />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/calendar">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <CalendarMain />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/calendar/settings">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <CalendarSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/calendar-settings">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <CalendarSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Settings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/business-profile">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <BusinessProfile />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/my-profile">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <MyProfile />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/staff">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Staff />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/staff/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <StaffDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/teams/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <TeamDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/hr-settings">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <HRSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/clients">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <ClientsSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/roles-permissions">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <RolesPermissions />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/permission-audit">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <PermissionAudit />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/integrations">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Integrations />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/custom-fields">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <CustomFields />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/custom-fields/:id/edit">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <EditFolder />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/calendar-settings">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <CalendarSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/calendar/:id/edit">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <CalendarEdit />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/tags">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Tags />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/products">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Products />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/tasks">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <TasksSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/automation-triggers">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <AutomationTriggers />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/audit-logs">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <AuditLogs />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/form-builder">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <FormBuilder />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/form-builder/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <FormBuilder formId={params.id} />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/forms-test">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <FormsTest />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );

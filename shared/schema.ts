@@ -1697,6 +1697,25 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
 export type Staff = typeof staff.$inferSelect;
 export type InsertStaff = z.infer<typeof insertStaffSchema>;
 
+// Authentication Users - Session-based authentication
+export const authUsers = pgTable("auth_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }).unique(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  isActive: boolean("is_active").default(true),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAuthUserSchema = createInsertSchema(authUsers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AuthUser = typeof authUsers.$inferSelect;
+export type InsertAuthUser = z.infer<typeof insertAuthUserSchema>;
+
 // Job Openings Management
 export const jobOpenings = pgTable("job_openings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -56,6 +56,7 @@ import {
   type JobOpening, type InsertJobOpening, jobOpenings,
   type ClientBriefSection, type InsertClientBriefSection, clientBriefSections,
   type ClientBriefValue, type InsertClientBriefValue, clientBriefValues,
+  type AuthUser, type InsertAuthUser, authUsers,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -110,6 +111,12 @@ export interface IStorage {
   // Client Brief Values - Hybrid core/custom data
   getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>>;
   setClientBriefValue(clientId: string, sectionId: string, value: string): Promise<void>;
+  
+  // Authentication
+  getAuthUserByEmail(email: string): Promise<AuthUser | undefined>;
+  createAuthUser(authUser: InsertAuthUser): Promise<AuthUser>;
+  updateLastLogin(authUserId: string): Promise<void>;
+  setPasswordHash(authUserId: string, passwordHash: string): Promise<void>;
   
   // Campaigns
   getCampaigns(): Promise<Campaign[]>;
@@ -520,6 +527,7 @@ export class MemStorage implements IStorage {
   private notifications: Map<string, Notification> = new Map();
   private auditLogs: Map<string, AuditLog> = new Map();
   private templateTasks: Map<string, TemplateTask> = new Map();
+  private authUsers: Map<string, AuthUser> = new Map();
 
   constructor() {
     // Add sample data for testing
@@ -2082,6 +2090,54 @@ export class MemStorage implements IStorage {
 
   async deleteClient(id: string): Promise<boolean> {
     return this.clients.delete(id);
+  }
+
+  // Authentication methods
+  async getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
+    const authUserArray = Array.from(this.authUsers.values());
+    return authUserArray.find(user => user.email.toLowerCase() === email.toLowerCase());
+  }
+
+  async createAuthUser(authUser: InsertAuthUser): Promise<AuthUser> {
+    const id = randomUUID();
+    const now = new Date();
+    const newAuthUser: AuthUser = {
+      id,
+      email: authUser.email.toLowerCase(),
+      passwordHash: authUser.passwordHash || null,
+      firstName: authUser.firstName || null,
+      lastName: authUser.lastName || null,
+      isActive: authUser.isActive !== undefined ? authUser.isActive : true,
+      lastLogin: authUser.lastLogin || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.authUsers.set(id, newAuthUser);
+    return newAuthUser;
+  }
+
+  async updateLastLogin(authUserId: string): Promise<void> {
+    const authUser = this.authUsers.get(authUserId);
+    if (authUser) {
+      const updatedUser = {
+        ...authUser,
+        lastLogin: new Date(),
+        updatedAt: new Date()
+      };
+      this.authUsers.set(authUserId, updatedUser);
+    }
+  }
+
+  async setPasswordHash(authUserId: string, passwordHash: string): Promise<void> {
+    const authUser = this.authUsers.get(authUserId);
+    if (authUser) {
+      const updatedUser = {
+        ...authUser,
+        passwordHash,
+        updatedAt: new Date()
+      };
+      this.authUsers.set(authUserId, updatedUser);
+    }
   }
 
 
@@ -6202,6 +6258,54 @@ class MinimalStorage implements Partial<IStorage> {
       }
     } catch (error) {
       console.error("Error setting client brief value:", error);
+      throw error;
+    }
+  }
+
+  // Authentication methods
+  async getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
+    try {
+      const result = await db.select().from(authUsers).where(eq(authUsers.email, email.toLowerCase()));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching auth user:", error);
+      return undefined;
+    }
+  }
+
+  async createAuthUser(authUser: InsertAuthUser): Promise<AuthUser> {
+    try {
+      const result = await db.insert(authUsers).values({
+        ...authUser,
+        email: authUser.email.toLowerCase(),
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating auth user:", error);
+      throw error;
+    }
+  }
+
+  async updateLastLogin(authUserId: string): Promise<void> {
+    try {
+      await db.update(authUsers)
+        .set({ lastLogin: new Date() })
+        .where(eq(authUsers.id, authUserId));
+    } catch (error) {
+      console.error("Error updating last login:", error);
+      throw error;
+    }
+  }
+
+  async setPasswordHash(authUserId: string, passwordHash: string): Promise<void> {
+    try {
+      await db.update(authUsers)
+        .set({ passwordHash })
+        .where(eq(authUsers.id, authUserId));
+    } catch (error) {
+      console.error("Error setting password hash:", error);
       throw error;
     }
   }

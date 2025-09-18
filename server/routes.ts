@@ -34,7 +34,7 @@ import {
   inputClientHealthScoreSchema, insertClientHealthScoreSchema,
   insertSmartListSchema, insertTaskTemplateSchema,
   insertClientBriefSectionSchema, insertClientBriefValueSchema,
-  users, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
+  users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, customFieldFileUploads,
@@ -51,6 +51,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
 import { google } from "googleapis";
@@ -114,6 +115,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const upload = multer({ 
     storage: multerStorage, // Use local variable to avoid any scope confusion
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  });
+
+  // ===== AUTHENTICATION ROUTES =====
+  
+  // Login schema
+  const loginSchema = z.object({
+    email: z.string().email().transform(email => email.toLowerCase()),
+    password: z.string().min(1)
+  });
+
+  // POST /api/auth/login - Authenticate user and create session
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      
+      // Find auth user by email
+      const authUser = await appStorage.getAuthUserByEmail(email);
+      if (!authUser) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      // Check if auth user is active
+      if (!authUser.isActive) {
+        return res.status(401).json({ error: "Account is deactivated" });
+      }
+      
+      // Verify password
+      const passwordMatches = await bcrypt.compare(password, authUser.passwordHash);
+      if (!passwordMatches) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      // Get staff information
+      const staffUser = await db.select().from(staff).where(eq(staff.id, authUser.userId)).limit(1);
+      if (!staffUser.length) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      // Get user roles and permissions
+      const userRolesList = await db
+        .select({ 
+          roleId: userRoles.roleId, 
+          roleName: roles.name 
+        })
+        .from(userRoles)
+        .leftJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, authUser.userId));
+      
+      // Create session
+      req.session = {
+        userId: authUser.userId,
+        user: {
+          id: staffUser[0].id,
+          firstName: staffUser[0].firstName,
+          lastName: staffUser[0].lastName,
+          email: staffUser[0].email,
+          roles: userRolesList.map(ur => ur.roleName)
+        }
+      };
+      
+      // Update last login
+      await appStorage.updateLastLogin(authUser.id);
+      
+      res.json({ 
+        success: true, 
+        user: {
+          id: staffUser[0].id,
+          firstName: staffUser[0].firstName,
+          lastName: staffUser[0].lastName,
+          email: staffUser[0].email,
+          roles: userRolesList.map(ur => ur.roleName)
+        }
+      });
+      
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request format" });
+      }
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // POST /api/auth/logout - Destroy session
+  app.post("/api/auth/logout", (req, res) => {
+    req.session = null;
+    res.json({ success: true });
+  });
+
+  // GET /api/auth/me - Return current user profile and permissions
+  app.get("/api/auth/me", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      // Get staff information
+      const staffUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      if (!staffUser.length) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Get user roles and permissions
+      const userRolesList = await db
+        .select({ 
+          roleId: userRoles.roleId, 
+          roleName: roles.name 
+        })
+        .from(userRoles)
+        .leftJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, userId));
+      
+      res.json({
+        id: staffUser[0].id,
+        firstName: staffUser[0].firstName,
+        lastName: staffUser[0].lastName,
+        email: staffUser[0].email,
+        roles: userRolesList.map(ur => ur.roleName)
+      });
+      
+    } catch (error) {
+      console.error("Get current user error:", error);
+      res.status(500).json({ error: "Failed to get user information" });
+    }
+  });
+
+  // Bootstrap route schema
+  const bootstrapSchema = z.object({
+    password: z.string().min(8).max(100)
+  });
+
+  // GET /api/auth/bootstrap - Check if Joe needs to set initial password
+  app.get("/api/auth/bootstrap", async (req, res) => {
+    try {
+      const joeUserId = "030e554b-c0bc-446e-9538-e351f3d17b10";
+      const authUser = await db.select().from(authUsers).where(eq(authUsers.userId, joeUserId)).limit(1);
+      
+      res.json({ 
+        needsBootstrap: authUser.length === 0 
+      });
+      
+    } catch (error) {
+      console.error("Bootstrap check error:", error);
+      res.status(500).json({ error: "Failed to check bootstrap status" });
+    }
+  });
+
+  // POST /api/auth/bootstrap - Set Joe's initial password
+  app.post("/api/auth/bootstrap", async (req, res) => {
+    try {
+      const { password } = bootstrapSchema.parse(req.body);
+      const joeUserId = "030e554b-c0bc-446e-9538-e351f3d17b10";
+      const joeEmail = "joe@themediaoptimizers.com";
+      
+      // Debug: Check storage object
+      console.log("appStorage import result:", typeof appStorage);
+      if (appStorage) {
+        console.log("appStorage object:", appStorage);
+        console.log("appStorage methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(appStorage)));
+        console.log("Has getAuthUserByEmail?", typeof appStorage.getAuthUserByEmail);
+      } else {
+        console.log("ERROR: appStorage is undefined - storage module failed to load");
+      }
+      
+      // Check if auth user already exists
+      const existingAuthUser = await appStorage.getAuthUserByEmail(joeEmail);
+      if (existingAuthUser) {
+        return res.status(400).json({ error: "Bootstrap already completed" });
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 12);
+      
+      // Create auth user
+      const authUser = await appStorage.createAuthUser({
+        userId: joeUserId,
+        email: joeEmail,
+        passwordHash,
+        isActive: true
+      });
+      
+      res.json({ 
+        success: true,
+        message: "Initial password set successfully"
+      });
+      
+    } catch (error) {
+      console.error("Bootstrap error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid request format",
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ error: "Failed to set initial password" });
+    }
   });
 
   // ===== CRITICAL FIX: TIME TRACKING API ENDPOINT =====
@@ -14843,7 +15041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // KNOWLEDGE BASE API ROUTES
   
   // Categories API
-  app.get("/api/knowledge-base/categories", async (req, res) => {
+  app.get("/api/knowledge-base/categories", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
       const categories = await db.select()
         .from(knowledgeBaseCategories)
