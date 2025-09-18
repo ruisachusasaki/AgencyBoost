@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -1558,6 +1559,7 @@ export default function EnhancedClientDetail() {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [deletingAppointment, setDeletingAppointment] = useState<any>(null);
   
   // Appointments state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -4653,11 +4655,7 @@ export default function EnhancedClientDetail() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete "${appointment.title}"?`)) {
-                                      deleteAppointmentMutation.mutate(appointment.id);
-                                    }
-                                  }}
+                                  onClick={() => setDeletingAppointment(appointment)}
                                   className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
                                   data-testid={`button-delete-appointment-${appointment.id}`}
                                 >
@@ -4792,6 +4790,32 @@ export default function EnhancedClientDetail() {
         appointmentId={editingAppointment?.id}
         existingAppointment={editingAppointment}
       />
+
+      {/* Delete Appointment Confirmation Dialog */}
+      <AlertDialog open={!!deletingAppointment} onOpenChange={(open) => !open && setDeletingAppointment(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingAppointment?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (deletingAppointment) {
+                  deleteAppointmentMutation.mutate(deletingAppointment.id);
+                  setDeletingAppointment(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
