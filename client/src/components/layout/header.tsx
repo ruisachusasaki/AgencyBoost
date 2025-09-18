@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Menu, Search, Bell, X, MessageSquare, Check } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import TimerIndicator from "@/components/timer-indicator";
+import type { Staff } from "@shared/schema";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -203,10 +205,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const pageName = pageNames[location] || "Page";
 
-  // Fetch current user data
-  const { data: currentUser } = useQuery({
+  // Fetch current user data with authentication info
+  const { data: authUser } = useQuery({
     queryKey: ['/api/auth/current-user'],
     retry: 1
+  });
+
+  // Fetch full staff profile data including profile image
+  const { data: currentUser } = useQuery<Staff>({
+    queryKey: ['/api/staff', authUser?.id],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/staff/${authUser?.id}`);
+      return await response.json();
+    },
+    enabled: !!authUser?.id,
   });
 
   return (
@@ -243,18 +255,26 @@ export default function Header({ onMenuClick }: HeaderProps) {
           
           <NotificationButton />
           
-          <div className="flex items-center gap-3">
+          <Link 
+            href="/settings/my-profile" 
+            className="flex items-center gap-3 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors cursor-pointer"
+            data-testid="link-profile"
+          >
             <span className="text-sm font-medium text-slate-700 hidden sm:block">
               {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
             </span>
-            <div className="w-8 h-8 bg-slate-300 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-slate-600">
+            <Avatar className="w-8 h-8" data-testid="img-avatar">
+              <AvatarImage 
+                src={currentUser?.profileImagePath ? `/api/objects/${currentUser.profileImagePath}` : undefined} 
+                alt={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'} 
+              />
+              <AvatarFallback className="bg-slate-300 text-slate-600 text-sm font-medium">
                 {currentUser 
                   ? `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}` 
                   : 'U'}
-              </span>
-            </div>
-          </div>
+              </AvatarFallback>
+            </Avatar>
+          </Link>
         </div>
       </div>
     </header>
