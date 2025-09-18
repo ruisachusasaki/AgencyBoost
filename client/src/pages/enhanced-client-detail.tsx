@@ -4046,144 +4046,438 @@ export default function EnhancedClientDetail() {
 
           <TabsContent value="hub" className="space-y-6 mt-6">
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Client Hub</CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={activeHubSection === "notes" ? "default" : "outline"}
-                      onClick={() => setActiveHubSection("notes")}
-                    >
-                      Notes
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={activeHubSection === "tasks" ? "default" : "outline"}
-                      onClick={() => setActiveHubSection("tasks")}
-                    >
-                      Tasks
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={activeHubSection === "appointments" ? "default" : "outline"}
-                      onClick={() => setActiveHubSection("appointments")}
-                    >
-                      Appointments
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={activeHubSection === "documents" ? "default" : "outline"}
-                      onClick={() => setActiveHubSection("documents")}
-                    >
-                      Documents
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={activeHubSection === "team" ? "default" : "outline"}
-                      onClick={() => setActiveHubSection("team")}
-                    >
-                      Team
-                    </Button>
-                  </div>
+              <CardHeader className="pb-4">
+                {/* Horizontal Icons Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Client Hub</h2>
                 </div>
+                <TooltipProvider>
+                  <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("notes")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "notes"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Notes</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("tasks")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "tasks"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Tasks</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("appointments")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "appointments"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Meetings/Appointments</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("documents")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "documents"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Upload className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Files</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("team")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "team"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Team</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </CardHeader>
-              <CardContent>
-                {/* Conditional rendering based on activeHubSection */}
+              <CardContent className="pt-6">
+                {/* Notes Section */}
                 {activeHubSection === "notes" && (
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-medium text-gray-900">Notes</h3>
-                      <Button
-                        size="sm"
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Notes</h3>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
                         onClick={() => setIsAddingNote(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Note
-                      </Button>
-                    </div>
-                    {clientNotes && clientNotes.length > 0 ? (
-                      <div className="space-y-3">
-                        {clientNotes.map((note, index) => (
-                          <div key={index} className="p-4 border rounded-lg">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-sm font-medium text-gray-900">
-                                {new Date(note.createdAt).toLocaleDateString()}
-                              </span>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditNote(note)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteNote(note.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-700">{note.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <StickyNote className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Notes Yet</h3>
-                        <p className="text-gray-600 mb-6">Add your first note to get started.</p>
-                        <Button
-                          onClick={() => setIsAddingNote(true)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Your First Note
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {activeHubSection === "tasks" && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <h3 className="font-medium text-gray-900">Tasks</h3>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="show-completed"
-                            checked={showCompletedTasks}
-                            onCheckedChange={(checked) => setShowCompletedTasks(!!checked)}
-                          />
-                          <Label htmlFor="show-completed" className="text-sm">
-                            Show completed tasks
-                          </Label>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => setIsTaskDialogOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Task
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </div>
                     
-                    {clientTasksData && clientTasksData.length > 0 ? (
-                      <div className="space-y-3">
-                        {clientTasksData
-                          .filter((task) => showCompletedTasks || task.status !== 'completed')
-                          .map((task) => (
-                            <div key={task.id} className="border rounded-lg p-4">
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search notes..."
+                          value={searchNotes}
+                          onChange={(e) => setSearchNotes(e.target.value)}
+                          className="pl-10 text-sm"
+                        />
+                      </div>
+                      <Textarea
+                        placeholder="Add a note..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        className="min-h-[80px] text-sm"
+                      />
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-primary hover:bg-primary/90"
+                        disabled={!newNote.trim() || createNoteMutation.isPending}
+                        onClick={() => createNoteMutation.mutate(newNote)}
+                      >
+                        {createNoteMutation.isPending ? "Adding..." : "Add Note"}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3 overflow-y-auto max-h-96">
+                      {notesLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading notes...</div>
+                        </div>
+                      ) : clientNotes.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No notes yet</p>
+                          <p className="text-xs text-gray-400">Add a note to get started</p>
+                        </div>
+                      ) : (
+                        clientNotes
+                          .filter((note: any) => !searchNotes || note.content.toLowerCase().includes(searchNotes.toLowerCase()))
+                          .map((note: any) => (
+                            <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-sm font-medium text-gray-900">Note</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  {currentUser?.role === 'Admin' && (
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                        onClick={() => {
+                                          setEditingNote(note.id);
+                                          setEditNoteContent(note.content);
+                                        }}
+                                        title="Edit note"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
+                                        onClick={() => {
+                                          if (confirm('Are you sure you want to delete this note?')) {
+                                            deleteNoteMutation.mutate(note.id);
+                                          }
+                                        }}
+                                        title="Delete note"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {editingNote === note.id ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    value={editNoteContent}
+                                    onChange={(e) => setEditNoteContent(e.target.value)}
+                                    className="min-h-[60px] text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        editNoteMutation.mutate({ 
+                                          noteId: note.id, 
+                                          content: editNoteContent 
+                                        });
+                                        setEditingNote(null);
+                                        setEditNoteContent("");
+                                      }}
+                                      disabled={!editNoteContent.trim() || editNoteMutation.isPending}
+                                      className="h-7"
+                                    >
+                                      {editNoteMutation.isPending ? "Saving..." : "Save"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingNote(null);
+                                        setEditNoteContent("");
+                                      }}
+                                      className="h-7"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <p className="text-sm text-gray-600 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+                                    {note.content}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <div className="mt-2 flex justify-between items-center">
+                                <div className="text-xs text-gray-400">
+                                  by {note.createdBy?.firstName} {note.createdBy?.lastName}
+                                </div>
+                                {note.editedBy && (
+                                  <div className="text-xs text-gray-400">
+                                    edited by {note.editedBy?.firstName} {note.editedBy?.lastName}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tasks Section */}
+                {activeHubSection === "tasks" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Tasks</h3>
+                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Task</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
+                              <Input
+                                value={newTask.title}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="Enter task title"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
+                              <Textarea
+                                value={newTask.description}
+                                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Enter task description"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
+                                <Input
+                                  type="date"
+                                  value={newTask.dueDate}
+                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
+                                <Input
+                                  type="time"
+                                  value={newTask.dueTime}
+                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                            <div className="relative">
+                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
+                              <Input
+                                value={assigneeSearchTerm}
+                                onChange={(e) => {
+                                  setAssigneeSearchTerm(e.target.value);
+                                  if (e.target.value.trim() && staffData) {
+                                    const filtered = staffData.filter((staff: any) => 
+                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
+                                    );
+                                    setFilteredAssignees(filtered);
+                                    setShowAssigneeSuggestions(filtered.length > 0);
+                                  } else {
+                                    setFilteredAssignees([]);
+                                    setShowAssigneeSuggestions(false);
+                                  }
+                                }}
+                                placeholder="Search staff members..."
+                                onFocus={() => {
+                                  if (assigneeSearchTerm.trim() && staffData) {
+                                    const filtered = staffData.filter((staff: any) => 
+                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
+                                      staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
+                                    );
+                                    setFilteredAssignees(filtered);
+                                    setShowAssigneeSuggestions(filtered.length > 0);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => setShowAssigneeSuggestions(false), 200);
+                                }}
+                              />
+                              
+                              {showAssigneeSuggestions && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                  {filteredAssignees.map((staff: any) => (
+                                    <button
+                                      key={staff.id}
+                                      onClick={() => {
+                                        setNewTask(prev => ({ ...prev, assignee: staff.id }));
+                                        setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
+                                        setShowAssigneeSuggestions(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
+                                    >
+                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
+                                        <div className="text-xs text-gray-500">{staff.email}</div>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" onClick={() => {
+                                setIsTaskDialogOpen(false);
+                                setNewTask({
+                                  title: "",
+                                  description: "",
+                                  dueDate: "",
+                                  dueTime: "",
+                                  assignee: "",
+                                  recurring: false
+                                });
+                                setAssigneeSearchTerm("");
+                                setShowAssigneeSuggestions(false);
+                                setFilteredAssignees([]);
+                              }}>
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  if (newTask.title.trim()) {
+                                    const taskData = {
+                                      title: newTask.title,
+                                      description: newTask.description,
+                                      dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
+                                      assignedTo: newTask.assignee || undefined
+                                    };
+                                    createTaskMutation.mutate(taskData);
+                                  }
+                                }}
+                                disabled={!newTask.title.trim() || createTaskMutation.isPending}
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mb-4">
+                      <Checkbox
+                        id="show-completed"
+                        checked={showCompletedTasks}
+                        onCheckedChange={(checked) => setShowCompletedTasks(!!checked)}
+                      />
+                      <Label htmlFor="show-completed" className="text-sm text-gray-600">
+                        Show completed tasks
+                      </Label>
+                    </div>
+
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {tasksLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">Loading tasks...</div>
+                        </div>
+                      ) : clientTasksData.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm">No tasks yet</p>
+                          <p className="text-xs text-gray-400">Create a task to get started</p>
+                        </div>
+                      ) : (
+                        clientTasksData
+                          .filter((task: any) => showCompletedTasks || task.status !== 'completed')
+                          .map((task: any) => (
+                            <div key={task.id} className="p-3 border border-gray-200 rounded-lg">
                               <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 flex-1">
                                   <Checkbox
                                     checked={task.status === 'completed'}
                                     onCheckedChange={(checked) => {
@@ -4195,163 +4489,92 @@ export default function EnhancedClientDetail() {
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <h4 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                    <h4 className={`font-medium text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                                       {task.title}
                                     </h4>
                                     {task.description && (
-                                      <p className={`text-sm mt-1 ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                      <p className={`text-xs mt-1 ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
                                         {task.description}
                                       </p>
                                     )}
-                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                                       {task.dueDate && (
                                         <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
                                       )}
                                       {task.assignedTo && (
                                         <span>Assigned to: {task.assignedTo}</span>
                                       )}
-                                      {task.isRecurring && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          <RefreshCw className="h-3 w-3 mr-1" />
-                                          Recurring
-                                        </Badge>
-                                      )}
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1 ml-2">
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
                                     onClick={() => handleEditTask(task)}
                                   >
-                                    <Edit2 className="h-4 w-4" />
+                                    <Edit2 className="h-3 w-3" />
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
                                     onClick={() => deleteTaskMutation.mutate(task.id)}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3 w-3" />
                                   </Button>
                                 </div>
                               </div>
                             </div>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <CheckCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Tasks Yet</h3>
-                        <p className="text-gray-600 mb-6">Create your first task to get started.</p>
-                        <Button
-                          onClick={() => setIsTaskDialogOpen(true)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create Your First Task
-                        </Button>
-                      </div>
-                    )}
+                          ))
+                      )}
+                    </div>
                   </div>
                 )}
 
+                {/* Appointments Section */}
                 {activeHubSection === "appointments" && (
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-medium text-gray-900">Appointments</h3>
-                      <Button
-                        size="sm"
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Appointments</h3>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
                         onClick={() => setIsAppointmentModalOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Schedule Appointment
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    {clientAppointmentsData && clientAppointmentsData.length > 0 ? (
-                      <div className="space-y-3">
-                        {clientAppointmentsData.map((appointment) => (
-                          <div key={appointment.id} className="p-4 border rounded-lg">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium text-gray-900">{appointment.title}</h4>
-                                <p className="text-sm text-gray-600 mt-1">{appointment.description}</p>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                  <span>{new Date(appointment.startTime).toLocaleDateString()} at {new Date(appointment.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                  <span>{appointment.duration} minutes</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Appointments Yet</h3>
-                        <p className="text-gray-600 mb-6">Schedule your first appointment with this client.</p>
-                        <Button
-                          onClick={() => setIsAppointmentModalOpen(true)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Schedule First Appointment
-                        </Button>
-                      </div>
-                    )}
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm">No appointments scheduled</p>
+                      <p className="text-xs text-gray-400">Schedule an appointment to get started</p>
+                    </div>
                   </div>
                 )}
 
+                {/* Documents Section */}
                 {activeHubSection === "documents" && (
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-medium text-gray-900">Documents</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Documents</h3>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                    {clientDocuments && clientDocuments.length > 0 ? (
-                      <div className="space-y-3">
-                        {clientDocuments.map((doc) => (
-                          <div key={doc.id} className="p-4 border rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                <div>
-                                  <h4 className="font-medium text-gray-900">{doc.name}</h4>
-                                  <p className="text-xs text-gray-500">
-                                    {doc.size && `${(doc.size / 1024 / 1024).toFixed(2)} MB`} • {doc.uploadedAt}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button variant="ghost" size="sm">
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Yet</h3>
-                        <p className="text-gray-600">Documents uploaded for this client will appear here.</p>
-                      </div>
-                    )}
+                    <div className="text-center py-8 text-gray-500">
+                      <Upload className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm">No documents uploaded</p>
+                      <p className="text-xs text-gray-400">Upload a document to get started</p>
+                    </div>
                   </div>
                 )}
 
+                {/* Team Section */}
                 {activeHubSection === "team" && (
                   <div className="space-y-4">
-                    <h3 className="font-medium text-gray-900">Team Assignment</h3>
+                    <h3 className="font-semibold text-gray-900">Team Assignment</h3>
                     <TeamAssignmentSection clientId={clientId!} />
                   </div>
                 )}
