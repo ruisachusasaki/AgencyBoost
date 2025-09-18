@@ -1,0 +1,152 @@
+Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788608.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788612.Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788986.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71787750.Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789220.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789332.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789337.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789344.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789360.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789364.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789367.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789379.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789399.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789403.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789421.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789425.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789476.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789295.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2
+h @ background-redux-new.js:2
+(anonymous) @ background-redux-new.js:2Understand this error
+109Unchecked runtime.lastError: Cannot create item with duplicate id Add Password <URL>Understand this error
+109Unchecked runtime.lastError: Cannot create item with duplicate id Add Address <URL>Understand this error
+109Unchecked runtime.lastError: Cannot create item with duplicate id Add Payment Card <URL>Understand this error
+109Unchecked runtime.lastError: Cannot create item with duplicate id Add other item <URL>Understand this error
+109Unchecked runtime.lastError: Cannot create item with duplicate id Save all entered data <URL>Understand this error
+114Unchecked runtime.lastError: Cannot create item with duplicate id Generate Secure Password <URL>Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+105Unchecked runtime.lastError: Cannot create item with duplicate id LastPass <URL>Understand this error
+105Unchecked runtime.lastError: Cannot create item with duplicate id separator <URL>Understand this error
+105Unchecked runtime.lastError: Cannot create item with duplicate id Add Item <URL>Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789573.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789740.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789728.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789613.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789608.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789561.Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Fill - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Edit - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Copy username - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Copy password - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Fill - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Edit - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Copy username - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+Unchecked runtime.lastError: Cannot create item with duplicate id Copy password - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789843.Understand this error
+chunk-RPCDYKBN.js?v=e3d7b7fa:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+my-profile:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+my-profile:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+/api/time-entries/running:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+/api/hr/time-off-requests:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+/api/hr/time-off-policies:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id LastPass https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id LastPass https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+5Unchecked runtime.lastError: Cannot find menu item with id Add Item <URL>Understand this error
+Unchecked runtime.lastError: Cannot find menu item with id LastPass https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+030e554b-c0bc-446e-9538-e351f3d17b10:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+/api/training/categories:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+/api/training/courses?search=:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+/api/roles:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+/api/positions:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+/api/hr/time-off-policies:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+/api/hr/time-off-requests:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+030e554b-c0bc-446e-9538-e351f3d17b10:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+2465 log entries are not shown.Understand this warning
+queryClient.ts:31  PUT https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/api/staff/030e554b-c0bc-446e-9538-e351f3d17b10 500 (Internal Server Error)
+apiRequest @ queryClient.ts:31
+mutationFn @ my-profile.tsx:145
+fn @ @tanstack_react-query.js?v=e3d7b7fa:1189
+run @ @tanstack_react-query.js?v=e3d7b7fa:494
+start @ @tanstack_react-query.js?v=e3d7b7fa:536
+execute @ @tanstack_react-query.js?v=e3d7b7fa:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=e3d7b7fa:2630
+(anonymous) @ @tanstack_react-query.js?v=e3d7b7fa:3295
+(anonymous) @ my-profile.tsx:580
+(anonymous) @ chunk-4BFJKWC4.js?v=e3d7b7fa:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=e3d7b7fa:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=e3d7b7fa:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=e3d7b7fa:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=e3d7b7fa:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=e3d7b7fa:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=e3d7b7fa:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=e3d7b7fa:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=e3d7b7fa:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=e3d7b7fa:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=e3d7b7fa:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=e3d7b7fa:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=e3d7b7fa:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=e3d7b7fa:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=e3d7b7fa:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=e3d7b7fa:5449Understand this error

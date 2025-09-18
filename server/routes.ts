@@ -56,7 +56,7 @@ import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbidde
 import { db } from "./db";
 import { google } from "googleapis";
 import twilio from "twilio";
-import { eq, like, or, and, asc, desc, sql, inArray, isNotNull } from "drizzle-orm";
+import { eq, like, or, and, asc, desc, sql, inArray, isNotNull, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
@@ -6839,7 +6839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updatedAt: new Date()
         })
         .where(eq(staff.id, req.params.id))
-        .returning();
+        .returning(getTableColumns(staff));
       
       if (!updatedStaff) {
         return res.status(404).json({ message: "Staff member not found" });
