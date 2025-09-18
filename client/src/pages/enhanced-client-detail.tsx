@@ -4725,6 +4725,8 @@ export default function EnhancedClientDetail() {
           setIsAppointmentModalOpen(false);
         }}
         clientId={clientId!}
+        clientName={client?.name}
+        clientEmail={client?.email}
       />
     </div>
   );
