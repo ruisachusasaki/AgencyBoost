@@ -3,6 +3,13 @@
 ## Overview
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system for marketing agencies. It manages clients, projects, campaigns, leads, tasks, and invoices, with integrated reporting and a responsive interface. The system aims to enhance efficiency and operational oversight, providing a modern solution for agencies.
 
+## Recent Changes
+- Successfully implemented profile photo upload functionality and header profile image display with clickable navigation
+- Added emergency contact fields (name, phone, relationship) to database schema and Personal tab form
+- Resolved critical emergency contact save functionality issue by implementing two-step database update approach
+- Fixed persistent database query bug that was preventing staff profile updates
+- Emergency contact form now successfully saves all contact information (name, phone, relationship)
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Bundle architecture preference: Collection-based bundles.
