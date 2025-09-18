@@ -1698,6 +1698,7 @@ export const staff = pgTable("staff", {
   position: varchar("position", { length: 100 }),
   managerId: uuid("manager_id"),
   birthdate: date("birthdate"),
+  shirtSize: varchar("shirt_size", { length: 10 }), // S, M, L, XL, 2XL, 3XL
   assignedCalendarId: varchar("assigned_calendar_id"), // Links to calendar assignment
   
   // Emergency contact information

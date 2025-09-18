@@ -27,6 +27,7 @@ import { z } from "zod";
 // Form schemas for different tabs
 const personalInfoSchema = z.object({
   birthdate: z.string().optional(),
+  shirtSize: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   emergencyContactRelationship: z.string().optional(),
@@ -100,6 +101,7 @@ export default function MyProfile() {
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
       birthdate: currentUser?.birthdate || "",
+      shirtSize: currentUser?.shirtSize || "",
       emergencyContactName: currentUser?.emergencyContactName || "",
       emergencyContactPhone: currentUser?.emergencyContactPhone || "",
       emergencyContactRelationship: currentUser?.emergencyContactRelationship || "",
@@ -166,6 +168,7 @@ export default function MyProfile() {
     if (currentUser) {
       personalForm.reset({
         birthdate: currentUser.birthdate || "",
+        shirtSize: currentUser.shirtSize || "",
         emergencyContactName: currentUser.emergencyContactName || "",
         emergencyContactPhone: currentUser.emergencyContactPhone || "",
         emergencyContactRelationship: currentUser.emergencyContactRelationship || "",
@@ -584,19 +587,47 @@ export default function MyProfile() {
                     <p className="text-sm text-muted-foreground">Update your personal details</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <FormField
-                      control={personalForm.control}
-                      name="birthdate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Birthdate</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="date" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={personalForm.control}
+                        name="birthdate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Birthdate</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={personalForm.control}
+                        name="shirtSize"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shirt Size</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-shirt-size">
+                                  <SelectValue placeholder="Select size" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="S">S</SelectItem>
+                                <SelectItem value="M">M</SelectItem>
+                                <SelectItem value="L">L</SelectItem>
+                                <SelectItem value="XL">XL</SelectItem>
+                                <SelectItem value="2XL">2XL</SelectItem>
+                                <SelectItem value="3XL">3XL</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
                     <div className="border-t pt-4">
                       <h4 className="text-sm font-medium mb-3">Emergency Contact</h4>
