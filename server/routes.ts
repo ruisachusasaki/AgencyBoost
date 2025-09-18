@@ -10228,14 +10228,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      // Get documents first
+      // Get documents with uploader information
       const docs = await db
-        .select()
+        .select({
+          id: documents.id,
+          clientId: documents.clientId,
+          name: documents.name,
+          fileName: documents.fileName,
+          fileType: documents.fileType,
+          fileSize: documents.fileSize,
+          fileUrl: documents.fileUrl,
+          uploadedBy: documents.uploadedBy,
+          createdAt: documents.createdAt,
+          uploaderName: sql<string>`concat(${staff.firstName}, ' ', ${staff.lastName})`
+        })
         .from(documents)
+        .leftJoin(staff, eq(documents.uploadedBy, staff.id))
         .where(eq(documents.clientId, clientId))
         .orderBy(desc(documents.createdAt));
 
-      // Format response with basic uploader info (we'll fetch staff info separately if needed)
+      // Format response with proper uploader info
       const formattedDocuments = docs.map(doc => ({
         id: doc.id,
         clientId: doc.clientId,
@@ -10245,10 +10257,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileSize: doc.fileSize,
         fileUrl: doc.fileUrl,
         downloadUrl: doc.fileUrl, // Frontend expects downloadUrl
-        uploadedBy: doc.uploadedBy,
+        uploadedBy: doc.uploaderName || 'Unknown User', // Use actual user name instead of UUID
         uploadedByUser: {
-          firstName: "Staff",
-          lastName: "Member"
+          firstName: doc.uploaderName ? doc.uploaderName.split(' ')[0] : 'Unknown',
+          lastName: doc.uploaderName ? doc.uploaderName.split(' ').slice(1).join(' ') : 'User'
         },
         createdAt: doc.createdAt,
       }));
