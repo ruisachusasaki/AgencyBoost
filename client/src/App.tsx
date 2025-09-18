@@ -593,9 +593,7 @@ function App() {
       <TimerProvider>
         <TooltipProvider>
           <Toaster />
-          <MainLayout>
-            <Router />
-          </MainLayout>
+          <Router />
         </TooltipProvider>
       </TimerProvider>
     </QueryClientProvider>
