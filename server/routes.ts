@@ -182,6 +182,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== AUTHENTICATION ROUTES =====
   
+  
+  
   // Login schema
   const loginSchema = z.object({
     email: z.string().email().transform(email => email.toLowerCase()),
@@ -333,17 +335,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(roles, eq(userRoles.roleId, roles.id))
         .where(eq(userRoles.userId, authUser.userId));
       
-      // Create session
-      req.session = {
-        userId: authUser.userId,
-        user: {
-          id: staffUser[0].id,
-          firstName: staffUser[0].firstName,
-          lastName: staffUser[0].lastName,
-          email: staffUser[0].email,
-          roles: userRolesList.map(ur => ur.roleName)
-        }
+      // Set session properties (don't overwrite the entire session object!)
+      req.session.userId = authUser.userId;
+      req.session.user = {
+        id: staffUser[0].id,
+        firstName: staffUser[0].firstName,
+        lastName: staffUser[0].lastName,
+        email: staffUser[0].email,
+        roles: userRolesList.map(ur => ur.roleName)
       };
+      
+      // Session successfully set with user data
       
       // Update last login
       await appStorage.updateLastLogin(authUser.id);

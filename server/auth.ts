@@ -21,15 +21,17 @@ import { eq, and } from 'drizzle-orm';
 export const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 export const MOCK_ADMIN_USER_ID = '00000000-0000-4000-8000-000000000000';
 
-// Extended Express Request interface with session
-declare global {
-  namespace Express {
-    interface Request {
-      session?: {
-        userId?: string;
-        user?: any;
-      };
-    }
+// Extend express-session's SessionData interface instead of overriding Express.Request
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+    user?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      roles: string[];
+    };
   }
 }
 

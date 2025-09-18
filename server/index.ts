@@ -1,4 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
@@ -170,6 +172,57 @@ async function initializeCoreClientBriefSections() {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configure PostgreSQL session store
+const PgSession = connectPgSimple(session);
+
+// Session middleware configuration
+console.log("🔧 Configuring session middleware with DATABASE_URL:", process.env.DATABASE_URL ? "FOUND" : "MISSING");
+
+const sessionStore = new PgSession({
+  conString: process.env.DATABASE_URL,
+  tableName: 'user_sessions',
+  createTableIfMissing: true
+});
+
+// Add comprehensive error handling for session store
+sessionStore.on('error', (err) => {
+  console.error("🚨 Session Store Error:", err);
+});
+
+sessionStore.on('connect', () => {
+  console.log("✅ Session Store Connected to PostgreSQL");
+});
+
+sessionStore.on('disconnect', () => {
+  console.error("❌ Session Store Disconnected from PostgreSQL");
+});
+
+// Test session store connection immediately
+console.log("🔧 Testing session store connection...");
+sessionStore.get('test-connection', (err, session) => {
+  if (err) {
+    console.error("❌ Session Store Connection Test Failed:", err);
+  } else {
+    console.log("✅ Session Store Connection Test Passed");
+  }
+});
+
+app.use(session({
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET || 'your-secret-key-here-change-in-production',
+  resave: true, // Force session save to ensure persistence
+  saveUninitialized: true, // Save uninitialized sessions to store
+  rolling: true, // Reset expiration on activity
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax'
+  }
+}));
+
+// Note: Session debugging middleware removed for production
 
 app.use((req, res, next) => {
   const start = Date.now();
