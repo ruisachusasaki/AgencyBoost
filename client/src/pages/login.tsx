@@ -67,9 +67,29 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: (data: LoginFormData) => apiRequest('POST', '/api/auth/login', data),
     onSuccess: (response) => {
+      // Safely access user properties with fallbacks
+      const user = response?.user || {};
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      const email = user.email || '';
+      
+      // Create display name with fallbacks
+      let displayName = '';
+      if (firstName && lastName) {
+        displayName = `${firstName} ${lastName}`;
+      } else if (firstName) {
+        displayName = firstName;
+      } else if (lastName) {
+        displayName = lastName;
+      } else if (email) {
+        displayName = email;
+      } else {
+        displayName = 'User';
+      }
+
       toast({
         title: "Welcome!",
-        description: `Signed in as ${response.user.firstName} ${response.user.lastName}`,
+        description: `Signed in as ${displayName}`,
         duration: 3000
       });
       // Redirect to dashboard
