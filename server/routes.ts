@@ -10228,7 +10228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      // Get documents with uploader information
+      // Get documents with uploader information  
       const docs = await db
         .select({
           id: documents.id,
@@ -10240,10 +10240,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileUrl: documents.fileUrl,
           uploadedBy: documents.uploadedBy,
           createdAt: documents.createdAt,
-          uploaderName: sql<string>`concat(${staff.firstName}, ' ', ${staff.lastName})`
+          uploaderName: sql<string>`concat(${users.firstName}, ' ', ${users.lastName})`
         })
         .from(documents)
-        .leftJoin(staff, eq(documents.uploadedBy, staff.id))
+        .leftJoin(users, sql`${documents.uploadedBy} = ${users.id}`)
         .where(eq(documents.clientId, clientId))
         .orderBy(desc(documents.createdAt));
 

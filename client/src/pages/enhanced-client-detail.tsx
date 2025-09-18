@@ -4570,11 +4570,20 @@ export default function EnhancedClientDetail() {
                                   {appointment.title}
                                 </h4>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                  {appointment.date && (
-                                    <span>Date: {new Date(appointment.date).toLocaleDateString()}</span>
+                                  {appointment.startTime && (
+                                    <span>Date: {new Date(appointment.startTime).toLocaleDateString()}</span>
                                   )}
-                                  {appointment.time && (
-                                    <span>Time: {appointment.time}</span>
+                                  {appointment.startTime && (
+                                    <span>Time: {new Date(appointment.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  )}
+                                  {appointment.status && (
+                                    <span className={`px-2 py-1 rounded-full text-xs ${
+                                      appointment.status === 'scheduled' ? 'bg-green-100 text-green-700' :
+                                      appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {appointment.status}
+                                    </span>
                                   )}
                                 </div>
                                 {appointment.description && (
