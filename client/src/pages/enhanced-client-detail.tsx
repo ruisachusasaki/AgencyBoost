@@ -1555,6 +1555,8 @@ export default function EnhancedClientDetail() {
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState("");
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   
   // Appointments state
@@ -2400,6 +2402,33 @@ export default function EnhancedClientDetail() {
       });
     },
   });
+
+  // Handle edit task function
+  const handleEditTask = (task: any) => {
+    // Populate edit form with current task data
+    setEditingTaskId(task.id);
+    const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+    setEditTask({
+      title: task.title,
+      description: task.description || "",
+      dueDate: taskDueDate ? taskDueDate.toISOString().split('T')[0] : "",
+      dueTime: taskDueDate ? taskDueDate.toTimeString().slice(0, 5) : "",
+      assignee: task.assignedTo || "",
+      recurring: task.isRecurring || false
+    });
+    if (task.isRecurring) {
+      setEditRecurringConfig({
+        interval: task.recurringInterval || 1,
+        unit: task.recurringUnit || "days",
+        endType: task.recurringEndType || "never",
+        endDate: task.recurringEndDate ? new Date(task.recurringEndDate).toISOString().split('T')[0] : "",
+        endAfter: task.recurringEndOccurrences || 1,
+        createIfOverdue: task.createIfOverdue || false
+      });
+    }
+    setEditAssigneeSearchTerm(task.assignedToUser ? `${task.assignedToUser.firstName} ${task.assignedToUser.lastName}` : "");
+    setIsEditTaskDialogOpen(true);
+  };
 
   // Update bundle quantities mutation
   const updateBundleQuantitiesMutation = useMutation({
