@@ -4479,10 +4479,10 @@ export default function EnhancedClientDetail() {
                     </div>
                     
                     <div className="flex items-center gap-2 mb-4">
-                      <Checkbox
+                      <Switch
                         id="show-completed"
                         checked={showCompletedTasks}
-                        onCheckedChange={(checked) => setShowCompletedTasks(!!checked)}
+                        onCheckedChange={setShowCompletedTasks}
                       />
                       <Label htmlFor="show-completed" className="text-sm text-gray-600">
                         Show completed tasks
@@ -4504,55 +4504,35 @@ export default function EnhancedClientDetail() {
                         clientTasksData
                           .filter((task: any) => showCompletedTasks || task.status !== 'completed')
                           .map((task: any) => (
-                            <div key={task.id} className="p-3 border border-gray-200 rounded-lg">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-3 flex-1">
-                                  <Checkbox
-                                    checked={task.status === 'completed'}
-                                    onCheckedChange={(checked) => {
-                                      updateTaskStatusMutation.mutate({
-                                        taskId: task.id,
-                                        status: checked ? 'completed' : 'pending'
-                                      });
-                                    }}
-                                    className="mt-1"
-                                  />
-                                  <div className="flex-1">
-                                    <h4 className={`font-medium text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                                      {task.title}
-                                    </h4>
-                                    {task.description && (
-                                      <p className={`text-xs mt-1 ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
-                                        {task.description}
-                                      </p>
+                            <div 
+                              key={task.id} 
+                              className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => window.open(`/tasks/${task.id}`, '_blank')}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={task.status === 'completed'}
+                                  onCheckedChange={(checked) => {
+                                    updateTaskStatusMutation.mutate({
+                                      taskId: task.id,
+                                      status: checked ? 'completed' : 'pending'
+                                    });
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h4 className={`font-medium text-sm truncate ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                    {task.title}
+                                  </h4>
+                                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                    {task.dueDate && (
+                                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
                                     )}
-                                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                                      {task.dueDate && (
-                                        <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                                      )}
-                                      {task.assignedTo && (
-                                        <span>Assigned to: {task.assignedTo}</span>
-                                      )}
-                                    </div>
+                                    {task.assignedToUser && (
+                                      <span>Assigned to: {task.assignedToUser.firstName} {task.assignedToUser.lastName}</span>
+                                    )}
                                   </div>
-                                </div>
-                                <div className="flex gap-1 ml-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-                                    onClick={() => handleEditTask(task)}
-                                  >
-                                    <Edit2 className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                                    onClick={() => deleteTaskMutation.mutate(task.id)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
                                 </div>
                               </div>
                             </div>
