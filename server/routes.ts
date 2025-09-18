@@ -10847,8 +10847,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      console.log("🔍 DEBUG current-user endpoint: userId =", userId);
-      
       // Get actual user data from database
       const userData = await db.select({
         id: staff.id,
@@ -10858,14 +10856,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         roleId: staff.roleId
       }).from(staff).where(eq(staff.id, userId)).limit(1);
       
-      console.log("🔍 DEBUG current-user endpoint: userData =", userData);
-      
       if (userData.length === 0) {
-        console.log("🔍 DEBUG current-user endpoint: NO USER FOUND for userId =", userId);
         return res.status(404).json({ error: "User not found" });
       }
       
-      console.log("🔍 DEBUG current-user endpoint: RETURNING =", userData[0]);
       res.json(userData[0]);
     } catch (error) {
       console.error('Error getting current user:', error);
