@@ -79,7 +79,7 @@ export default function ClientsSettings() {
   // Create section mutation
   const createSectionMutation = useMutation({
     mutationFn: (data: ClientBriefSectionForm) => 
-      apiRequest('/api/client-brief-sections', { method: 'POST', body: data }),
+      apiRequest('POST', '/api/client-brief-sections', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
       setIsCreateDialogOpen(false);
@@ -93,7 +93,7 @@ export default function ClientsSettings() {
   // Update section mutation
   const updateSectionMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ClientBriefSectionForm> }) => 
-      apiRequest(`/api/client-brief-sections/${id}`, { method: 'PUT', body: data }),
+      apiRequest('PUT', `/api/client-brief-sections/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
       setIsEditDialogOpen(false);
@@ -108,7 +108,7 @@ export default function ClientsSettings() {
   // Delete section mutation
   const deleteSectionMutation = useMutation({
     mutationFn: (id: string) => 
-      apiRequest(`/api/client-brief-sections/${id}`, { method: 'DELETE' }),
+      apiRequest('DELETE', `/api/client-brief-sections/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
       setIsDeleteDialogOpen(false);
@@ -123,7 +123,7 @@ export default function ClientsSettings() {
   // Reorder sections mutation
   const reorderSectionsMutation = useMutation({
     mutationFn: (sectionIds: string[]) => 
-      apiRequest('/api/client-brief-sections/reorder', { method: 'PUT', body: { sectionIds } }),
+      apiRequest('PUT', '/api/client-brief-sections/reorder', { sectionIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
       toast({ title: "Sections reordered successfully" });
