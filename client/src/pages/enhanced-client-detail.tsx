@@ -1871,7 +1871,7 @@ export default function EnhancedClientDetail() {
   });
 
   // Fetch client appointments
-  const { data: clientAppointmentsData = [] } = useQuery({
+  const { data: clientAppointmentsData = [], isLoading: appointmentsLoading } = useQuery({
     queryKey: ['/api/appointments', 'client', clientId],
     queryFn: async () => {
       const response = await fetch(`/api/appointments?clientId=${clientId}`);
