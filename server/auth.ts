@@ -199,15 +199,18 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
   // Production mode - check admin role through database queries
   const adminRoles = await db
     .select({ 
-      roleId: userRoles.roleId,
+      roleId: staff.roleId,
       roleName: roles.name 
     })
-    .from(userRoles)
-    .leftJoin(roles, eq(userRoles.roleId, roles.id))
+    .from(staff)
+    .leftJoin(roles, eq(staff.roleId, roles.id))
     .where(
       and(
-        eq(userRoles.userId, userId),
-        eq(roles.name, 'admin')
+        eq(staff.id, userId),
+        or(
+          eq(roles.name, 'admin'),
+          eq(roles.name, 'Admin')
+        )
       )
     );
   
