@@ -10631,7 +10631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Get upload URL for document
-  app.post("/api/documents/upload-url", requireAuth(), requirePermission('documents', 'canCreate'), async (req, res) => {
+  app.post("/api/documents/upload-url", requireAuth(), requirePermission('clients', 'canCreate'), async (req, res) => {
     try {
       const { fileName, fileType, fileSize, clientId } = req.body;
 
@@ -10672,7 +10672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register uploaded document in database
-  app.post("/api/documents", requireAuth(), requirePermission('documents', 'canCreate'), async (req, res) => {
+  app.post("/api/documents", requireAuth(), requirePermission('clients', 'canCreate'), async (req, res) => {
     try {
       const { fileName, fileType, fileSize, fileUrl, clientId } = req.body;
 
@@ -10747,7 +10747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get client documents with uploader information
-  app.get("/api/clients/:clientId/documents", requireAuth(), requirePermission('documents', 'canView'), async (req, res) => {
+  app.get("/api/clients/:clientId/documents", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -10802,7 +10802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete document (Admin only)
-  app.delete("/api/documents/:id", requireAuth(), requirePermission('documents', 'canDelete'), async (req, res) => {
+  app.delete("/api/documents/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
 
