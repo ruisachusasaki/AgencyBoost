@@ -10,10 +10,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertLeadAppointmentSchema, type LeadAppointment, type InsertLeadAppointment } from "@shared/schema";
-import { Calendar as CalendarIcon, Clock, MapPin, FileText } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, FileText, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { z } from "zod";
 
@@ -36,6 +37,39 @@ const appointmentFormSchema = z.object({
 });
 
 type AppointmentFormData = z.infer<typeof appointmentFormSchema>;
+
+// Define available merge tags for leads
+const leadMergeTagGroups = [
+  {
+    label: "Lead Information",
+    tags: [
+      { label: "Lead Name", value: "{{name}}" },
+      { label: "Email", value: "{{email}}" },
+      { label: "Phone", value: "{{phone}}" },
+      { label: "Company", value: "{{company}}" },
+      { label: "Source", value: "{{source}}" },
+      { label: "Status", value: "{{status}}" },
+      { label: "Value", value: "{{value}}" },
+      { label: "Assigned To", value: "{{assignedTo}}" },
+    ]
+  },
+  {
+    label: "Appointment Details",
+    tags: [
+      { label: "Date", value: "{{appointmentDate}}" },
+      { label: "Time", value: "{{appointmentTime}}" },
+      { label: "Calendar", value: "{{calendarName}}" },
+      { label: "Team Member", value: "{{teamMember}}" },
+    ]
+  },
+  {
+    label: "Other",
+    tags: [
+      { label: "Notes", value: "{{notes}}" },
+      { label: "Last Contact Date", value: "{{lastContactDate}}" },
+    ]
+  }
+];
 
 export default function LeadAppointmentBooking({ leadId, editingAppointment, onSuccess, onCancel }: LeadAppointmentBookingProps) {
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -242,6 +276,86 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
     }
   }
 
+  // Merge tag handlers
+  const insertMergeTagIntoTitle = (tag: string) => {
+    const currentTitle = form.getValues('title');
+    form.setValue('title', currentTitle + tag);
+  };
+
+  const insertMergeTagIntoDescription = (tag: string) => {
+    const currentDescription = form.getValues('description') || '';
+    form.setValue('description', currentDescription + tag);
+  };
+
+  // Small Merge Tags Dropdown Component with search
+  const MergeTagsDropdown = ({ onInsert }: { onInsert: (tag: string) => void }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const filteredGroups = leadMergeTagGroups.map(group => ({
+      ...group,
+      tags: group.tags.filter(tag => 
+        tag.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tag.value.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    })).filter(group => group.tags.length > 0);
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            type="button"
+            className="h-8 w-8 p-0 hover:bg-gray-100"
+            data-testid="button-merge-tags"
+          >
+            <Tag className="h-4 w-4 text-gray-500" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-64" align="end">
+          <div className="p-2">
+            <Input
+              placeholder="Search merge tags..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8 text-sm"
+              data-testid="input-search-merge-tags"
+            />
+          </div>
+          {filteredGroups.map((group, groupIndex) => (
+            <div key={group.label}>
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
+                {group.label}
+              </div>
+              {group.tags.map((tag) => (
+                <DropdownMenuItem 
+                  key={tag.value} 
+                  onClick={() => {
+                    onInsert(tag.value);
+                    setSearchTerm(""); // Clear search after insert
+                  }}
+                  className="cursor-pointer"
+                  data-testid={`menu-item-${tag.value}`}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{tag.label}</span>
+                    <span className="text-xs text-gray-500">{tag.value}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+              {groupIndex < filteredGroups.length - 1 && <DropdownMenuSeparator />}
+            </div>
+          ))}
+          {filteredGroups.length === 0 && searchTerm && (
+            <div className="px-2 py-4 text-sm text-gray-500 text-center">
+              No merge tags found
+            </div>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   const isLoading = createAppointmentMutation.isPending;
 
   return (
@@ -399,7 +513,10 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Appointment Title</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Appointment Title</FormLabel>
+                      <MergeTagsDropdown onInsert={insertMergeTagIntoTitle} />
+                    </div>
                     <FormControl>
                       <Input {...field} placeholder="e.g., Initial consultation, Follow-up meeting" />
                     </FormControl>
@@ -430,7 +547,10 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <MergeTagsDropdown onInsert={insertMergeTagIntoDescription} />
+                    </div>
                     <FormControl>
                       <Textarea 
                         {...field}
