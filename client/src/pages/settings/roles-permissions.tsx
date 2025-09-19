@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -233,11 +233,15 @@ export default function RolesPermissions() {
   }) => {
     const [localRole, setLocalRole] = useState(role);
 
-    // Initialize permissions if empty
-    if (localRole.permissions.length === 0) {
-      const initialPermissions = initializePermissions();
-      setLocalRole(prev => ({ ...prev, permissions: initialPermissions }));
-    }
+    // Initialize permissions if empty on mount or when role changes
+    useEffect(() => {
+      if (role.permissions.length === 0) {
+        const initialPermissions = initializePermissions();
+        setLocalRole(prev => ({ ...prev, permissions: initialPermissions }));
+      } else {
+        setLocalRole(role);
+      }
+    }, [role]);
 
     return (
       <form onSubmit={onSubmit} className="space-y-6">
