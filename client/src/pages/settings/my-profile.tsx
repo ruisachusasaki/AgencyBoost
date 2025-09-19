@@ -608,7 +608,7 @@ export default function MyProfile() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Shirt Size</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-shirt-size">
                                   <SelectValue placeholder="Select size" />
