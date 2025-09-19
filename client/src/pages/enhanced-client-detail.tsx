@@ -530,509 +530,69 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Client Health Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="animate-pulse">
-                <div className="h-10 bg-gray-200 rounded w-48"></div>
-              </div>
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="h-4 bg-gray-200 rounded w-32"></div>
-                      <div className="h-6 bg-gray-200 rounded w-16"></div>
-                    </div>
-                    <div className="h-3 bg-gray-200 rounded w-full"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Health functionality has been moved to the health tab
 
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Client Health Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <div className="text-red-600 mb-2">
-                <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">Unable to Load Health Scores</h3>
-              <p className="text-gray-500 text-sm">There was an error loading the health scores. Please try again.</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-4"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] })}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!client) {
+    return <div className="p-8 text-center text-gray-500">Client not found</div>;
   }
-
+  
+  // Main component return starts here
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Client Health Overview
-            </div>
-            <Button
-              onClick={() => setIsHealthModalOpen(true)}
-              disabled={!!currentWeekScore}
-              className="flex items-center gap-2"
-              data-testid="button-take-weekly-score"
-            >
-              <Plus className="h-4 w-4" />
-              {currentWeekScore ? `Score Taken (${displayRange})` : 'Take Weekly Score'}
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!Array.isArray(healthScores) || healthScores.length === 0 ? (
-            // Empty State
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="health">Client Health</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6 mt-6">
             <div className="text-center py-12">
-              <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                <Activity className="h-12 w-12 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Scores Yet</h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                Start tracking this client's health by taking your first weekly score. 
-                Regular health scoring helps maintain strong client relationships and identify areas for improvement.
-              </p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Overview</h3>
+              <p className="text-gray-500">Client overview content will be displayed here.</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-6 mt-6">
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Tasks</h3>
+              <p className="text-gray-500">Client tasks will be displayed here.</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notes" className="space-y-6 mt-6">
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Notes</h3>
+              <p className="text-gray-500">Client notes will be displayed here.</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="health" className="space-y-6 mt-6">
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Client Health</h3>
+              <p className="text-gray-500">Client health scores will be displayed here.</p>
               <Button
                 onClick={() => setIsHealthModalOpen(true)}
-                className="flex items-center gap-2"
-                data-testid="button-first-health-score"
+                className="flex items-center gap-2 mt-4"
+                data-testid="button-take-weekly-score"
               >
                 <Plus className="h-4 w-4" />
-                Take First Weekly Score
+                Take Weekly Score
               </Button>
             </div>
-          ) : (
-            // Historical Health Scores Display
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-700">Health Score History</h3>
-                <div className="text-sm text-gray-500">
-                  {totalItems > 0 ? (
-                    <>
-                      Showing {showingStart}-{showingEnd} of {totalItems} score{totalItems !== 1 ? 's' : ''}
-                      {totalPages > 1 && ` (${totalPages} page${totalPages !== 1 ? 's' : ''})`}
-                      {totalItems !== (Array.isArray(healthScores) ? healthScores.length : 0) ? ' (filtered)' : ''}
-                    </>
-                  ) : (
-                    '0 scores'
-                  )}
-                </div>
-              </div>
+          </TabsContent>
+        </Tabs>
 
-              {/* Comprehensive Filter Controls */}
-              <Card className="border border-gray-200 bg-gray-50">
-                <CardContent className="p-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-gray-700">Filter Health Scores</h4>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearFilters}
-                        className="text-xs"
-                        data-testid="button-clear-filters"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Clear Filters
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Date Range Filter */}
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-600">Date Range</Label>
-                        <Select
-                          value={dateRangeFilter}
-                          onValueChange={setDateRangeFilter}
-                          data-testid="select-date-range-filter"
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Time</SelectItem>
-                            <SelectItem value="this_week">This Week</SelectItem>
-                            <SelectItem value="last_week">Last Week</SelectItem>
-                            <SelectItem value="this_month">This Month</SelectItem>
-                            <SelectItem value="last_3_months">Last 3 Months</SelectItem>
-                            <SelectItem value="custom">Custom Range</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        {/* Custom Date Range Picker */}
-                        {dateRangeFilter === "custom" && (
-                          <div className="flex gap-2 items-center">
-                            <div className="flex-1">
-                              <Input
-                                type="date"
-                                value={customDateRange.from ? format(customDateRange.from, 'yyyy-MM-dd') : ''}
-                                onChange={(e) => 
-                                  setCustomDateRange(prev => ({
-                                    ...prev,
-                                    from: e.target.value ? new Date(e.target.value) : null
-                                  }))
-                                }
-                                className="h-8 text-xs"
-                                placeholder="From date"
-                                data-testid="input-custom-date-from"
-                              />
-                            </div>
-                            <span className="text-xs text-gray-400">to</span>
-                            <div className="flex-1">
-                              <Input
-                                type="date"
-                                value={customDateRange.to ? format(customDateRange.to, 'yyyy-MM-dd') : ''}
-                                onChange={(e) => 
-                                  setCustomDateRange(prev => ({
-                                    ...prev,
-                                    to: e.target.value ? new Date(e.target.value) : null
-                                  }))
-                                }
-                                className="h-8 text-xs"
-                                placeholder="To date"
-                                data-testid="input-custom-date-to"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Health Status Filter */}
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-600">Health Status</Label>
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {Object.entries(healthStatusFilters).map(([status, isActive]) => (
-                              <div key={status} className="flex items-center space-x-1">
-                                <Checkbox
-                                  id={`filter-${status.toLowerCase()}`}
-                                  checked={isActive}
-                                  onCheckedChange={(checked) => 
-                                    setHealthStatusFilters(prev => ({
-                                      ...prev,
-                                      [status]: checked as boolean
-                                    }))
-                                  }
-                                  className="h-4 w-4"
-                                  data-testid={`checkbox-filter-${status.toLowerCase()}`}
-                                />
-                                <Label 
-                                  htmlFor={`filter-${status.toLowerCase()}`} 
-                                  className="text-xs font-normal cursor-pointer"
-                                >
-                                  <Badge 
-                                    className={`text-xs ${getHealthIndicatorStyling(status).badge} border`}
-                                  >
-                                    {status}
-                                  </Badge>
-                                </Label>
-                              </div>
-                            ))}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const allSelected = Object.values(healthStatusFilters).every(v => v);
-                                const newState = allSelected 
-                                  ? { Green: false, Yellow: false, Red: false }
-                                  : { Green: true, Yellow: true, Red: true };
-                                setHealthStatusFilters(newState);
-                              }}
-                              className="h-6 text-xs px-2 ml-2"
-                              data-testid="button-toggle-all-health-statuses"
-                            >
-                              {Object.values(healthStatusFilters).every(v => v) ? 'Deselect All' : 'Select All'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Active Filters Summary */}
-                    {(dateRangeFilter !== "all" || !Object.values(healthStatusFilters).every(v => v)) && (
-                      <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200">
-                        <span className="text-xs text-gray-500">Active filters:</span>
-                        {dateRangeFilter !== "all" && (
-                          <Badge variant="outline" className="text-xs">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {dateRangeFilter === "custom" 
-                              ? `${customDateRange.from ? format(customDateRange.from, 'M/d/yy') : '?'} - ${customDateRange.to ? format(customDateRange.to, 'M/d/yy') : '?'}`
-                              : dateRangeFilter.replace('_', ' ')
-                            }
-                          </Badge>
-                        )}
-                        {!Object.values(healthStatusFilters).every(v => v) && (
-                          <Badge variant="outline" className="text-xs">
-                            <Filter className="h-3 w-3 mr-1" />
-                            {Object.entries(healthStatusFilters).filter(([_, active]) => active).map(([status]) => status).join(', ')}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* No Results After Filtering */}
-              {filteredHealthScores.length === 0 && Array.isArray(healthScores) && healthScores.length > 0 ? (
-                <div className="text-center py-8 border border-gray-200 rounded-lg bg-white">
-                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Filter className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Scores Match Filters</h3>
-                  <p className="text-gray-500 mb-4 max-w-md mx-auto">
-                    Try adjusting your filters to see more results.
-                  </p>
-                  <Button
-                    onClick={clearFilters}
-                    variant="outline"
-                    size="sm"
-                    data-testid="button-clear-filters-empty-state"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Clear Filters
-                  </Button>
-                </div>
-              ) : (
-                // Historical Scores
-                <div className="space-y-4">
-                  {paginatedHealthScores.map((score) => {
-                    const styling = getHealthIndicatorStyling(score.healthIndicator);
-                    const weekDisplay = `${format(new Date(score.weekStartDate), 'M/d/yy')} - ${format(new Date(score.weekEndDate), 'M/d/yy')}`;
-                    
-                    return (
-                      <Card key={score.id} className="border border-gray-200 hover:border-gray-300 transition-colors">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-3 h-3 rounded-full ${styling.dot}`}></div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">Week: {weekDisplay}</h4>
-                                <p className="text-sm text-gray-500">
-                                  Recorded {formatDistanceToNow(new Date(score.createdAt), { addSuffix: true })}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Badge className={`${styling.badge} border`}>
-                                {score.healthIndicator} Health
-                              </Badge>
-                              <div className="text-right">
-                                <div className="text-lg font-semibold text-gray-900">
-                                  {Number(score.averageScore).toFixed(1)}
-                                </div>
-                                <div className="text-xs text-gray-500">avg score</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Health Metrics */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">Goals</div>
-                              <Badge variant="outline" className={`text-xs ${getMetricStyling('goals', score.goals)}`}>
-                                {score.goals}
-                              </Badge>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">Fulfillment</div>
-                              <Badge variant="outline" className={`text-xs ${getMetricStyling('fulfillment', score.fulfillment)}`}>
-                                {score.fulfillment}
-                              </Badge>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">Relationship</div>
-                              <Badge variant="outline" className={`text-xs ${getMetricStyling('relationship', score.relationship)}`}>
-                                {score.relationship}
-                              </Badge>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">Client Actions</div>
-                              <Badge variant="outline" className={`text-xs ${getMetricStyling('clientActions', score.clientActions)}`}>
-                                {score.clientActions}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {/* Weekly Recap */}
-                          {score.weeklyRecap && (
-                            <div className="border-t border-gray-100 pt-4">
-                              <h5 className="text-sm font-medium text-gray-700 mb-2">Weekly Recap</h5>
-                              <p className="text-sm text-gray-600 leading-relaxed">
-                                {score.weeklyRecap.length > 200 
-                                  ? `${score.weeklyRecap.substring(0, 200)}...` 
-                                  : score.weeklyRecap
-                                }
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Opportunities and Solutions */}
-                          <div className="grid md:grid-cols-2 gap-4 mt-4">
-                            {score.opportunities && (
-                              <div>
-                                <h5 className="text-sm font-medium text-gray-700 mb-2">Opportunities</h5>
-                                <p className="text-sm text-gray-600 leading-relaxed">
-                                  {score.opportunities.length > 100 
-                                    ? `${score.opportunities.substring(0, 100)}...` 
-                                    : score.opportunities
-                                  }
-                                </p>
-                              </div>
-                            )}
-                            {score.solutions && (
-                              <div>
-                                <h5 className="text-sm font-medium text-gray-700 mb-2">Solutions</h5>
-                                <p className="text-sm text-gray-600 leading-relaxed">
-                                  {score.solutions.length > 100 
-                                    ? `${score.solutions.substring(0, 100)}...` 
-                                    : score.solutions
-                                  }
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Pagination Controls */}
-              {totalItems > 0 && totalPages > 1 && (
-                <Card className="border border-gray-200 bg-gray-50 mt-6">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      {/* Items per page selector */}
-                      <div className="flex items-center gap-2 text-sm">
-                        <Label className="text-gray-600">Show:</Label>
-                        <Select
-                          value={itemsPerPage.toString()}
-                          onValueChange={(value) => {
-                            setItemsPerPage(Number(value));
-                            setCurrentPage(1); // Reset to first page when changing page size
-                          }}
-                          data-testid="select-items-per-page"
-                        >
-                          <SelectTrigger className="w-20 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5">5</SelectItem>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="20">20</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <span className="text-gray-600">per page</span>
-                      </div>
-
-                      {/* Pagination summary and controls */}
-                      <div className="flex items-center gap-4">
-                        <div className="text-sm text-gray-600">
-                          Page {currentPage} of {totalPages}
-                        </div>
-                        
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(1)}
-                            disabled={currentPage === 1}
-                            className="h-8 px-2"
-                            data-testid="button-first-page"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            <ChevronLeft className="h-4 w-4 -ml-1" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className="h-8 px-2"
-                            data-testid="button-previous-page"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            Previous
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className="h-8 px-2"
-                            data-testid="button-next-page"
-                          >
-                            Next
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                            className="h-8 px-2"
-                            data-testid="button-last-page"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                            <ChevronRight className="h-4 w-4 -ml-1" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Health Score Modal */}
-      <ClientHealthModal
-        clientId={clientId}
-        isOpen={isHealthModalOpen}
-        onClose={() => setIsHealthModalOpen(false)}
-        onSuccess={handleHealthScoreSuccess}
-      />
+        {/* Health Score Modal */}
+        <ClientHealthModal
+          clientId={clientId}
+          isOpen={isHealthModalOpen}
+          onClose={() => setIsHealthModalOpen(false)}
+          onSuccess={handleHealthScoreSuccess}
+        />
+      </div>
     </div>
   );
 }
@@ -4769,46 +4329,7 @@ export default function EnhancedClientDetail() {
           </TabsContent>
 
           <TabsContent value="health" className="space-y-6 mt-6">
-            {/* Client Health Section */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      Client Health Overview
-                    </div>
-                    <Button
-                      onClick={() => setIsHealthModalOpen(true)}
-                      className="flex items-center gap-2"
-                      data-testid="button-take-weekly-score"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Take Weekly Score
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                      <Activity className="h-12 w-12 text-blue-600" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Client Health Scoring</h3>
-                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                      Track this client's health by recording weekly scores. Regular health scoring helps maintain strong client relationships and identify areas for improvement.
-                    </p>
-                    <Button
-                      onClick={() => setIsHealthModalOpen(true)}
-                      className="flex items-center gap-2"
-                      data-testid="button-take-health-score"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Take Weekly Score
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Health functionality will be moved here from the original location */}
           </TabsContent>
 
       </Tabs>
