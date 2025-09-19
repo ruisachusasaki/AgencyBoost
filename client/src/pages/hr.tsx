@@ -461,16 +461,10 @@ export default function HRPage() {
     return positions;
   }, [staffData]);
 
-  // Filter staff data based on selected filters and role permissions
+  // Filter staff data based on selected filters - Staff Directory is visible to EVERYONE
   const filteredStaffData = useMemo(() => {
-    let staffToShow = staffData;
-    
-    // Role-based filtering for staff directory
-    if (!canViewAllData && isManager) {
-      staffToShow = [...(directReports as Staff[]), currentUser].filter(Boolean) as Staff[]; // Manager sees their team + themselves
-    } else if (!canViewAllData && !isManager) {
-      staffToShow = [currentUser].filter(Boolean) as Staff[]; // Regular users see only themselves
-    }
+    // Staff Directory shows all staff to everyone - no role restrictions
+    const staffToShow = staffData;
     
     // Apply department and position filters
     return staffToShow.filter(member => {
@@ -478,7 +472,7 @@ export default function HRPage() {
       const matchesPosition = positionFilter === "all" || member.position === positionFilter;
       return matchesDepartment && matchesPosition;
     });
-  }, [staffData, directReports, currentUser, departmentFilter, positionFilter, canViewAllData, isManager]);
+  }, [staffData, departmentFilter, positionFilter]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
