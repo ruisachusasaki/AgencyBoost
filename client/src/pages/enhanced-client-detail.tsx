@@ -2280,14 +2280,9 @@ export default function EnhancedClientDetail() {
         isOpen: false  // All sections closed by default
       }));
       
-      // Only set sections if they're actually different
-      setSections(prevSections => {
-        if (prevSections.length === 0 && newSections.length > 0) {
-          sectionsInitialized.current = true;
-          return newSections;
-        }
-        return prevSections;
-      });
+      // Replace the default sections with calculated ones from custom field folders
+      setSections(newSections);
+      sectionsInitialized.current = true;
     }
   }, [calculatedSections]);
 
