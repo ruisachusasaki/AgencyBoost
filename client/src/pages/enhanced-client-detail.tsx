@@ -530,13 +530,124 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     });
   };
 
-  // Health functionality has been moved to the health tab
-
-  if (!client) {
-    return <div className="p-8 text-center text-gray-500">Client not found</div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Loading health data...</p>
+        </div>
+      </div>
+    );
   }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8 text-red-600">
+          <p>Error loading health scores: {error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium text-gray-900">Client Health Scores</h3>
+        <Button 
+          onClick={() => setIsHealthModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+          data-testid="button-add-health-score"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Health Score
+        </Button>
+      </div>
+
+      {/* Health Score Cards */}
+      {paginatedHealthScores.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg border">
+          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">No health scores recorded yet</p>
+          <p className="text-gray-400 text-xs mt-1">Start tracking client health by adding a weekly score</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {paginatedHealthScores.map((score) => {
+            const styling = getHealthIndicatorStyling(score.healthIndicator);
+            return (
+              <div key={score.id} className="bg-white rounded-lg border p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${styling.dot}`}></div>
+                    <h4 className="font-medium text-gray-900">
+                      Week of {new Date(score.weekStartDate).toLocaleDateString()}
+                    </h4>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${styling.badge}`}>
+                      {score.healthIndicator}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Score: {score.overallScore}/100
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-500">Goals</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('goals', score.goals)}`}>
+                      {score.goals}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-500">Fulfillment</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('fulfillment', score.fulfillment)}`}>
+                      {score.fulfillment}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-500">Relationship</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('relationship', score.relationship)}`}>
+                      {score.relationship}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-500">Client Actions</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('clientActions', score.clientActions)}`}>
+                      {score.clientActions}
+                    </div>
+                  </div>
+                </div>
+                
+                {score.notes && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="text-sm text-gray-500 mb-1">Notes</div>
+                    <p className="text-gray-700 text-sm">{score.notes}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Health Score Modal */}
+      <ClientHealthModal
+        clientId={clientId}
+        isOpen={isHealthModalOpen}
+        onClose={() => setIsHealthModalOpen(false)}
+        onSuccess={handleHealthScoreSuccess}
+      />
+    </div>
+  );
+}
+
+// Main enhanced client detail component
+const EnhancedClientDetailPage = ({ params }: { params: { id: string } }) => {
+  const clientId = params.id;
+  const [activeTab, setActiveTab] = useState("overview");
   
-  // Main component return starts here
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -573,18 +684,10 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
             <ClientHealthTabContent clientId={clientId} />
           </TabsContent>
         </Tabs>
-
-        {/* Health Score Modal */}
-        <ClientHealthModal
-          clientId={clientId}
-          isOpen={isHealthModalOpen}
-          onClose={() => setIsHealthModalOpen(false)}
-          onSuccess={handleHealthScoreSuccess}
-        />
       </div>
     </div>
   );
-}
+};
 
 // Types
 interface Section {
@@ -1003,7 +1106,7 @@ export default function EnhancedClientDetail() {
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
   const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
-  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team">("notes");
+  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "health">("notes");
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -3758,6 +3861,24 @@ export default function EnhancedClientDetail() {
                         <p>Team</p>
                       </TooltipContent>
                     </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("health")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "health"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Activity className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Client Health</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </TooltipProvider>
               </CardHeader>
@@ -4302,6 +4423,13 @@ export default function EnhancedClientDetail() {
                 {activeHubSection === "team" && (
                   <div className="space-y-4">
                     <TeamAssignmentSection clientId={clientId!} />
+                  </div>
+                )}
+
+                {/* Health Section */}
+                {activeHubSection === "health" && (
+                  <div className="space-y-4">
+                    <ClientHealthTabContent clientId={clientId!} />
                   </div>
                 )}
               </CardContent>
