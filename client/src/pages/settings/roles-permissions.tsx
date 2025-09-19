@@ -243,14 +243,6 @@ export default function RolesPermissions() {
       }
     }, [role]);
 
-    // Sync local state with parent state on changes
-    useEffect(() => {
-      if (isEdit && editingRole) {
-        setEditingRole({ ...editingRole, ...localRole });
-      } else {
-        setNewRole(prev => ({ ...prev, ...localRole }));
-      }
-    }, [localRole, isEdit]);
 
     return (
       <form onSubmit={onSubmit} className="space-y-6">
