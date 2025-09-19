@@ -68,9 +68,7 @@ export default function RolesPermissions() {
   });
 
   // Check if user is admin - only admins can manage roles
-  // Development bypass: allow access in development environment
-  const isDevelopment = import.meta.env.DEV;
-  const isAdmin = isDevelopment || (currentUser && ['Admin', 'admin'].includes(currentUser.role));
+  const isAdmin = currentUser && ['Admin', 'admin'].includes(currentUser.role);
 
   // Available modules for permissions
   const modules = [
@@ -78,10 +76,10 @@ export default function RolesPermissions() {
     "leads", "workflows", "social_media", "reports", "settings", "staff", "roles"
   ];
 
-  // Fetch roles - only if user is admin (or in development)
+  // Fetch roles - only if user is admin
   const { data: roles = [], isLoading } = useQuery<RoleWithPermissions[]>({
     queryKey: ["/api/roles"],
-    enabled: isAdmin, // Only fetch if user is admin or in development
+    enabled: isAdmin, // Only fetch if user is admin
     retry: false,
   });
 
@@ -340,7 +338,7 @@ export default function RolesPermissions() {
   };
 
   // Show loading state while checking authentication
-  if (loadingUser && !isDevelopment) {
+  if (loadingUser) {
     return (
       <div className="space-y-6">
         <Link to="/settings">
@@ -360,8 +358,8 @@ export default function RolesPermissions() {
     );
   }
 
-  // Show authentication error (but skip in development)
-  if (userError && !isDevelopment) {
+  // Show authentication error
+  if (userError) {
     return (
       <div className="space-y-6">
         <Link to="/settings">
@@ -389,8 +387,8 @@ export default function RolesPermissions() {
     );
   }
 
-  // Show access denied for non-admin users (but skip in development)
-  if (!isAdmin && !isDevelopment) {
+  // Show access denied for non-admin users
+  if (!isAdmin) {
     return (
       <div className="space-y-6">
         <Link to="/settings">
@@ -456,7 +454,6 @@ export default function RolesPermissions() {
               <h1 className="text-2xl font-bold">Roles & Permissions</h1>
               <p className="text-muted-foreground">
                 Manage user roles and their permissions
-                {isDevelopment && <span className="text-amber-600 ml-2">(Development Mode)</span>}
               </p>
             </div>
           </div>
