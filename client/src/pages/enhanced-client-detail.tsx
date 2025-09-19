@@ -1288,10 +1288,7 @@ export default function EnhancedClientDetail() {
   // Update client brief section mutation - now uses hybrid API
   const updateClientBriefSectionMutation = useMutation({
     mutationFn: async ({ sectionId, content }: { sectionId: string; content: string }) => {
-      return apiRequest(`/api/clients/${clientId}/brief/${sectionId}`, {
-        method: 'PUT',
-        body: { value: content }
-      });
+      return apiRequest('PUT', `/api/clients/${clientId}/brief/${sectionId}`, { value: content });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/brief`] });
