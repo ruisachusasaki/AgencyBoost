@@ -243,6 +243,15 @@ export default function RolesPermissions() {
       }
     }, [role]);
 
+    // Sync local state with parent state on changes
+    useEffect(() => {
+      if (isEdit && editingRole) {
+        setEditingRole({ ...editingRole, ...localRole });
+      } else {
+        setNewRole(prev => ({ ...prev, ...localRole }));
+      }
+    }, [localRole, isEdit]);
+
     return (
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="space-y-4">
@@ -253,11 +262,6 @@ export default function RolesPermissions() {
               value={localRole.name}
               onChange={(e) => {
                 setLocalRole(prev => ({ ...prev, name: e.target.value }));
-                if (isEdit && editingRole) {
-                  setEditingRole({ ...editingRole, name: e.target.value });
-                } else {
-                  setNewRole(prev => ({ ...prev, name: e.target.value }));
-                }
               }}
               placeholder="Enter role name"
               required
@@ -271,11 +275,6 @@ export default function RolesPermissions() {
               value={localRole.description || ""}
               onChange={(e) => {
                 setLocalRole(prev => ({ ...prev, description: e.target.value }));
-                if (isEdit && editingRole) {
-                  setEditingRole({ ...editingRole, description: e.target.value });
-                } else {
-                  setNewRole(prev => ({ ...prev, description: e.target.value }));
-                }
               }}
               placeholder="Enter role description"
               rows={3}
@@ -306,17 +305,6 @@ export default function RolesPermissions() {
                           p.module === perm.module ? { ...p, [action]: checked } : p
                         );
                         setLocalRole(prev => ({ ...prev, permissions: updatedPermissions }));
-                        
-                        if (isEdit && editingRole) {
-                          setEditingRole({ 
-                            ...editingRole, 
-                            permissions: editingRole.permissions.map(p => 
-                              p.module === perm.module ? { ...p, [action]: checked } : p
-                            )
-                          });
-                        } else {
-                          setNewRole(prev => ({ ...prev, permissions: updatedPermissions }));
-                        }
                       }}
                     />
                   </div>
