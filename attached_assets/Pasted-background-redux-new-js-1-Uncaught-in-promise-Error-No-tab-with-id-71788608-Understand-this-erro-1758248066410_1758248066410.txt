@@ -1,0 +1,108 @@
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788608.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788612.Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788986.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71787750.Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789220.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789332.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789337.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789344.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789360.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789364.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789367.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789379.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789399.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789403.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789421.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789425.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789476.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789295.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2
+h @ background-redux-new.js:2
+(anonymous) @ background-redux-new.js:2Understand this error
+2background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789573.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789740.Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789728.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789613.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789608.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789561.Understand this error
+108Unchecked runtime.lastError: Cannot create item with duplicate id Add Password <URL>Understand this error
+108Unchecked runtime.lastError: Cannot create item with duplicate id Add Address <URL>Understand this error
+108Unchecked runtime.lastError: Cannot create item with duplicate id Add Payment Card <URL>Understand this error
+108Unchecked runtime.lastError: Cannot create item with duplicate id Add other item <URL>Understand this error
+108Unchecked runtime.lastError: Cannot create item with duplicate id Save all entered data <URL>Understand this error
+122Unchecked runtime.lastError: Cannot create item with duplicate id Generate Secure Password <URL>Understand this error
+105Unchecked runtime.lastError: Cannot create item with duplicate id Add Item <URL>Understand this error
+105Unchecked runtime.lastError: Cannot create item with duplicate id LastPass <URL>Understand this error
+104Unchecked runtime.lastError: Cannot create item with duplicate id separator <URL>Understand this error
+background-redux-new.js:2 Error: Invalid frameId for foreground frameId: 0
+    at ae (background-redux-new.js:2:7791913)
+    at h (background-redux-new.js:2:7858816)
+    at background-redux-new.js:2:7859818
+ae @ background-redux-new.js:2Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789843.Understand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 7227431877519077169 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+Unchecked runtime.lastError: Cannot find menu item with id replit.dev - 2824103959244329791 https://5c4a8c51-6829-49c8-ae4d-22eb60034d38-00-1yp9iglp9a43x.kirk.replit.dev/settings/my-profileUnderstand this error
+6Unchecked runtime.lastError: Cannot find menu item with id LastPass <URL>Understand this error
+10Unchecked runtime.lastError: Cannot find menu item with id Add Item <URL>Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789806.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789803.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71789795.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788976.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71790013.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71790034.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71788276.Understand this error
+background-redux-new.js:1 Uncaught (in promise) Error: No tab with id: 71790091.Understand this error
+chunk-RPCDYKBN.js?v=e3d7b7fa:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+my-profile:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:12:49Understand this error
+my-profile:1 Error handling response: TypeError: Cannot read properties of undefined (reading 'split')
+    at chrome-extension://gojpkpkjapgbahdiiaeofdgibfbnfpln/popup.js:19:38Understand this error
+contentOverview.js:188373 Uncaught (in promise) Error: Request failed with status code 401
+    at createAxiosError (contentOverview.js:188373:15)
+    at Object.settle (contentOverview.js:188357:7)
+    at contentOverview.js:194082:21Understand this error
+/api/time-entries/running:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+/api/roles:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+8roles-permissions:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was receivedUnderstand this error
+/api/roles:1  Failed to load resource: the server responded with a status of 403 (Forbidden)Understand this error
+2960 log entries are not shown.Understand this warning
