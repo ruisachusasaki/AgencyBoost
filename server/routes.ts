@@ -10843,14 +10843,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      // Get actual user data from database
+      // Get actual user data from database with role information
       const userData = await db.select({
         id: staff.id,
         firstName: staff.firstName,
         lastName: staff.lastName,
         email: staff.email,
-        roleId: staff.roleId
-      }).from(staff).where(eq(staff.id, userId)).limit(1);
+        roleId: staff.roleId,
+        role: roles.name
+      }).from(staff)
+      .leftJoin(roles, eq(staff.roleId, roles.id))
+      .where(eq(staff.id, userId))
+      .limit(1);
       
       if (userData.length === 0) {
         return res.status(404).json({ error: "User not found" });
