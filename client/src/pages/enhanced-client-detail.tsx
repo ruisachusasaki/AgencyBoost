@@ -1109,6 +1109,7 @@ export default function EnhancedClientDetail() {
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [deletingAppointment, setDeletingAppointment] = useState<any>(null);
+  const [deletingNote, setDeletingNote] = useState<any>(null);
   
   // Appointments state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -3842,9 +3843,7 @@ export default function EnhancedClientDetail() {
                                         size="sm" 
                                         className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" 
                                         onClick={() => {
-                                          if (confirm('Are you sure you want to delete this note?')) {
-                                            deleteNoteMutation.mutate(note.id);
-                                          }
+                                          setDeletingNote(note);
                                         }}
                                         title="Delete note"
                                       >
@@ -4352,6 +4351,32 @@ export default function EnhancedClientDetail() {
                 if (deletingAppointment) {
                   deleteAppointmentMutation.mutate(deletingAppointment.id);
                   setDeletingAppointment(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Note Confirmation Dialog */}
+      <AlertDialog open={!!deletingNote} onOpenChange={(open) => !open && setDeletingNote(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Note</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (deletingNote) {
+                  deleteNoteMutation.mutate(deletingNote.id);
+                  setDeletingNote(null);
                 }
               }}
               className="bg-red-600 hover:bg-red-700"
