@@ -4768,6 +4768,49 @@ export default function EnhancedClientDetail() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="health" className="space-y-6 mt-6">
+            {/* Client Health Section */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Client Health Overview
+                    </div>
+                    <Button
+                      onClick={() => setIsHealthModalOpen(true)}
+                      className="flex items-center gap-2"
+                      data-testid="button-take-weekly-score"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Take Weekly Score
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12">
+                    <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                      <Activity className="h-12 w-12 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Client Health Scoring</h3>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                      Track this client's health by recording weekly scores. Regular health scoring helps maintain strong client relationships and identify areas for improvement.
+                    </p>
+                    <Button
+                      onClick={() => setIsHealthModalOpen(true)}
+                      className="flex items-center gap-2"
+                      data-testid="button-take-health-score"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Take Weekly Score
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
       </Tabs>
       
       {/* Appointment Modal */}
