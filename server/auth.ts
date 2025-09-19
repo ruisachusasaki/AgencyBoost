@@ -249,7 +249,13 @@ export function requireAdmin() {
       console.log('DEBUG requireAdmin - Not admin, returning 403');
       return res.status(403).json({ 
         error: "Admin access required",
-        message: "This operation requires administrator privileges"
+        message: "This operation requires administrator privileges",
+        debug: {
+          userId: userId,
+          hasUserId: !!userId,
+          adminCheckResult: isAdmin,
+          timestamp: new Date().toISOString()
+        }
       });
     }
     
