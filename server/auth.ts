@@ -46,10 +46,26 @@ export function getAuthenticatedUserId(req: Request): string | undefined {
 /**
  * Middleware to require authentication.
  * Returns 401 if no valid session exists.
+ * In development mode, automatically creates mock admin session.
  */
 export function requireAuth() {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userId = getAuthenticatedUserId(req);
+    let userId = getAuthenticatedUserId(req);
+    
+    // Development mode bypass - automatically create authenticated session
+    if (!userId && IS_DEVELOPMENT) {
+      console.log('🔧 Development mode: Creating mock admin session');
+      req.session.userId = MOCK_ADMIN_USER_ID;
+      req.session.user = {
+        id: MOCK_ADMIN_USER_ID,
+        firstName: 'Admin',
+        lastName: 'User',
+        email: 'admin@development.local',
+        roles: ['Admin']
+      };
+      userId = MOCK_ADMIN_USER_ID;
+      console.log('✅ Mock admin session created for development');
+    }
     
     if (!userId) {
       return res.status(401).json({ 
@@ -188,6 +204,7 @@ export function getAuthenticatedUserIdOrFail(req: Request, res: Response): strin
 /**
  * Check if current user is admin.
  * Checks admin role through database queries.
+ * In development mode, mock admin user always returns true.
  */
 export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
   const userId = getAuthenticatedUserId(req);
@@ -197,6 +214,12 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
   if (!userId) {
     console.log('DEBUG isCurrentUserAdmin - No userId found');
     return false;
+  }
+  
+  // Development mode bypass - mock admin user is always admin
+  if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+    console.log('🔧 Development mode: Mock admin user detected, granting admin access');
+    return true;
   }
   
   // Production mode - check admin role through database queries

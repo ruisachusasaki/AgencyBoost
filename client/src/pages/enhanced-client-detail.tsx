@@ -570,18 +570,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
           </TabsContent>
 
           <TabsContent value="health" className="space-y-6 mt-6">
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Client Health</h3>
-              <p className="text-gray-500">Client health scores will be displayed here.</p>
-              <Button
-                onClick={() => setIsHealthModalOpen(true)}
-                className="flex items-center gap-2 mt-4"
-                data-testid="button-take-weekly-score"
-              >
-                <Plus className="h-4 w-4" />
-                Take Weekly Score
-              </Button>
-            </div>
+            <ClientHealthTabContent clientId={clientId} />
           </TabsContent>
         </Tabs>
 
@@ -1348,7 +1337,7 @@ export default function EnhancedClientDetail() {
   const [scheduledTimezone, setScheduledTimezone] = useState('America/New_York');
 
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'contact' | 'activity' | 'communication' | 'hub' | 'health'>('contact');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'health'>('overview');
 
 
 
