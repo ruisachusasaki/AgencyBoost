@@ -192,7 +192,10 @@ export function getAuthenticatedUserIdOrFail(req: Request, res: Response): strin
 export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
   const userId = getAuthenticatedUserId(req);
   
+  console.log('DEBUG isCurrentUserAdmin - userId:', userId);
+  
   if (!userId) {
+    console.log('DEBUG isCurrentUserAdmin - No userId found');
     return false;
   }
   
@@ -213,6 +216,9 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
         )
       )
     );
+  
+  console.log('DEBUG isCurrentUserAdmin - adminRoles results:', adminRoles);
+  console.log('DEBUG isCurrentUserAdmin - adminRoles.length:', adminRoles.length);
   
   return adminRoles.length > 0;
 }
