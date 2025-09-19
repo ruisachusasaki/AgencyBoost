@@ -9633,6 +9633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         startTime: new Date(req.body.startTime),
         endTime: new Date(req.body.endTime),
+        createdBy: req.session.userId, // Add the current user as createdBy
       };
       
       const validatedData = insertLeadAppointmentSchema.parse(requestData);
