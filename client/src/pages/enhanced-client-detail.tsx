@@ -1337,7 +1337,7 @@ export default function EnhancedClientDetail() {
   const [scheduledTimezone, setScheduledTimezone] = useState('America/New_York');
 
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'health'>('overview');
+  const [activeTab, setActiveTab] = useState<'contact' | 'hub' | 'health' | 'products' | 'communication' | 'activity'>('contact');
 
 
 
