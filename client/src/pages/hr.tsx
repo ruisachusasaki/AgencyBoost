@@ -165,7 +165,7 @@ export default function HRPage() {
   });
   
   const isManager = directReports.length > 0;
-  const isAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.id?.startsWith('dev-admin'); // Include dev admin detection
+  const isAdmin = ((currentUser as any)?.role?.toLowerCase() === 'admin') || (currentUser as any)?.id?.startsWith('dev-admin'); // Include dev admin detection with case-insensitive check
   const canViewAllData = isAdmin;
   const canManageJobOpenings = isManager || isAdmin;
   
