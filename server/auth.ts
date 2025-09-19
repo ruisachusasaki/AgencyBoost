@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
 import { staff, userRoles, roles, permissions } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 
 /**
  * AUTHENTICATION & AUTHORIZATION MIDDLEWARE
