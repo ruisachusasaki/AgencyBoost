@@ -229,9 +229,13 @@ export async function isCurrentUserAdmin(req: Request): Promise<boolean> {
  */
 export function requireAdmin() {
   return async (req: Request, res: Response, next: NextFunction) => {
+    console.log('DEBUG requireAdmin - middleware called for:', req.method, req.path);
+    
     const userId = getAuthenticatedUserId(req);
+    console.log('DEBUG requireAdmin - userId:', userId);
     
     if (!userId) {
+      console.log('DEBUG requireAdmin - No userId, returning 401');
       return res.status(401).json({ 
         error: "Authentication required",
         message: "Please log in to access this resource"
@@ -239,14 +243,17 @@ export function requireAdmin() {
     }
     
     const isAdmin = await isCurrentUserAdmin(req);
+    console.log('DEBUG requireAdmin - isAdmin result:', isAdmin);
     
     if (!isAdmin) {
+      console.log('DEBUG requireAdmin - Not admin, returning 403');
       return res.status(403).json({ 
         error: "Admin access required",
         message: "This operation requires administrator privileges"
       });
     }
     
+    console.log('DEBUG requireAdmin - Admin check passed, calling next()');
     next();
   };
 }
