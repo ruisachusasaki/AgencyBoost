@@ -9628,14 +9628,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/lead-appointments", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
+      // Debug session info
+      console.log("Session info:", {
+        sessionExists: !!req.session,
+        userId: req.session?.userId,
+        user: req.session?.user,
+        isDevelopment: IS_DEVELOPMENT
+      });
+
+      // Get user ID from session or use development fallback
+      let userId = req.session?.userId;
+      if (IS_DEVELOPMENT && !userId) {
+        userId = '030e554b-c0bc-446e-9538-e351f3d17b10'; // Use a default user ID in development
+      }
+
+      if (!userId) {
+        console.error("No user ID found in session");
+        return res.status(401).json({ error: "User authentication failed" });
+      }
+
       // Convert string dates to Date objects
       const requestData = {
         ...req.body,
         startTime: new Date(req.body.startTime),
         endTime: new Date(req.body.endTime),
-        createdBy: req.session.userId, // Add the current user as createdBy
+        createdBy: userId,
       };
       
+      console.log("Request data:", requestData);
       const validatedData = insertLeadAppointmentSchema.parse(requestData);
       const [appointment] = await db.insert(leadAppointments).values(validatedData).returning();
       
