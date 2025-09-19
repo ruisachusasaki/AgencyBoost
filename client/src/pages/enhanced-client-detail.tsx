@@ -4308,9 +4308,6 @@ export default function EnhancedClientDetail() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="health" className="space-y-6 mt-6">
-            {/* Health functionality will be moved here from the original location */}
-          </TabsContent>
 
       </Tabs>
       
