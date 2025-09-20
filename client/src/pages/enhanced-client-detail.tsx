@@ -1651,8 +1651,8 @@ export default function EnhancedClientDetail() {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Helper functions to get dynamic names from custom fields
-  const getClientDisplayName = () => {
+  // Helper functions to get dynamic names from custom fields - memoized to prevent infinite re-renders
+  const clientDisplayName = useMemo(() => {
     if (!client) return "";
     
     // If custom fields are still loading, show database name as fallback
@@ -1686,14 +1686,14 @@ export default function EnhancedClientDetail() {
     }
     // Otherwise fall back to database name or email
     return client.name || client.email || "Unnamed Client";
-  };
+  }, [client, customFieldsData, customFieldsLoading]);
 
-  const getBusinessDisplayName = () => {
+  const businessDisplayName = useMemo(() => {
     if (!client) return "";
     
     // For now, just use company field (can be enhanced later with caching)
     return client.company || "";
-  };
+  }, [client]);
 
   // Fixed height for notes section to enable consistent scrolling
   const calculateNotesMaxHeight = () => {
@@ -2967,7 +2967,7 @@ export default function EnhancedClientDetail() {
                       }`}
                       data-testid="client-name-header"
                     >
-                      {getClientDisplayName()}
+                      {clientDisplayName}
                     </h1>
                   </TooltipTrigger>
                   {healthStatus?.shouldHighlight && (
@@ -2999,7 +2999,7 @@ export default function EnhancedClientDetail() {
                   )}
                 </Tooltip>
               </TooltipProvider>
-              <p className="text-muted-foreground">{getBusinessDisplayName()}</p>
+              <p className="text-muted-foreground">{businessDisplayName}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
