@@ -3976,7 +3976,16 @@ export default function EnhancedClientDetail() {
                                       <span className="ml-2 text-blue-600">x{item.quantity || 1}</span>
                                     )}
                                   </span>
-                                  <span className="text-gray-500">${item.cost || 0}</span>
+                                  <span className="text-gray-500">
+                                    ${(() => {
+                                      // Handle various formats of cost fields (string, number, null, undefined)
+                                      // Try multiple possible field names: productCost, cost, price, productPrice
+                                      const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
+                                      const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
+                                      const validCost = isNaN(cost) ? 0 : cost;
+                                      return validCost.toFixed(2);
+                                    })()}
+                                  </span>
                                 </div>
                               ))}
                             </div>
