@@ -565,10 +565,10 @@ export default function ProductsSettings() {
 
   const calculateBundleMetrics = (bundle: ProductBundle) => {
     if (!bundle.products || bundle.products.length === 0) {
-      return { totalCost: 0, totalPrice: 0 };
+      return { totalCost: 0 };
     }
 
-    // Each product is 1 unit in base bundle - calculate total cost and price
+    // Each product is 1 unit in base bundle - calculate total cost
     const totalCost = bundle.products.reduce((sum, product) => {
       // Handle various formats of productCost (string, number, null, undefined)
       const cost = product.productCost 
@@ -583,21 +583,7 @@ export default function ProductsSettings() {
       return sum + validCost;
     }, 0);
 
-    const totalPrice = bundle.products.reduce((sum, product) => {
-      // Handle various formats of productPrice (string, number, null, undefined)
-      const price = product.productPrice 
-        ? (typeof product.productPrice === 'string' 
-            ? parseFloat(product.productPrice) 
-            : Number(product.productPrice))
-        : 0;
-      
-      // Ensure we have a valid number (not NaN)
-      const validPrice = isNaN(price) ? 0 : price;
-      
-      return sum + validPrice;
-    }, 0);
-
-    return { totalCost, totalPrice };
+    return { totalCost };
   };
 
   // Sorting and pagination logic
@@ -1457,8 +1443,8 @@ export default function ProductsSettings() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
-                            {/* Bundle Metrics - Cost and Price */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Bundle Metrics - Cost Only */}
+                            <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
                               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="w-4 h-4 text-blue-600" />
@@ -1466,15 +1452,6 @@ export default function ProductsSettings() {
                                 </div>
                                 <div className="text-lg font-bold text-blue-600">
                                   ${metrics.totalCost.toFixed(2)}
-                                </div>
-                              </div>
-                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="w-4 h-4 text-green-600" />
-                                  <span className="text-sm font-medium text-gray-600">Total Bundle Price</span>
-                                </div>
-                                <div className="text-lg font-bold text-green-600">
-                                  ${metrics.totalPrice.toFixed(2)}
                                 </div>
                               </div>
                             </div>
@@ -1495,13 +1472,8 @@ export default function ProductsSettings() {
                                           </span>
                                         </div>
                                       </div>
-                                      <div className="text-sm font-medium space-x-4">
-                                        <span className="text-blue-600">
-                                          ${parseFloat(product.productCost || '0').toFixed(2)} cost
-                                        </span>
-                                        <span className="text-green-600">
-                                          ${parseFloat(product.productPrice || '0').toFixed(2)} price
-                                        </span>
+                                      <div className="text-sm font-medium text-blue-600">
+                                        ${parseFloat(product.productCost || '0').toFixed(2)} cost each
                                       </div>
                                     </div>
                                   ))}
