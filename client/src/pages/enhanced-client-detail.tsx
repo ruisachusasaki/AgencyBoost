@@ -707,9 +707,6 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                       {score.healthIndicator}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Score: {score.overallScore}/100
-                  </div>
                 </div>
                 
                 {/* Weekly Recap */}
