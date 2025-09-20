@@ -423,9 +423,6 @@ export default function ClientsSettings() {
                                           <h3 className="font-medium" data-testid={`text-title-${section.id}`}>
                                             {section.title}
                                           </h3>
-                                          {section.scope === 'core' && (
-                                            <Badge variant="secondary">Core</Badge>
-                                          )}
                                           {!section.isEnabled && (
                                             <Badge variant="outline">Disabled</Badge>
                                           )}

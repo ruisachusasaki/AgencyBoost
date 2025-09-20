@@ -3513,9 +3513,6 @@ export default function EnhancedClientDetail() {
                           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                             <IconComponent className="h-5 w-5 text-primary" />
                             {section.title}
-                            {section.scope === 'core' && (
-                              <Badge variant="secondary" className="text-xs">Core</Badge>
-                            )}
                           </h2>
                           {!isEditing ? (
                             <Button
