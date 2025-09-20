@@ -724,7 +724,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                 {score.opportunities && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium text-gray-900 mb-2">Opportunities</h5>
-                    <p className="text-gray-700 text-sm bg-yellow-50 p-3 rounded-lg border border-yellow-200">{score.opportunities}</p>
+                    <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{score.opportunities}</p>
                   </div>
                 )}
 
@@ -732,7 +732,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                 {score.solutions && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium text-gray-900 mb-2">Solutions</h5>
-                    <p className="text-gray-700 text-sm bg-blue-50 p-3 rounded-lg border border-blue-200">{score.solutions}</p>
+                    <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{score.solutions}</p>
                   </div>
                 )}
 
