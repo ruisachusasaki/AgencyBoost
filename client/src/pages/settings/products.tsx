@@ -98,6 +98,9 @@ export default function ProductsSettings() {
   const [editFormType, setEditFormType] = useState("");
   const [editFormStatus, setEditFormStatus] = useState("");
   const [editFormCategoryId, setEditFormCategoryId] = useState("");
+
+  // State for tracking expanded bundles
+  const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
   
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -1454,28 +1457,55 @@ export default function ProductsSettings() {
                               </div>
                             </div>
 
-                            {/* Bundle Products */}
+                            {/* Bundle Products - Expandable */}
                             {bundle.products && bundle.products.length > 0 && (
                               <div>
-                                <h4 className="font-medium text-gray-900 mb-2">Included Products</h4>
-                                <div className="space-y-2">
-                                  {bundle.products.map((product) => (
-                                    <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                      <div className="flex items-center gap-3">
-                                        <ShoppingCart className="w-4 h-4 text-gray-500" />
-                                        <div>
-                                          <span className="font-medium">{product.productName}</span>
-                                          <span className="text-sm text-gray-500 ml-2">
-                                            1 unit each
-                                          </span>
+                                <div 
+                                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                                  onClick={() => {
+                                    const newExpanded = new Set(expandedBundles);
+                                    if (newExpanded.has(bundle.id)) {
+                                      newExpanded.delete(bundle.id);
+                                    } else {
+                                      newExpanded.add(bundle.id);
+                                    }
+                                    setExpandedBundles(newExpanded);
+                                  }}
+                                  data-testid={`button-expand-bundle-products-${bundle.id}`}
+                                >
+                                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                                    {expandedBundles.has(bundle.id) ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                    Included Products ({bundle.products.length})
+                                  </h4>
+                                  <span className="text-sm text-gray-500">
+                                    {expandedBundles.has(bundle.id) ? 'Click to collapse' : 'Click to expand'}
+                                  </span>
+                                </div>
+                                
+                                {expandedBundles.has(bundle.id) && (
+                                  <div className="space-y-2 mt-2 pl-6">
+                                    {bundle.products.map((product) => (
+                                      <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                        <div className="flex items-center gap-3">
+                                          <ShoppingCart className="w-4 h-4 text-gray-500" />
+                                          <div>
+                                            <span className="font-medium">{product.productName}</span>
+                                            <span className="text-sm text-gray-500 ml-2">
+                                              1 unit each
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="text-sm font-medium text-blue-600">
+                                          ${parseFloat(product.productCost || '0').toFixed(2)} cost each
                                         </div>
                                       </div>
-                                      <div className="text-sm font-medium text-blue-600">
-                                        ${parseFloat(product.productCost || '0').toFixed(2)} cost each
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
