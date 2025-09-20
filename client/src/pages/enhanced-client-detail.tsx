@@ -3805,9 +3805,39 @@ export default function EnhancedClientDetail() {
                       <div key={product.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900" data-testid={`text-product-name-${product.id}`}>
-                              {product.productName || product.name}
-                            </h4>
+                            <div className="flex items-center gap-2">
+                              {product.itemType === 'bundle' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newExpanded = new Set(expandedBundles);
+                                    if (newExpanded.has(product.productId)) {
+                                      newExpanded.delete(product.productId);
+                                    } else {
+                                      newExpanded.add(product.productId);
+                                    }
+                                    setExpandedBundles(newExpanded);
+                                  }}
+                                  className="p-0 h-auto"
+                                  data-testid={`button-expand-bundle-${product.id}`}
+                                >
+                                  {expandedBundles.has(product.productId) ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                              <h4 className="font-medium text-gray-900" data-testid={`text-product-name-${product.id}`}>
+                                {product.productName || product.name}
+                                {product.itemType === 'bundle' && (
+                                  <span className="ml-2 text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                                    Bundle
+                                  </span>
+                                )}
+                              </h4>
+                            </div>
                             {(product.productDescription || product.description) && (
                               <p className="text-sm text-gray-600 mt-1" data-testid={`text-product-description-${product.id}`}>
                                 {product.productDescription || product.description}
@@ -3827,6 +3857,33 @@ export default function EnhancedClientDetail() {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            {product.itemType === 'bundle' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (editingBundleQuantities === product.productId) {
+                                    setEditingBundleQuantities(null);
+                                    setTempQuantities({});
+                                  } else {
+                                    setEditingBundleQuantities(product.productId);
+                                    // Set current quantities as temp values
+                                    const bundleDetails = bundleDetailsData[product.productId];
+                                    if (bundleDetails) {
+                                      const currentQuantities: Record<string, number> = {};
+                                      bundleDetails.forEach((item: any) => {
+                                        currentQuantities[item.productId] = item.quantity || 1;
+                                      });
+                                      setTempQuantities(currentQuantities);
+                                    }
+                                  }
+                                }}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                data-testid={`button-edit-quantities-${product.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -3846,6 +3903,67 @@ export default function EnhancedClientDetail() {
                             </Button>
                           </div>
                         </div>
+                        
+                        {/* Bundle Details - Show when expanded */}
+                        {product.itemType === 'bundle' && expandedBundles.has(product.productId) && bundleDetailsData[product.productId] && (
+                          <div className="mt-4 pl-6 border-l-2 border-gray-200">
+                            <h5 className="text-sm font-medium text-gray-700 mb-2">Bundle Contents:</h5>
+                            <div className="space-y-2">
+                              {bundleDetailsData[product.productId].map((item: any) => (
+                                <div key={item.productId} className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-600">
+                                    {item.productName}
+                                    {editingBundleQuantities === product.productId ? (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={tempQuantities[item.productId] || item.quantity || 1}
+                                        onChange={(e) => {
+                                          const newQuantities = { ...tempQuantities };
+                                          newQuantities[item.productId] = parseInt(e.target.value) || 0;
+                                          setTempQuantities(newQuantities);
+                                        }}
+                                        className="ml-2 w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                                        data-testid={`input-quantity-${item.productId}`}
+                                      />
+                                    ) : (
+                                      <span className="ml-2 text-blue-600">x{item.quantity || 1}</span>
+                                    )}
+                                  </span>
+                                  <span className="text-gray-500">${item.cost || 0}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {editingBundleQuantities === product.productId && (
+                              <div className="flex gap-2 mt-3">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    // Save the quantities (implement API call here)
+                                    setEditingBundleQuantities(null);
+                                    setTempQuantities({});
+                                    // TODO: Implement save quantities API call
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  data-testid={`button-save-quantities-${product.id}`}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingBundleQuantities(null);
+                                    setTempQuantities({});
+                                  }}
+                                  data-testid={`button-cancel-quantities-${product.id}`}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
