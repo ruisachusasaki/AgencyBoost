@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -220,8 +220,8 @@ export default function Clients() {
     return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : '-';
   };
 
-  // Helper functions to get dynamic names from custom fields
-  const getClientDisplayName = (client: Client) => {
+  // Helper functions to get dynamic names from custom fields - memoized to prevent infinite re-renders
+  const getClientDisplayName = useCallback((client: Client) => {
     if (!client || !customFieldsData) return client?.name || "";
     
     // Check if custom field values exist
@@ -251,9 +251,9 @@ export default function Clients() {
     }
     // Otherwise fall back to database name
     return client.name || "";
-  };
+  }, [customFieldsData]);
 
-  const getBusinessDisplayName = (client: Client) => {
+  const getBusinessDisplayName = useCallback((client: Client) => {
     if (!client || !customFieldsData) return client?.company || "";
     
     // Check if custom field values exist
@@ -275,7 +275,7 @@ export default function Clients() {
     }
     // Otherwise fall back to database company
     return client.company || "";
-  };
+  }, [customFieldsData]);
 
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
