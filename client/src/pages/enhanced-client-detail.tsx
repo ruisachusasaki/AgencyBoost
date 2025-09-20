@@ -3884,14 +3884,19 @@ export default function EnhancedClientDetail() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditProduct(product)}
-                              data-testid={`button-edit-product-${product.id}`}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
+                            {product.itemType !== 'bundle' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // TODO: Implement product editing functionality
+                                  console.log('Edit product:', product);
+                                }}
+                                data-testid={`button-edit-product-${product.id}`}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
