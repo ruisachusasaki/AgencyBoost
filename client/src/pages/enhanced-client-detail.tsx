@@ -3867,13 +3867,16 @@ export default function EnhancedClientDetail() {
                         <button
                           onClick={() => {
                             console.log("Health button clicked - setting activeHubSection to 'health'");
+                            console.log("Previous activeHubSection:", activeHubSection);
                             setActiveHubSection("health");
+                            console.log("After setActiveHubSection called");
                           }}
                           className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
                             activeHubSection === "health"
                               ? "bg-white text-primary shadow-sm"
                               : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                           }`}
+                          data-testid="button-client-health"
                         >
                           <Activity className="h-4 w-4" />
                         </button>
@@ -3886,7 +3889,6 @@ export default function EnhancedClientDetail() {
                 </TooltipProvider>
               </CardHeader>
               <CardContent className="pt-6">
-                {console.log("Current activeHubSection:", activeHubSection)}
                 {/* Notes Section */}
                 {activeHubSection === "notes" && (
                   <div className="space-y-4">
