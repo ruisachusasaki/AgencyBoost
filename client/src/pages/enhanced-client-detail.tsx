@@ -1836,6 +1836,23 @@ export default function EnhancedClientDetail() {
     return total;
   }, [clientProductsData, bundleDetailsData]);
 
+  // Helper function to calculate individual bundle cost
+  const calculateIndividualBundleCost = useCallback((bundleId: string) => {
+    const bundleDetails = bundleDetailsData[bundleId];
+    if (!bundleDetails || !Array.isArray(bundleDetails)) return 0;
+    
+    return bundleDetails.reduce((total, item: any) => {
+      // Handle various formats of cost fields (string, number, null, undefined)
+      // Try multiple possible field names: productCost, cost, price, productPrice
+      const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
+      const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
+      const validCost = isNaN(cost) ? 0 : cost;
+      
+      const quantity = parseInt(item.quantity || '1');
+      return total + (validCost * quantity);
+    }, 0);
+  }, [bundleDetailsData]);
+
   // Helper functions to get dynamic names from custom fields - memoized to prevent infinite re-renders
   const clientDisplayName = useMemo(() => {
     if (!client) return "";
@@ -3890,7 +3907,12 @@ export default function EnhancedClientDetail() {
                               </p>
                             )}
                             <div className="flex items-center gap-4 mt-2">
-                              {product.price && (
+                              {product.itemType === 'bundle' && (
+                                <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded" data-testid={`text-bundle-total-${product.id}`}>
+                                  Bundle Total: ${calculateIndividualBundleCost(product.productId).toFixed(2)}
+                                </span>
+                              )}
+                              {product.price && product.itemType !== 'bundle' && (
                                 <span className="text-sm font-medium text-green-600" data-testid={`text-product-price-${product.id}`}>
                                   ${product.price}
                                 </span>
