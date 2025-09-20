@@ -570,12 +570,10 @@ export default function ProductsSettings() {
 
     // Each product is 1 unit in base bundle - calculate total cost
     const totalCost = bundle.products.reduce((sum, product) => {
-      // Handle various formats of productCost (string, number, null, undefined)
-      const cost = product.productCost 
-        ? (typeof product.productCost === 'string' 
-            ? parseFloat(product.productCost) 
-            : Number(product.productCost))
-        : 0;
+      // Handle various formats of cost fields (string, number, null, undefined)
+      // Try multiple possible field names: productCost, cost, price, productPrice
+      const costValue = product.productCost || product.cost || product.price || product.productPrice || 0;
+      const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
       
       // Ensure we have a valid number (not NaN)
       const validCost = isNaN(cost) ? 0 : cost;
