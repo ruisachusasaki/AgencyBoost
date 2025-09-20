@@ -3862,29 +3862,6 @@ export default function EnhancedClientDetail() {
                       </TooltipContent>
                     </Tooltip>
                     
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            console.log("Health button clicked - setting activeHubSection to 'health'");
-                            console.log("Previous activeHubSection:", activeHubSection);
-                            setActiveHubSection("health");
-                            console.log("After setActiveHubSection called");
-                          }}
-                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
-                            activeHubSection === "health"
-                              ? "bg-white text-primary shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          }`}
-                          data-testid="button-client-health"
-                        >
-                          <Activity className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Client Health</p>
-                      </TooltipContent>
-                    </Tooltip>
                   </div>
                 </TooltipProvider>
               </CardHeader>
@@ -4432,15 +4409,6 @@ export default function EnhancedClientDetail() {
                   </div>
                 )}
 
-                {/* Health Section */}
-                {activeHubSection === "health" && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-                      <p className="text-sm text-blue-800">Health section is active! ClientId: {clientId}</p>
-                    </div>
-                    <ClientHealthTabContent clientId={clientId!} />
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
