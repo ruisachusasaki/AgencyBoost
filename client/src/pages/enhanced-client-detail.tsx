@@ -643,7 +643,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
           {/* Health Status Filter */}
           <div className="space-y-4">
             <Label className="text-sm font-medium text-gray-700 mb-2 block">Health Status</Label>
-            <div className="space-y-2">
+            <div className="flex gap-4">
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="filter-green"
@@ -684,94 +684,6 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      {/* Weekly Recap Section */}
-      <div className="bg-white rounded-lg border p-6">
-        <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          Weekly Recap
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <div className="text-sm text-gray-600">Tasks Completed</div>
-          </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <div className="text-sm text-gray-600">Communications</div>
-          </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900">-</div>
-            <div className="text-sm text-gray-600">Latest Health Score</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Opportunities Section */}
-      <div className="bg-white rounded-lg border p-6">
-        <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-          <Target className="h-4 w-4" />
-          Opportunities
-        </h4>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-            <div>
-              <div className="font-medium text-gray-900">Engagement Opportunity</div>
-              <div className="text-sm text-gray-600">Client hasn't responded to recent communications</div>
-              <div className="text-xs text-gray-500 mt-1">Last activity: 5 days ago</div>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-            <div>
-              <div className="font-medium text-gray-900">Upsell Opportunity</div>
-              <div className="text-sm text-gray-600">Client showing interest in additional services</div>
-              <div className="text-xs text-gray-500 mt-1">Based on recent project success</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Solutions Section */}
-      <div className="bg-white rounded-lg border p-6">
-        <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-          <Lightbulb className="h-4 w-4" />
-          Recommended Solutions
-        </h4>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <div className="font-medium text-gray-900">Schedule Check-in Call</div>
-              <div className="text-sm text-gray-600">Proactive communication to address engagement concerns</div>
-              <Button variant="outline" size="sm" className="mt-2">
-                Schedule Call
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <div className="font-medium text-gray-900">Send Progress Report</div>
-              <div className="text-sm text-gray-600">Share recent wins and upcoming milestones</div>
-              <Button variant="outline" size="sm" className="mt-2">
-                Generate Report
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-            <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <div className="font-medium text-gray-900">Prepare Service Proposal</div>
-              <div className="text-sm text-gray-600">Create proposal for additional services based on client interest</div>
-              <Button variant="outline" size="sm" className="mt-2">
-                Create Proposal
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Health Score Cards */}
       {paginatedHealthScores.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border">
@@ -800,39 +712,60 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-sm text-gray-500">Goals</div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('goals', score.goals)}`}>
-                      {score.goals}
-                    </div>
+                {/* Weekly Recap */}
+                {score.weeklyRecap && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 mb-2">Weekly Recap</h5>
+                    <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{score.weeklyRecap}</p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-sm text-gray-500">Fulfillment</div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('fulfillment', score.fulfillment)}`}>
-                      {score.fulfillment}
-                    </div>
+                )}
+
+                {/* Opportunities */}
+                {score.opportunities && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 mb-2">Opportunities</h5>
+                    <p className="text-gray-700 text-sm bg-yellow-50 p-3 rounded-lg border border-yellow-200">{score.opportunities}</p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-sm text-gray-500">Relationship</div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('relationship', score.relationship)}`}>
-                      {score.relationship}
-                    </div>
+                )}
+
+                {/* Solutions */}
+                {score.solutions && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 mb-2">Solutions</h5>
+                    <p className="text-gray-700 text-sm bg-blue-50 p-3 rounded-lg border border-blue-200">{score.solutions}</p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-sm text-gray-500">Client Actions</div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('clientActions', score.clientActions)}`}>
-                      {score.clientActions}
+                )}
+
+                {/* Health Metrics */}
+                <div className="mt-4">
+                  <h5 className="text-sm font-medium text-gray-900 mb-3">Health Metrics</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500">Goals</div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('goals', score.goals)}`}>
+                        {score.goals}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500">Fulfillment</div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('fulfillment', score.fulfillment)}`}>
+                        {score.fulfillment}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500">Relationship</div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('relationship', score.relationship)}`}>
+                        {score.relationship}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500">Client Actions</div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('clientActions', score.clientActions)}`}>
+                        {score.clientActions}
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                {score.notes && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="text-sm text-gray-500 mb-1">Notes</div>
-                    <p className="text-gray-700 text-sm">{score.notes}</p>
-                  </div>
-                )}
               </div>
             );
           })}
