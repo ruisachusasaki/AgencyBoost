@@ -655,68 +655,6 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
   );
 }
 
-// Main enhanced client detail component
-const EnhancedClientDetailPage = ({ params }: { params: { id: string } }) => {
-  const clientId = params.id;
-  const [activeTab, setActiveTab] = useState("overview");
-  
-  console.log("EnhancedClientDetailPage rendering with clientId:", clientId);
-  console.log("Current activeTab:", activeTab);
-  
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* DEBUG: Visual debugging indicator */}
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded fixed top-0 right-0 z-50 m-4">
-        <p className="text-sm">
-          <strong>DEBUG:</strong> ClientId: {clientId} | ActiveTab: {activeTab}
-        </p>
-      </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs 
-          value={activeTab} 
-          onValueChange={(value) => {
-            console.log("Tab changing from", activeTab, "to", value);
-            setActiveTab(value);
-          }} 
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview" onClick={() => console.log("Overview tab clicked")}>Overview</TabsTrigger>
-            <TabsTrigger value="tasks" onClick={() => console.log("Tasks tab clicked")}>Tasks</TabsTrigger>
-            <TabsTrigger value="notes" onClick={() => console.log("Notes tab clicked")}>Notes</TabsTrigger>
-            <TabsTrigger value="health" onClick={() => console.log("CLIENT HEALTH TAB CLICKED!!!")}>Client Health</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6 mt-6">
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Overview</h3>
-              <p className="text-gray-500">Client overview content will be displayed here.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tasks" className="space-y-6 mt-6">
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Tasks</h3>
-              <p className="text-gray-500">Client tasks will be displayed here.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="notes" className="space-y-6 mt-6">
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Notes</h3>
-              <p className="text-gray-500">Client notes will be displayed here.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="health" className="space-y-6 mt-6">
-            {console.log("Rendering health tab with clientId:", clientId, "type:", typeof clientId)}
-            <ClientHealthTabContent clientId={clientId} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-};
 
 // Types
 interface Section {
@@ -3790,6 +3728,10 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="health" className="space-y-6 mt-6">
+            <ClientHealthTabContent clientId={clientId} />
           </TabsContent>
 
           <TabsContent value="hub" className="space-y-6 mt-6">

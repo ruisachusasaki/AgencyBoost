@@ -297,8 +297,8 @@ export default function Clients() {
     },
   });
 
-  // Apply filter to clients
-  const applyClientFilter = (clients: Client[], filter: ClientFilter): Client[] => {
+  // Apply filter to clients - memoized to prevent infinite re-renders
+  const applyClientFilter = useCallback((clients: Client[], filter: ClientFilter): Client[] => {
     console.log('Applying filter with conditions:', filter.conditions);
     console.log('Filter logic:', filter.logic);
     
@@ -362,7 +362,7 @@ export default function Clients() {
         ? results.every(result => result)
         : results.some(result => result);
     });
-  };
+  }, [customFieldsData, getClientDisplayName, getBusinessDisplayName]);
 
   // Apply filtering and sorting to clients
   const filteredAndSortedClients = useMemo(() => {
