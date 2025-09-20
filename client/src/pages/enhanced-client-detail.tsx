@@ -314,6 +314,18 @@ function SmsTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content:
 
 // ClientHealthTabContent Component
 function ClientHealthTabContent({ clientId }: { clientId: string }) {
+  console.log("ClientHealthTabContent rendering with clientId:", clientId);
+  
+  // Early return if no clientId
+  if (!clientId) {
+    console.log("No clientId provided to ClientHealthTabContent");
+    return (
+      <div className="p-8 text-center">
+        <p className="text-gray-500">No client ID provided</p>
+      </div>
+    );
+  }
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
@@ -681,6 +693,7 @@ const EnhancedClientDetailPage = ({ params }: { params: { id: string } }) => {
           </TabsContent>
 
           <TabsContent value="health" className="space-y-6 mt-6">
+            {console.log("Rendering health tab with clientId:", clientId, "type:", typeof clientId)}
             <ClientHealthTabContent clientId={clientId} />
           </TabsContent>
         </Tabs>
