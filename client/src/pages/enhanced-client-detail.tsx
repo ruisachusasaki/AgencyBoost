@@ -1804,6 +1804,33 @@ export default function EnhancedClientDetail() {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  // Calculate total cost of all client products and bundles
+  const totalProductsCost = useMemo(() => {
+    if (!clientProductsData || !Array.isArray(clientProductsData)) return 0;
+    
+    let total = 0;
+    
+    clientProductsData.forEach((product: any) => {
+      if (product.itemType === 'bundle') {
+        // Calculate bundle cost by summing all items in the bundle
+        const bundleDetails = bundleDetailsData[product.productId];
+        if (bundleDetails && Array.isArray(bundleDetails)) {
+          bundleDetails.forEach((item: any) => {
+            const cost = parseFloat(item.cost || '0');
+            const quantity = parseInt(item.quantity || '1');
+            total += cost * quantity;
+          });
+        }
+      } else {
+        // Individual product cost
+        const cost = parseFloat(product.cost || product.productCost || '0');
+        total += cost;
+      }
+    });
+    
+    return total;
+  }, [clientProductsData, bundleDetailsData]);
+
   // Helper functions to get dynamic names from custom fields - memoized to prevent infinite re-renders
   const clientDisplayName = useMemo(() => {
     if (!client) return "";
@@ -3797,6 +3824,20 @@ export default function EnhancedClientDetail() {
                     Add Product
                   </Button>
                 </div>
+                {/* Total Cost Display */}
+                {clientProductsData && clientProductsData.length > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShoppingBag className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-600">Total Products & Services Cost</span>
+                      </div>
+                      <div className="text-lg font-bold text-blue-600" data-testid="text-total-products-cost">
+                        ${totalProductsCost.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {clientProductsData && clientProductsData.length > 0 ? (
