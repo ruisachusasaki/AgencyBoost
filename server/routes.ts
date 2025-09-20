@@ -1435,15 +1435,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "sectionIds must be an array" });
       }
 
-      console.log("DEBUG - Reorder request with sectionIds:", sectionIds);
-
       // Verify all sections exist before reordering
       const existingSections = await appStorage.listBriefSections();
       const existingIds = new Set(existingSections.map(s => s.id));
       
       const missingIds = sectionIds.filter(id => !existingIds.has(id));
       if (missingIds.length > 0) {
-        console.log("DEBUG - Missing section IDs:", missingIds);
         return res.status(404).json({ message: "Client brief section not found" });
       }
 
