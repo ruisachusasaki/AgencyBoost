@@ -1262,7 +1262,12 @@ export default function EnhancedClientDetail() {
   const queryClient = useQueryClient();
   
   // Extract client ID from URL
-  const clientId = window.location.pathname.split('/').pop();
+  // Extract client ID from URL path (e.g., /clients/df3f4467-809f-4cf1-bd8f-08a895996b65)
+  const pathSegments = window.location.pathname.split('/');
+  const clientIndex = pathSegments.indexOf('clients');
+  const clientId = clientIndex !== -1 && clientIndex + 1 < pathSegments.length 
+    ? pathSegments[clientIndex + 1] 
+    : pathSegments[pathSegments.length - 1];
   
   // Ref for right column (left column height tracking removed)
   const rightColumnRef = useRef<HTMLDivElement>(null);
@@ -4020,11 +4025,51 @@ export default function EnhancedClientDetail() {
                               <div className="flex gap-2 mt-3">
                                 <Button
                                   size="sm"
-                                  onClick={() => {
-                                    // Save the quantities (implement API call here)
-                                    setEditingBundleQuantities(null);
-                                    setTempQuantities({});
-                                    // TODO: Implement save quantities API call
+                                  onClick={async () => {
+                                    try {
+                                      console.log('Saving bundle quantities:', {
+                                        clientId,
+                                        bundleId: product.productId,
+                                        customQuantities: tempQuantities,
+                                        url: `/api/clients/${clientId}/bundles/${product.productId}/quantities`
+                                      });
+                                      
+                                      // Save the quantities to the backend
+                                      const response = await apiRequest(`/api/clients/${clientId}/bundles/${product.productId}/quantities`, {
+                                        method: 'PATCH',
+                                        body: JSON.stringify({ customQuantities: tempQuantities })
+                                      });
+                                      
+                                      console.log('Save response:', response);
+                                      
+                                      // Invalidate cache to refresh data
+                                      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/product-bundles', product.productId, 'products'] });
+                                      
+                                      // Close editing mode
+                                      setEditingBundleQuantities(null);
+                                      setTempQuantities({});
+                                      
+                                      // Show success message
+                                      toast({
+                                        title: "Success",
+                                        description: "Bundle quantities updated successfully."
+                                      });
+                                    } catch (error) {
+                                      console.error('Error saving bundle quantities:', error);
+                                      console.error('Error details:', {
+                                        message: error.message,
+                                        stack: error.stack,
+                                        clientId,
+                                        bundleId: product.productId,
+                                        tempQuantities
+                                      });
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to save bundle quantities. Please try again.",
+                                        variant: "destructive"
+                                      });
+                                    }
                                   }}
                                   className="bg-green-600 hover:bg-green-700 text-white"
                                   data-testid={`button-save-quantities-${product.id}`}
