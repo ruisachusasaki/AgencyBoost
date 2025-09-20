@@ -569,7 +569,6 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
         <h3 className="text-lg font-medium text-gray-900">Client Health Scores</h3>
         <Button 
           onClick={() => setIsHealthModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
           data-testid="button-add-health-score"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -592,9 +591,9 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Date Range Filter */}
-          <div>
+          <div className="space-y-4">
             <Label className="text-sm font-medium text-gray-700 mb-2 block">Date Range</Label>
             <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
               <SelectTrigger>
@@ -609,12 +608,42 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                 <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Custom Date Range Picker */}
+            {dateRangeFilter === "custom" && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-gray-500">From</Label>
+                  <Input
+                    type="date"
+                    value={customDateRange.from ? customDateRange.from.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange(prev => ({ 
+                      ...prev, 
+                      from: e.target.value ? new Date(e.target.value) : null 
+                    }))}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">To</Label>
+                  <Input
+                    type="date"
+                    value={customDateRange.to ? customDateRange.to.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange(prev => ({ 
+                      ...prev, 
+                      to: e.target.value ? new Date(e.target.value) : null 
+                    }))}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Health Status Filter */}
-          <div>
+          <div className="space-y-4">
             <Label className="text-sm font-medium text-gray-700 mb-2 block">Health Status</Label>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="filter-green"
@@ -647,11 +676,97 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
               </div>
             </div>
           </div>
+        </div>
+        
+        {/* Results Summary */}
+        <div className="text-sm text-gray-600 mt-4">
+          Showing {showingStart}-{showingEnd} of {totalItems} records
+        </div>
+      </div>
 
-          {/* Results Summary */}
-          <div className="flex items-end">
-            <div className="text-sm text-gray-600">
-              Showing {showingStart}-{showingEnd} of {totalItems} records
+      {/* Weekly Recap Section */}
+      <div className="bg-white rounded-lg border p-6">
+        <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <Calendar className="h-4 w-4" />
+          Weekly Recap
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-sm text-gray-600">Tasks Completed</div>
+          </div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-sm text-gray-600">Communications</div>
+          </div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-900">-</div>
+            <div className="text-sm text-gray-600">Latest Health Score</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Opportunities Section */}
+      <div className="bg-white rounded-lg border p-6">
+        <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          Opportunities
+        </h4>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+            <div>
+              <div className="font-medium text-gray-900">Engagement Opportunity</div>
+              <div className="text-sm text-gray-600">Client hasn't responded to recent communications</div>
+              <div className="text-xs text-gray-500 mt-1">Last activity: 5 days ago</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+            <div>
+              <div className="font-medium text-gray-900">Upsell Opportunity</div>
+              <div className="text-sm text-gray-600">Client showing interest in additional services</div>
+              <div className="text-xs text-gray-500 mt-1">Based on recent project success</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Solutions Section */}
+      <div className="bg-white rounded-lg border p-6">
+        <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <Lightbulb className="h-4 w-4" />
+          Recommended Solutions
+        </h4>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Schedule Check-in Call</div>
+              <div className="text-sm text-gray-600">Proactive communication to address engagement concerns</div>
+              <Button variant="outline" size="sm" className="mt-2">
+                Schedule Call
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Send Progress Report</div>
+              <div className="text-sm text-gray-600">Share recent wins and upcoming milestones</div>
+              <Button variant="outline" size="sm" className="mt-2">
+                Generate Report
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Prepare Service Proposal</div>
+              <div className="text-sm text-gray-600">Create proposal for additional services based on client interest</div>
+              <Button variant="outline" size="sm" className="mt-2">
+                Create Proposal
+              </Button>
             </div>
           </div>
         </div>
