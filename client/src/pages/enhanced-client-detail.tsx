@@ -577,6 +577,86 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
         </Button>
       </div>
 
+      {/* Filters Section */}
+      <div className="bg-white rounded-lg border p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-medium text-gray-900">Filters</h4>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={clearFilters}
+            className="text-gray-600 hover:text-gray-800"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Clear Filters
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Date Range Filter */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Date Range</Label>
+            <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="this_week">This Week</SelectItem>
+                <SelectItem value="last_week">Last Week</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Health Status Filter */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Health Status</Label>
+            <div className="flex gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="filter-green"
+                  checked={healthStatusFilters.Green}
+                  onCheckedChange={(checked) => 
+                    setHealthStatusFilters(prev => ({ ...prev, Green: !!checked }))
+                  }
+                />
+                <Label htmlFor="filter-green" className="text-sm text-green-600">Green</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="filter-yellow"
+                  checked={healthStatusFilters.Yellow}
+                  onCheckedChange={(checked) => 
+                    setHealthStatusFilters(prev => ({ ...prev, Yellow: !!checked }))
+                  }
+                />
+                <Label htmlFor="filter-yellow" className="text-sm text-yellow-600">Yellow</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="filter-red"
+                  checked={healthStatusFilters.Red}
+                  onCheckedChange={(checked) => 
+                    setHealthStatusFilters(prev => ({ ...prev, Red: !!checked }))
+                  }
+                />
+                <Label htmlFor="filter-red" className="text-sm text-red-600">Red</Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Results Summary */}
+          <div className="flex items-end">
+            <div className="text-sm text-gray-600">
+              Showing {showingStart}-{showingEnd} of {totalItems} records
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Health Score Cards */}
       {paginatedHealthScores.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border">
@@ -641,6 +721,50 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white rounded-lg border p-4">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-gray-600">per page</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
