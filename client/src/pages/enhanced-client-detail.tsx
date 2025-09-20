@@ -1812,13 +1812,18 @@ export default function EnhancedClientDetail() {
     
     clientProductsData.forEach((product: any) => {
       if (product.itemType === 'bundle') {
-        // Calculate bundle cost by summing all items in the bundle
+        // Calculate bundle cost by summing all items in the bundle with client-specific quantities
         const bundleDetails = bundleDetailsData[product.productId];
         if (bundleDetails && Array.isArray(bundleDetails)) {
           bundleDetails.forEach((item: any) => {
-            const cost = parseFloat(item.cost || '0');
+            // Handle various formats of cost fields (string, number, null, undefined)
+            // Try multiple possible field names: productCost, cost, price, productPrice
+            const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
+            const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
+            const validCost = isNaN(cost) ? 0 : cost;
+            
             const quantity = parseInt(item.quantity || '1');
-            total += cost * quantity;
+            total += validCost * quantity;
           });
         }
       } else {
