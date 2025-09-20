@@ -97,7 +97,7 @@ export async function hasPermission(
       .where(
         and(
           eq(userRoles.userId, userId),
-          eq(roles.name, 'admin')
+          eq(roles.name, 'Admin')
         )
       );
     
