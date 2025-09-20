@@ -3806,11 +3806,11 @@ export default function EnhancedClientDetail() {
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h4 className="font-medium text-gray-900" data-testid={`text-product-name-${product.id}`}>
-                              {product.name}
+                              {product.productName || product.name}
                             </h4>
-                            {product.description && (
+                            {(product.productDescription || product.description) && (
                               <p className="text-sm text-gray-600 mt-1" data-testid={`text-product-description-${product.id}`}>
-                                {product.description}
+                                {product.productDescription || product.description}
                               </p>
                             )}
                             <div className="flex items-center gap-4 mt-2">
