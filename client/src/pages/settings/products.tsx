@@ -25,7 +25,8 @@ import {
   X,
   ArrowLeft,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Link } from "wouter";
 
