@@ -1425,6 +1425,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/client-brief-sections/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { sectionIds } = req.body;
+      if (!Array.isArray(sectionIds)) {
+        return res.status(400).json({ message: "sectionIds must be an array" });
+      }
+
+      console.log("DEBUG - Reorder request with sectionIds:", sectionIds);
+
+      // Verify all sections exist before reordering
+      const existingSections = await appStorage.listBriefSections();
+      const existingIds = new Set(existingSections.map(s => s.id));
+      
+      const missingIds = sectionIds.filter(id => !existingIds.has(id));
+      if (missingIds.length > 0) {
+        console.log("DEBUG - Missing section IDs:", missingIds);
+        return res.status(404).json({ message: "Client brief section not found" });
+      }
+
+      await appStorage.reorderBriefSections(sectionIds);
+
+      // Log the reorder
+      await createAuditLog(
+        "updated",
+        "client_brief_sections",
+        "reorder",
+        "Client Brief Sections Order",
+        userId,
+        `Reordered client brief sections`,
+        null,
+        { sectionIds },
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error reordering client brief sections:", error);
+      res.status(500).json({ message: "Failed to reorder client brief sections" });
+    }
+  });
+
   app.put("/api/client-brief-sections/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -1514,49 +1558,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/client-brief-sections/reorder", requireAuth(), requireAdmin(), async (req, res) => {
-    try {
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return;
-
-      const { sectionIds } = req.body;
-      if (!Array.isArray(sectionIds)) {
-        return res.status(400).json({ message: "sectionIds must be an array" });
-      }
-
-      console.log("DEBUG - Reorder request with sectionIds:", sectionIds);
-
-      // Verify all sections exist before reordering
-      const existingSections = await appStorage.listBriefSections();
-      const existingIds = new Set(existingSections.map(s => s.id));
-      
-      const missingIds = sectionIds.filter(id => !existingIds.has(id));
-      if (missingIds.length > 0) {
-        console.log("DEBUG - Missing section IDs:", missingIds);
-        return res.status(404).json({ message: "Client brief section not found" });
-      }
-
-      await appStorage.reorderBriefSections(sectionIds);
-
-      // Log the reorder
-      await createAuditLog(
-        "updated",
-        "client_brief_sections",
-        "reorder",
-        "Client Brief Sections Order",
-        userId,
-        `Reordered client brief sections`,
-        null,
-        { sectionIds },
-        req
-      );
-
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error reordering client brief sections:", error);
-      res.status(500).json({ message: "Failed to reorder client brief sections" });
-    }
-  });
 
   // Client Brief Data routes - Hybrid core/custom data access
   app.get("/api/clients/:id/brief", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
