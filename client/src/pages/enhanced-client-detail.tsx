@@ -385,11 +385,11 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
   }, [dateRangeFilter, customDateRange]);
 
   // Clear filters function
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setDateRangeFilter("all");
     setCustomDateRange({ from: null, to: null });
     setHealthStatusFilters({ Green: true, Yellow: true, Red: true });
-  };
+  }, []);
 
   // Get current week range for checking if score exists
   const weekRange = getCurrentWeekRange();
@@ -466,7 +466,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     : undefined;
 
   // Helper function to get health indicator styling
-  const getHealthIndicatorStyling = (healthIndicator: string) => {
+  const getHealthIndicatorStyling = useCallback((healthIndicator: string) => {
     switch (healthIndicator) {
       case 'Green':
         return {
@@ -493,10 +493,10 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
           text: 'text-gray-700'
         };
     }
-  };
+  }, []);
 
   // Helper function to get metric styling based on value
-  const getMetricStyling = (metric: string, value: string) => {
+  const getMetricStyling = useCallback((metric: string, value: string) => {
     if (metric === 'goals') {
       switch (value) {
         case 'Above': return 'text-green-600 bg-green-50';
@@ -530,17 +530,17 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
       }
     }
     return 'text-gray-600 bg-gray-50';
-  };
+  }, []);
 
   // Handle successful health score submission
-  const handleHealthScoreSuccess = () => {
+  const handleHealthScoreSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] });
     setIsHealthModalOpen(false);
     toast({
       title: "Health Score Recorded",
       description: `Weekly health score for ${displayRange} has been saved successfully.`,
     });
-  };
+  }, [queryClient, clientId, displayRange, toast]);
 
   if (isLoading) {
     return (
