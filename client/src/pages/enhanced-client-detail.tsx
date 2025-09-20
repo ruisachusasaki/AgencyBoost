@@ -660,15 +660,31 @@ const EnhancedClientDetailPage = ({ params }: { params: { id: string } }) => {
   const clientId = params.id;
   const [activeTab, setActiveTab] = useState("overview");
   
+  console.log("EnhancedClientDetailPage rendering with clientId:", clientId);
+  console.log("Current activeTab:", activeTab);
+  
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* DEBUG: Visual debugging indicator */}
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded fixed top-0 right-0 z-50 m-4">
+        <p className="text-sm">
+          <strong>DEBUG:</strong> ClientId: {clientId} | ActiveTab: {activeTab}
+        </p>
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => {
+            console.log("Tab changing from", activeTab, "to", value);
+            setActiveTab(value);
+          }} 
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="health">Client Health</TabsTrigger>
+            <TabsTrigger value="overview" onClick={() => console.log("Overview tab clicked")}>Overview</TabsTrigger>
+            <TabsTrigger value="tasks" onClick={() => console.log("Tasks tab clicked")}>Tasks</TabsTrigger>
+            <TabsTrigger value="notes" onClick={() => console.log("Notes tab clicked")}>Notes</TabsTrigger>
+            <TabsTrigger value="health" onClick={() => console.log("CLIENT HEALTH TAB CLICKED!!!")}>Client Health</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
