@@ -3865,7 +3865,10 @@ export default function EnhancedClientDetail() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => setActiveHubSection("health")}
+                          onClick={() => {
+                            console.log("Health button clicked - setting activeHubSection to 'health'");
+                            setActiveHubSection("health");
+                          }}
                           className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
                             activeHubSection === "health"
                               ? "bg-white text-primary shadow-sm"
@@ -3883,6 +3886,7 @@ export default function EnhancedClientDetail() {
                 </TooltipProvider>
               </CardHeader>
               <CardContent className="pt-6">
+                {console.log("Current activeHubSection:", activeHubSection)}
                 {/* Notes Section */}
                 {activeHubSection === "notes" && (
                   <div className="space-y-4">
@@ -4429,6 +4433,9 @@ export default function EnhancedClientDetail() {
                 {/* Health Section */}
                 {activeHubSection === "health" && (
                   <div className="space-y-4">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-800">Health section is active! ClientId: {clientId}</p>
+                    </div>
                     <ClientHealthTabContent clientId={clientId!} />
                   </div>
                 )}
