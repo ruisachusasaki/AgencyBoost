@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -155,12 +155,14 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Agency Flow Logo */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              Agency<span className="text-blue-600">Flow</span>
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Access the Agency Flow System
-            </p>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                Agency<span className="text-primary">Flow</span>
+              </h1>
+            </div>
           </div>
           
           <Card data-testid="bootstrap-card">
@@ -255,12 +257,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Agency Flow Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Agency<span className="text-blue-600">Flow</span>
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Access the Agency Flow System
-          </p>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+              Agency<span className="text-primary">Flow</span>
+            </h1>
+          </div>
         </div>
         
         <Card data-testid="login-card">
