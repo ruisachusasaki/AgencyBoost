@@ -4944,6 +4944,7 @@ export default function EnhancedClientDetail() {
                               productId: product.id
                             });
                             queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+                            setShowAddProductModal(false);
                             toast({
                               title: "Success",
                               description: `${product.name} added successfully!`
@@ -4998,6 +4999,7 @@ export default function EnhancedClientDetail() {
                               productId: bundle.id
                             });
                             queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+                            setShowAddProductModal(false);
                             toast({
                               title: "Success",
                               description: `${bundle.name} bundle added successfully!`
