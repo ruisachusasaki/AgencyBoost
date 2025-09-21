@@ -4132,6 +4132,22 @@ export class DbStorage implements IStorage {
     }
   }
 
+  async updateClient(id: string, clientData: Partial<InsertClient>): Promise<Client | undefined> {
+    try {
+      const result = await db.update(clients)
+        .set({
+          ...clientData,
+          updatedAt: new Date()
+        })
+        .where(eq(clients.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating client:", error);
+      return undefined;
+    }
+  }
+
   // Client Health Scores
   async createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore> {
     const result = await db.insert(clientHealthScores).values({
