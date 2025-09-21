@@ -3844,7 +3844,7 @@ export default function EnhancedClientDetail() {
                   <Button
                     onClick={() => setIsAddingProduct(true)}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     data-testid="button-add-product"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -3853,13 +3853,13 @@ export default function EnhancedClientDetail() {
                 </div>
                 {/* Total Cost Display */}
                 {clientProductsData && clientProductsData.length > 0 && (
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-4">
+                  <div className="bg-primary/10 p-3 rounded-lg border border-primary/20 mt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <ShoppingBag className="w-5 h-5 text-blue-600" />
+                        <ShoppingBag className="w-5 h-5 text-primary" />
                         <span className="text-sm font-medium text-gray-600">Total Products & Services Cost</span>
                       </div>
-                      <div className="text-lg font-bold text-blue-600" data-testid="text-total-products-cost">
+                      <div className="text-lg font-bold text-primary" data-testid="text-total-products-cost">
                         ${totalProductsCost.toFixed(2)}
                       </div>
                     </div>
@@ -3913,7 +3913,7 @@ export default function EnhancedClientDetail() {
                             )}
                             <div className="flex items-center gap-4 mt-2">
                               {product.itemType === 'bundle' && (
-                                <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded" data-testid={`text-bundle-total-${product.id}`}>
+                                <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded" data-testid={`text-bundle-total-${product.id}`}>
                                   Bundle Total: ${calculateIndividualBundleCost(product.productId).toFixed(2)}
                                 </span>
                               )}
@@ -3923,7 +3923,7 @@ export default function EnhancedClientDetail() {
                                 </span>
                               )}
                               {product.category && (
-                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full" data-testid={`text-product-category-${product.id}`}>
+                                <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full" data-testid={`text-product-category-${product.id}`}>
                                   {product.category}
                                 </span>
                               )}
@@ -3951,7 +3951,7 @@ export default function EnhancedClientDetail() {
                                     }
                                   }
                                 }}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                className="text-primary hover:text-primary/80 hover:bg-primary/10"
                                 data-testid={`button-edit-quantities-${product.id}`}
                               >
                                 <Edit className="h-4 w-4" />
@@ -4005,7 +4005,7 @@ export default function EnhancedClientDetail() {
                                         data-testid={`input-quantity-${item.productId}`}
                                       />
                                     ) : (
-                                      <span className="ml-2 text-blue-600">x{item.quantity || 1}</span>
+                                      <span className="ml-2 text-primary">x{item.quantity || 1}</span>
                                     )}
                                   </span>
                                   <span className="text-gray-500">
@@ -4085,7 +4085,7 @@ export default function EnhancedClientDetail() {
                     <p className="text-gray-600 mb-6">Add your first product or service to get started.</p>
                     <Button
                       onClick={() => setIsAddingProduct(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       data-testid="button-add-first-product"
                     >
                       <Plus className="h-4 w-4 mr-2" />

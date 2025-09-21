@@ -17,6 +17,7 @@ UX Organization: Project Templates integrated as tabs under Projects section rat
 Checkbox Design: Bulk action checkboxes should be square, task completion checkboxes should be circular.
 Filter Preferences: Simplified filtering with only essential filters (search and department, not position) for time off reports.
 Settings Organization: Removed Settings > Support section (old ticketing system feature no longer needed).
+Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179, 39%, 45%)`) throughout ALL features. Replace any blue buttons, accents, or styling with the primary theme color to ensure visual consistency across the entire application.
 
 ## System Architecture
 
