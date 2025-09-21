@@ -4886,6 +4886,153 @@ export default function EnhancedClientDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Product Modal */}
+      <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Products & Services</DialogTitle>
+            <DialogDescription>
+              Select products and bundles to add to this client.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Search Input */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Search products and bundles..."
+                value={productSearchTerm}
+                onChange={(e) => setProductSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                data-testid="input-product-search"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Products Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Products</h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {productsData && productsData
+                  .filter(product => 
+                    product.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                    product.description?.toLowerCase().includes(productSearchTerm.toLowerCase())
+                  )
+                  .map((product) => (
+                    <div 
+                      key={product.id} 
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{product.name}</h4>
+                        {product.description && (
+                          <p className="text-sm text-gray-600">{product.description}</p>
+                        )}
+                        <p className="text-sm font-medium text-primary">
+                          ${Number(product.cost || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await apiRequest('POST', `/api/clients/${clientId}/products`, {
+                              productId: product.id
+                            });
+                            queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+                            toast({
+                              title: "Success",
+                              description: `${product.name} added successfully!`
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to add product. Please try again.",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        data-testid={`button-add-product-${product.id}`}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Bundles Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Bundles</h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {bundlesData && bundlesData
+                  .filter(bundle => 
+                    bundle.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                    bundle.description?.toLowerCase().includes(productSearchTerm.toLowerCase())
+                  )
+                  .map((bundle) => (
+                    <div 
+                      key={bundle.id} 
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{bundle.name}</h4>
+                        {bundle.description && (
+                          <p className="text-sm text-gray-600">{bundle.description}</p>
+                        )}
+                        <p className="text-sm font-medium text-primary">
+                          ${Number(bundle.price || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await apiRequest('POST', `/api/clients/${clientId}/products`, {
+                              productId: bundle.id
+                            });
+                            queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+                            toast({
+                              title: "Success",
+                              description: `${bundle.name} bundle added successfully!`
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to add bundle. Please try again.",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        data-testid={`button-add-bundle-${bundle.id}`}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddProductModal(false)}
+              data-testid="button-close-add-product-modal"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
