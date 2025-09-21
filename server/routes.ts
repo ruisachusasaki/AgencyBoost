@@ -1144,9 +1144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create separate audit logs for DND changes due to their critical nature
       if (dndChanges.length > 0) {
+        try {
+          console.log("📝 Starting DND audit logging...");
         
-        // Get staff name for audit log
-        const staffResult = await db.select({
+          // Get staff name for audit log
+          const staffResult = await db.select({
           id: staff.id,
           firstName: staff.firstName,
           lastName: staff.lastName,
@@ -1210,10 +1212,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req
           );
         }
+        console.log("✅ DND audit logging completed successfully");
+        } catch (auditError) {
+          console.error("❌ DND audit logging failed but update was successful:", auditError);
+          // Continue execution - don't fail the request for audit issues
+        }
       }
       
       // Log the general update
-      await createAuditLog(
+      try {
+        console.log("📝 Starting general audit logging...");
+        await createAuditLog(
         "updated",
         "contact",
         client.id,
@@ -1224,7 +1233,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { name: client.name, email: client.email, phone: client.phone },
         req
       );
+      console.log("✅ General audit logging completed successfully");
+      } catch (auditError) {
+        console.error("❌ General audit logging failed but update was successful:", auditError);
+        // Continue execution - don't fail the request for audit issues
+      }
       
+      console.log("🎉 Client update completed successfully, returning response");
       res.json(client);
     } catch (error) {
       if (error instanceof z.ZodError) {
