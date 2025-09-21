@@ -5809,7 +5809,7 @@ class MinimalStorage implements Partial<IStorage> {
       return result[0];
     } catch (error) {
       console.error("Error updating client:", error);
-      return undefined;
+      throw error; // Re-throw the error so the API can handle it properly
     }
   }
 
