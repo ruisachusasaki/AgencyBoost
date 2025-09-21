@@ -91,6 +91,12 @@ export async function hasPermission(
   try {
     console.log("🔍 hasPermission called for:", { userId, module, permission });
     
+    // Development mode bypass - mock admin user has all permissions
+    if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+      console.log('🔧 Development mode: Mock admin user detected, granting all permissions');
+      return true;
+    }
+    
     // Check if user has admin role through proper database queries
     console.log("📝 Querying admin roles...");
     const adminRoles = await db
