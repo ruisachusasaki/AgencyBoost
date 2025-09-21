@@ -89,7 +89,10 @@ export async function hasPermission(
 ): Promise<boolean> {
   
   try {
+    console.log("🔍 hasPermission called for:", { userId, module, permission });
+    
     // Check if user has admin role through proper database queries
+    console.log("📝 Querying admin roles...");
     const adminRoles = await db
       .select({ roleId: userRoles.roleId, roleName: roles.name })
       .from(userRoles)
@@ -100,6 +103,7 @@ export async function hasPermission(
           eq(roles.name, 'Admin')
         )
       );
+    console.log("✅ Admin roles query completed:", adminRoles);
     
     // Users with admin role have all permissions
     if (adminRoles.length > 0) {
