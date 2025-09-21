@@ -1014,26 +1014,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/clients/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
-      console.log("🚀 PUT /api/clients/:id route started with:", { id: req.params.id, body: req.body });
       
       // Get the old client data first for audit logging
-      console.log("📝 Getting old client data...");
       const oldClient = await appStorage.getClient(req.params.id);
       if (!oldClient) {
         console.log("❌ Client not found");
         return res.status(404).json({ message: "Client not found" });
       }
-      console.log("✅ Old client data retrieved");
       
-      console.log("📝 Validating request data with Zod...");
       const validatedData = insertClientSchema.partial().parse(req.body);
-      console.log("✅ Zod validation passed");
       
       // Remove undefined values and check if there are valid fields to update
       const filteredData = Object.fromEntries(
         Object.entries(validatedData).filter(([key, value]) => value !== undefined)
       );
-      console.log("📝 Filtered data:", filteredData);
       
       if (Object.keys(filteredData).length === 0) {
         console.log("❌ No valid fields to update");
@@ -1059,7 +1053,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (dndFieldsBeingDisabled.length > 0) {
-        console.log("🔒 DND disable attempt detected, checking Admin role...");
         
         try {
           // Strict Admin role check - only users with Admin role can disable DND
@@ -1074,8 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          console.log("✅ Admin user confirmed, allowing DND disable operation");
-        } catch (error) {
+          } catch (error) {
           console.error("❌ Error checking Admin role for DND operation:", error);
           return res.status(403).json({ 
             message: "Unable to verify Admin permissions for DND disable operation",
