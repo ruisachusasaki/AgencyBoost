@@ -2047,6 +2047,20 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  // Handle delete product function
+  const handleDeleteProduct = (productId: string) => {
+    if (!canDeleteProducts) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to delete products",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    deleteProductMutation.mutate(productId);
+  };
+
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
