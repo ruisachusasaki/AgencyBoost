@@ -4196,13 +4196,6 @@ export class DbStorage implements IStorage {
     return client;
   }
 
-  async updateClient(id: string, clientData: Partial<InsertClient>): Promise<Client | undefined> {
-    const result = await db.update(clients)
-      .set(clientData)
-      .where(eq(clients.id, id))
-      .returning();
-    return result[0];
-  }
 
   async deleteClient(id: string): Promise<boolean> {
     const result = await db.delete(clients).where(eq(clients.id, id));
