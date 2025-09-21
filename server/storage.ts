@@ -4134,6 +4134,7 @@ export class DbStorage implements IStorage {
 
   async updateClient(id: string, clientData: Partial<InsertClient>): Promise<Client | undefined> {
     try {
+      console.log("🔧 updateClient called with:", { id, clientData });
       const result = await db.update(clients)
         .set({
           ...clientData,
@@ -4141,10 +4142,12 @@ export class DbStorage implements IStorage {
         })
         .where(eq(clients.id, id))
         .returning();
+      console.log("✅ Database update successful, returning:", result[0]);
       return result[0];
     } catch (error) {
-      console.error("Error updating client:", error);
-      return undefined;
+      console.error("❌ Database error in updateClient:", error);
+      console.error("❌ Full error details:", JSON.stringify(error, null, 2));
+      throw error; // Re-throw the error so it gets caught by the route
     }
   }
 
