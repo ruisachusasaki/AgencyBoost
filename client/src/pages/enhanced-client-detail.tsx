@@ -1912,6 +1912,25 @@ export default function EnhancedClientDetail() {
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
   const canDeleteProducts = currentUser && ['Admin', 'Accounting', 'Manager'].includes(currentUser.role);
 
+  // Check if current user is admin (only admins can uncheck DND settings)
+  const isAdmin = currentUser && currentUser.role === 'Admin';
+
+  // Handle DND setting changes with admin-only uncheck restriction
+  const handleDNDChange = (setting: 'dndAll' | 'dndEmail' | 'dndSms' | 'dndCalls', checked: boolean) => {
+    // If trying to uncheck (disable DND) and user is not admin, prevent the action
+    if (!checked && !isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only Administrators can disable Do Not Disturb settings",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Allow the change
+    updateDNDMutation.mutate({ [setting]: checked });
+  };
+
   // Delete product/bundle mutation
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -4159,7 +4178,7 @@ export default function EnhancedClientDetail() {
                     <Switch
                       id="dnd-all"
                       checked={client?.dndAll || false}
-                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndAll: checked })}
+                      onCheckedChange={(checked) => handleDNDChange('dndAll', checked)}
                       data-testid="switch-dnd-all"
                     />
                   </div>
@@ -4172,7 +4191,7 @@ export default function EnhancedClientDetail() {
                     <Switch
                       id="dnd-email"
                       checked={client?.dndEmail || false}
-                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndEmail: checked })}
+                      onCheckedChange={(checked) => handleDNDChange('dndEmail', checked)}
                       disabled={client?.dndAll}
                       data-testid="switch-dnd-email"
                     />
@@ -4186,7 +4205,7 @@ export default function EnhancedClientDetail() {
                     <Switch
                       id="dnd-sms"
                       checked={client?.dndSms || false}
-                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndSms: checked })}
+                      onCheckedChange={(checked) => handleDNDChange('dndSms', checked)}
                       disabled={client?.dndAll}
                       data-testid="switch-dnd-sms"
                     />
@@ -4200,7 +4219,7 @@ export default function EnhancedClientDetail() {
                     <Switch
                       id="dnd-calls"
                       checked={client?.dndCalls || false}
-                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndCalls: checked })}
+                      onCheckedChange={(checked) => handleDNDChange('dndCalls', checked)}
                       disabled={client?.dndAll}
                       data-testid="switch-dnd-calls"
                     />
