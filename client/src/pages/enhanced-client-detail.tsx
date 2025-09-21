@@ -4035,6 +4035,7 @@ export default function EnhancedClientDetail() {
                                       // Invalidate cache to refresh data
                                       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
                                       queryClient.invalidateQueries({ queryKey: ['/api/product-bundles', product.productId, 'products'] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/bundle-details', 'all-client-bundles'] });
                                       
                                       // Close editing mode
                                       setEditingBundleQuantities(null);
