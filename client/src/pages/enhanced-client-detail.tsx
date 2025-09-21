@@ -3987,7 +3987,7 @@ export default function EnhancedClientDetail() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() => handleDeleteProduct(product.productId)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               data-testid={`button-delete-product-${product.id}`}
                             >
