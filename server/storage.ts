@@ -4122,6 +4122,15 @@ export class DbStorage implements IStorage {
     }
   }
 
+  async getClient(id: string): Promise<Client | undefined> {
+    try {
+      const result = await db.select().from(clients).where(eq(clients.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching client:", error);
+      return undefined;
+    }
+  }
 
   // Client Health Scores
   async createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore> {
