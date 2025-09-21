@@ -4028,9 +4028,8 @@ export default function EnhancedClientDetail() {
                                   onClick={async () => {
                                     try {
                                       // Save the quantities to the backend
-                                      await apiRequest(`/api/clients/${clientId}/bundles/${product.productId}/quantities`, {
-                                        method: 'PATCH',
-                                        body: JSON.stringify({ customQuantities: tempQuantities })
+                                      await apiRequest('PATCH', `/api/clients/${clientId}/bundles/${product.productId}/quantities`, {
+                                        customQuantities: tempQuantities
                                       });
                                       
                                       // Invalidate cache to refresh data
