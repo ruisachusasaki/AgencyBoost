@@ -152,13 +152,24 @@ export default function LoginPage() {
   if (bootstrapStatus?.needsBootstrap) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-        <Card className="w-full max-w-md" data-testid="bootstrap-card">
-          <CardHeader>
-            <CardTitle className="text-center">Welcome to TMO CRM</CardTitle>
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              First-time setup: Please set your admin password
+        <div className="w-full max-w-md">
+          {/* Agency Flow Logo */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              Agency<span className="text-blue-600">Flow</span>
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Access the Agency Flow System
             </p>
-          </CardHeader>
+          </div>
+          
+          <Card data-testid="bootstrap-card">
+            <CardHeader>
+              <CardTitle className="text-center">Welcome to Agency Flow</CardTitle>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                First-time setup: Please set your admin password
+              </p>
+            </CardHeader>
           <CardContent>
             <form onSubmit={bootstrapForm.handleSubmit(onBootstrapSubmit)} className="space-y-4">
               <div>
@@ -233,6 +244,7 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -240,14 +252,25 @@ export default function LoginPage() {
   // Show login form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md" data-testid="login-card">
-        <CardHeader>
-          <CardTitle className="text-center">Sign In</CardTitle>
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-            Access your TMO CRM account
+      <div className="w-full max-w-md">
+        {/* Agency Flow Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Agency<span className="text-blue-600">Flow</span>
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Access the Agency Flow System
           </p>
-        </CardHeader>
-        <CardContent>
+        </div>
+        
+        <Card data-testid="login-card">
+          <CardHeader>
+            <CardTitle className="text-center">Sign In</CardTitle>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              Access the Agency Flow System
+            </p>
+          </CardHeader>
+          <CardContent>
           <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
@@ -312,6 +335,7 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

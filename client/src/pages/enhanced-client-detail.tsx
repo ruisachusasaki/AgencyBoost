@@ -4027,20 +4027,11 @@ export default function EnhancedClientDetail() {
                                   size="sm"
                                   onClick={async () => {
                                     try {
-                                      console.log('Saving bundle quantities:', {
-                                        clientId,
-                                        bundleId: product.productId,
-                                        customQuantities: tempQuantities,
-                                        url: `/api/clients/${clientId}/bundles/${product.productId}/quantities`
-                                      });
-                                      
                                       // Save the quantities to the backend
-                                      const response = await apiRequest(`/api/clients/${clientId}/bundles/${product.productId}/quantities`, {
+                                      await apiRequest(`/api/clients/${clientId}/bundles/${product.productId}/quantities`, {
                                         method: 'PATCH',
                                         body: JSON.stringify({ customQuantities: tempQuantities })
                                       });
-                                      
-                                      console.log('Save response:', response);
                                       
                                       // Invalidate cache to refresh data
                                       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
@@ -4057,13 +4048,6 @@ export default function EnhancedClientDetail() {
                                       });
                                     } catch (error) {
                                       console.error('Error saving bundle quantities:', error);
-                                      console.error('Error details:', {
-                                        message: error.message,
-                                        stack: error.stack,
-                                        clientId,
-                                        bundleId: product.productId,
-                                        tempQuantities
-                                      });
                                       toast({
                                         title: "Error",
                                         description: "Failed to save bundle quantities. Please try again.",
