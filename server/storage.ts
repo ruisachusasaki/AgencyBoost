@@ -2077,16 +2077,6 @@ export class MemStorage implements IStorage {
     return client;
   }
 
-  async updateClient(id: string, clientUpdate: Partial<InsertClient>): Promise<Client | undefined> {
-    const client = this.clients.get(id);
-    if (!client) return undefined;
-    
-    let updatedClient = { ...client, ...clientUpdate };
-    
-    
-    this.clients.set(id, updatedClient);
-    return updatedClient;
-  }
 
   async deleteClient(id: string): Promise<boolean> {
     return this.clients.delete(id);
@@ -4132,75 +4122,6 @@ export class DbStorage implements IStorage {
     }
   }
 
-  async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
-    try {
-      // Get total count
-      const totalResult = await db.select({ count: sql`count(*)` }).from(clients);
-      const total = Number(totalResult[0]?.count) || 0;
-      
-      // Build the query with sorting
-      let query = db.select().from(clients);
-      
-      if (sortBy) {
-        const column = clients[sortBy as keyof typeof clients];
-        if (column) {
-          if (sortOrder === 'desc') {
-            query = query.orderBy(desc(column));
-          } else {
-            query = query.orderBy(asc(column));
-          }
-        }
-      } else {
-        // Default sort by createdAt desc
-        query = query.orderBy(desc(clients.createdAt));
-      }
-      
-      // Add pagination
-      query = query.limit(limit).offset(offset);
-      
-      const clientsResult = await query;
-      
-      return {
-        clients: clientsResult,
-        total
-      };
-    } catch (error) {
-      console.error("Error fetching clients with pagination:", error);
-      return {
-        clients: [],
-        total: 0
-      };
-    }
-  }
-
-  async getClient(id: string): Promise<Client | undefined> {
-    try {
-      const result = await db.select().from(clients).where(eq(clients.id, id));
-      return result[0];
-    } catch (error) {
-      console.error("Error fetching client:", error);
-      return undefined;
-    }
-  }
-
-  async createClient(insertClient: InsertClient): Promise<Client> {
-    const id = randomUUID();
-    const now = new Date();
-    const client: Client = { 
-      id,
-      ...insertClient,
-      createdAt: now,
-    };
-    
-    await db.insert(clients).values(client);
-    return client;
-  }
-
-
-  async deleteClient(id: string): Promise<boolean> {
-    const result = await db.delete(clients).where(eq(clients.id, id));
-    return true;
-  }
 
   // Client Health Scores
   async createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore> {
