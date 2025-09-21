@@ -4,17 +4,6 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import { storage as appStorage } from "./storage";
-
-// CRITICAL DEBUG: Verify storage instance and updateClient method
-console.log('🔍 Storage instance verification:');
-console.log('- Storage constructor:', Object.getPrototypeOf(appStorage).constructor.name);
-console.log('- updateClient type:', typeof appStorage.updateClient);
-console.log('- updateClient exists:', 'updateClient' in appStorage);
-console.log('- Storage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(appStorage)).filter(name => name.includes('Client')));
-
-if (typeof appStorage.updateClient !== 'function') {
-  throw new Error(`CRITICAL: appStorage.updateClient is not a function! Type: ${typeof appStorage.updateClient}`);
-}
 import { 
   insertClientSchema, insertCampaignSchema, insertLeadSchema, 
   insertTaskSchema, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
@@ -1089,9 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log("📝 Calling appStorage.updateClient...");
       const client = await appStorage.updateClient(req.params.id, filteredData);
-      console.log("✅ appStorage.updateClient completed");
       
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
@@ -1145,7 +1132,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create separate audit logs for DND changes due to their critical nature
       if (dndChanges.length > 0) {
         try {
-          console.log("📝 Starting DND audit logging...");
         
           // Get staff name for audit log
           const staffResult = await db.select({
@@ -1212,16 +1198,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req
           );
         }
-        console.log("✅ DND audit logging completed successfully");
         } catch (auditError) {
-          console.error("❌ DND audit logging failed but update was successful:", auditError);
+          console.error("DND audit logging failed but update was successful:", auditError);
           // Continue execution - don't fail the request for audit issues
         }
       }
       
       // Log the general update
       try {
-        console.log("📝 Starting general audit logging...");
         await createAuditLog(
         "updated",
         "contact",
@@ -1233,13 +1217,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { name: client.name, email: client.email, phone: client.phone },
         req
       );
-      console.log("✅ General audit logging completed successfully");
       } catch (auditError) {
-        console.error("❌ General audit logging failed but update was successful:", auditError);
+        console.error("General audit logging failed but update was successful:", auditError);
         // Continue execution - don't fail the request for audit issues
       }
       
-      console.log("🎉 Client update completed successfully, returning response");
       res.json(client);
     } catch (error) {
       if (error instanceof z.ZodError) {

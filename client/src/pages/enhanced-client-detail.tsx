@@ -4175,13 +4175,11 @@ export default function EnhancedClientDetail() {
                       <Label htmlFor="dnd-all" className="text-sm font-medium">Block All Communications</Label>
                       <p className="text-xs text-gray-500">Prevents all emails, SMS, and calls</p>
                     </div>
-                    <input
-                      type="checkbox"
+                    <Switch
                       id="dnd-all"
                       checked={client?.dndAll || false}
-                      onChange={(e) => handleDNDChange('dndAll', e.target.checked)}
-                      data-testid="checkbox-dnd-all"
-                      className="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                      onCheckedChange={(checked) => handleDNDChange('dndAll', checked)}
+                      data-testid="switch-dnd-all"
                     />
                   </div>
                   
