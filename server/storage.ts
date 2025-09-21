@@ -5719,10 +5719,14 @@ class MinimalStorage implements Partial<IStorage> {
 
   async updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined> {
     try {
+      console.log("🔍 UpdateClient called with:", { id, client });
       const result = await db.update(clients).set(client).where(eq(clients.id, id)).returning();
+      console.log("✅ UpdateClient success:", result[0]);
       return result[0];
     } catch (error) {
-      console.error("Error updating client:", error);
+      console.error("❌ Error updating client with id:", id);
+      console.error("❌ Error updating client data:", client);
+      console.error("❌ Error updating client:", error);
       throw error; // Re-throw the error so the API can handle it properly
     }
   }
