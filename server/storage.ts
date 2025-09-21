@@ -5521,7 +5521,7 @@ export class DbStorage implements IStorage {
       const sections = await this.listBriefSections();
       
       // Get client data for core sections
-      const client = await this.getClient(clientId);
+      const [client] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
       
       // Get custom section values
       const customValues = await db.select()
