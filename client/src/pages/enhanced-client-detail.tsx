@@ -500,7 +500,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     if (metric === 'goals') {
       switch (value) {
         case 'Above': return 'text-green-600 bg-green-50';
-        case 'On Track': return 'text-blue-600 bg-blue-50';
+        case 'On Track': return 'text-primary bg-primary/10';
         case 'Below': return 'text-red-600 bg-red-50';
         default: return 'text-gray-600 bg-gray-50';
       }
@@ -508,7 +508,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     if (metric === 'fulfillment') {
       switch (value) {
         case 'Early': return 'text-green-600 bg-green-50';
-        case 'On Time': return 'text-blue-600 bg-blue-50';
+        case 'On Time': return 'text-primary bg-primary/10';
         case 'Behind': return 'text-red-600 bg-red-50';
         default: return 'text-gray-600 bg-gray-50';
       }
@@ -524,7 +524,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     if (metric === 'clientActions') {
       switch (value) {
         case 'Early': return 'text-green-600 bg-green-50';
-        case 'Up to Date': return 'text-blue-600 bg-blue-50';
+        case 'Up to Date': return 'text-primary bg-primary/10';
         case 'Late': return 'text-red-600 bg-red-50';
         default: return 'text-gray-600 bg-gray-50';
       }
@@ -4329,7 +4329,7 @@ export default function EnhancedClientDetail() {
                                       <Button 
                                         variant="ghost" 
                                         size="sm" 
-                                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600" 
+                                        className="h-6 w-6 p-0 text-gray-400 hover:text-primary" 
                                         onClick={() => {
                                           setEditingNote(note.id);
                                           setEditNoteContent(note.content);
