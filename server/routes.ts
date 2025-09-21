@@ -4,6 +4,17 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import { storage as appStorage } from "./storage";
+
+// CRITICAL DEBUG: Verify storage instance and updateClient method
+console.log('🔍 Storage instance verification:');
+console.log('- Storage constructor:', Object.getPrototypeOf(appStorage).constructor.name);
+console.log('- updateClient type:', typeof appStorage.updateClient);
+console.log('- updateClient exists:', 'updateClient' in appStorage);
+console.log('- Storage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(appStorage)).filter(name => name.includes('Client')));
+
+if (typeof appStorage.updateClient !== 'function') {
+  throw new Error(`CRITICAL: appStorage.updateClient is not a function! Type: ${typeof appStorage.updateClient}`);
+}
 import { 
   insertClientSchema, insertCampaignSchema, insertLeadSchema, 
   insertTaskSchema, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
