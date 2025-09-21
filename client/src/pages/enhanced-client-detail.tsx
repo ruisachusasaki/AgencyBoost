@@ -4015,7 +4015,9 @@ export default function EnhancedClientDetail() {
                                       const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
                                       const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
                                       const validCost = isNaN(cost) ? 0 : cost;
-                                      return validCost.toFixed(2);
+                                      const quantity = item.quantity || 1;
+                                      const totalCost = validCost * quantity;
+                                      return totalCost.toFixed(2);
                                     })()}
                                   </span>
                                 </div>
