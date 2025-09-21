@@ -3842,7 +3842,7 @@ export default function EnhancedClientDetail() {
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold">Products & Services</CardTitle>
                   <Button
-                    onClick={() => setIsAddingProduct(true)}
+                    onClick={() => setShowAddProductModal(true)}
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     data-testid="button-add-product"
@@ -4086,7 +4086,7 @@ export default function EnhancedClientDetail() {
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Yet</h3>
                     <p className="text-gray-600 mb-6">Add your first product or service to get started.</p>
                     <Button
-                      onClick={() => setIsAddingProduct(true)}
+                      onClick={() => setShowAddProductModal(true)}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       data-testid="button-add-first-product"
                     >
