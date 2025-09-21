@@ -1034,6 +1034,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No valid client fields to update" });
       }
       
+      // Security check for DND changes - Only Admin users can UNCHECK (disable) DND settings
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      const dndFieldsBeingDisabled = [];
+      if (validatedData.dndAll === false && oldClient.dndAll === true) {
+        dndFieldsBeingDisabled.push('dndAll');
+      }
+      if (validatedData.dndEmail === false && oldClient.dndEmail === true) {
+        dndFieldsBeingDisabled.push('dndEmail');
+      }
+      if (validatedData.dndSms === false && oldClient.dndSms === true) {
+        dndFieldsBeingDisabled.push('dndSms');
+      }
+      if (validatedData.dndCalls === false && oldClient.dndCalls === true) {
+        dndFieldsBeingDisabled.push('dndCalls');
+      }
+      
+      if (dndFieldsBeingDisabled.length > 0) {
+        console.log("🔒 DND disable attempt detected, checking Admin role...");
+        
+        try {
+          // Strict Admin role check - only users with Admin role can disable DND
+          const isAdmin = await isCurrentUserAdmin(req);
+          
+          if (!isAdmin) {
+            console.log("❌ Non-Admin user attempted to disable DND settings");
+            return res.status(403).json({ 
+              message: "Only Admin users can disable DND settings. You can enable DND settings but cannot disable them.",
+              restrictedFields: dndFieldsBeingDisabled,
+              error: "Admin role required for DND disable operation"
+            });
+          }
+          
+          console.log("✅ Admin user confirmed, allowing DND disable operation");
+        } catch (error) {
+          console.error("❌ Error checking Admin role for DND operation:", error);
+          return res.status(403).json({ 
+            message: "Unable to verify Admin permissions for DND disable operation",
+            error: "Permission check failed"
+          });
+        }
+      }
+      
       console.log("📝 Calling appStorage.updateClient...");
       const client = await appStorage.updateClient(req.params.id, filteredData);
       console.log("✅ appStorage.updateClient completed");
@@ -1086,10 +1130,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dndDetails.push(`User ${action} for client ${client.name || client.email}`);
         changes.push(`Calls DND ${status}`);
       }
-
-      // Get current authenticated user - SECURE (needed for all audit logging)
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Create separate audit logs for DND changes due to their critical nature
       if (dndChanges.length > 0) {
