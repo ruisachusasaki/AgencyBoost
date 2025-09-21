@@ -3952,7 +3952,7 @@ export class MemStorage implements IStorage {
 
   async getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>> {
     const sections = await this.listBriefSections();
-    const client = await this.getClient(clientId);
+    const [client] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
     
     return sections.map(section => {
       let value = undefined;
@@ -4007,7 +4007,7 @@ export class MemStorage implements IStorage {
 
     // If it's a core section, update client directly
     if (section.key && section.isCoreSection) {
-      const client = await this.getClient(clientId);
+      const [client] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
       if (client) {
         const updateData: Partial<InsertClient> = {};
         
