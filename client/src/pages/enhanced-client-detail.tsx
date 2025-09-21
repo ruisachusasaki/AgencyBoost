@@ -4143,6 +4143,405 @@ export default function EnhancedClientDetail() {
         </TabsContent>
 
           <TabsContent value="communication" className="space-y-6 mt-6">
+            {/* DND Settings Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Do Not Disturb Settings</CardTitle>
+                <p className="text-sm text-gray-600">Manage communication preferences for this client</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="dnd-all" className="text-sm font-medium">Block All Communications</Label>
+                      <p className="text-xs text-gray-500">Prevents all emails, SMS, and calls</p>
+                    </div>
+                    <Switch
+                      id="dnd-all"
+                      checked={client?.dndAll || false}
+                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndAll: checked })}
+                      data-testid="switch-dnd-all"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="dnd-email" className="text-sm font-medium">Block Emails</Label>
+                      <p className="text-xs text-gray-500">Prevents email communications</p>
+                    </div>
+                    <Switch
+                      id="dnd-email"
+                      checked={client?.dndEmail || false}
+                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndEmail: checked })}
+                      disabled={client?.dndAll}
+                      data-testid="switch-dnd-email"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="dnd-sms" className="text-sm font-medium">Block SMS</Label>
+                      <p className="text-xs text-gray-500">Prevents SMS communications</p>
+                    </div>
+                    <Switch
+                      id="dnd-sms"
+                      checked={client?.dndSms || false}
+                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndSms: checked })}
+                      disabled={client?.dndAll}
+                      data-testid="switch-dnd-sms"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="dnd-calls" className="text-sm font-medium">Block Calls</Label>
+                      <p className="text-xs text-gray-500">Prevents phone calls</p>
+                    </div>
+                    <Switch
+                      id="dnd-calls"
+                      checked={client?.dndCalls || false}
+                      onCheckedChange={(checked) => updateDNDMutation.mutate({ dndCalls: checked })}
+                      disabled={client?.dndAll}
+                      data-testid="switch-dnd-calls"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Communication Tabs for SMS and Email */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Send Communication</CardTitle>
+                <Tabs value={communicationTab} onValueChange={(value) => setCommunicationTab(value as 'sms' | 'email')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="sms" className="flex items-center gap-2" data-testid="tab-sms">
+                      <MessageSquare className="h-4 w-4" />
+                      SMS
+                    </TabsTrigger>
+                    <TabsTrigger value="email" className="flex items-center gap-2" data-testid="tab-email">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={communicationTab} className="w-full">
+                  {/* SMS Tab Content */}
+                  <TabsContent value="sms" className="space-y-4 mt-0">
+                    {client?.dndAll || client?.dndSms ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <PhoneOff className="h-4 w-4" />
+                          <span className="font-medium">SMS Communications Disabled</span>
+                        </div>
+                        <p className="text-sm text-red-600 mt-1">
+                          This client has SMS communications disabled. Disable DND to send messages.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="sms-from">From Number</Label>
+                            <Select value={smsData.fromNumber} onValueChange={(value) => handleSmsFieldChange('fromNumber', value)}>
+                              <SelectTrigger data-testid="select-sms-from">
+                                <SelectValue placeholder="Select from number" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {twilioNumbers?.phoneNumbers?.map((number) => (
+                                  <SelectItem key={number.id} value={number.phoneNumber}>
+                                    {number.friendlyName || number.phoneNumber}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="sms-to">To</Label>
+                            <Input
+                              id="sms-to"
+                              value={client?.phone || ''}
+                              disabled
+                              className="bg-gray-50"
+                              data-testid="input-sms-to"
+                            />
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label htmlFor="sms-message">Message</Label>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsTemplateModal(true)}
+                                  data-testid="button-sms-templates"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Templates
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSmsMergeTagsModal(true)}
+                                  data-testid="button-sms-merge-tags"
+                                >
+                                  <Hash className="h-3 w-3 mr-1" />
+                                  Merge Tags
+                                </Button>
+                              </div>
+                            </div>
+                            <Textarea
+                              id="sms-message"
+                              value={smsData.message}
+                              onChange={(e) => {
+                                handleSmsFieldChange('message', e.target.value);
+                                setCharacterCount(e.target.value.length);
+                              }}
+                              placeholder="Type your message..."
+                              rows={4}
+                              className="resize-none"
+                              data-testid="textarea-sms-message"
+                            />
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs text-gray-500">
+                                {characterCount}/160 characters
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ~{Math.ceil(characterCount / 160)} message{Math.ceil(characterCount / 160) !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 pt-4">
+                          <Button
+                            onClick={handleSendSms}
+                            disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone || sendSmsMutation.isPending}
+                            className="flex-1"
+                            data-testid="button-send-sms"
+                          >
+                            {sendSmsMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Send SMS
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowSmsSendModal(true)}
+                            disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
+                            data-testid="button-schedule-sms"
+                          >
+                            <Clock className="h-4 w-4 mr-2" />
+                            Schedule
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  {/* Email Tab Content */}
+                  <TabsContent value="email" className="space-y-4 mt-0">
+                    {client?.dndAll || client?.dndEmail ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <MailX className="h-4 w-4" />
+                          <span className="font-medium">Email Communications Disabled</span>
+                        </div>
+                        <p className="text-sm text-red-600 mt-1">
+                          This client has email communications disabled. Disable DND to send emails.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="email-from-name">From Name</Label>
+                              <Input
+                                id="email-from-name"
+                                value={emailData.fromName}
+                                onChange={(e) => handleEmailFieldChange('fromName', e.target.value)}
+                                placeholder="Your name"
+                                data-testid="input-email-from-name"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="email-from-email">From Email</Label>
+                              <Input
+                                id="email-from-email"
+                                type="email"
+                                value={emailData.fromEmail}
+                                onChange={(e) => handleEmailFieldChange('fromEmail', e.target.value)}
+                                placeholder="your@email.com"
+                                data-testid="input-email-from-email"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="email-to">To</Label>
+                            <Input
+                              id="email-to"
+                              value={client?.email || ''}
+                              disabled
+                              className="bg-gray-50"
+                              data-testid="input-email-to"
+                            />
+                          </div>
+                          
+                          {showCC && (
+                            <div>
+                              <Label htmlFor="email-cc">CC</Label>
+                              <Input
+                                id="email-cc"
+                                type="email"
+                                value={emailData.cc}
+                                onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
+                                placeholder="cc@email.com"
+                                data-testid="input-email-cc"
+                              />
+                            </div>
+                          )}
+                          
+                          {showBCC && (
+                            <div>
+                              <Label htmlFor="email-bcc">BCC</Label>
+                              <Input
+                                id="email-bcc"
+                                type="email"
+                                value={emailData.bcc}
+                                onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
+                                placeholder="bcc@email.com"
+                                data-testid="input-email-bcc"
+                              />
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2">
+                            {!showCC && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowCC(true)}
+                                data-testid="button-show-cc"
+                              >
+                                + CC
+                              </Button>
+                            )}
+                            {!showBCC && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowBCC(true)}
+                                data-testid="button-show-bcc"
+                              >
+                                + BCC
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="email-subject">Subject</Label>
+                            <Input
+                              id="email-subject"
+                              value={emailData.subject}
+                              onChange={(e) => handleEmailFieldChange('subject', e.target.value)}
+                              placeholder="Email subject"
+                              data-testid="input-email-subject"
+                            />
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label htmlFor="email-message">Message</Label>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowTemplateModal(true)}
+                                  data-testid="button-email-templates"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Templates
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowMergeTagsModal(true)}
+                                  data-testid="button-email-merge-tags"
+                                >
+                                  <Hash className="h-3 w-3 mr-1" />
+                                  Merge Tags
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowWysiwyg(!showWysiwyg)}
+                                  data-testid="button-toggle-wysiwyg"
+                                >
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  {showWysiwyg ? 'Simple' : 'Rich Text'}
+                                </Button>
+                              </div>
+                            </div>
+                            <Textarea
+                              id="email-message"
+                              value={emailData.message}
+                              onChange={(e) => handleEmailFieldChange('message', e.target.value)}
+                              placeholder="Type your message..."
+                              rows={8}
+                              className="resize-none"
+                              data-testid="textarea-email-message"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 pt-4">
+                          <Button
+                            onClick={handleSendEmail}
+                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
+                            className="flex-1"
+                            data-testid="button-send-email"
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Send Email
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowSendModal(true)}
+                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
+                            data-testid="button-schedule-email"
+                          >
+                            <Clock className="h-4 w-4 mr-2" />
+                            Schedule
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Communication History */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Communication History</CardTitle>
