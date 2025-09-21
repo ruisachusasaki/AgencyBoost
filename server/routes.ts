@@ -91,7 +91,13 @@ async function createAuditLog(
 ) {
   try {
     // SECURITY FIX: Convert "system" userId to proper UUID for database
-    const normalizedUserId = userId === "system" ? await normalizeUserIdForDb(userId) : userId;
+    let normalizedUserId;
+    try {
+      normalizedUserId = userId === "system" ? await normalizeUserIdForDb(userId) : userId;
+    } catch (normalizeError) {
+      console.error("❌ Failed to normalize userId for audit log:", normalizeError);
+      normalizedUserId = userId; // fallback to original userId
+    }
     
     await db.insert(auditLogs).values({
       action,
@@ -106,7 +112,7 @@ async function createAuditLog(
       userAgent: req?.get("User-Agent") || "Unknown",
     });
   } catch (error) {
-    console.error("Failed to create audit log:", error);
+    console.error("❌ Failed to create audit log:", error);
     // Don't fail the main operation if audit logging fails
   }
 }
@@ -1227,6 +1233,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      console.error("❌ CRITICAL: Main route error after successful database update:", error);
+      console.error("❌ Error stack:", error?.stack);
+      console.error("❌ Error details:", JSON.stringify(error, null, 2));
       res.status(500).json({ message: "Failed to update client" });
     }
   });
