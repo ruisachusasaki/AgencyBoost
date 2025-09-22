@@ -3894,8 +3894,22 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
 
+            {/* DEBUG: Simple test button */}
+            <div className="fixed top-4 right-4 z-50 bg-red-500 text-white p-2 rounded">
+              <p>SMS Modal Debug: {showSmsSendModal ? 'OPEN' : 'CLOSED'}</p>
+              <button 
+                onClick={() => {
+                  console.log('Debug button clicked, current state:', showSmsSendModal);
+                  setShowSmsSendModal(!showSmsSendModal);
+                }}
+                className="bg-white text-red-500 px-2 py-1 rounded mt-1"
+              >
+                Toggle SMS Modal
+              </button>
+            </div>
+
             {/* SMS Send Options Modal */}
-            <Dialog open={true} onOpenChange={setShowSmsSendModal}>
+            <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Send SMS</DialogTitle>
