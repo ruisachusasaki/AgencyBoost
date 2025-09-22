@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2 } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -4486,11 +4486,32 @@ export default function EnhancedClientDetail() {
                             }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
                             data-testid="button-schedule-sms"
+                            title={
+                              !smsData.fromNumber ? "Please select a From Number" :
+                              !smsData.message.trim() ? "Please enter a message" :
+                              !client?.phone ? "Client has no phone number" :
+                              "Schedule this SMS"
+                            }
                           >
                             <Clock className="h-4 w-4 mr-2" />
                             Schedule
                           </Button>
                         </div>
+                        
+                        {/* Show helpful message when buttons are disabled */}
+                        {(!smsData.fromNumber || !smsData.message.trim() || !client?.phone) && (
+                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                            <div className="flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              <span className="font-medium">Required to send/schedule:</span>
+                            </div>
+                            <ul className="mt-1 ml-4 space-y-1 text-xs">
+                              {!smsData.fromNumber && <li>• Select a "From Number"</li>}
+                              {!smsData.message.trim() && <li>• Enter a message</li>}
+                              {!client?.phone && <li>• Client needs a phone number in their profile</li>}
+                            </ul>
+                          </div>
+                        )}
                       </>
                     )}
                   </TabsContent>
