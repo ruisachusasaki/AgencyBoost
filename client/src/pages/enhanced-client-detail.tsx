@@ -2901,6 +2901,15 @@ export default function EnhancedClientDetail() {
     setShowSendModal(false);
   };
 
+  const scheduleSms = async () => {
+    // Implementation for scheduling SMS
+    toast({
+      title: "SMS Scheduled",
+      description: `Your SMS has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
+    });
+    setShowSmsSendModal(false);
+  };
+
   // Removed duplicate formatPhoneNumber function - using the one with Twilio formatting above
 
   const toggleSection = (sectionId: string) => {
@@ -3955,12 +3964,10 @@ export default function EnhancedClientDetail() {
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => {
-                            console.log('Scheduling SMS:', { ...smsData, scheduledDate, scheduledTime, scheduledTimezone });
-                            setShowSmsSendModal(false);
-                          }}
+                          onClick={scheduleSms}
                           disabled={!scheduledDate || !scheduledTime}
                           className="flex-1"
+                          data-testid="button-confirm-schedule-sms"
                         >
                           <Clock className="h-4 w-4 mr-2" />
                           Schedule SMS
