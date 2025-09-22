@@ -2782,7 +2782,7 @@ export default function EnhancedClientDetail() {
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData?.length, client?.id, JSON.stringify(client?.followers), client?.contactOwner]);
+  }, [followerSearchTerm, staffData, client]);
 
   // Auto-populate email fields when user and client data are available
   useEffect(() => {
@@ -3902,7 +3902,6 @@ export default function EnhancedClientDetail() {
                 <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                   <h2 className="text-lg font-semibold mb-2">Send SMS</h2>
                   <p className="text-sm text-gray-600 mb-4">Choose how you want to send this message</p>
-                  <p className="text-xs text-red-500 mb-4">DEBUG: Modal open state: {showSmsChoiceModal ? 'OPEN' : 'CLOSED'}</p>
                   
                   <div className="space-y-3">
                     <Button
@@ -4512,12 +4511,7 @@ export default function EnhancedClientDetail() {
                         
                         <div className="flex gap-2 pt-4">
                           <Button
-                            onClick={() => {
-                              console.log('SMS Send button clicked - opening choice modal');
-                              console.log('Current showSmsChoiceModal state:', showSmsChoiceModal);
-                              setShowSmsChoiceModal(true);
-                              console.log('State update called - should be true now');
-                            }}
+                            onClick={() => setShowSmsChoiceModal(true)}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
                             className="w-full"
                             data-testid="button-send-sms"
