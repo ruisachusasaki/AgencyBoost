@@ -3895,7 +3895,7 @@ export default function EnhancedClientDetail() {
 
 
             {/* SMS Send Options Modal */}
-            <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
+            <Dialog open={true} onOpenChange={setShowSmsSendModal}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Send SMS</DialogTitle>
