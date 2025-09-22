@@ -1701,6 +1701,7 @@ export default function EnhancedClientDetail() {
 
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
   const [smsModalMode, setSmsModalMode] = useState<'both' | 'schedule-only'>('both');
+  const [showSmsChoiceModal, setShowSmsChoiceModal] = useState(false);
 
 
 
@@ -3895,6 +3896,49 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
 
+            {/* SMS Choice Modal - Choose Send Now or Schedule */}
+            <Dialog open={showSmsChoiceModal} onOpenChange={setShowSmsChoiceModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send SMS</DialogTitle>
+                  <p className="text-sm text-gray-600">Choose how you want to send this message</p>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => {
+                        console.log('Send Now clicked from choice modal');
+                        setShowSmsChoiceModal(false);
+                        handleSendSms(); // Send immediately
+                      }}
+                      className="w-full justify-start"
+                      size="lg"
+                      data-testid="button-send-now-choice"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Now
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        console.log('Schedule clicked from choice modal');
+                        setShowSmsChoiceModal(false);
+                        setSmsModalMode('schedule-only');
+                        setShowSmsSendModal(true); // Open scheduling modal
+                      }}
+                      className="w-full justify-start"
+                      size="lg"
+                      data-testid="button-schedule-choice"
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      Schedule for Later
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* SMS Send Options Modal */}
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
               <DialogContent className="max-w-md">
@@ -4460,41 +4504,22 @@ export default function EnhancedClientDetail() {
                         
                         <div className="flex gap-2 pt-4">
                           <Button
-                            onClick={handleSendSms}
-                            disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone || sendSmsMutation.isPending}
-                            className="flex-1"
-                            data-testid="button-send-sms"
-                          >
-                            {sendSmsMutation.isPending ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Send SMS
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
                             onClick={() => {
-                              console.log('Schedule SMS button clicked');
-                              setSmsModalMode('schedule-only');
-                              setShowSmsSendModal(true);
+                              console.log('SMS Send button clicked - opening choice modal');
+                              setShowSmsChoiceModal(true);
                             }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
-                            data-testid="button-schedule-sms"
+                            className="w-full"
+                            data-testid="button-send-sms"
                             title={
                               !smsData.fromNumber ? "Please select a From Number" :
                               !smsData.message.trim() ? "Please enter a message" :
                               !client?.phone ? "Client has no phone number" :
-                              "Schedule this SMS"
+                              "Send SMS"
                             }
                           >
-                            <Clock className="h-4 w-4 mr-2" />
-                            Schedule
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
                           </Button>
                         </div>
                         
