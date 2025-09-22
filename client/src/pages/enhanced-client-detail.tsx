@@ -4826,12 +4826,9 @@ export default function EnhancedClientDetail() {
                               </div>
                             </div>
                             
-                            {/* Short description - always visible */}
-                            <p className="text-sm text-gray-600 mb-2" data-testid={`text-message-preview-${log.id}`}>{shortDescription}</p>
-                            
-                            {/* Phone numbers */}
+                            {/* Phone numbers - always visible */}
                             {log.newValues && (log.newValues.to || log.newValues.from) && (
-                              <div className="text-xs text-gray-500 mb-2" data-testid={`text-phone-numbers-${log.id}`}>
+                              <div className="text-sm text-gray-600 mb-2" data-testid={`text-phone-numbers-${log.id}`}>
                                 {log.newValues.to && `To: ${log.newValues.to}`}
                                 {log.newValues.to && log.newValues.from && ' | '}
                                 {log.newValues.from && `From: ${log.newValues.from}`}
