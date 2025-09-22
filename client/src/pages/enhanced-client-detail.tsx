@@ -2856,12 +2856,6 @@ export default function EnhancedClientDetail() {
 
   // Removed duplicate handleSendSms function
 
-  const sendSmsNow = () => {
-    console.log('Sending SMS now:', smsData);
-    setShowSmsSendModal(false);
-    // Add actual SMS sending logic here
-  };
-
   const insertMergeTag = (tag: string) => {
     const newMessage = emailData.message + `{{${tag}}}`;
     setEmailData(prev => ({ ...prev, message: newMessage }));
@@ -3906,7 +3900,7 @@ export default function EnhancedClientDetail() {
                     {smsModalMode === 'both' && (
                       <>
                         <Button
-                          onClick={sendSmsNow}
+                          onClick={handleSendSms}
                           className="w-full justify-start"
                           size="lg"
                         >
