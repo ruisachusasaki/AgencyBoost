@@ -5701,7 +5701,7 @@ export default function EnhancedClientDetail() {
           <Button
             onClick={() => {
               setShowSmsChoiceModal(false);
-              setShowSmsSendModal(true);
+              handleSendSms(); // Send the already composed message immediately
             }}
             className="w-full justify-start gap-3 h-12"
             data-testid="button-send-sms-now"
@@ -5793,10 +5793,9 @@ export default function EnhancedClientDetail() {
           </Button>
           <Button
             onClick={() => {
-              // Close schedule modal and open SMS composition with schedule mode
+              // Close schedule modal and schedule the already composed message
               setShowSmsScheduleModal(false);
-              setSmsModalMode('schedule-only');
-              setShowSmsSendModal(true);
+              scheduleSms(); // Schedule the already composed message
             }}
             disabled={!scheduledDate || !scheduledTime}
             data-testid="button-continue-schedule"
