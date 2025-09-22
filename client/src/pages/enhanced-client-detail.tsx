@@ -1425,14 +1425,22 @@ export default function EnhancedClientDetail() {
       return await apiRequest("POST", "/api/integrations/twilio/send", smsPayload);
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "SMS sent successfully!" });
-      setSmsData({ fromNumber: "", message: "" }); // Clear form
+      // Invalidate communication history to refresh the list
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/communications`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/audit-logs/entity/contact/${clientId}`] });
+      toast({
+        title: "SMS Sent",
+        description: "Your message has been sent successfully.",
+      });
+      setShowSmsSendModal(false);
+      // Clear the form
+      setSmsData(prev => ({ ...prev, message: '' }));
     },
     onError: (error: any) => {
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: error?.message || "Failed to send SMS" 
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send SMS. Please try again."
       });
     }
   });
@@ -2903,31 +2911,29 @@ export default function EnhancedClientDetail() {
       return;
     }
 
-    const formattedToNumber = formatPhoneNumber(client.phone);
     const scheduleDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
-
-    try {
-      // Make API call to schedule SMS
-      await apiRequest("POST", "/api/integrations/twilio/schedule", {
-        fromNumber: smsData.fromNumber,
-        to: formattedToNumber,
-        message: smsData.message,
-        clientId: client?.id,
-        scheduledFor: scheduleDateTime.toISOString()
-      });
-
-      toast({
-        title: "SMS Scheduled",
-        description: `Your SMS has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
-      });
-      setShowSmsSendModal(false);
-    } catch (error) {
+    const now = new Date();
+    
+    // Check if scheduled time is in the past
+    if (scheduleDateTime <= now) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to schedule SMS. Please try again."
+        description: "Scheduled time must be in the future."
       });
+      return;
     }
+
+    // For now, show a message that scheduling will be added later
+    // In a real implementation, you'd want to either:
+    // 1. Use a job queue/scheduler service
+    // 2. Store in database and have a cron job process scheduled messages
+    toast({
+      title: "SMS Scheduled",
+      description: `SMS scheduling feature will be available soon. For now, please send immediately or use your phone's scheduled text feature.`,
+      variant: "destructive"
+    });
+    setShowSmsSendModal(false);
   };
 
   // Removed duplicate formatPhoneNumber function - using the one with Twilio formatting above
