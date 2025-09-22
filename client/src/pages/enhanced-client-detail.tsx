@@ -3899,6 +3899,7 @@ export default function EnhancedClientDetail() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Send SMS</DialogTitle>
+                  <p className="text-xs text-gray-500">Modal state: {showSmsSendModal ? 'OPEN' : 'CLOSED'}</p>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-3">
@@ -4478,7 +4479,22 @@ export default function EnhancedClientDetail() {
                               console.log('smsData:', smsData);
                               console.log('client phone:', client?.phone);
                               console.log('Button disabled?', !smsData.fromNumber || !smsData.message.trim() || !client?.phone);
-                              setShowSmsSendModal(true);
+                              console.log('Current showSmsSendModal state BEFORE:', showSmsSendModal);
+                              
+                              // Force state update with multiple approaches
+                              setShowSmsSendModal(prev => {
+                                console.log('setState callback - prev:', prev, 'setting to: true');
+                                return true;
+                              });
+                              
+                              // Also try direct set as backup
+                              setTimeout(() => {
+                                console.log('Timeout check - showSmsSendModal is now:', showSmsSendModal);
+                                if (!showSmsSendModal) {
+                                  console.log('Modal still closed, forcing another update');
+                                  setShowSmsSendModal(true);
+                                }
+                              }, 50);
                             }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
                             data-testid="button-schedule-sms"
