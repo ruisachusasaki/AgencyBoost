@@ -129,8 +129,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     }
   });
 
-  console.log('Staff data in AppointmentModal:', staff);
-  console.log('Staff loading:', isStaffLoading);
+  // Staff query is now properly managed without infinite loops
 
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
@@ -262,7 +261,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     } else if (!isEditMode && open) {
       resetForm();
     }
-  }, [isEditMode, existingAppointment, open, clientName, clientEmail]);
+  }, [isEditMode, existingAppointment, open]);
 
   const handleSubmit = () => {
     console.log('AppointmentModal handleSubmit called');
