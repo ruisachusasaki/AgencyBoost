@@ -1751,7 +1751,7 @@ export default function EnhancedClientDetail() {
         return hasChanges ? contentMap : prevContent;
       });
     }
-  }, [briefSections]);
+  }, [briefSections.length, JSON.stringify(briefSections)]);
 
   // Fetch custom field folders
   const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
