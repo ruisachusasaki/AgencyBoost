@@ -2804,7 +2804,7 @@ export default function EnhancedClientDetail() {
         return prev;
       });
     }
-  }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.id, client?.email]);
+  }, [currentUser, client]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
