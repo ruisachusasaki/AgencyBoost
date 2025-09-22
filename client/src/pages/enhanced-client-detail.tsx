@@ -5467,6 +5467,75 @@ export default function EnhancedClientDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* SMS Template Modal */}
+      <Dialog open={showSmsTemplateModal} onOpenChange={setShowSmsTemplateModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>SMS Templates</DialogTitle>
+            <DialogDescription>
+              Choose a template to insert into your SMS message.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto">
+            <SmsTemplateSelector onSelectTemplate={selectSmsTemplate} />
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowSmsTemplateModal(false)}
+              data-testid="button-close-sms-template-modal"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS Merge Tags Modal */}
+      <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>SMS Merge Tags</DialogTitle>
+            <DialogDescription>
+              Click a tag to insert it into your SMS message.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {[
+              'First Name',
+              'Last Name', 
+              'Company',
+              'Phone',
+              'Email',
+              'City',
+              'State',
+              'Today Date',
+              'Current Time'
+            ].map((tag) => (
+              <Button
+                key={tag}
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => insertSmsTag(tag)}
+                data-testid={`button-sms-tag-${tag.toLowerCase().replace(' ', '-')}`}
+              >
+                <Hash className="h-4 w-4 mr-2" />
+                {`{{${tag}}}`}
+              </Button>
+            ))}
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowSmsMergeTagsModal(false)}
+              data-testid="button-close-sms-merge-tags-modal"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
