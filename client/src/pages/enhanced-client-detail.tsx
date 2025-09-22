@@ -4473,7 +4473,13 @@ export default function EnhancedClientDetail() {
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => setShowSmsSendModal(true)}
+                            onClick={() => {
+                              console.log('Schedule button clicked!');
+                              console.log('smsData:', smsData);
+                              console.log('client phone:', client?.phone);
+                              console.log('Button disabled?', !smsData.fromNumber || !smsData.message.trim() || !client?.phone);
+                              setShowSmsSendModal(true);
+                            }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
                             data-testid="button-schedule-sms"
                           >
