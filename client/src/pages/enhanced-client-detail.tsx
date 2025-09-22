@@ -3902,6 +3902,7 @@ export default function EnhancedClientDetail() {
                 <DialogHeader>
                   <DialogTitle>Send SMS</DialogTitle>
                   <p className="text-sm text-gray-600">Choose how you want to send this message</p>
+                  <p className="text-xs text-red-500">DEBUG: Modal open state: {showSmsChoiceModal ? 'OPEN' : 'CLOSED'}</p>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-3">
@@ -4506,7 +4507,9 @@ export default function EnhancedClientDetail() {
                           <Button
                             onClick={() => {
                               console.log('SMS Send button clicked - opening choice modal');
+                              console.log('Current showSmsChoiceModal state:', showSmsChoiceModal);
                               setShowSmsChoiceModal(true);
+                              console.log('State update called - should be true now');
                             }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
                             className="w-full"
