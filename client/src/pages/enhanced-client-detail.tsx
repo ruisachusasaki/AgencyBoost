@@ -5657,65 +5657,53 @@ export default function EnhancedClientDetail() {
     </div>
     
     {/* SMS Choice Modal - MOVED OUTSIDE MAIN CONTAINER */}
-    {showSmsChoiceModal && (
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(255, 0, 0, 0.8)',
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'auto'
-        }}
-        onClick={() => {
-          console.log('🎯 MODAL BACKDROP CLICKED!');
-          setShowSmsChoiceModal(false);
-        }}
-      >
-        <div 
-          style={{
-            backgroundColor: 'white',
-            padding: '32px',
-            borderRadius: '8px',
-            minWidth: '300px',
-            textAlign: 'center'
-          }}
-          onClick={(e) => {
-            console.log('🎯 MODAL CONTENT CLICKED!');
-            e.stopPropagation();
-          }}
-        >
-          <h1 style={{fontSize: '24px', fontWeight: 'bold', color: 'green'}}>
-            🎉 MODAL IS WORKING!
-          </h1>
-          <p style={{margin: '16px 0', color: '#666'}}>
-            If you see this, the modal renders properly
-          </p>
-          <button 
+    <Dialog open={showSmsChoiceModal} onOpenChange={setShowSmsChoiceModal}>
+      <DialogContent className="sm:max-w-md" data-testid="modal-sms-choice">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Send SMS Options
+          </DialogTitle>
+          <DialogDescription>
+            Choose how you want to send your SMS message to {clientDisplayName}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Button
             onClick={() => {
-              console.log('🎯 CLOSE BUTTON CLICKED!');
               setShowSmsChoiceModal(false);
+              setShowSmsModal(true);
             }}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-            data-testid="button-close-test"
+            className="w-full justify-start gap-3 h-12"
+            data-testid="button-send-sms-now"
           >
-            Close Modal
-          </button>
+            <MessageSquare className="h-5 w-5" />
+            Send SMS Now
+          </Button>
+          <Button
+            onClick={() => {
+              setShowSmsChoiceModal(false);
+              setShowSmsScheduleModal(true);
+            }}
+            variant="outline"
+            className="w-full justify-start gap-3 h-12"
+            data-testid="button-schedule-sms"
+          >
+            <Clock className="h-5 w-5" />
+            Schedule SMS
+          </Button>
         </div>
-      </div>
-    )}
+        <div className="flex justify-end mt-4">
+          <Button
+            variant="ghost"
+            onClick={() => setShowSmsChoiceModal(false)}
+            data-testid="button-cancel-sms-choice"
+          >
+            Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 };
