@@ -3888,9 +3888,22 @@ export default function EnhancedClientDetail() {
 
             {/* SMS Choice Modal - Choose Send Now or Schedule - SIMPLE VERSION */}
             {showSmsChoiceModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                  <h2 className="text-lg font-semibold mb-2">Send SMS</h2>
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+                onClick={(e) => {
+                  console.log('🎯 MODAL OVERLAY CLICKED');
+                  console.log('Target:', e.target);
+                  console.log('Current target:', e.currentTarget);
+                }}
+              >
+                <div 
+                  className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+                  onClick={(e) => {
+                    console.log('🎯 MODAL CONTENT CLICKED');
+                    e.stopPropagation();
+                  }}
+                >
+                  <h2 className="text-lg font-semibold mb-2">🔥 MODAL IS RENDERING! Send SMS</h2>
                   <p className="text-sm text-gray-600 mb-4">Choose how you want to send this message</p>
                   
                   <div className="space-y-3">
