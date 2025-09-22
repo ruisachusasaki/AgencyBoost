@@ -312,6 +312,113 @@ function SmsTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content:
   );
 }
 
+// SmsMergeTagsSelector Component
+function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string; onSelectTag: (tag: string) => void }) {
+  // Fetch custom fields
+  const { data: customFields = [], isLoading } = useQuery<CustomField[]>({
+    queryKey: ["/api/custom-fields"],
+  });
+
+  // Built-in merge tags (standard system fields)
+  const builtInTags = [
+    { name: 'First Name', key: 'first_name' },
+    { name: 'Last Name', key: 'last_name' },
+    { name: 'Full Name', key: 'full_name' },
+    { name: 'Company', key: 'company' },
+    { name: 'Phone', key: 'phone' },
+    { name: 'Email', key: 'email' },
+    { name: 'City', key: 'city' },
+    { name: 'State', key: 'state' },
+    { name: 'Today Date', key: 'today_date' },
+    { name: 'Current Time', key: 'current_time' }
+  ];
+
+  // Generate merge tag key from custom field name
+  const generateMergeKey = (fieldName: string) => {
+    return fieldName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  };
+
+  // Combine built-in tags with custom fields
+  const allTags = [
+    ...builtInTags,
+    ...customFields.map((field: CustomField) => ({
+      name: field.name,
+      key: generateMergeKey(field.name),
+      isCustom: true,
+      type: field.type
+    }))
+  ];
+
+  // Filter tags based on search term
+  const filteredTags = allTags.filter(tag =>
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tag.key.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading merge tags...</div>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {filteredTags.length === 0 ? (
+        <div className="p-4 text-center text-gray-500">
+          {searchTerm ? "No merge tags found matching your search." : "No merge tags available."}
+        </div>
+      ) : (
+        <>
+          {/* Built-in Tags Section */}
+          {filteredTags.some(tag => !tag.isCustom) && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">System Fields</h4>
+              {filteredTags.filter(tag => !tag.isCustom).map((tag) => (
+                <Button
+                  key={tag.key}
+                  variant="outline"
+                  className="w-full justify-start text-left mb-1"
+                  onClick={() => onSelectTag(tag.name)}
+                  data-testid={`button-sms-tag-${tag.key}`}
+                >
+                  <Hash className="h-4 w-4 mr-2" />
+                  <span className="font-mono text-sm">{`{{${tag.name}}}`}</span>
+                  <span className="ml-2 text-gray-500">({tag.name})</span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* Custom Fields Section */}
+          {filteredTags.some(tag => tag.isCustom) && (
+            <div className={filteredTags.some(tag => !tag.isCustom) ? "mt-4" : ""}>
+              {filteredTags.some(tag => !tag.isCustom) && (
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">Custom Fields</h4>
+              )}
+              {filteredTags.filter(tag => tag.isCustom).map((tag) => (
+                <Button
+                  key={tag.key}
+                  variant="outline"
+                  className="w-full justify-start text-left mb-1"
+                  onClick={() => onSelectTag(tag.name)}
+                  data-testid={`button-sms-tag-${tag.key}`}
+                >
+                  <Hash className="h-4 w-4 mr-2" />
+                  <span className="font-mono text-sm">{`{{${tag.name}}}`}</span>
+                  <span className="ml-2 text-gray-500">({tag.name})</span>
+                  {tag.type && (
+                    <Badge variant="secondary" className="ml-auto text-xs">
+                      {tag.type}
+                    </Badge>
+                  )}
+                </Button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ClientHealthTabContent Component
 function ClientHealthTabContent({ clientId }: { clientId: string }) {
   console.log("ClientHealthTabContent rendering with clientId:", clientId);
@@ -5494,36 +5601,30 @@ export default function EnhancedClientDetail() {
 
       {/* SMS Merge Tags Modal */}
       <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>SMS Merge Tags</DialogTitle>
             <DialogDescription>
-              Click a tag to insert it into your SMS message.
+              Click a tag to insert it into your SMS message. Includes all custom fields.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            {[
-              'First Name',
-              'Last Name', 
-              'Company',
-              'Phone',
-              'Email',
-              'City',
-              'State',
-              'Today Date',
-              'Current Time'
-            ].map((tag) => (
-              <Button
-                key={tag}
-                variant="outline"
-                className="w-full justify-start text-left"
-                onClick={() => insertSmsTag(tag)}
-                data-testid={`button-sms-tag-${tag.toLowerCase().replace(' ', '-')}`}
-              >
-                <Hash className="h-4 w-4 mr-2" />
-                {`{{${tag}}}`}
-              </Button>
-            ))}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search merge tags..."
+                value={smsMergeTagsSearch}
+                onChange={(e) => setSmsMergeTagsSearch(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-sms-merge-tags"
+              />
+            </div>
+            <div className="overflow-y-auto max-h-96">
+              <SmsMergeTagsSelector 
+                searchTerm={smsMergeTagsSearch} 
+                onSelectTag={insertSmsTag} 
+              />
+            </div>
           </div>
           <div className="flex justify-end mt-4">
             <Button
