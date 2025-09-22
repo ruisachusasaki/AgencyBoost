@@ -1425,9 +1425,11 @@ export default function EnhancedClientDetail() {
       return await apiRequest("POST", "/api/integrations/twilio/send", smsPayload);
     },
     onSuccess: () => {
-      // Invalidate communication history to refresh the list
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/communications`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/audit-logs/entity/contact/${clientId}`] });
+      // Invalidate audit logs to refresh the communication history
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/audit-logs/entity/contact', clientId],
+        exact: false // This will invalidate all queries that start with this key
+      });
       toast({
         title: "SMS Sent",
         description: "Your message has been sent successfully.",
@@ -4720,14 +4722,31 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {client?.communications && client.communications.length > 0 ? (
-                    client.communications.map((comm, index) => (
-                      <div key={index} className="border rounded-lg p-4">
+                  {auditLogs?.filter(log => log.entityType === 'sms' || log.entityType === 'email').length > 0 ? (
+                    auditLogs
+                      .filter(log => log.entityType === 'sms' || log.entityType === 'email')
+                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                      .map((log) => (
+                      <div key={log.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-900">{comm.type}</span>
-                          <span className="text-sm text-gray-500">{comm.date}</span>
+                          <div className="flex items-center gap-2">
+                            {log.entityType === 'sms' ? (
+                              <MessageSquare className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Mail className="h-4 w-4 text-blue-600" />
+                            )}
+                            <span className="font-medium text-gray-900 capitalize">{log.entityType}</span>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-600">{comm.content}</p>
+                        <p className="text-sm text-gray-600">{log.description}</p>
+                        {log.metadata && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            To: {log.metadata.to} | From: {log.metadata.from}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
