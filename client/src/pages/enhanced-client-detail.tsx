@@ -4271,7 +4271,7 @@ export default function EnhancedClientDetail() {
                               <SelectContent>
                                 {twilioNumbers?.map((number) => (
                                   <SelectItem key={number.id} value={number.phoneNumber}>
-                                    {number.name || number.phoneNumber}
+                                    {number.name ? `${number.name} - ${number.phoneNumber}` : number.phoneNumber}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
