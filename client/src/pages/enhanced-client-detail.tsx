@@ -4269,9 +4269,9 @@ export default function EnhancedClientDetail() {
                                 <SelectValue placeholder="Select from number" />
                               </SelectTrigger>
                               <SelectContent>
-                                {twilioNumbers?.phoneNumbers?.map((number) => (
+                                {twilioNumbers?.map((number) => (
                                   <SelectItem key={number.id} value={number.phoneNumber}>
-                                    {number.friendlyName || number.phoneNumber}
+                                    {number.name || number.phoneNumber}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
