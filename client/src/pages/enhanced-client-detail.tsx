@@ -4492,6 +4492,20 @@ export default function EnhancedClientDetail() {
                           </Button>
                         </div>
                         
+                        {/* INLINE TEST - Show state directly in UI */}
+                        {showSmsChoiceModal && (
+                          <div className="bg-red-500 text-white p-4 mt-2 rounded border-4 border-yellow-400">
+                            <h1 className="text-lg font-bold">🎉 MODAL STATE IS TRUE!</h1>
+                            <p>If you see this, conditional rendering works!</p>
+                            <button 
+                              onClick={() => setShowSmsChoiceModal(false)}
+                              className="mt-2 px-2 py-1 bg-white text-black rounded"
+                            >
+                              Hide This Test
+                            </button>
+                          </div>
+                        )}
+                        
                         {/* Show helpful message when client has no phone */}
                         {!client?.phone && (
                           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
