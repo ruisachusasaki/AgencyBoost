@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -1614,6 +1614,20 @@ export default function EnhancedClientDetail() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   
+  // Communication history state
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+  const [communicationSearch, setCommunicationSearch] = useState('');
+  const deferredCommunicationSearch = useDeferredValue(communicationSearch);
+  const [commCurrentPage, setCommCurrentPage] = useState(1);
+  const commItemsPerPage = 10;
+  
+  // Reset page when search changes (with proper dependency to avoid render loop)
+  useEffect(() => {
+    if (commCurrentPage !== 1) {
+      setCommCurrentPage(1);
+    }
+  }, [deferredCommunicationSearch]);
+  
   // Tags state
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
@@ -2627,6 +2641,43 @@ export default function EnhancedClientDetail() {
   const totalActivities = auditLogsData?.total || 0;
   const hasMoreActivities = auditLogsData?.hasMore || false;
   const totalPages = Math.ceil(totalActivities / itemsPerPage);
+
+  // Helper functions for communication history
+  const toggleMessageExpansion = (messageId: string) => {
+    setExpandedMessages(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(messageId)) {
+        newExpanded.delete(messageId);
+      } else {
+        newExpanded.add(messageId);
+      }
+      return newExpanded;
+    });
+  };
+
+  // Memoized communications filtering to prevent re-render loops
+  const communications = useMemo(() => {
+    return auditLogs
+      .filter(log => log.entityType === 'sms' || log.entityType === 'email')
+      .filter(log => {
+        if (!deferredCommunicationSearch.trim()) return true;
+        const searchLower = deferredCommunicationSearch.toLowerCase();
+        const messageContent = log.newValues?.message || log.details || '';
+        const phoneNumber = log.newValues?.to || log.newValues?.from || '';
+        const details = log.details || '';
+        return messageContent.toLowerCase().includes(searchLower) || 
+               phoneNumber.includes(searchLower) ||
+               details.toLowerCase().includes(searchLower);
+      })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [auditLogs, deferredCommunicationSearch]);
+
+  const totalCommunications = communications.length;
+  const totalCommPages = Math.ceil(totalCommunications / commItemsPerPage);
+  const paginatedCommunications = communications.slice(
+    (commCurrentPage - 1) * commItemsPerPage,
+    commCurrentPage * commItemsPerPage
+  );
 
   // Reset page when filter changes
   const handleFilterChange = (newFilter: typeof activityFilter) => {
@@ -4718,42 +4769,134 @@ export default function EnhancedClientDetail() {
             {/* Communication History */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">Communication History</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold">Communication History</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder="Search messages..."
+                        value={communicationSearch}
+                        onChange={(e) => {
+                          setCommunicationSearch(e.target.value);
+                          setCommCurrentPage(1); // Reset to first page when searching
+                        }}
+                        className="pl-10 w-64"
+                        data-testid="input-communication-search"
+                      />
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {auditLogs?.filter(log => log.entityType === 'sms' || log.entityType === 'email').length > 0 ? (
-                    auditLogs
-                      .filter(log => log.entityType === 'sms' || log.entityType === 'email')
-                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                      .map((log) => (
-                      <div key={log.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {log.entityType === 'sms' ? (
-                              <MessageSquare className="h-4 w-4 text-primary" />
-                            ) : (
-                              <Mail className="h-4 w-4 text-blue-600" />
+                  {paginatedCommunications.length > 0 ? (
+                    <>
+                      {paginatedCommunications.map((log) => {
+                        const isExpanded = expandedMessages.has(log.id);
+                        const fullMessage = log.newValues?.message || log.details || '';
+                        const shortDescription = log.details;
+                        
+                        return (
+                          <div key={log.id} className="border rounded-lg p-4" data-testid={`message-card-${log.id}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                {log.entityType === 'sms' ? (
+                                  <MessageSquare className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <Mail className="h-4 w-4 text-blue-600" />
+                                )}
+                                <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>{log.entityType}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500" data-testid={`text-timestamp-${log.id}`}>
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </span>
+                                <button
+                                  onClick={() => toggleMessageExpansion(log.id)}
+                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                  data-testid={`button-expand-message-${log.id}`}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* Short description - always visible */}
+                            <p className="text-sm text-gray-600 mb-2" data-testid={`text-message-preview-${log.id}`}>{shortDescription}</p>
+                            
+                            {/* Phone numbers */}
+                            {log.newValues && (log.newValues.to || log.newValues.from) && (
+                              <div className="text-xs text-gray-500 mb-2" data-testid={`text-phone-numbers-${log.id}`}>
+                                {log.newValues.to && `To: ${log.newValues.to}`}
+                                {log.newValues.to && log.newValues.from && ' | '}
+                                {log.newValues.from && `From: ${log.newValues.from}`}
+                              </div>
                             )}
-                            <span className="font-medium text-gray-900 capitalize">{log.entityType}</span>
+                            
+                            {/* Full message content - expandable */}
+                            {isExpanded && fullMessage && fullMessage !== shortDescription && (
+                              <div className="mt-3 pt-3 border-t border-gray-200" data-testid={`container-full-message-${log.id}`}>
+                                <p className="text-sm font-medium text-gray-700 mb-2">Full Message:</p>
+                                <div className="bg-gray-50 rounded-md p-3">
+                                  <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid={`text-full-message-${log.id}`}>{fullMessage}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <span className="text-sm text-gray-500">
-                            {new Date(log.timestamp).toLocaleString()}
-                          </span>
+                        );
+                      })}
+                      
+                      {/* Pagination Controls */}
+                      {totalCommPages > 1 && (
+                        <div className="flex items-center justify-between pt-4">
+                          <div className="text-sm text-gray-500" data-testid="text-pagination-info">
+                            Showing {((commCurrentPage - 1) * commItemsPerPage) + 1} to{' '}
+                            {Math.min(commCurrentPage * commItemsPerPage, totalCommunications)} of{' '}
+                            {totalCommunications} messages
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCommCurrentPage(prev => Math.max(1, prev - 1))}
+                              disabled={commCurrentPage === 1}
+                              data-testid="button-prev-communications"
+                            >
+                              Previous
+                            </Button>
+                            <span className="text-sm text-gray-600" data-testid="text-current-page">
+                              Page {commCurrentPage} of {totalCommPages}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCommCurrentPage(prev => Math.min(totalCommPages, prev + 1))}
+                              disabled={commCurrentPage === totalCommPages}
+                              data-testid="button-next-communications"
+                            >
+                              Next
+                            </Button>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600">{log.description}</p>
-                        {log.metadata && (
-                          <div className="mt-2 text-xs text-gray-500">
-                            To: {log.metadata.to} | From: {log.metadata.from}
-                          </div>
-                        )}
-                      </div>
-                    ))
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-12">
                       <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Communication Yet</h3>
-                      <p className="text-gray-600">Communication history will appear here as you interact with this client.</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {communicationSearch.trim() ? 'No Messages Found' : 'No Communication Yet'}
+                      </h3>
+                      <p className="text-gray-600">
+                        {communicationSearch.trim() 
+                          ? `No messages found matching "${communicationSearch}"`
+                          : 'Communication history will appear here as you interact with this client.'
+                        }
+                      </p>
                     </div>
                   )}
                 </div>
