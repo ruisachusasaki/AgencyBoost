@@ -1702,6 +1702,11 @@ export default function EnhancedClientDetail() {
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
   const [smsModalMode, setSmsModalMode] = useState<'both' | 'schedule-only'>('both');
   const [showSmsChoiceModal, setShowSmsChoiceModal] = useState(false);
+  
+  // Debug the SMS modal state changes
+  useEffect(() => {
+    console.log('🎯 SMS MODAL STATE CHANGED:', showSmsChoiceModal);
+  }, [showSmsChoiceModal]);
 
 
 
