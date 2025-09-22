@@ -2819,17 +2819,7 @@ export default function EnhancedClientDetail() {
     setCharacterCount(smsData.message.length);
   }, [smsData.message]);
 
-  // Auto-populate SMS fields when client data is available
-  useEffect(() => {
-    if (client?.phone) {
-      setSmsData(prev => {
-        if (prev.to !== client.phone) {
-          return { ...prev, to: client.phone };
-        }
-        return prev;
-      });
-    }
-  }, [client?.phone]);
+  // NOTE: SMS phone number is displayed directly from client?.phone, no need to store in state
 
   // Email utility functions (removed duplicate)
 
