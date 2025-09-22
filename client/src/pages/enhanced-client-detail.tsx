@@ -2782,7 +2782,7 @@ export default function EnhancedClientDetail() {
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData, client]);
+  }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
 
   // Auto-populate email fields when user and client data are available
   useEffect(() => {
@@ -2804,7 +2804,7 @@ export default function EnhancedClientDetail() {
         return prev;
       });
     }
-  }, [currentUser, client]);
+  }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
