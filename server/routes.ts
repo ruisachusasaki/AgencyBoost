@@ -8482,7 +8482,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filter = req.query.filter as string || 'all';
       
       // Build filter conditions
-      const baseConditions = and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId));
+      let baseConditions;
+      
+      // Special handling for contact entity - include related communications (SMS/email)
+      if (entityType === 'contact') {
+        baseConditions = or(
+          // Direct contact logs
+          and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId)),
+          // SMS logs for this contact (stored in newValues.clientId)
+          and(eq(auditLogs.entityType, 'sms'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`),
+          // Email logs for this contact (stored in newValues.clientId) 
+          and(eq(auditLogs.entityType, 'email'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`)
+        );
+      } else {
+        // Standard entity query
+        baseConditions = and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId));
+      }
+      
       let filterConditions = baseConditions;
       
       if (filter !== 'all') {
