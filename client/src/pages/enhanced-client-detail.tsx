@@ -1421,7 +1421,7 @@ export default function EnhancedClientDetail() {
 
   // SMS sending functionality
   const sendSmsMutation = useMutation({
-    mutationFn: async (smsPayload: { fromNumber: string; to: string; message: string }) => {
+    mutationFn: async (smsPayload: { fromNumber: string; to: string; message: string; clientId: string }) => {
       return await apiRequest("POST", "/api/integrations/twilio/send", smsPayload);
     },
     onSuccess: () => {
@@ -4502,32 +4502,27 @@ export default function EnhancedClientDetail() {
                         <div className="flex gap-2 pt-4">
                           <Button
                             onClick={() => setShowSmsChoiceModal(true)}
-                            disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
+                            disabled={!client?.phone}
                             className="w-full"
                             data-testid="button-send-sms"
                             title={
-                              !smsData.fromNumber ? "Please select a From Number" :
-                              !smsData.message.trim() ? "Please enter a message" :
-                              !client?.phone ? "Client has no phone number" :
-                              "Send SMS"
+                              !client?.phone ? "Client has no phone number" : "Send SMS"
                             }
                           >
                             <Send className="h-4 w-4 mr-2" />
-                            Send
+                            Send SMS
                           </Button>
                         </div>
                         
-                        {/* Show helpful message when buttons are disabled */}
-                        {(!smsData.fromNumber || !smsData.message.trim() || !client?.phone) && (
+                        {/* Show helpful message when client has no phone */}
+                        {!client?.phone && (
                           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
                             <div className="flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
-                              <span className="font-medium">Required to send/schedule:</span>
+                              <span className="font-medium">Required to send SMS:</span>
                             </div>
                             <ul className="mt-1 ml-4 space-y-1 text-xs">
-                              {!smsData.fromNumber && <li>• Select a "From Number"</li>}
-                              {!smsData.message.trim() && <li>• Enter a message</li>}
-                              {!client?.phone && <li>• Client needs a phone number in their profile</li>}
+                              <li>• Client needs a phone number in their profile</li>
                             </ul>
                           </div>
                         )}
