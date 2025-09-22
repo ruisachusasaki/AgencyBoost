@@ -3290,8 +3290,9 @@ export default function EnhancedClientDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Back Button */}
+    <>
+      <div className="space-y-6">
+        {/* Back Button */}
       <div className="flex items-center space-x-2">
         <Button variant="outline" size="sm" onClick={() => setLocation("/clients")} className="flex items-center space-x-2">
           <ArrowLeft className="h-4 w-4" />
@@ -3891,21 +3892,6 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
 
-            {/* SMS TEST MODAL - MINIMAL VERSION */}
-            {showSmsChoiceModal && (
-              <div className="fixed top-0 left-0 w-full h-full bg-red-500 z-[9999] flex items-center justify-center">
-                <div className="bg-white p-8 rounded shadow-lg">
-                  <h1 className="text-2xl font-bold text-green-600">🎉 TEST MODAL WORKING!</h1>
-                  <p className="mt-4">If you see this, the modal system works!</p>
-                  <button 
-                    onClick={() => setShowSmsChoiceModal(false)}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-                  >
-                    Close Test Modal
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* SMS Send Options Modal */}
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
@@ -4492,19 +4478,6 @@ export default function EnhancedClientDetail() {
                           </Button>
                         </div>
                         
-                        {/* INLINE TEST - Show state directly in UI */}
-                        {showSmsChoiceModal && (
-                          <div className="bg-red-500 text-white p-4 mt-2 rounded border-4 border-yellow-400">
-                            <h1 className="text-lg font-bold">🎉 MODAL STATE IS TRUE!</h1>
-                            <p>If you see this, conditional rendering works!</p>
-                            <button 
-                              onClick={() => setShowSmsChoiceModal(false)}
-                              className="mt-2 px-2 py-1 bg-white text-black rounded"
-                            >
-                              Hide This Test
-                            </button>
-                          </div>
-                        )}
                         
                         {/* Show helpful message when client has no phone */}
                         {!client?.phone && (
@@ -5682,5 +5655,67 @@ export default function EnhancedClientDetail() {
         </DialogContent>
       </Dialog>
     </div>
+    
+    {/* SMS Choice Modal - MOVED OUTSIDE MAIN CONTAINER */}
+    {showSmsChoiceModal && (
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(255, 0, 0, 0.8)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'auto'
+        }}
+        onClick={() => {
+          console.log('🎯 MODAL BACKDROP CLICKED!');
+          setShowSmsChoiceModal(false);
+        }}
+      >
+        <div 
+          style={{
+            backgroundColor: 'white',
+            padding: '32px',
+            borderRadius: '8px',
+            minWidth: '300px',
+            textAlign: 'center'
+          }}
+          onClick={(e) => {
+            console.log('🎯 MODAL CONTENT CLICKED!');
+            e.stopPropagation();
+          }}
+        >
+          <h1 style={{fontSize: '24px', fontWeight: 'bold', color: 'green'}}>
+            🎉 MODAL IS WORKING!
+          </h1>
+          <p style={{margin: '16px 0', color: '#666'}}>
+            If you see this, the modal renders properly
+          </p>
+          <button 
+            onClick={() => {
+              console.log('🎯 CLOSE BUTTON CLICKED!');
+              setShowSmsChoiceModal(false);
+            }}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#0066cc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+            data-testid="button-close-test"
+          >
+            Close Modal
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
