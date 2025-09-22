@@ -3896,15 +3896,14 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
 
-            {/* SMS Choice Modal - Choose Send Now or Schedule */}
-            <Dialog open={showSmsChoiceModal} onOpenChange={setShowSmsChoiceModal}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Send SMS</DialogTitle>
-                  <p className="text-sm text-gray-600">Choose how you want to send this message</p>
-                  <p className="text-xs text-red-500">DEBUG: Modal open state: {showSmsChoiceModal ? 'OPEN' : 'CLOSED'}</p>
-                </DialogHeader>
-                <div className="space-y-4">
+            {/* SMS Choice Modal - Choose Send Now or Schedule - SIMPLE VERSION */}
+            {showSmsChoiceModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                  <h2 className="text-lg font-semibold mb-2">Send SMS</h2>
+                  <p className="text-sm text-gray-600 mb-4">Choose how you want to send this message</p>
+                  <p className="text-xs text-red-500 mb-4">DEBUG: Modal open state: {showSmsChoiceModal ? 'OPEN' : 'CLOSED'}</p>
+                  
                   <div className="space-y-3">
                     <Button
                       onClick={() => {
@@ -3935,10 +3934,18 @@ export default function EnhancedClientDetail() {
                       <Clock className="h-4 w-4 mr-2" />
                       Schedule for Later
                     </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowSmsChoiceModal(false)}
+                      className="w-full"
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
+              </div>
+            )}
 
             {/* SMS Send Options Modal */}
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
