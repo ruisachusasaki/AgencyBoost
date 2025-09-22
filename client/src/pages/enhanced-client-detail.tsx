@@ -1702,6 +1702,7 @@ export default function EnhancedClientDetail() {
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
   const [smsModalMode, setSmsModalMode] = useState<'both' | 'schedule-only'>('both');
   const [showSmsChoiceModal, setShowSmsChoiceModal] = useState(false);
+  const [showSmsScheduleModal, setShowSmsScheduleModal] = useState(false);
   
   // Debug the SMS modal state changes
   useEffect(() => {
@@ -5672,7 +5673,7 @@ export default function EnhancedClientDetail() {
           <Button
             onClick={() => {
               setShowSmsChoiceModal(false);
-              setShowSmsModal(true);
+              setShowSmsSendModal(true);
             }}
             className="w-full justify-start gap-3 h-12"
             data-testid="button-send-sms-now"
@@ -5700,6 +5701,79 @@ export default function EnhancedClientDetail() {
             data-testid="button-cancel-sms-choice"
           >
             Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    
+    {/* SMS Schedule Modal */}
+    <Dialog open={showSmsScheduleModal} onOpenChange={setShowSmsScheduleModal}>
+      <DialogContent className="sm:max-w-lg" data-testid="modal-sms-schedule">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Schedule SMS to {clientDisplayName}
+          </DialogTitle>
+          <DialogDescription>
+            Choose when you want to send your SMS message.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Date</label>
+              <Input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                data-testid="input-schedule-date"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Time</label>
+              <Input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                data-testid="input-schedule-time"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Timezone</label>
+              <Select value={scheduledTimezone} onValueChange={setScheduledTimezone}>
+                <SelectTrigger data-testid="select-timezone">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                  <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                  <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                  <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <Button
+            variant="ghost"
+            onClick={() => setShowSmsScheduleModal(false)}
+            data-testid="button-cancel-schedule"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              // Close schedule modal and open SMS composition with schedule mode
+              setShowSmsScheduleModal(false);
+              setSmsModalMode('schedule-only');
+              setShowSmsSendModal(true);
+            }}
+            disabled={!scheduledDate || !scheduledTime}
+            data-testid="button-continue-schedule"
+          >
+            Continue
           </Button>
         </div>
       </DialogContent>
