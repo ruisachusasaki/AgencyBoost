@@ -1,0 +1,85 @@
+🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: false
+enhanced-client-detail.tsx:3901 ❌ CONDITION FAILED - MODAL WILL NOT RENDER
+enhanced-client-detail.tsx:4532 🔥 SMS BUTTON CLICKED!
+enhanced-client-detail.tsx:4533 Client phone: 8013617017
+enhanced-client-detail.tsx:4534 Button disabled? false
+enhanced-client-detail.tsx:4535 Current showSmsChoiceModal: false
+enhanced-client-detail.tsx:4537 Just called setShowSmsChoiceModal(true)
+enhanced-client-detail.tsx:3896 🚀 CHECKING SMS MODAL CONDITION: true
+enhanced-client-detail.tsx:3898 ✅ CONDITION PASSED - MODAL SHOULD RENDER
+enhanced-client-detail.tsx:1708 🎯 SMS MODAL STATE CHANGED: true
+enhanced-client-detail.tsx:4532 🔥 SMS BUTTON CLICKED!
+enhanced-client-detail.tsx:4533 Client phone: 8013617017
+enhanced-client-detail.tsx:4534 Button disabled? false
+enhanced-client-detail.tsx:4535 Current showSmsChoiceModal: true
+enhanced-client-detail.tsx:4537 Just called setShowSmsChoiceModal(true)

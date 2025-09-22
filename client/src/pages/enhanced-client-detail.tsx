@@ -3891,74 +3891,18 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
 
-            {/* SMS Choice Modal - Choose Send Now or Schedule - SIMPLE VERSION */}
-            {(() => {
-              console.log('🚀 CHECKING SMS MODAL CONDITION:', showSmsChoiceModal);
-              if (showSmsChoiceModal) {
-                console.log('✅ CONDITION PASSED - MODAL SHOULD RENDER');
-                return true;
-              } else {
-                console.log('❌ CONDITION FAILED - MODAL WILL NOT RENDER');
-                return false;
-              }
-            })() && (
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-                onClick={(e) => {
-                  console.log('🎯 MODAL OVERLAY CLICKED');
-                  console.log('Target:', e.target);
-                  console.log('Current target:', e.currentTarget);
-                }}
-              >
-                <div 
-                  className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
-                  onClick={(e) => {
-                    console.log('🎯 MODAL CONTENT CLICKED');
-                    e.stopPropagation();
-                  }}
-                >
-                  <h2 className="text-lg font-semibold mb-2">🔥 MODAL IS RENDERING! Send SMS</h2>
-                  <p className="text-sm text-gray-600 mb-4">Choose how you want to send this message</p>
-                  
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => {
-                        console.log('Send Now clicked from choice modal');
-                        setShowSmsChoiceModal(false);
-                        handleSendSms(); // Send immediately
-                      }}
-                      className="w-full justify-start"
-                      size="lg"
-                      data-testid="button-send-now-choice"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Now
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        console.log('Schedule clicked from choice modal');
-                        setShowSmsChoiceModal(false);
-                        setSmsModalMode('schedule-only');
-                        setShowSmsSendModal(true); // Open scheduling modal
-                      }}
-                      className="w-full justify-start"
-                      size="lg"
-                      data-testid="button-schedule-choice"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Schedule for Later
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowSmsChoiceModal(false)}
-                      className="w-full"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
+            {/* SMS TEST MODAL - MINIMAL VERSION */}
+            {showSmsChoiceModal && (
+              <div className="fixed top-0 left-0 w-full h-full bg-red-500 z-[9999] flex items-center justify-center">
+                <div className="bg-white p-8 rounded shadow-lg">
+                  <h1 className="text-2xl font-bold text-green-600">🎉 TEST MODAL WORKING!</h1>
+                  <p className="mt-4">If you see this, the modal system works!</p>
+                  <button 
+                    onClick={() => setShowSmsChoiceModal(false)}
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+                  >
+                    Close Test Modal
+                  </button>
                 </div>
               </div>
             )}
