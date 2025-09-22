@@ -498,8 +498,8 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     setHealthStatusFilters({ Green: true, Yellow: true, Red: true });
   }, []);
 
-  // Get current week range for checking if score exists
-  const weekRange = getCurrentWeekRange();
+  // Get current week range for checking if score exists (memoized to prevent infinite loops)
+  const weekRange = useMemo(() => getCurrentWeekRange(), []);
   const weekStart = weekRange.weekStart.toISOString().split('T')[0];
   const weekEnd = weekRange.weekEnd.toISOString().split('T')[0];
   const displayRange = weekRange.displayRange;
@@ -645,9 +645,9 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     setIsHealthModalOpen(false);
     toast({
       title: "Health Score Recorded",
-      description: `Weekly health score for ${displayRange} has been saved successfully.`,
+      description: `Weekly health score for ${weekRange.displayRange} has been saved successfully.`,
     });
-  }, [queryClient, clientId, displayRange, toast]);
+  }, [queryClient, clientId, weekRange, toast]);
 
   if (isLoading) {
     return (
