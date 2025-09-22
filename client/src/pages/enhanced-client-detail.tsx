@@ -3894,20 +3894,6 @@ export default function EnhancedClientDetail() {
             </Dialog>
 
 
-            {/* DEBUG: Simple test button */}
-            <div className="fixed top-4 right-4 z-50 bg-red-500 text-white p-2 rounded">
-              <p>SMS Modal Debug: {showSmsSendModal ? 'OPEN' : 'CLOSED'}</p>
-              <button 
-                onClick={() => {
-                  console.log('Debug button clicked, current state:', showSmsSendModal);
-                  setShowSmsSendModal(!showSmsSendModal);
-                }}
-                className="bg-white text-red-500 px-2 py-1 rounded mt-1"
-              >
-                Toggle SMS Modal
-              </button>
-            </div>
-
             {/* SMS Send Options Modal */}
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
               <DialogContent className="max-w-md">
@@ -4489,26 +4475,8 @@ export default function EnhancedClientDetail() {
                           <Button
                             variant="outline"
                             onClick={() => {
-                              console.log('Schedule button clicked!');
-                              console.log('smsData:', smsData);
-                              console.log('client phone:', client?.phone);
-                              console.log('Button disabled?', !smsData.fromNumber || !smsData.message.trim() || !client?.phone);
-                              console.log('Current showSmsSendModal state BEFORE:', showSmsSendModal);
-                              
-                              // Force state update with multiple approaches
-                              setShowSmsSendModal(prev => {
-                                console.log('setState callback - prev:', prev, 'setting to: true');
-                                return true;
-                              });
-                              
-                              // Also try direct set as backup
-                              setTimeout(() => {
-                                console.log('Timeout check - showSmsSendModal is now:', showSmsSendModal);
-                                if (!showSmsSendModal) {
-                                  console.log('Modal still closed, forcing another update');
-                                  setShowSmsSendModal(true);
-                                }
-                              }, 50);
+                              console.log('Schedule SMS button clicked');
+                              setShowSmsSendModal(true);
                             }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
                             data-testid="button-schedule-sms"
