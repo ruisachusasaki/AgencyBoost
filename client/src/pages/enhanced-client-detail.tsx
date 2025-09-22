@@ -1700,6 +1700,7 @@ export default function EnhancedClientDetail() {
   const [showSmsMergeTagsModal, setShowSmsMergeTagsModal] = useState(false);
 
   const [showSmsSendModal, setShowSmsSendModal] = useState(false);
+  const [smsModalMode, setSmsModalMode] = useState<'both' | 'schedule-only'>('both');
 
 
 
@@ -3898,29 +3899,33 @@ export default function EnhancedClientDetail() {
             <Dialog open={showSmsSendModal} onOpenChange={setShowSmsSendModal}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Send SMS</DialogTitle>
+                  <DialogTitle>{smsModalMode === 'schedule-only' ? 'Schedule SMS' : 'Send SMS'}</DialogTitle>
                   <p className="text-xs text-gray-500">Modal state: {showSmsSendModal ? 'OPEN' : 'CLOSED'}</p>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-3">
-                    <Button
-                      onClick={sendSmsNow}
-                      className="w-full justify-start"
-                      size="lg"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Now
-                    </Button>
-                    
-                    {/* OR Divider */}
-                    <div className="flex items-center my-4">
-                      <div className="flex-1 h-px bg-gray-300"></div>
-                      <span className="px-3 text-sm text-gray-500 font-medium">OR</span>
-                      <div className="flex-1 h-px bg-gray-300"></div>
-                    </div>
+                    {smsModalMode === 'both' && (
+                      <>
+                        <Button
+                          onClick={sendSmsNow}
+                          className="w-full justify-start"
+                          size="lg"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Now
+                        </Button>
+                        
+                        {/* OR Divider */}
+                        <div className="flex items-center my-4">
+                          <div className="flex-1 h-px bg-gray-300"></div>
+                          <span className="px-3 text-sm text-gray-500 font-medium">OR</span>
+                          <div className="flex-1 h-px bg-gray-300"></div>
+                        </div>
+                      </>
+                    )}
                     
                     <div className="space-y-3">
-                      <h4 className="font-medium">Schedule SMS</h4>
+                      {smsModalMode === 'both' && <h4 className="font-medium">Schedule SMS</h4>}
                       <div className="space-y-2">
                         <div>
                           <Label className="text-sm">Date</Label>
@@ -4476,6 +4481,7 @@ export default function EnhancedClientDetail() {
                             variant="outline"
                             onClick={() => {
                               console.log('Schedule SMS button clicked');
+                              setSmsModalMode('schedule-only');
                               setShowSmsSendModal(true);
                             }}
                             disabled={!smsData.fromNumber || !smsData.message.trim() || !client?.phone}
