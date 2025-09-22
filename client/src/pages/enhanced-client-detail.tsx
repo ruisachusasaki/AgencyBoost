@@ -2762,7 +2762,7 @@ export default function EnhancedClientDetail() {
       setFilteredStaff([]);
       setShowOwnerSuggestions(false);
     }
-  }, [ownerSearchTerm, staffData]);
+  }, [ownerSearchTerm, staffData?.length, JSON.stringify(staffData)]);
 
   // Follower search filtering
   useEffect(() => {
@@ -2782,7 +2782,7 @@ export default function EnhancedClientDetail() {
     );
     setFilteredFollowers(filtered);
     setShowFollowerSuggestions(filtered.length > 0);
-  }, [followerSearchTerm, staffData, client?.id, client?.followers, client?.contactOwner]);
+  }, [followerSearchTerm, staffData?.length, client?.id, JSON.stringify(client?.followers), client?.contactOwner]);
 
   // Auto-populate email fields when user and client data are available
   useEffect(() => {
