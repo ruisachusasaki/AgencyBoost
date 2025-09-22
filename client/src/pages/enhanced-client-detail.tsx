@@ -4333,32 +4333,117 @@ export default function EnhancedClientDetail() {
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Activity & Timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {client?.activities && client.activities.length > 0 ? (
-                    client.activities.map((activity, index) => (
-                      <div key={index} className="border-l-2 border-gray-200 pl-4 pb-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                          <span className="text-sm text-gray-500">{activity.date}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12">
-                      <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Activity Yet</h3>
-                      <p className="text-gray-600">Activity and timeline will appear here as you interact with this client.</p>
-                    </div>
-                  )}
+          {/* Activity Filter */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-500" />
+                  <Select value={activityFilter} onValueChange={(value) => handleFilterChange(value as typeof activityFilter)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Activity</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="call">Call</SelectItem>
+                      <SelectItem value="meeting">Meeting</SelectItem>
+                      <SelectItem value="task">Task</SelectItem>
+                      <SelectItem value="note">Note</SelectItem>
+                      <SelectItem value="campaign">Campaign</SelectItem>
+                      <SelectItem value="workflow">Workflow</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {auditLogsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                  </div>
+                ) : auditLogs.length > 0 ? (
+                  <>
+                    {auditLogs.map((log) => (
+                      <div key={log.id} className="border-l-2 border-gray-200 pl-4 pb-4" data-testid={`activity-item-${log.id}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {log.entityType === 'sms' && <MessageSquare className="h-4 w-4 text-primary" />}
+                            {log.entityType === 'email' && <Mail className="h-4 w-4 text-blue-600" />}
+                            {log.entityType === 'call' && <Phone className="h-4 w-4 text-green-600" />}
+                            {log.entityType === 'meeting' && <Calendar className="h-4 w-4 text-purple-600" />}
+                            {log.entityType === 'task' && <CheckCircle className="h-4 w-4 text-orange-600" />}
+                            {log.entityType === 'note' && <StickyNote className="h-4 w-4 text-yellow-600" />}
+                            {log.entityType === 'campaign' && <Target className="h-4 w-4 text-red-600" />}
+                            {log.entityType === 'workflow' && <Workflow className="h-4 w-4 text-indigo-600" />}
+                            {!['sms', 'email', 'call', 'meeting', 'task', 'note', 'campaign', 'workflow'].includes(log.entityType) && 
+                              <Activity className="h-4 w-4 text-gray-600" />
+                            }
+                            <h4 className="font-medium text-gray-900 capitalize" data-testid={`activity-type-${log.id}`}>
+                              {log.entityType} Activity
+                            </h4>
+                          </div>
+                          <span className="text-sm text-gray-500" data-testid={`activity-timestamp-${log.id}`}>
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1" data-testid={`activity-description-${log.id}`}>
+                          {log.details || log.description}
+                        </p>
+                        {log.newValues && Object.keys(log.newValues).length > 0 && (
+                          <div className="text-xs text-gray-500 mt-2">
+                            {log.newValues.to && `To: ${log.newValues.to}`}
+                            {log.newValues.from && ` | From: ${log.newValues.from}`}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Pagination for Activity */}
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="text-sm text-gray-500">
+                        Showing {((currentPage - 1) * itemsPerPage) + 1} to{' '}
+                        {Math.min(currentPage * itemsPerPage, totalActivities)} of{' '}
+                        {totalActivities} activities
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          data-testid="button-prev-activity"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages || !hasMoreActivities}
+                          data-testid="button-next-activity"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Activity Yet</h3>
+                    <p className="text-gray-600">Activity and timeline will appear here as you interact with this client.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
           <TabsContent value="communication" className="space-y-6 mt-6">
