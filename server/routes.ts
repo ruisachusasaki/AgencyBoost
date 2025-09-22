@@ -12620,19 +12620,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create audit log for SMS sending
       const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      console.log('SMS audit log - userId from getAuthenticatedUserIdOrFail:', userId);
+      if (!userId) {
+        console.log('SMS audit log - No userId found, skipping audit log creation');
+        return; // getAuthenticatedUserIdOrFail already sent 401 response
+      }
       
-      await createAuditLog(
-        "created",
-        "sms",
-        smsMessage.sid,
-        `SMS to ${to}`,
-        userId,
-        `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
-        null,
-        { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
-        req
-      );
+      console.log('SMS audit log - Creating audit log with:', {
+        action: "created",
+        entityType: "sms", 
+        entityId: smsMessage.sid,
+        entityName: `SMS to ${to}`,
+        userId
+      });
+      
+      try {
+        await createAuditLog(
+          "created",
+          "sms",
+          smsMessage.sid,
+          `SMS to ${to}`,
+          userId,
+          `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
+          null,
+          { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
+          req
+        );
+        console.log('SMS audit log - Successfully created audit log for SMS:', smsMessage.sid);
+      } catch (auditError) {
+        console.error('SMS audit log - Failed to create audit log:', auditError);
+        // Continue with SMS response even if audit log fails
+      }
       
       res.json({
         message: "SMS sent successfully",
