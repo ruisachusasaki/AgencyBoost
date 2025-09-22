@@ -2747,7 +2747,7 @@ export default function EnhancedClientDetail() {
       setSections(newSections);
       sectionsInitialized.current = true;
     }
-  }, [calculatedSections]);
+  }, [calculatedSections.length, JSON.stringify(calculatedSections)]);
 
   // Owner search filtering
   useEffect(() => {
