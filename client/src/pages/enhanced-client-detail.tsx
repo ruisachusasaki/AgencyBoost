@@ -4501,7 +4501,14 @@ export default function EnhancedClientDetail() {
                         
                         <div className="flex gap-2 pt-4">
                           <Button
-                            onClick={() => setShowSmsChoiceModal(true)}
+                            onClick={() => {
+                              console.log('🔥 SMS BUTTON CLICKED!');
+                              console.log('Client phone:', client?.phone);
+                              console.log('Button disabled?', !client?.phone);
+                              console.log('Current showSmsChoiceModal:', showSmsChoiceModal);
+                              setShowSmsChoiceModal(true);
+                              console.log('Just called setShowSmsChoiceModal(true)');
+                            }}
                             disabled={!client?.phone}
                             className="w-full"
                             data-testid="button-send-sms"
