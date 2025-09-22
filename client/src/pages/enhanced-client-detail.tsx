@@ -1752,7 +1752,7 @@ export default function EnhancedClientDetail() {
         return hasChanges ? contentMap : prevContent;
       });
     }
-  }, [briefSections.length, JSON.stringify(briefSections)]);
+  }, [briefSections]);
 
   // Fetch custom field folders
   const { data: customFieldFoldersData } = useQuery<Array<{ id: string; name: string; order: number }>>({
@@ -2747,7 +2747,7 @@ export default function EnhancedClientDetail() {
       setSections(newSections);
       sectionsInitialized.current = true;
     }
-  }, [calculatedSections.length, JSON.stringify(calculatedSections)]);
+  }, [calculatedSections]);
 
   // Owner search filtering
   useEffect(() => {
@@ -2762,7 +2762,7 @@ export default function EnhancedClientDetail() {
       setFilteredStaff([]);
       setShowOwnerSuggestions(false);
     }
-  }, [ownerSearchTerm, staffData?.length, JSON.stringify(staffData)]);
+  }, [ownerSearchTerm, staffData]);
 
   // Follower search filtering
   useEffect(() => {
