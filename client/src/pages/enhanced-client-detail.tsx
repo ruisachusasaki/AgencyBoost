@@ -2894,12 +2894,40 @@ export default function EnhancedClientDetail() {
   };
 
   const scheduleSms = async () => {
-    // Implementation for scheduling SMS
-    toast({
-      title: "SMS Scheduled",
-      description: `Your SMS has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
-    });
-    setShowSmsSendModal(false);
+    if (!smsData.fromNumber || !smsData.message.trim() || !client?.phone || !scheduledDate || !scheduledTime) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill in all required fields including date and time"
+      });
+      return;
+    }
+
+    const formattedToNumber = formatPhoneNumber(client.phone);
+    const scheduleDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+
+    try {
+      // Make API call to schedule SMS
+      await apiRequest("POST", "/api/integrations/twilio/schedule", {
+        fromNumber: smsData.fromNumber,
+        to: formattedToNumber,
+        message: smsData.message,
+        clientId: client?.id,
+        scheduledFor: scheduleDateTime.toISOString()
+      });
+
+      toast({
+        title: "SMS Scheduled",
+        description: `Your SMS has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
+      });
+      setShowSmsSendModal(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to schedule SMS. Please try again."
+      });
+    }
   };
 
   // Removed duplicate formatPhoneNumber function - using the one with Twilio formatting above
