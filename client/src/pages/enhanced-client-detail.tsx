@@ -3892,7 +3892,16 @@ export default function EnhancedClientDetail() {
 
 
             {/* SMS Choice Modal - Choose Send Now or Schedule - SIMPLE VERSION */}
-            {showSmsChoiceModal && (
+            {(() => {
+              console.log('🚀 CHECKING SMS MODAL CONDITION:', showSmsChoiceModal);
+              if (showSmsChoiceModal) {
+                console.log('✅ CONDITION PASSED - MODAL SHOULD RENDER');
+                return true;
+              } else {
+                console.log('❌ CONDITION FAILED - MODAL WILL NOT RENDER');
+                return false;
+              }
+            })() && (
               <div 
                 className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
                 onClick={(e) => {
