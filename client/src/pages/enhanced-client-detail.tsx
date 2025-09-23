@@ -2974,14 +2974,9 @@ export default function EnhancedClientDetail() {
   };
 
   const handleSendEmail = () => {
-    console.log('🎯 SEND EMAIL BUTTON CLICKED - Opening modal...');
-    console.log('📋 Current modal states:', {
-      showSendModal,
-      showTemplateModal,
-      showMergeTagsModal
-    });
-    setShowSendModal(true);
-    console.log('✅ setShowSendModal(true) called');
+    console.log('🎯 SEND EMAIL BUTTON CLICKED - Sending directly...');
+    // Bypass modal and send email directly for now
+    sendEmailNow();
   };
 
   const sendEmailNow = async () => {
