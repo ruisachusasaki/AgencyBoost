@@ -57,6 +57,7 @@ import {
   type ClientBriefSection, type InsertClientBriefSection, clientBriefSections,
   type ClientBriefValue, type InsertClientBriefValue, clientBriefValues,
   type AuthUser, type InsertAuthUser, authUsers,
+  type EmailIntegration, type InsertEmailIntegration, emailIntegrations,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -499,6 +500,14 @@ export interface IStorage {
   deleteAutomationTrigger(id: string): Promise<boolean>;
   deleteAutomationAction(id: string): Promise<boolean>;
   deleteWorkflowExecution(id: string): Promise<boolean>;
+  
+  // Email Integrations
+  getEmailIntegrations(): Promise<EmailIntegration[]>;
+  getEmailIntegration(id: string): Promise<EmailIntegration | undefined>;
+  getEmailIntegrationByProvider(provider: string): Promise<EmailIntegration | undefined>;
+  createEmailIntegration(integration: InsertEmailIntegration): Promise<EmailIntegration>;
+  updateEmailIntegration(id: string, integration: Partial<InsertEmailIntegration>): Promise<EmailIntegration | undefined>;
+  deleteEmailIntegration(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -528,6 +537,7 @@ export class MemStorage implements IStorage {
   private auditLogs: Map<string, AuditLog> = new Map();
   private templateTasks: Map<string, TemplateTask> = new Map();
   private authUsers: Map<string, AuthUser> = new Map();
+  private emailIntegrations: Map<string, EmailIntegration> = new Map();
 
   constructor() {
     // Add sample data for testing
@@ -4055,6 +4065,47 @@ export class MemStorage implements IStorage {
     }
   }
 
+  // Email Integrations
+  async getEmailIntegrations(): Promise<EmailIntegration[]> {
+    return Array.from(this.emailIntegrations.values());
+  }
+
+  async getEmailIntegration(id: string): Promise<EmailIntegration | undefined> {
+    return this.emailIntegrations.get(id);
+  }
+
+  async getEmailIntegrationByProvider(provider: string): Promise<EmailIntegration | undefined> {
+    return Array.from(this.emailIntegrations.values()).find(integration => integration.provider === provider);
+  }
+
+  async createEmailIntegration(integrationData: InsertEmailIntegration): Promise<EmailIntegration> {
+    const integration: EmailIntegration = {
+      id: randomUUID(),
+      ...integrationData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.emailIntegrations.set(integration.id, integration);
+    return integration;
+  }
+
+  async updateEmailIntegration(id: string, integrationData: Partial<InsertEmailIntegration>): Promise<EmailIntegration | undefined> {
+    const integration = this.emailIntegrations.get(id);
+    if (!integration) return undefined;
+
+    const updated: EmailIntegration = {
+      ...integration,
+      ...integrationData,
+      updatedAt: new Date(),
+    };
+    this.emailIntegrations.set(id, updated);
+    return updated;
+  }
+
+  async deleteEmailIntegration(id: string): Promise<boolean> {
+    return this.emailIntegrations.delete(id);
+  }
+
 }
 
 // Database storage implementation using PostgreSQL
@@ -5715,6 +5766,79 @@ export class DbStorage implements IStorage {
         clients: [],
         total: 0
       };
+    }
+  }
+
+  // Email Integrations
+  async getEmailIntegrations(): Promise<EmailIntegration[]> {
+    try {
+      const result = await db.select().from(emailIntegrations);
+      return result;
+    } catch (error) {
+      console.error("Error fetching email integrations:", error);
+      return [];
+    }
+  }
+
+  async getEmailIntegration(id: string): Promise<EmailIntegration | undefined> {
+    try {
+      const result = await db.select().from(emailIntegrations).where(eq(emailIntegrations.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching email integration:", error);
+      return undefined;
+    }
+  }
+
+  async getEmailIntegrationByProvider(provider: string): Promise<EmailIntegration | undefined> {
+    try {
+      const result = await db.select().from(emailIntegrations)
+        .where(and(eq(emailIntegrations.provider, provider), eq(emailIntegrations.isActive, true)))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching email integration by provider:", error);
+      return undefined;
+    }
+  }
+
+  async createEmailIntegration(integrationData: InsertEmailIntegration): Promise<EmailIntegration> {
+    try {
+      const result = await db.insert(emailIntegrations).values({
+        ...integrationData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating email integration:", error);
+      throw error;
+    }
+  }
+
+  async updateEmailIntegration(id: string, integrationData: Partial<InsertEmailIntegration>): Promise<EmailIntegration | undefined> {
+    try {
+      const result = await db.update(emailIntegrations)
+        .set({
+          ...integrationData,
+          updatedAt: new Date(),
+        })
+        .where(eq(emailIntegrations.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating email integration:", error);
+      return undefined;
+    }
+  }
+
+  async deleteEmailIntegration(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(emailIntegrations).where(eq(emailIntegrations.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting email integration:", error);
+      return false;
     }
   }
 }

@@ -2048,6 +2048,22 @@ export const smsIntegrations = pgTable("sms_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Email integrations (MailGun, SendGrid, etc.)
+export const emailIntegrations = pgTable("email_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(), // 'mailgun', 'sendgrid', 'ses', etc.
+  name: text("name").notNull().default("Primary"), // Purpose/name for the email config (Sales, Support, etc.)
+  apiKey: text("api_key").notNull(), // API Key (encrypted)
+  domain: text("domain").notNull(), // Email domain
+  fromName: text("from_name").notNull(), // Default from name
+  fromEmail: text("from_email").notNull(), // Default from email
+  isActive: boolean("is_active").default(true),
+  lastTestAt: timestamp("last_test_at"),
+  connectionErrors: text("connection_errors"), // Latest connection error messages
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Lead Notes - Multiple notes per lead  
 export const leadNotes = pgTable("lead_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2187,6 +2203,12 @@ export const insertSmsIntegrationSchema = createInsertSchema(smsIntegrations).om
   updatedAt: true,
 });
 
+export const insertEmailIntegrationSchema = createInsertSchema(emailIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCalendarAppointmentSchema = createInsertSchema(calendarAppointments).omit({
   id: true,
   createdAt: true,
@@ -2221,6 +2243,9 @@ export type InsertCalendarIntegration = z.infer<typeof insertCalendarIntegration
 
 export type SmsIntegration = typeof smsIntegrations.$inferSelect;
 export type InsertSmsIntegration = z.infer<typeof insertSmsIntegrationSchema>;
+
+export type EmailIntegration = typeof emailIntegrations.$inferSelect;
+export type InsertEmailIntegration = z.infer<typeof insertEmailIntegrationSchema>;
 
 export type CalendarAppointment = typeof calendarAppointments.$inferSelect;
 export type InsertCalendarAppointment = z.infer<typeof insertCalendarAppointmentSchema>;
