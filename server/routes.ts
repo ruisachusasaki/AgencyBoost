@@ -8503,6 +8503,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let filterConditions = baseConditions;
       
+      // Apply additional filtering if not 'all'
+      if (filter !== 'all') {
+        switch (filter) {
+          case 'sms':
+            filterConditions = and(eq(auditLogs.entityType, 'sms'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`);
+            break;
+          case 'contact':
+            filterConditions = and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId));
+            break;
+          case 'email':
+            filterConditions = and(eq(auditLogs.entityType, 'email'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`);
+            break;
+          case 'general':
+            // General activities - contact updates only
+            filterConditions = and(
+              eq(auditLogs.entityType, 'contact'), 
+              eq(auditLogs.entityId, entityId)
+            );
+            break;
+          default:
+            // For other filters like call, task, etc. - just show contact activities for now
+            filterConditions = and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId));
+        }
+      }
+      
       // Get total count for pagination (with filter applied)
       const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs)
         .where(filterConditions);
