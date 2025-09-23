@@ -3988,19 +3988,33 @@ export default function EnhancedClientDetail() {
 
 
 
-            {/* Send Options Modal */}
-            <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Send Email</DialogTitle>
-                  <p className="text-xs text-red-500 font-bold">Modal state: {showSendModal ? 'OPEN' : 'CLOSED'}</p>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-3">
+            {/* Send Options Modal - Custom Modal */}
+            {showSendModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center">
+                {/* Backdrop */}
+                <div 
+                  className="absolute inset-0 bg-black bg-opacity-50" 
+                  onClick={() => setShowSendModal(false)}
+                ></div>
+                
+                {/* Modal Content */}
+                <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Send Email</h3>
+                    <button 
+                      onClick={() => setShowSendModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
                     <Button
                       onClick={sendEmailNow}
                       className="w-full justify-start"
                       size="lg"
+                      data-testid="button-send-now"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Send Now
@@ -4070,8 +4084,8 @@ export default function EnhancedClientDetail() {
                     </div>
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
+              </div>
+            )}
 
 
 
