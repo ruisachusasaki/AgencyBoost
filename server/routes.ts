@@ -8484,69 +8484,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 AUDIT LOG REQUEST: entityType=${entityType}, entityId=${entityId}, filter=${filter}, limit=${limit}, offset=${offset}`);
       
       // Build filter conditions
-      let filterConditions;
+      let baseConditions;
       
       // Special handling for contact entity - include related communications (SMS/email)
       if (entityType === 'contact') {
-        if (filter === 'all') {
-          // Show all activities for this contact
-          filterConditions = or(
-            // Direct contact logs
-            and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId)),
-            // SMS logs for this contact (stored in newValues.clientId)
-            and(eq(auditLogs.entityType, 'sms'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`),
-            // Email logs for this contact (stored in newValues.clientId) 
-            and(eq(auditLogs.entityType, 'email'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`)
-          );
-        } else {
-          // Filter by specific activity type
-          switch (filter) {
-            case 'contact':
-              filterConditions = and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId));
-              break;
-            case 'sms':
-              filterConditions = and(eq(auditLogs.entityType, 'sms'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`);
-              break;
-            case 'email':
-              filterConditions = and(eq(auditLogs.entityType, 'email'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`);
-              break;
-            case 'call':
-            case 'meeting':
-            case 'task':
-            case 'note':
-            case 'campaign':
-            case 'workflow':
-              filterConditions = and(eq(auditLogs.entityType, filter), eq(auditLogs.entityId, entityId));
-              break;
-            case 'general':
-              filterConditions = and(
-                eq(auditLogs.entityType, 'contact'), 
-                eq(auditLogs.entityId, entityId),
-                or(eq(auditLogs.action, 'updated'), eq(auditLogs.action, 'created'))
-              );
-              break;
-            default:
-              filterConditions = or(
-                and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId)),
-                and(eq(auditLogs.entityType, 'sms'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`),
-                and(eq(auditLogs.entityType, 'email'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`)
-              );
-          }
-        }
+        baseConditions = or(
+          // Direct contact logs
+          and(eq(auditLogs.entityType, 'contact'), eq(auditLogs.entityId, entityId)),
+          // SMS logs for this contact (stored in newValues.clientId)
+          and(eq(auditLogs.entityType, 'sms'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`),
+          // Email logs for this contact (stored in newValues.clientId) 
+          and(eq(auditLogs.entityType, 'email'), sql`(${auditLogs.newValues}->>'clientId') = ${entityId}`)
+        );
       } else {
-        // Standard entity query (non-contact)
-        if (filter === 'all') {
-          filterConditions = and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId));
-        } else if (filter === 'general') {
-          filterConditions = and(
-            eq(auditLogs.entityType, entityType), 
-            eq(auditLogs.entityId, entityId),
-            or(eq(auditLogs.action, 'updated'), eq(auditLogs.action, 'created'))
-          );
-        } else {
-          filterConditions = and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId));
-        }
+        // Standard entity query
+        baseConditions = and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId));
       }
+      
+      let filterConditions = baseConditions;
       
       // Get total count for pagination (with filter applied)
       const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs)
