@@ -12766,13 +12766,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/mailgun/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       // Validate input using Zod schema
+      console.log('MailGun Connect Request Body:', JSON.stringify(req.body, null, 2));
       const validationResult = mailgunConnectSchema.safeParse(req.body);
       if (!validationResult.success) {
+        console.log('MailGun Validation Errors:', JSON.stringify(validationResult.error.flatten().fieldErrors, null, 2));
         return res.status(400).json({
           message: "Invalid input",
           errors: validationResult.error.flatten().fieldErrors
         });
       }
+      console.log('MailGun validation passed successfully');
 
       const { apiKey, domain, fromName, fromEmail } = validationResult.data;
 
