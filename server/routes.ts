@@ -37,7 +37,7 @@ import {
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, customFieldFileUploads,
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
@@ -56,6 +56,9 @@ import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbidde
 import { db } from "./db";
 import { google } from "googleapis";
 import twilio from "twilio";
+import mailgun from "mailgun.js";
+import formData from "form-data";
+import { EncryptionService } from "./encryption";
 import { eq, like, or, and, asc, desc, sql, inArray, isNotNull, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
@@ -12691,6 +12694,232 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error sending SMS:', error);
       res.status(500).json({ 
         message: "Failed to send SMS",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // ============== MAILGUN EMAIL INTEGRATION ENDPOINTS ==============
+
+  // Helper function to create MailGun client
+  function createMailgunClient(apiKey: string, domain: string) {
+    const mg = new mailgun(formData);
+    return mg.client({
+      username: 'api',
+      key: apiKey,
+      url: 'https://api.mailgun.net'
+    });
+  }
+
+  // GET MailGun Integration Status
+  app.get("/api/integrations/mailgun/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
+    try {
+      const [integration] = await db
+        .select()
+        .from(emailIntegrations)
+        .where(and(
+          eq(emailIntegrations.provider, 'mailgun'),
+          eq(emailIntegrations.isActive, true)
+        ));
+
+      if (!integration) {
+        return res.json({
+          connected: false,
+          status: "disconnected",
+          lastSent: null
+        });
+      }
+
+      res.json({
+        connected: true,
+        status: "connected",
+        domain: integration.domain,
+        fromEmail: integration.fromEmail,
+        fromName: integration.fromName,
+        lastSent: integration.lastTestAt?.toISOString() || null,
+        errors: integration.connectionErrors
+      });
+    } catch (error) {
+      console.error('Error checking MailGun status:', error);
+      res.status(500).json({ 
+        connected: false,
+        message: "Failed to check MailGun status" 
+      });
+    }
+  });
+
+  // POST MailGun Connect
+  app.post("/api/integrations/mailgun/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { apiKey, domain, fromName, fromEmail } = req.body;
+
+      if (!apiKey || !domain || !fromName || !fromEmail) {
+        return res.status(400).json({
+          message: "API Key, Domain, From Name, and From Email are required"
+        });
+      }
+
+      // Test MailGun connection by validating domain
+      try {
+        const mg = createMailgunClient(apiKey, domain);
+        await mg.domains.get(domain);
+      } catch (error) {
+        console.error('MailGun connection test failed:', error);
+        return res.status(400).json({
+          message: "Failed to connect to MailGun. Please check your API key and domain."
+        });
+      }
+
+      // Encrypt API key before storage
+      const encryptedApiKey = EncryptionService.encrypt(apiKey);
+
+      // Check if integration already exists
+      const [existingIntegration] = await db
+        .select()
+        .from(emailIntegrations)
+        .where(eq(emailIntegrations.provider, 'mailgun'));
+
+      if (existingIntegration) {
+        // Update existing integration
+        await db
+          .update(emailIntegrations)
+          .set({
+            apiKey: encryptedApiKey,
+            domain,
+            fromName,
+            fromEmail,
+            isActive: true,
+            connectionErrors: null,
+            updatedAt: new Date()
+          })
+          .where(eq(emailIntegrations.id, existingIntegration.id));
+      } else {
+        // Create new integration
+        await db
+          .insert(emailIntegrations)
+          .values({
+            provider: 'mailgun',
+            name: 'Primary',
+            apiKey: encryptedApiKey,
+            domain,
+            fromName,
+            fromEmail,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+      }
+
+      res.json({
+        message: "MailGun connected successfully!",
+        domain,
+        fromEmail,
+        fromName
+      });
+    } catch (error) {
+      console.error('Error connecting MailGun:', error);
+      res.status(500).json({
+        message: "Failed to connect MailGun",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // POST MailGun Disconnect
+  app.post("/api/integrations/mailgun/disconnect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      await db
+        .update(emailIntegrations)
+        .set({
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(emailIntegrations.provider, 'mailgun'));
+
+      res.json({ message: "MailGun disconnected successfully" });
+    } catch (error) {
+      console.error('Error disconnecting MailGun:', error);
+      res.status(500).json({ 
+        message: "Failed to disconnect MailGun" 
+      });
+    }
+  });
+
+  // POST MailGun Test Email
+  app.post("/api/integrations/mailgun/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { to, fromEmail, fromName } = req.body;
+
+      if (!to) {
+        return res.status(400).json({
+          message: "Test email address is required"
+        });
+      }
+
+      const [integration] = await db
+        .select()
+        .from(emailIntegrations)
+        .where(and(
+          eq(emailIntegrations.provider, 'mailgun'),
+          eq(emailIntegrations.isActive, true)
+        ));
+
+      if (!integration) {
+        return res.status(400).json({
+          message: "MailGun integration not connected"
+        });
+      }
+
+      // Decrypt API key for use
+      const decryptedApiKey = EncryptionService.decrypt(integration.apiKey);
+      const mg = createMailgunClient(decryptedApiKey, integration.domain);
+
+      const emailData = {
+        from: `${fromName || integration.fromName} <${fromEmail || integration.fromEmail}>`,
+        to: to,
+        subject: 'Test Email from Your CRM System',
+        text: 'This is a test email to verify your MailGun integration is working correctly!',
+        html: '<h2>Test Email</h2><p>This is a test email to verify your MailGun integration is working correctly!</p><p>Your MailGun integration is configured and ready to use.</p>'
+      };
+
+      const message = await mg.messages.create(integration.domain, emailData);
+
+      // Update last test time
+      await db
+        .update(emailIntegrations)
+        .set({
+          lastTestAt: new Date(),
+          connectionErrors: null,
+          updatedAt: new Date()
+        })
+        .where(eq(emailIntegrations.id, integration.id));
+
+      res.json({
+        message: "Test email sent successfully",
+        messageId: message.id,
+        to: to
+      });
+    } catch (error) {
+      console.error('Error sending test email:', error);
+
+      // Log error to integration
+      const [integration] = await db
+        .select()
+        .from(emailIntegrations)
+        .where(eq(emailIntegrations.provider, 'mailgun'));
+
+      if (integration) {
+        await db
+          .update(emailIntegrations)
+          .set({
+            connectionErrors: `Test Error: ${(error as Error).message}`,
+            updatedAt: new Date()
+          })
+          .where(eq(emailIntegrations.id, integration.id));
+      }
+
+      res.status(500).json({
+        message: "Failed to send test email",
         error: (error as Error).message
       });
     }
