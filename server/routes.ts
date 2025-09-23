@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // MailGun Integration Validation Schemas
   const mailgunConnectSchema = z.object({
-    apiKey: z.string().min(1, "API Key is required").regex(/^key-[a-z0-9]+$/, "Invalid MailGun API key format"),
+    apiKey: z.string().min(10, "API Key is required").regex(/^key-[a-zA-Z0-9\-_]+$/, "API Key must start with 'key-' followed by letters, numbers, hyphens or underscores"),
     domain: z.string().min(1, "Domain is required").regex(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Invalid domain format"),
     fromName: z.string().min(1, "From Name is required").max(100, "From Name too long"),
     fromEmail: z.string().email("Invalid email address").max(255, "Email address too long")
