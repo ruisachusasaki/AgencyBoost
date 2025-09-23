@@ -12958,27 +12958,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue with response even if audit log fails
       }
 
-      // Create activity record for recent activity display
-      try {
-        await appStorage.createActivity({
-          type: 'email',
-          description: `Sent email: "${subject}"`,
-          details: {
-            to,
-            subject,
-            fromEmail: actualFromEmail,
-            fromName: actualFromName,
-            messageId: result.id,
-            sentAt: new Date().toISOString()
-          },
-          clientId: clientId,
-          userId: null // Skip user reference to avoid foreign key constraint issue
-        });
-        console.log('Email activity record created');
-      } catch (activityError) {
-        console.error('Failed to create email activity record:', activityError);
-        // Continue with response even if activity logging fails
-      }
+      // Skip activity logging for emails - Communication History audit logs provide the needed tracking
+      console.log('Email activity tracking handled by Communication History audit logs');
 
       res.json({
         message: "Email sent successfully!",
