@@ -12902,16 +12902,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST MailGun Test Email
   app.post("/api/integrations/mailgun/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      // Validate input using Zod schema
-      const validationResult = mailgunTestSchema.safeParse(req.body);
-      if (!validationResult.success) {
+      console.log('MailGun Test - Processing test email request');
+      console.log('Test request body:', req.body);
+      
+      const { to, fromEmail, fromName } = req.body;
+      
+      // Simple validation
+      if (!to || typeof to !== 'string' || !to.includes('@')) {
+        console.log('Invalid email address provided:', to);
         return res.status(400).json({
-          message: "Invalid input",
-          errors: validationResult.error.flatten().fieldErrors
+          message: "Please provide a valid email address for testing"
         });
       }
-
-      const { to, fromEmail, fromName } = validationResult.data;
+      
+      console.log('Valid test email address provided:', to);
 
       const [integration] = await db
         .select()
