@@ -8480,6 +8480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
       const filter = req.query.filter as string || 'all';
+      const userFilter = req.query.user as string || 'all';
       
       
       // Build filter conditions
@@ -8527,6 +8528,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Apply user filtering if specified
+      if (userFilter !== 'all') {
+        filterConditions = and(filterConditions, eq(auditLogs.userId, userFilter));
+      }
+      
       // Get total count for pagination (with filter applied)
       const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs)
         .leftJoin(staff, eq(auditLogs.userId, staff.id))
@@ -8561,7 +8567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit,
         offset,
         hasMore: offset + limit < count,
-        filter
+        filter,
+        user: userFilter
       });
     } catch (error) {
       console.error('Error fetching entity audit logs:', error);
