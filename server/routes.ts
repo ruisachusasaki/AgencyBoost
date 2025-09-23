@@ -12764,14 +12764,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST MailGun Connect
   app.post("/api/integrations/mailgun/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
-    console.log('MailGun Connect endpoint reached!');
-    console.log('Request body:', req.body);
-    
-    // Temporary success response to test if endpoint is reachable
-    res.json({
-      message: "Endpoint reached successfully! (Debug mode)",
-      receivedData: req.body
-    });
+    try {
+      console.log('MailGun Connect - Processing connection request');
+      const { apiKey, domain, fromName, fromEmail } = req.body;
+      
+      // Simple validation
+      if (!apiKey || !domain || !fromName || !fromEmail) {
+        console.log('Missing required fields:', { apiKey: !!apiKey, domain: !!domain, fromName: !!fromName, fromEmail: !!fromEmail });
+        return res.status(400).json({
+          message: "All fields are required: API Key, Domain, From Name, and From Email"
+        });
+      }
+      
+      console.log('All fields present, testing MailGun connection...');
+      
+      // Test MailGun connection by validating domain
+      try {
+        const mg = createMailgunClient(apiKey, domain);
+        console.log('Created MailGun client, testing domain:', domain);
+        await mg.domains.get(domain);
+        console.log('MailGun domain validation successful');
+      } catch (error) {
+        console.error('MailGun connection test failed:', error);
+        return res.status(400).json({
+          message: "Failed to connect to MailGun. Please check your API key and domain.",
+          error: (error as Error).message
+        });
+      }
+
+      // Encrypt API key before storage
+      const encryptedApiKey = EncryptionService.encrypt(apiKey);
+      console.log('API key encrypted, saving to database...');
+
+      // Use transaction to ensure only one active MailGun configuration
+      await db.transaction(async (tx) => {
+        // First, deactivate any existing MailGun integrations
+        await tx
+          .update(emailIntegrations)
+          .set({
+            isActive: false,
+            updatedAt: new Date()
+          })
+          .where(eq(emailIntegrations.provider, 'mailgun'));
+
+        // Then create the new active integration
+        await tx
+          .insert(emailIntegrations)
+          .values({
+            provider: 'mailgun',
+            name: 'Primary',
+            apiKey: encryptedApiKey,
+            domain,
+            fromName,
+            fromEmail,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+      });
+
+      console.log('Database transaction completed successfully');
+
+      // Create audit log for MailGun connection
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "created",
+          "email_integration",
+          "mailgun-integration",
+          "MailGun Integration",
+          userId,
+          `Connected MailGun integration with domain: ${domain}`,
+          null,
+          { provider: 'mailgun', domain, fromEmail, fromName },
+          req
+        );
+        console.log('Audit log created successfully');
+      } catch (auditError) {
+        console.error('Failed to create MailGun connection audit log:', auditError);
+        // Continue with response even if audit log fails
+      }
+
+      res.json({
+        message: "MailGun connected successfully!",
+        domain,
+        fromEmail,
+        fromName
+      });
+    } catch (error) {
+      console.error('Error connecting MailGun:', error);
+      res.status(500).json({
+        message: "Failed to connect MailGun",
+        error: (error as Error).message
+      });
+    }
   });
 
   // POST MailGun Disconnect
