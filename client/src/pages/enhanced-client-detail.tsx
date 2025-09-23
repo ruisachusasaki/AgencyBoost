@@ -2960,12 +2960,62 @@ export default function EnhancedClientDetail() {
   };
 
   const sendEmailNow = async () => {
-    // Implementation for sending email immediately
-    toast({
-      title: "Email Sent",
-      description: "Your email has been sent successfully.",
-    });
-    setShowSendModal(false);
+    try {
+      // Validate required fields
+      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields: from email, subject, and message.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check DND settings before sending
+      if (client?.dndAll || client?.dndEmail) {
+        toast({
+          title: "Cannot Send Email",
+          description: `${client?.name} has email communications disabled (DND active)`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Send email through CRM API using MailGun integration
+      const response = await apiRequest('POST', '/api/communications/send-email', {
+        to: client.email,
+        subject: emailData.subject,
+        message: emailData.message,
+        fromEmail: emailData.fromEmail,
+        fromName: emailData.fromName,
+        clientId: client.id
+      });
+
+      const result = await response.json();
+      
+      toast({
+        title: "Email Sent Successfully",
+        description: `Email sent to ${client?.name} (${client?.email})`,
+      });
+      
+      // Clear the form after successful send
+      setEmailData({
+        fromEmail: emailData.fromEmail, // Keep from email
+        fromName: emailData.fromName,   // Keep from name
+        subject: "",                    // Clear subject
+        message: ""                     // Clear message
+      });
+      
+      setShowSendModal(false);
+      
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast({
+        title: "Failed to Send Email",
+        description: "There was an error sending your email. Please try again or check your MailGun configuration.",
+        variant: "destructive",
+      });
+    }
   };
 
   const scheduleEmail = async () => {

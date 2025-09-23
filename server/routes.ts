@@ -4973,8 +4973,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email Template routes - SECURED (Admin Only)
-  app.get("/api/email-templates", requireAuth(), requireAdmin(), async (req, res) => {
+  // Email Template routes - SECURED (Users with client access)
+  app.get("/api/email-templates", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const templates = await appStorage.getEmailTemplates();
       res.json(templates);
@@ -12884,6 +12884,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error connecting MailGun:', error);
       res.status(500).json({
         message: "Failed to connect MailGun",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // POST Send Email through CRM Communication Interface
+  app.post("/api/communications/send-email", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      console.log('CRM Email Send - Processing communication request');
+      const { to, subject, message, fromEmail, fromName, clientId } = req.body;
+      
+      // Validate required fields
+      if (!to || !subject || !message) {
+        return res.status(400).json({
+          message: "All fields are required: recipient email, subject, and message"
+        });
+      }
+      
+      // Get active MailGun integration
+      const [integration] = await db
+        .select()
+        .from(emailIntegrations)
+        .where(and(
+          eq(emailIntegrations.provider, 'mailgun'),
+          eq(emailIntegrations.isActive, true)
+        ));
+
+      if (!integration) {
+        return res.status(400).json({
+          message: "MailGun integration not configured. Please set up MailGun in Settings > Integrations."
+        });
+      }
+
+      // Use integration settings or provided override
+      const actualFromEmail = fromEmail || integration.fromEmail;
+      const actualFromName = fromName || integration.fromName;
+      
+      console.log(`Sending email to ${to} via MailGun...`);
+
+      // Decrypt API key and send email
+      const decryptedApiKey = EncryptionService.decrypt(integration.apiKey);
+      const mg = createMailgunClient(decryptedApiKey, integration.domain);
+
+      const emailData = {
+        from: `${actualFromName} <${actualFromEmail}>`,
+        to: to,
+        subject: subject,
+        html: message,
+        text: message.replace(/<[^>]*>/g, '') // Strip HTML for plain text version
+      };
+
+      const result = await mg.messages.create(integration.domain, emailData);
+      console.log('MailGun send successful:', result.id);
+
+      // Create audit log for email communication
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "created",
+          "email_communication", 
+          clientId || result.id,
+          "Email Communication",
+          userId,
+          `Sent email to ${to}: "${subject}"`,
+          null,
+          { to, subject, fromEmail: actualFromEmail, fromName: actualFromName, messageId: result.id },
+          req
+        );
+        console.log('Email communication audit log created');
+      } catch (auditError) {
+        console.error('Failed to create email communication audit log:', auditError);
+        // Continue with response even if audit log fails
+      }
+
+      res.json({
+        message: "Email sent successfully!",
+        messageId: result.id,
+        to: to,
+        subject: subject
+      });
+
+    } catch (error) {
+      console.error('Error sending CRM email:', error);
+      res.status(500).json({
+        message: "Failed to send email",
         error: (error as Error).message
       });
     }
