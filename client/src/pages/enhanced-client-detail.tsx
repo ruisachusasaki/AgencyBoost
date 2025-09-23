@@ -2909,6 +2909,11 @@ export default function EnhancedClientDetail() {
     }
   }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
 
+  // Debug modal state changes
+  useEffect(() => {
+    console.log('🔄 MODAL STATE CHANGED:', { showSendModal });
+  }, [showSendModal]);
+
   // Update word count when message changes (strip HTML tags for accurate count)
   useEffect(() => {
     // Strip HTML tags to get plain text for word count
@@ -2970,7 +2975,13 @@ export default function EnhancedClientDetail() {
 
   const handleSendEmail = () => {
     console.log('🎯 SEND EMAIL BUTTON CLICKED - Opening modal...');
+    console.log('📋 Current modal states:', {
+      showSendModal,
+      showTemplateModal,
+      showMergeTagsModal
+    });
     setShowSendModal(true);
+    console.log('✅ setShowSendModal(true) called');
   };
 
   const sendEmailNow = async () => {
