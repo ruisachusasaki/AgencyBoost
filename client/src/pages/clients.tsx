@@ -282,7 +282,8 @@ export default function Clients() {
       await apiRequest("DELETE", `/api/clients/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] }); // Also invalidate base query
       toast({
         title: "Client deleted",
         description: "The client has been successfully deleted.",
