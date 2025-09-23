@@ -4199,6 +4199,16 @@ export class DbStorage implements IStorage {
     }
   }
 
+  async deleteClient(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(clients).where(eq(clients.id, id));
+      return result.changes > 0;
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      throw error;
+    }
+  }
+
   // Client Health Scores
   async createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore> {
     const result = await db.insert(clientHealthScores).values({

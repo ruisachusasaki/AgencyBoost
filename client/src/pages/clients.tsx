@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X, Share2, Globe, Lock, Database, Eye } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X, Share2, Globe, Lock, Database, Eye, AlertTriangle } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -777,9 +777,19 @@ export default function Clients() {
     }
   };
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<{id: string, name: string} | null>(null);
+
   const handleDeleteClient = (id: string, clientName: string) => {
-    if (confirm(`Are you sure you want to permanently delete "${clientName}"? This action cannot be undone and will remove all associated data including projects, campaigns, and invoices.`)) {
-      deleteClientMutation.mutate(id);
+    setClientToDelete({id, name: clientName});
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteClient = () => {
+    if (clientToDelete) {
+      deleteClientMutation.mutate(clientToDelete.id);
+      setShowDeleteModal(false);
+      setClientToDelete(null);
     }
   };
 
@@ -1761,6 +1771,49 @@ export default function Clients() {
                 Update Sharing
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Client Confirmation Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Client
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-3">
+              Are you sure you want to permanently delete
+            </p>
+            <p className="font-semibold text-gray-900 mb-3">
+              "{clientToDelete?.name}"?
+            </p>
+            <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              ⚠️ This action cannot be undone and will remove all associated data including projects, campaigns, and invoices.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteModal(false);
+                setClientToDelete(null);
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmDeleteClient}
+              disabled={deleteClientMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteClientMutation.isPending ? "Deleting..." : "Delete Client"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
