@@ -12764,20 +12764,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST MailGun Connect
   app.post("/api/integrations/mailgun/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
-    try {
-      // Temporarily bypass validation for debugging
-      console.log('MailGun Connect - bypassing validation for debugging');
-      const { apiKey, domain, fromName, fromEmail } = req.body;
-      
-      // Basic null checks
-      if (!apiKey || !domain || !fromName || !fromEmail) {
-        console.log('Missing required fields:', { apiKey: !!apiKey, domain: !!domain, fromName: !!fromName, fromEmail: !!fromEmail });
-        return res.status(400).json({
-          message: "All fields are required: API Key, Domain, From Name, and From Email"
-        });
-      }
-      
-      console.log('All required fields present, proceeding with connection test');
+    console.log('MailGun Connect endpoint reached!');
+    console.log('Request body:', req.body);
+    
+    // Temporary success response to test if endpoint is reachable
+    res.json({
+      message: "Endpoint reached successfully! (Debug mode)",
+      receivedData: req.body
+    });
+    return;
 
       // Test MailGun connection by validating domain
       try {
