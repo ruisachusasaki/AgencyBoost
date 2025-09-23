@@ -8552,25 +8552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs)
         .where(filterConditions);
       
-      // Get paginated logs (with filter applied) and join with staff to get user names
-      const logs = await db.select({
-        id: auditLogs.id,
-        action: auditLogs.action,
-        entityType: auditLogs.entityType,
-        entityId: auditLogs.entityId,
-        entityName: auditLogs.entityName,
-        userId: auditLogs.userId,
-        userName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, ${staff.email}, 'Unknown User')`.as('userName'),
-        details: auditLogs.details,
-        oldValues: auditLogs.oldValues,
-        newValues: auditLogs.newValues,
-        timestamp: auditLogs.timestamp,
-        ipAddress: auditLogs.ipAddress,
-        userAgent: auditLogs.userAgent,
-        changedFields: auditLogs.changedFields
-      })
-        .from(auditLogs)
-        .leftJoin(staff, eq(auditLogs.userId, staff.id))
+      // Get paginated logs (with filter applied)
+      const logs = await db.select().from(auditLogs)
         .where(filterConditions)
         .orderBy(desc(auditLogs.timestamp))
         .limit(limit)
