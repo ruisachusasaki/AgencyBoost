@@ -12790,29 +12790,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Encrypt API key before storage
       const encryptedApiKey = EncryptionService.encrypt(apiKey);
 
-      // Check if integration already exists
-      const [existingIntegration] = await db
-        .select()
-        .from(emailIntegrations)
-        .where(eq(emailIntegrations.provider, 'mailgun'));
-
-      if (existingIntegration) {
-        // Update existing integration
-        await db
+      // Use transaction to ensure only one active MailGun configuration
+      await db.transaction(async (tx) => {
+        // First, deactivate any existing MailGun integrations
+        await tx
           .update(emailIntegrations)
           .set({
-            apiKey: encryptedApiKey,
-            domain,
-            fromName,
-            fromEmail,
-            isActive: true,
-            connectionErrors: null,
+            isActive: false,
             updatedAt: new Date()
           })
-          .where(eq(emailIntegrations.id, existingIntegration.id));
-      } else {
-        // Create new integration
-        await db
+          .where(eq(emailIntegrations.provider, 'mailgun'));
+
+        // Then create the new active integration
+        await tx
           .insert(emailIntegrations)
           .values({
             provider: 'mailgun',
@@ -12825,6 +12815,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             createdAt: new Date(),
             updatedAt: new Date()
           });
+      });
+
+      // Create audit log for MailGun connection
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "created",
+          "email_integration",
+          "mailgun-integration",
+          "MailGun Integration",
+          userId,
+          `Connected MailGun integration with domain: ${domain}`,
+          null,
+          { provider: 'mailgun', domain, fromEmail, fromName },
+          req
+        );
+      } catch (auditError) {
+        console.error('Failed to create MailGun connection audit log:', auditError);
+        // Continue with response even if audit log fails
       }
 
       res.json({
@@ -12852,6 +12861,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updatedAt: new Date()
         })
         .where(eq(emailIntegrations.provider, 'mailgun'));
+
+      // Create audit log for MailGun disconnection
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "updated",
+          "email_integration",
+          "mailgun-integration",
+          "MailGun Integration",
+          userId,
+          "Disconnected MailGun integration",
+          { isActive: true },
+          { isActive: false },
+          req
+        );
+      } catch (auditError) {
+        console.error('Failed to create MailGun disconnection audit log:', auditError);
+        // Continue with response even if audit log fails
+      }
 
       res.json({ message: "MailGun disconnected successfully" });
     } catch (error) {
@@ -12913,6 +12941,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updatedAt: new Date()
         })
         .where(eq(emailIntegrations.id, integration.id));
+
+      // Create audit log for MailGun test email
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "created",
+          "email_test",
+          `test-${message.id}`,
+          "MailGun Test Email",
+          userId,
+          `Sent test email to ${to} via MailGun`,
+          null,
+          { to, messageId: message.id, domain: integration.domain },
+          req
+        );
+      } catch (auditError) {
+        console.error('Failed to create MailGun test email audit log:', auditError);
+        // Continue with response even if audit log fails
+      }
 
       res.json({
         message: "Test email sent successfully",
