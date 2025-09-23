@@ -4184,6 +4184,21 @@ export class DbStorage implements IStorage {
     }
   }
 
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    try {
+      const result = await db.insert(clients).values({
+        ...insertClient,
+        id: randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating client:", error);
+      throw error;
+    }
+  }
+
   async updateClient(id: string, clientData: Partial<InsertClient>): Promise<Client | undefined> {
     try {
       const result = await db.update(clients)
