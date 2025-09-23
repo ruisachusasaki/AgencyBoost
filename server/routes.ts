@@ -12768,11 +12768,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('MailGun Connect - Processing connection request');
       const { apiKey, domain, fromName, fromEmail } = req.body;
       
-      // Simple validation
-      if (!apiKey || !domain || !fromName || !fromEmail) {
-        console.log('Missing required fields:', { apiKey: !!apiKey, domain: !!domain, fromName: !!fromName, fromEmail: !!fromEmail });
+      // Check if this is an update request (no API key provided, using existing)
+      let actualApiKey = apiKey;
+      let encryptedApiKey: string;
+      
+      if (!apiKey) {
+        console.log('No API key provided, checking for existing configuration...');
+        // Load existing API key from database
+        const [existingIntegration] = await db
+          .select()
+          .from(emailIntegrations)
+          .where(and(
+            eq(emailIntegrations.provider, 'mailgun'),
+            eq(emailIntegrations.isActive, true)
+          ));
+
+        if (!existingIntegration) {
+          return res.status(400).json({
+            message: "No existing MailGun configuration found. Please provide an API key."
+          });
+        }
+
+        // Use existing encrypted key and decrypt for testing
+        encryptedApiKey = existingIntegration.apiKey;
+        actualApiKey = EncryptionService.decrypt(existingIntegration.apiKey);
+        console.log('Using existing API key for connection test');
+      } else {
+        // New API key provided, encrypt it
+        encryptedApiKey = EncryptionService.encrypt(apiKey);
+        console.log('New API key provided, encrypted for storage');
+      }
+      
+      // Validate required fields
+      if (!domain || !fromName || !fromEmail) {
+        console.log('Missing required fields:', { domain: !!domain, fromName: !!fromName, fromEmail: !!fromEmail });
         return res.status(400).json({
-          message: "All fields are required: API Key, Domain, From Name, and From Email"
+          message: "All fields are required: Domain, From Name, and From Email"
         });
       }
       
@@ -12780,7 +12811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Test MailGun connection by validating domain
       try {
-        const mg = createMailgunClient(apiKey, domain);
+        const mg = createMailgunClient(actualApiKey, domain);
         console.log('Created MailGun client, testing domain:', domain);
         await mg.domains.get(domain);
         console.log('MailGun domain validation successful');
@@ -12792,9 +12823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Encrypt API key before storage
-      const encryptedApiKey = EncryptionService.encrypt(apiKey);
-      console.log('API key encrypted, saving to database...');
+      console.log('API key ready for storage...');
 
       // Use transaction to ensure only one active MailGun configuration
       await db.transaction(async (tx) => {

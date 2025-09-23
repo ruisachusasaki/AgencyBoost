@@ -680,23 +680,38 @@ export default function Integrations() {
   };
 
   const handleMailgunConnect = async () => {
-    if (!mailgunSettings.apiKey || !mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName) {
+    // Check if this is an update with masked API key or new setup
+    const isMaskedApiKey = mailgunSettings.apiKey === "key-*********************";
+    
+    if (!isMaskedApiKey && (!mailgunSettings.apiKey || !mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName)) {
       toast({
-        title: "Missing Information",
+        title: "Missing Information", 
         description: "Please fill in all required fields (API Key, Domain, From Name, and From Email).",
         variant: "destructive",
+      });
+      return;
+    }
+    
+    if (isMaskedApiKey && (!mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName)) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields (Domain, From Name, and From Email).",
+        variant: "destructive", 
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/integrations/mailgun/connect', {
-        apiKey: mailgunSettings.apiKey,
+      const requestBody = {
         domain: mailgunSettings.domain,
         fromName: mailgunSettings.fromName,
-        fromEmail: mailgunSettings.fromEmail
-      });
+        fromEmail: mailgunSettings.fromEmail,
+        // Only include API key if it's not masked (meaning it's new or being updated)
+        ...(isMaskedApiKey ? {} : { apiKey: mailgunSettings.apiKey })
+      };
+      
+      const response = await apiRequest('POST', '/api/integrations/mailgun/connect', requestBody);
       const result = await response.json();
       
       // Update integration status
@@ -784,8 +799,35 @@ export default function Integrations() {
     }
   };
 
-  const openConfigDialog = (integration: Integration) => {
+  const loadMailgunConfiguration = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/mailgun/status');
+      const status = await response.json();
+      
+      if (status.connected && status.domain) {
+        // Pre-populate the form with existing configuration, but mask the API key
+        setMailgunSettings({
+          apiKey: "key-*********************", // Masked for security
+          domain: status.domain || "",
+          fromName: status.fromName || "",
+          fromEmail: status.fromEmail || "",
+          testEmail: "" // Always start with empty test email
+        });
+      }
+    } catch (error) {
+      console.error('Error loading MailGun configuration:', error);
+      // If error loading, keep empty form
+    }
+  };
+
+  const openConfigDialog = async (integration: Integration) => {
     setSelectedIntegration(integration);
+    
+    // Load existing configuration for MailGun
+    if (integration.id === "mailgun") {
+      await loadMailgunConfiguration();
+    }
+    
     setIsConfigDialogOpen(true);
   };
 
