@@ -17,7 +17,7 @@ import {
   type Document, type InsertDocument,
   type ClientHealthScore, type InsertClientHealthScore, clientHealthScores,
   clientBriefValues,
-  type Activity, type InsertActivity,
+  type Activity, type InsertActivity, activities,
   type SocialMediaAccount, type InsertSocialMediaAccount,
   type SocialMediaPost, type InsertSocialMediaPost,
   type SocialMediaTemplate, type InsertSocialMediaTemplate,
@@ -4274,6 +4274,21 @@ export class DbStorage implements IStorage {
 
   async deleteClientHealthScore(id: string): Promise<void> {
     await db.delete(clientHealthScores).where(eq(clientHealthScores.id, id));
+  }
+
+  // Activities
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    try {
+      const result = await db.insert(activities).values({
+        ...insertActivity,
+        id: randomUUID(),
+        createdAt: new Date()
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating activity:", error);
+      throw error;
+    }
   }
 
   async getClientHealthScoreByWeek(clientId: string, weekStartDate: Date): Promise<ClientHealthScore | null> {

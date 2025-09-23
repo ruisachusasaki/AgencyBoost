@@ -12958,6 +12958,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue with response even if audit log fails
       }
 
+      // Create activity record for recent activity display
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await appStorage.createActivity({
+          type: 'email',
+          description: `Sent email: "${subject}"`,
+          details: {
+            to,
+            subject,
+            fromEmail: actualFromEmail,
+            fromName: actualFromName,
+            messageId: result.id,
+            sentAt: new Date().toISOString()
+          },
+          clientId: clientId,
+          userId: userId
+        });
+        console.log('Email activity record created');
+      } catch (activityError) {
+        console.error('Failed to create email activity record:', activityError);
+        // Continue with response even if activity logging fails
+      }
+
       res.json({
         message: "Email sent successfully!",
         messageId: result.id,
