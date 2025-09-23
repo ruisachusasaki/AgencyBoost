@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -77,6 +77,16 @@ export default function Integrations() {
       lastSync: "2024-08-07 16:45",
       features: ["Real-time notifications", "Team collaboration", "Status updates"],
       settingsRequired: false
+    },
+    {
+      id: "mailgun",
+      name: "MailGun",
+      description: "Professional email sending and delivery service for customer communications",
+      icon: Send,
+      status: "disconnected",
+      lastSync: "",
+      features: ["Transactional emails", "Email templates", "Delivery tracking", "Bounce handling"],
+      settingsRequired: true
     }
   ]);
 
@@ -126,6 +136,9 @@ export default function Integrations() {
     
     // Check Slack status
     checkSlackStatus();
+    
+    // Check MailGun status
+    checkMailgunStatus();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -166,6 +179,30 @@ export default function Integrations() {
       setIntegrations(prev => prev.map(integration => 
         integration.id === "slack" 
           ? { ...integration, status: "error" as const }
+          : integration
+      ));
+    }
+  };
+  
+  const checkMailgunStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/mailgun/status');
+      const status = await response.json();
+      
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "mailgun" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : "disconnected" as const,
+              lastSync: status.lastSent ? new Date(status.lastSent).toLocaleString() : "",
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking MailGun status:', error);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "mailgun" 
+          ? { ...integration, status: "disconnected" as const }
           : integration
       ));
     }
@@ -302,6 +339,13 @@ export default function Integrations() {
         description: "Slack integration is configured via environment variables and ready to use!",
       });
       return;
+    } else if (integrationId === "mailgun") {
+      // Open MailGun configuration dialog
+      const mailgunIntegration = integrations.find(i => i.id === "mailgun");
+      if (mailgunIntegration) {
+        openConfigDialog(mailgunIntegration);
+      }
+      return;
     }
 
     toast({
@@ -344,6 +388,33 @@ export default function Integrations() {
       setIsLoading(true);
       try {
         await apiRequest('POST', '/api/integrations/twilio/disconnect');
+        
+        // Update local state
+        setIntegrations(prev => prev.map(integration => 
+          integration.id === integrationId 
+            ? { ...integration, status: "disconnected" as const, lastSync: "" }
+            : integration
+        ));
+        
+        toast({
+          title: "Success",
+          description: `Disconnected from ${integrationName}`,
+        });
+      } catch (error) {
+        console.error('Disconnect error:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to disconnect integration. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    } else if (integrationId === "mailgun") {
+      setIsLoading(true);
+      try {
+        await apiRequest('POST', '/api/integrations/mailgun/disconnect');
         
         // Update local state
         setIntegrations(prev => prev.map(integration => 
@@ -455,6 +526,27 @@ export default function Integrations() {
         setIsLoading(false);
       }
       return;
+    } else if (integrationId === "mailgun") {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('POST', '/api/integrations/mailgun/test');
+        const result = await response.json();
+        
+        toast({
+          title: "Success",
+          description: "Test email sent successfully via MailGun!",
+        });
+      } catch (error) {
+        console.error('MailGun test error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send test email. Please check your MailGun configuration.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
     }
 
     toast({
@@ -478,6 +570,15 @@ export default function Integrations() {
   
   // Slack configuration state
   const [isSlackConfigDialogOpen, setIsSlackConfigDialogOpen] = useState(false);
+  
+  // MailGun configuration state
+  const [mailgunSettings, setMailgunSettings] = useState({
+    apiKey: "",
+    domain: "",
+    testEmail: "",
+    fromName: "",
+    fromEmail: ""
+  });
   
   const openSlackConfigDialog = () => {
     setIsSlackConfigDialogOpen(true);
@@ -571,6 +672,102 @@ export default function Integrations() {
       toast({
         title: "Test Failed",
         description: "Failed to send test SMS. Please check your configuration.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMailgunConnect = async () => {
+    if (!mailgunSettings.apiKey || !mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields (API Key, Domain, From Name, and From Email).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/mailgun/connect', {
+        apiKey: mailgunSettings.apiKey,
+        domain: mailgunSettings.domain,
+        fromName: mailgunSettings.fromName,
+        fromEmail: mailgunSettings.fromEmail
+      });
+      const result = await response.json();
+      
+      // Update integration status
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "mailgun" 
+          ? { 
+              ...integration, 
+              status: "connected" as const,
+              lastSync: new Date().toLocaleString()
+            }
+          : integration
+      ));
+      
+      toast({
+        title: "Success",
+        description: result.message || "Mailgun connected successfully!",
+      });
+      
+      // Refresh status
+      checkMailgunStatus();
+      
+      setIsConfigDialogOpen(false);
+      
+      // Clear the form
+      setMailgunSettings({
+        apiKey: "",
+        domain: "",
+        testEmail: "",
+        fromName: "",
+        fromEmail: ""
+      });
+    } catch (error) {
+      console.error('Mailgun connection error:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect to Mailgun. Please check your credentials.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMailgunTest = async () => {
+    if (!mailgunSettings.testEmail) {
+      toast({
+        title: "Missing Test Email",
+        description: "Please enter a test email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/mailgun/test', {
+        to: mailgunSettings.testEmail,
+        fromEmail: mailgunSettings.fromEmail,
+        fromName: mailgunSettings.fromName
+      });
+      const result = await response.json();
+      
+      toast({
+        title: "Test Email Sent",
+        description: `Test message sent successfully to ${mailgunSettings.testEmail}`,
+      });
+    } catch (error) {
+      console.error('Mailgun test error:', error);
+      toast({
+        title: "Test Failed",
+        description: "Failed to send test email. Please check your configuration.",
         variant: "destructive",
       });
     } finally {
@@ -971,6 +1168,77 @@ export default function Integrations() {
                   </div>
                 </>
               )}
+
+              {selectedIntegration?.id === "mailgun" && (
+                <>
+                  <div>
+                    <Label htmlFor="mailgunApiKey">Mailgun API Key</Label>
+                    <Input
+                      id="mailgunApiKey"
+                      type="password"
+                      value={mailgunSettings.apiKey}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, apiKey: e.target.value})}
+                      placeholder="key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      data-testid="input-mailgun-api-key"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mailgunDomain">Mailgun Domain</Label>
+                    <Input
+                      id="mailgunDomain"
+                      value={mailgunSettings.domain}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, domain: e.target.value})}
+                      placeholder="your-domain.mailgun.org"
+                      data-testid="input-mailgun-domain"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mailgunFromName">From Name</Label>
+                    <Input
+                      id="mailgunFromName"
+                      value={mailgunSettings.fromName}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, fromName: e.target.value})}
+                      placeholder="Your Company Name"
+                      data-testid="input-mailgun-from-name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mailgunFromEmail">From Email</Label>
+                    <Input
+                      id="mailgunFromEmail"
+                      type="email"
+                      value={mailgunSettings.fromEmail}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, fromEmail: e.target.value})}
+                      placeholder="noreply@your-domain.com"
+                      data-testid="input-mailgun-from-email"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mailgunTestEmail">Test Email Address (Optional)</Label>
+                    <Input
+                      id="mailgunTestEmail"
+                      type="email"
+                      value={mailgunSettings.testEmail}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, testEmail: e.target.value})}
+                      placeholder="test@your-email.com (for testing emails)"
+                      data-testid="input-mailgun-test-email"
+                    />
+                  </div>
+                  
+                  {mailgunSettings.testEmail && (
+                    <div className="pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleMailgunTest}
+                        disabled={isLoading}
+                        data-testid="button-test-mailgun"
+                      >
+                        {isLoading ? "Sending..." : "Send Test Email"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
               
               <div>
                 <Label htmlFor="syncFreq">Sync Frequency</Label>
@@ -997,10 +1265,12 @@ export default function Integrations() {
                 <Button onClick={() => {
                   if (selectedIntegration?.id === "twilio") {
                     handleTwilioConnect();
+                  } else if (selectedIntegration?.id === "mailgun") {
+                    handleMailgunConnect();
                   } else {
                     handleTestConnection(selectedIntegration?.id || "");
                   }
-                }}>
+                }} data-testid="button-save-integration">
                   Test & Save
                 </Button>
               </div>
