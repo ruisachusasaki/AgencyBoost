@@ -2629,12 +2629,17 @@ export default function EnhancedClientDetail() {
     queryFn: async () => {
       const offset = (currentPage - 1) * itemsPerPage;
       const filterParam = activityFilter !== 'all' ? `&filter=${encodeURIComponent(activityFilter)}` : '';
-      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}${filterParam}`);
+      const timestampParam = `&t=${Date.now()}`;
+      console.log('🔄 Making audit logs request with filter:', activityFilter);
+      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}${filterParam}${timestampParam}`);
       if (!response.ok) throw new Error('Failed to fetch audit logs');
-      return response.json();
+      const data = await response.json();
+      console.log('📊 Received audit logs data:', { count: data.logs?.length, filter: data.filter });
+      return data;
     },
     enabled: !!clientId,
-    staleTime: 1000 * 30, // Cache for 30 seconds
+    staleTime: 0, // No caching for now
+    cacheTime: 0, // Force fresh data
   });
 
   const auditLogs = auditLogsData?.logs || [];
@@ -2681,8 +2686,13 @@ export default function EnhancedClientDetail() {
 
   // Reset page when filter changes
   const handleFilterChange = (newFilter: typeof activityFilter) => {
+    console.log('🔄 Filter changing from', activityFilter, 'to', newFilter);
     setActivityFilter(newFilter);
     setCurrentPage(1);
+    // Force invalidate the cache
+    queryClient.invalidateQueries({ 
+      queryKey: ['/api/audit-logs/entity/contact', clientId]
+    });
   };
 
   // Manual activity logging mutation
