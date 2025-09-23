@@ -2876,21 +2876,34 @@ export default function EnhancedClientDetail() {
 
   // Auto-populate email fields when user and client data are available
   useEffect(() => {
-    if (currentUser?.id && client?.email) {
+    // Always try to populate fromName and fromEmail when currentUser is available
+    if (currentUser?.id) {
       const fromName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
       const fromEmail = currentUser.email || '';
-      const to = client.email || '';
       
-      // Only update if values are different to prevent infinite re-renders
       setEmailData(prev => {
-        if (prev.fromName !== fromName || prev.fromEmail !== fromEmail || prev.to !== to) {
-          return {
-            ...prev,
-            fromName,
-            fromEmail,
-            to
-          };
+        const updates: any = {};
+        
+        // Update fromName if it's empty or different
+        if (!prev.fromName || prev.fromName !== fromName) {
+          updates.fromName = fromName;
         }
+        
+        // Update fromEmail if it's empty or different
+        if (!prev.fromEmail || prev.fromEmail !== fromEmail) {
+          updates.fromEmail = fromEmail;
+        }
+        
+        // Update to field if client email is available and it's empty or different
+        if (client?.email && (!prev.to || prev.to !== client.email)) {
+          updates.to = client.email;
+        }
+        
+        // Only update if there are actual changes
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        
         return prev;
       });
     }
