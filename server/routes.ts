@@ -8508,26 +8508,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           case 'general':
             activityCondition = or(eq(auditLogs.action, 'updated'), eq(auditLogs.action, 'created'));
             break;
+          case 'contact':
+            activityCondition = eq(auditLogs.entityType, 'contact');
+            break;
+          case 'sms':
+            activityCondition = eq(auditLogs.entityType, 'sms');
+            break;
           case 'email':
-            activityCondition = like(auditLogs.details, '%email%');
+            activityCondition = eq(auditLogs.entityType, 'email');
             break;
           case 'call':
-            activityCondition = like(auditLogs.details, '%call%');
+            activityCondition = eq(auditLogs.entityType, 'call');
             break;
           case 'meeting':
-            activityCondition = like(auditLogs.details, '%meeting%');
+            activityCondition = eq(auditLogs.entityType, 'meeting');
             break;
           case 'task':
-            activityCondition = like(auditLogs.details, '%task%');
+            activityCondition = eq(auditLogs.entityType, 'task');
             break;
           case 'note':
-            activityCondition = like(auditLogs.details, '%note%');
+            activityCondition = eq(auditLogs.entityType, 'note');
             break;
           case 'campaign':
-            activityCondition = like(auditLogs.details, '%campaign%');
+            activityCondition = eq(auditLogs.entityType, 'campaign');
             break;
           case 'workflow':
-            activityCondition = like(auditLogs.details, '%workflow%');
+            activityCondition = eq(auditLogs.entityType, 'workflow');
             break;
           default:
             activityCondition = undefined;
