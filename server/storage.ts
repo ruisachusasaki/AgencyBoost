@@ -1,7 +1,7 @@
 import { 
   type Client, type InsertClient, clients,
   // Projects removed from system
-  type Campaign, type InsertCampaign,
+  type Campaign, type InsertCampaign, campaigns,
   type Lead, type InsertLead,
   type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice,
@@ -16,6 +16,7 @@ import {
   type ClientAppointment, type InsertClientAppointment,
   type Document, type InsertDocument,
   type ClientHealthScore, type InsertClientHealthScore, clientHealthScores,
+  clientBriefValues,
   type Activity, type InsertActivity,
   type SocialMediaAccount, type InsertSocialMediaAccount,
   type SocialMediaPost, type InsertSocialMediaPost,
@@ -4201,6 +4202,17 @@ export class DbStorage implements IStorage {
 
   async deleteClient(id: string): Promise<boolean> {
     try {
+      // First delete all related records that reference this client
+      // Delete client brief values
+      await db.delete(clientBriefValues).where(eq(clientBriefValues.clientId, id));
+      
+      // Delete campaigns
+      await db.delete(campaigns).where(eq(campaigns.clientId, id));
+      
+      // Delete client health scores  
+      await db.delete(clientHealthScores).where(eq(clientHealthScores.clientId, id));
+      
+      // Then delete the client itself
       const result = await db.delete(clients).where(eq(clients.id, id)).returning();
       return result.length > 0;
     } catch (error) {
