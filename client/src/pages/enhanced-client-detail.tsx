@@ -1611,6 +1611,7 @@ export default function EnhancedClientDetail() {
   
   // Activity filtering and pagination
   const [activityFilter, setActivityFilter] = useState<'all' | 'general' | 'email' | 'call' | 'meeting' | 'task' | 'note' | 'campaign' | 'workflow'>('all');
+  const [userFilter, setUserFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   
@@ -2625,16 +2626,17 @@ export default function EnhancedClientDetail() {
 
   // Fetch audit logs for this client with pagination and filtering
   const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery({
-    queryKey: ['/api/audit-logs/entity/contact', clientId, currentPage, itemsPerPage, activityFilter],
+    queryKey: ['/api/audit-logs/entity/contact', clientId, currentPage, itemsPerPage, activityFilter, userFilter],
     queryFn: async () => {
       const offset = (currentPage - 1) * itemsPerPage;
       const filterParam = activityFilter !== 'all' ? `&filter=${encodeURIComponent(activityFilter)}` : '';
+      const userParam = userFilter !== 'all' ? `&user=${encodeURIComponent(userFilter)}` : '';
       const timestampParam = `&t=${Date.now()}`;
-      console.log('🔄 Making audit logs request with filter:', activityFilter);
-      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}${filterParam}${timestampParam}`);
+      console.log('🔄 Making audit logs request with filter:', activityFilter, 'user:', userFilter);
+      const response = await fetch(`/api/audit-logs/entity/contact/${clientId}?limit=${itemsPerPage}&offset=${offset}${filterParam}${userParam}${timestampParam}`);
       if (!response.ok) throw new Error('Failed to fetch audit logs');
       const data = await response.json();
-      console.log('📊 Received audit logs data:', { count: data.logs?.length, filter: data.filter });
+      console.log('📊 Received audit logs data:', { count: data.logs?.length, filter: data.filter, user: data.user });
       return data;
     },
     enabled: !!clientId,
@@ -2688,6 +2690,17 @@ export default function EnhancedClientDetail() {
   const handleFilterChange = (newFilter: typeof activityFilter) => {
     console.log('🔄 Filter changing from', activityFilter, 'to', newFilter);
     setActivityFilter(newFilter);
+    setCurrentPage(1);
+    // Force invalidate the cache
+    queryClient.invalidateQueries({ 
+      queryKey: ['/api/audit-logs/entity/contact', clientId]
+    });
+  };
+
+  // Reset page when user filter changes
+  const handleUserFilterChange = (newUserFilter: string) => {
+    console.log('🔄 User filter changing from', userFilter, 'to', newUserFilter);
+    setUserFilter(newUserFilter);
     setCurrentPage(1);
     // Force invalidate the cache
     queryClient.invalidateQueries({ 
@@ -4348,25 +4361,43 @@ export default function EnhancedClientDetail() {
             <CardHeader>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  <Select value={activityFilter} onValueChange={(value) => handleFilterChange(value as typeof activityFilter)}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Activity</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="contact">Client Updates</SelectItem>
-                      <SelectItem value="sms">SMS</SelectItem>
-                      <SelectItem value="call">Call</SelectItem>
-                      <SelectItem value="meeting">Meeting</SelectItem>
-                      <SelectItem value="task">Task</SelectItem>
-                      <SelectItem value="note">Note</SelectItem>
-                      <SelectItem value="campaign">Campaign</SelectItem>
-                      <SelectItem value="workflow">Workflow</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <Select value={activityFilter} onValueChange={(value) => handleFilterChange(value as typeof activityFilter)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Activity</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="contact">Client Updates</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                        <SelectItem value="call">Call</SelectItem>
+                        <SelectItem value="meeting">Meeting</SelectItem>
+                        <SelectItem value="task">Task</SelectItem>
+                        <SelectItem value="note">Note</SelectItem>
+                        <SelectItem value="campaign">Campaign</SelectItem>
+                        <SelectItem value="workflow">Workflow</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <Select value={userFilter} onValueChange={handleUserFilterChange}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filter by user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Users</SelectItem>
+                        {staffList.map((staff: any) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : staff.name || 'Unknown User'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardHeader>
