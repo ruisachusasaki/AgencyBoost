@@ -3993,6 +3993,7 @@ export default function EnhancedClientDetail() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Send Email</DialogTitle>
+                  <p className="text-xs text-red-500 font-bold">Modal state: {showSendModal ? 'OPEN' : 'CLOSED'}</p>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-3">
