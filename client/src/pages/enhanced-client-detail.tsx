@@ -4390,7 +4390,7 @@ export default function EnhancedClientDetail() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Users</SelectItem>
-                        {staffList.map((staff: any) => (
+                        {staffData.map((staff: any) => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : staff.name || 'Unknown User'}
                           </SelectItem>
