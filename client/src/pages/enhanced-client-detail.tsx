@@ -2956,10 +2956,12 @@ export default function EnhancedClientDetail() {
   };
 
   const handleSendEmail = () => {
+    console.log('🎯 SEND EMAIL BUTTON CLICKED - Opening modal...');
     setShowSendModal(true);
   };
 
   const sendEmailNow = async () => {
+    console.log('🚀 SEND NOW BUTTON CLICKED - Starting email send process...');
     try {
       // Validate required fields
       if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email) {
