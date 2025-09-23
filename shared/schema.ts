@@ -276,7 +276,7 @@ export const activities = pgTable("activities", {
   description: text("description").notNull(),
   details: jsonb("details"), // Additional data specific to activity type
   clientId: varchar("client_id").notNull().references(() => clients.id),
-  userId: varchar("user_id").references(() => users.id),
+  userId: varchar("user_id").references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -12960,7 +12960,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create activity record for recent activity display
       try {
-        const userId = await getAuthenticatedUserIdOrFail(req);
         await appStorage.createActivity({
           type: 'email',
           description: `Sent email: "${subject}"`,
@@ -12973,7 +12972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sentAt: new Date().toISOString()
           },
           clientId: clientId,
-          userId: userId
+          userId: null // Skip user reference to avoid foreign key constraint issue
         });
         console.log('Email activity record created');
       } catch (activityError) {
