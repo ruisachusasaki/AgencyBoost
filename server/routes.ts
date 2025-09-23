@@ -199,6 +199,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     password: z.string().min(1)
   });
 
+  // MailGun Integration Validation Schemas
+  const mailgunConnectSchema = z.object({
+    apiKey: z.string().min(1, "API Key is required").regex(/^key-[a-z0-9]+$/, "Invalid MailGun API key format"),
+    domain: z.string().min(1, "Domain is required").regex(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Invalid domain format"),
+    fromName: z.string().min(1, "From Name is required").max(100, "From Name too long"),
+    fromEmail: z.string().email("Invalid email address").max(255, "Email address too long")
+  });
+
+  const mailgunTestSchema = z.object({
+    to: z.string().email("Invalid test email address"),
+    fromEmail: z.string().email("Invalid from email address").optional(),
+    fromName: z.string().max(100, "From Name too long").optional()
+  });
+
   // POST /api/auth/login - Authenticate user and create session (HARDENED)
   app.post("/api/auth/login", async (req, res) => {
     const clientIp = req.ip || req.connection?.remoteAddress || "unknown";
@@ -12751,13 +12765,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST MailGun Connect
   app.post("/api/integrations/mailgun/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      const { apiKey, domain, fromName, fromEmail } = req.body;
-
-      if (!apiKey || !domain || !fromName || !fromEmail) {
+      // Validate input using Zod schema
+      const validationResult = mailgunConnectSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({
-          message: "API Key, Domain, From Name, and From Email are required"
+          message: "Invalid input",
+          errors: validationResult.error.flatten().fieldErrors
         });
       }
+
+      const { apiKey, domain, fromName, fromEmail } = validationResult.data;
 
       // Test MailGun connection by validating domain
       try {
@@ -12848,13 +12865,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST MailGun Test Email
   app.post("/api/integrations/mailgun/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      const { to, fromEmail, fromName } = req.body;
-
-      if (!to) {
+      // Validate input using Zod schema
+      const validationResult = mailgunTestSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({
-          message: "Test email address is required"
+          message: "Invalid input",
+          errors: validationResult.error.flatten().fieldErrors
         });
       }
+
+      const { to, fromEmail, fromName } = validationResult.data;
 
       const [integration] = await db
         .select()
