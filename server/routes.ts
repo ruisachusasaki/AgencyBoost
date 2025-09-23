@@ -8481,7 +8481,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
       const filter = req.query.filter as string || 'all';
       
-      console.log(`🔍 AUDIT LOG REQUEST: entityType=${entityType}, entityId=${entityId}, filter=${filter}, limit=${limit}, offset=${offset}`);
       
       // Build filter conditions
       let baseConditions;
@@ -8539,8 +8538,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(limit)
         .offset(offset);
         
-      console.log(`📊 AUDIT LOG RESULTS: Found ${logs.length} logs, total: ${count}, filter: ${filter}`);
-      console.log(`📋 FIRST LOG USER:`, logs[0] ? { userId: logs[0].userId, userName: logs[0].userName } : 'No logs found');
         
       res.json({
         logs,
