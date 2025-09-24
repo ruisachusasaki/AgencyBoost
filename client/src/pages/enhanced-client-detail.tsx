@@ -3490,10 +3490,14 @@ export default function EnhancedClientDetail() {
     ];
 
     // Convert custom fields to merge tags
-    const customFieldMergeTags = (customFields || []).map((field: any) => ({
-      tag: `{{${field.fieldKey}}}`,
-      description: field.fieldName || field.fieldKey
-    }));
+    const customFieldMergeTags = (customFields || []).map((field: any) => {
+      // Generate a safe key from the field name
+      const fieldKey = field.name ? field.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'unknown_field';
+      return {
+        tag: `{{${fieldKey}}}`,
+        description: field.name || 'Custom Field'
+      };
+    });
 
     // Combine all merge tags
     const allMergeTags = [...basicMergeTags, ...customFieldMergeTags];
