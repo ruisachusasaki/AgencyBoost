@@ -4242,18 +4242,38 @@ export default function EnhancedClientDetail() {
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => {
-                            console.log("🔘 Schedule button clicked!");
-                            console.log("📅 scheduledDate:", scheduledDate);
-                            console.log("⏰ scheduledTime:", scheduledTime);
-                            console.log("🚫 Button disabled?", !scheduledDate || !scheduledTime);
-                            scheduleEmail();
+                          onClick={async () => {
+                            alert("🔘 Schedule button clicked! Check console.");
+                            console.log("🚀 DIRECT SCHEDULE BUTTON CLICKED");
+                            console.log("State values:", { scheduledDate, scheduledTime, scheduledTimezone });
+                            
+                            // Test API call directly
+                            try {
+                              const response = await fetch('/api/scheduled-emails', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  clientId: client?.id,
+                                  toEmail: client?.email || 'test@test.com',
+                                  subject: emailData.subject || 'Test Subject',
+                                  content: emailData.message || 'Test Content',
+                                  plainTextContent: emailData.message || 'Test Content',
+                                  scheduledFor: new Date('2025-09-25T10:00:00.000Z').toISOString(),
+                                  timezone: 'UTC'
+                                })
+                              });
+                              const result = await response.json();
+                              console.log("✅ API Response:", result);
+                              alert("✅ Schedule worked! Check console for details.");
+                            } catch (error) {
+                              console.error("❌ API Error:", error);
+                              alert("❌ Schedule failed! Check console for error.");
+                            }
                           }}
-                          disabled={!scheduledDate || !scheduledTime}
                           className="flex-1"
                         >
                           <Clock className="h-4 w-4 mr-2" />
-                          Schedule Email
+                          TEST Schedule
                         </Button>
                       </div>
                     </div>
