@@ -5146,17 +5146,29 @@ export default function EnhancedClientDetail() {
                             🧪 TEST
                           </Button>
                           
-                          {/* MINIMAL TEST BUTTON - SHOULD ALWAYS WORK */}
+                          {/* DEBUG BUTTON - CHECK VALIDATION VALUES */}
                           <Button
                             variant="destructive"
                             onClick={() => {
-                              console.log("🔥 MINIMAL TEST CLICKED!");
-                              alert("MINIMAL TEST WORKS!");
+                              console.log("🔍 DEBUG VALUES:", {
+                                fromEmail: emailData.fromEmail,
+                                subject: emailData.subject,
+                                message: emailData.message,
+                                clientEmail: client?.email,
+                                validationFails: !emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email
+                              });
+                              
+                              const missing = [];
+                              if (!emailData.fromEmail) missing.push("fromEmail");
+                              if (!emailData.subject.trim()) missing.push("subject");
+                              if (!emailData.message.trim()) missing.push("message");
+                              if (!client?.email) missing.push("client email");
+                              
+                              alert(`Missing fields: ${missing.join(", ") || "NONE - buttons should work!"}`);
                             }}
                             className="ml-2"
-                            style={{ zIndex: 9999 }}
                           >
-                            🔥 MINIMAL TEST
+                            🔍 DEBUG VALUES
                           </Button>
                         </div>
                       </>
