@@ -2972,7 +2972,10 @@ export default function EnhancedClientDetail() {
     setShowFollowerSuggestions(filtered.length > 0);
   }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
 
-  // Auto-populate email fields when user and client data are available
+  // DISABLED - This useEffect was causing infinite render loops!
+  // The dependencies [currentUser?.id, currentUser?.firstName, etc.] are unstable React Query objects
+  // that get recreated on every render, causing this effect to run constantly
+  /*
   useEffect(() => {
     // Always try to populate fromName and fromEmail when currentUser is available
     if (currentUser?.id) {
@@ -3006,6 +3009,7 @@ export default function EnhancedClientDetail() {
       });
     }
   }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
+  */
 
   // Track what's resetting the modal
   useEffect(() => {
