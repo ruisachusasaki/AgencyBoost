@@ -4232,7 +4232,13 @@ export default function EnhancedClientDetail() {
                           Cancel
                         </Button>
                         <Button
-                          onClick={scheduleEmail}
+                          onClick={() => {
+                            console.log("🔘 Schedule button clicked!");
+                            console.log("📅 scheduledDate:", scheduledDate);
+                            console.log("⏰ scheduledTime:", scheduledTime);
+                            console.log("🚫 Button disabled?", !scheduledDate || !scheduledTime);
+                            scheduleEmail();
+                          }}
                           disabled={!scheduledDate || !scheduledTime}
                           className="flex-1"
                         >
