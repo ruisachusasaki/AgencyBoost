@@ -5137,12 +5137,26 @@ export default function EnhancedClientDetail() {
                             variant="secondary"
                             onClick={() => {
                               console.log("🧪 TEST BUTTON CLICKED!");
+                              alert("TEST BUTTON CLICKED!"); // IMMEDIATE feedback
                               setTestModalVisible(true);
                               console.log("✅ setTestModalVisible(true) called");
                             }}
                             className="ml-2"
                           >
                             🧪 TEST
+                          </Button>
+                          
+                          {/* MINIMAL TEST BUTTON - SHOULD ALWAYS WORK */}
+                          <Button
+                            variant="destructive"
+                            onClick={() => {
+                              console.log("🔥 MINIMAL TEST CLICKED!");
+                              alert("MINIMAL TEST WORKS!");
+                            }}
+                            className="ml-2"
+                            style={{ zIndex: 9999 }}
+                          >
+                            🔥 MINIMAL TEST
                           </Button>
                         </div>
                       </>
