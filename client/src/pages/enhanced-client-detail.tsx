@@ -3127,9 +3127,19 @@ export default function EnhancedClientDetail() {
   };
 
   const scheduleEmail = async () => {
+    console.log("🚀 scheduleEmail function called!");
+    console.log("📊 Current state:", {
+      emailData,
+      scheduledDate,
+      scheduledTime,
+      scheduledTimezone,
+      clientEmail: client?.email
+    });
+    
     try {
       // Validate required fields
       if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email || !scheduledDate || !scheduledTime) {
+        console.log("❌ Validation failed - missing fields");
         toast({
           title: "Missing Information",
           description: "Please fill in all required fields: from email, subject, message, date, and time.",
