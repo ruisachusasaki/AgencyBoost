@@ -1828,6 +1828,7 @@ export default function EnhancedClientDetail() {
     enabled: showMergeTagsModal || showSmsChoiceModal // Only fetch when modals are open
   });
   const [showSendModal, setShowSendModal] = useState(false);
+  const [testModalVisible, setTestModalVisible] = useState(false);
   const [wordCount, setWordCount] = useState(0);
 
   // Scheduling state
@@ -4172,7 +4173,7 @@ export default function EnhancedClientDetail() {
               zIndex: 9999
             }}>
               <h1 style={{color: 'white', fontSize: '48px', textAlign: 'center', paddingTop: '200px'}}>
-                MODAL IS WORKING!
+                ORIGINAL MODAL IS WORKING!
               </h1>
               <button 
                 onClick={() => setShowSendModal(false)}
@@ -4185,6 +4186,34 @@ export default function EnhancedClientDetail() {
                 }}
               >
                 CLOSE
+              </button>
+            </div>}
+
+            {/* TEST MODAL - Completely separate state */}
+            {console.log("🔍 TEST RENDER CHECK: testModalVisible =", testModalVisible)}
+            {testModalVisible && <div style={{
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              backgroundColor: 'blue', 
+              zIndex: 9998
+            }}>
+              <h1 style={{color: 'white', fontSize: '48px', textAlign: 'center', paddingTop: '200px'}}>
+                TEST MODAL IS WORKING!
+              </h1>
+              <button 
+                onClick={() => setTestModalVisible(false)}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  padding: '10px 20px',
+                  fontSize: '16px'
+                }}
+              >
+                CLOSE TEST
               </button>
             </div>}
 
@@ -5114,6 +5143,17 @@ export default function EnhancedClientDetail() {
                           >
                             <Clock className="h-4 w-4 mr-2" />
                             Schedule Email
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              console.log("🧪 TEST BUTTON CLICKED!");
+                              setTestModalVisible(true);
+                              console.log("✅ setTestModalVisible(true) called");
+                            }}
+                            className="ml-2"
+                          >
+                            🧪 TEST
                           </Button>
                         </div>
                       </>
