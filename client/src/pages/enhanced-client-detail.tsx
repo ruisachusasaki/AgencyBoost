@@ -3008,7 +3008,11 @@ export default function EnhancedClientDetail() {
 
   // Debug modal state changes
   useEffect(() => {
-    console.log('🔄 MODAL STATE CHANGED:', { showSendModal });
+    console.log('🔄 MODAL STATE CHANGED:', { 
+      showSendModal, 
+      modalShouldRender: showSendModal === true,
+      modalElement: showSendModal ? "SHOULD RENDER" : "HIDDEN"
+    });
   }, [showSendModal]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
@@ -5172,7 +5176,18 @@ export default function EnhancedClientDetail() {
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => setShowSendModal(true)}
+                            onClick={() => {
+                              console.log("🚀 SCHEDULE BUTTON CLICKED!");
+                              console.log("📧 Email validation:", {
+                                fromEmail: emailData.fromEmail,
+                                subject: emailData.subject.trim(),
+                                message: emailData.message.trim(),
+                                clientEmail: client?.email
+                              });
+                              console.log("📝 Setting showSendModal to true...");
+                              setShowSendModal(true);
+                              console.log("✅ setShowSendModal(true) called");
+                            }}
                             disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
                             data-testid="button-schedule-email"
                           >
