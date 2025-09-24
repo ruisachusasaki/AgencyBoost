@@ -12943,13 +12943,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = await getAuthenticatedUserIdOrFail(req);
         await createAuditLog(
           "created",
-          "email_communication", 
+          "email", 
           clientId || result.id,
           "Email Communication",
           userId,
           `Sent email to ${to}: "${subject}"`,
           null,
-          { to, subject, fromEmail: actualFromEmail, fromName: actualFromName, messageId: result.id },
+          { to, subject, fromEmail: actualFromEmail, fromName: actualFromName, messageId: result.id, clientId },
           req
         );
         console.log('Email communication audit log created');
