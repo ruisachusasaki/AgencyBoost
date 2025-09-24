@@ -3006,13 +3006,12 @@ export default function EnhancedClientDetail() {
     }
   }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
 
-  // Debug modal state changes
+  // Track what's resetting the modal
   useEffect(() => {
-    console.log('🔄 MODAL STATE CHANGED:', { 
-      showSendModal, 
-      modalShouldRender: showSendModal === true,
-      modalElement: showSendModal ? "SHOULD RENDER" : "HIDDEN"
-    });
+    if (!showSendModal) {
+      console.log('❌ MODAL RESET TO FALSE - Stack trace:');
+      console.trace();
+    }
   }, [showSendModal]);
 
   // Update word count when message changes (strip HTML tags for accurate count)
@@ -4163,7 +4162,7 @@ export default function EnhancedClientDetail() {
 
             {/* Send Options Modal - Custom Modal */}
             {showSendModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="fixed inset-0 z-50 flex items-center justify-center" style={{backgroundColor: 'rgba(255, 0, 0, 0.5)'}}>
                 {/* Backdrop */}
                 <div 
                   className="absolute inset-0 bg-black bg-opacity-50" 
