@@ -1008,6 +1008,16 @@ export const insertScheduledEmailSchema = createInsertSchema(scheduledEmails).om
   sentAt: true,
   failureReason: true,
   retryCount: true,
+}).extend({
+  // Require non-null date values and validate they're valid dates
+  scheduledFor: z.union([z.string(), z.date()])
+    .refine((val) => val !== null && val !== undefined && val !== '', {
+      message: "Scheduled date is required"
+    })
+    .transform((val) => new Date(val))
+    .refine((date) => !isNaN(date.getTime()), {
+      message: "Invalid date format"
+    }),
 });
 
 export const insertSmartListSchema = createInsertSchema(smartLists).omit({
