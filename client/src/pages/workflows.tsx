@@ -403,7 +403,7 @@ export default function WorkflowsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <GitBranch className="h-8 w-8 text-[#46a1a0]" />
+            <GitBranch className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold tracking-tight text-black">Workflow Automation</h1>
           </div>
           <p className="text-muted-foreground">
@@ -421,7 +421,7 @@ export default function WorkflowsPage() {
             </Button>
             <Button 
               onClick={() => navigate("/workflows/build")}
-              className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+              className="bg-primary hover:bg-primary/90"
             >
               <Plus className="h-4 w-4 mr-2" />
               Build Workflow
@@ -504,7 +504,7 @@ export default function WorkflowsPage() {
                 </p>
                 <Button 
                   onClick={createSampleWorkflow}
-                  className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+                  className="bg-primary hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Workflow
@@ -531,11 +531,11 @@ export default function WorkflowsPage() {
                           <div className="flex items-center gap-3">
                             {item.type === 'folder' ? (
                               <div 
-                                className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]"
+                                className="flex items-center gap-2 cursor-pointer hover:text-primary"
                                 onClick={() => setSelectedFolder(item.id)}
                                 data-testid={`folder-${item.id}`}
                               >
-                                <Folder className="h-4 w-4 text-[#46a1a0]" />
+                                <Folder className="h-4 w-4 text-primary" />
                                 <div>
                                   <div className="font-medium">{item.name}</div>
                                   <div className="text-sm text-gray-500">
@@ -545,11 +545,11 @@ export default function WorkflowsPage() {
                               </div>
                             ) : (
                               <div 
-                                className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]"
+                                className="flex items-center gap-2 cursor-pointer hover:text-primary"
                                 onClick={() => handleEditWorkflow(item.originalWorkflow)}
                                 data-testid={`workflow-${item.id}`}
                               >
-                                <GitBranch className="h-4 w-4 text-[#46a1a0]" />
+                                <GitBranch className="h-4 w-4 text-primary" />
                                 <div>
                                   <div className="font-medium">{item.name}</div>
                                   {item.status && (
@@ -722,7 +722,7 @@ export default function WorkflowsPage() {
                         </Button>
                       </div>
                       <CardTitle 
-                        className="text-lg cursor-pointer hover:text-[#46a1a0] transition-colors"
+                        className="text-lg cursor-pointer hover:text-primary transition-colors"
                         onClick={() => handleEditWorkflow(workflow)}
                       >
                         {workflow.name}
@@ -822,7 +822,7 @@ export default function WorkflowsPage() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#46a1a0]">
+                <div className="text-2xl font-bold text-primary">
                   {(workflows as Workflow[]).filter((w: Workflow) => w.status === "active").length}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -836,7 +836,7 @@ export default function WorkflowsPage() {
                 <Zap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#46a1a0]">
+                <div className="text-2xl font-bold text-primary">
                   {(workflows as Workflow[]).reduce((acc: number, w: Workflow) => acc + (w.totalRuns ?? 0), 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -850,7 +850,7 @@ export default function WorkflowsPage() {
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#46a1a0]">
+                <div className="text-2xl font-bold text-primary">
                   {(workflows as Workflow[]).length > 0 
                     ? Math.round(
                         ((workflows as Workflow[]).reduce((acc: number, w: Workflow) => acc + (w.successfulRuns ?? 0), 0) /
@@ -870,7 +870,7 @@ export default function WorkflowsPage() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#46a1a0]">
+                <div className="text-2xl font-bold text-primary">
                   {(workflowTasks as EnhancedTask[]).filter((t: EnhancedTask) => t.workflowId).length}
                 </div>
                 <p className="text-xs text-muted-foreground">
