@@ -4204,8 +4204,12 @@ export default function EnhancedClientDetail() {
                           <Input
                             type="date"
                             value={scheduledDate}
-                            onChange={(e) => setScheduledDate(e.target.value)}
+                            onChange={(e) => {
+                              console.log("📅 Email Date changed:", e.target.value);
+                              setScheduledDate(e.target.value);
+                            }}
                             className="mt-1"
+                            min={new Date().toISOString().split('T')[0]}
                           />
                         </div>
                         <div>
@@ -4213,7 +4217,10 @@ export default function EnhancedClientDetail() {
                           <Input
                             type="time"
                             value={scheduledTime}
-                            onChange={(e) => setScheduledTime(e.target.value)}
+                            onChange={(e) => {
+                              console.log("⏰ Email Time changed:", e.target.value);
+                              setScheduledTime(e.target.value);
+                            }}
                             className="mt-1"
                           />
                         </div>
@@ -4242,38 +4249,12 @@ export default function EnhancedClientDetail() {
                           Cancel
                         </Button>
                         <Button
-                          onClick={async () => {
-                            alert("🔘 Schedule button clicked! Check console.");
-                            console.log("🚀 DIRECT SCHEDULE BUTTON CLICKED");
-                            console.log("State values:", { scheduledDate, scheduledTime, scheduledTimezone });
-                            
-                            // Test API call directly
-                            try {
-                              const response = await fetch('/api/scheduled-emails', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  clientId: client?.id,
-                                  toEmail: client?.email || 'test@test.com',
-                                  subject: emailData.subject || 'Test Subject',
-                                  content: emailData.message || 'Test Content',
-                                  plainTextContent: emailData.message || 'Test Content',
-                                  scheduledFor: new Date('2025-09-25T10:00:00.000Z').toISOString(),
-                                  timezone: 'UTC'
-                                })
-                              });
-                              const result = await response.json();
-                              console.log("✅ API Response:", result);
-                              alert("✅ Schedule worked! Check console for details.");
-                            } catch (error) {
-                              console.error("❌ API Error:", error);
-                              alert("❌ Schedule failed! Check console for error.");
-                            }
-                          }}
+                          onClick={scheduleEmail}
+                          disabled={!scheduledDate || !scheduledTime}
                           className="flex-1"
                         >
                           <Clock className="h-4 w-4 mr-2" />
-                          TEST Schedule
+                          Schedule Email
                         </Button>
                       </div>
                     </div>
@@ -5191,40 +5172,12 @@ export default function EnhancedClientDetail() {
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={async () => {
-                              alert("🚀 MAIN Schedule button clicked!");
-                              console.log("🚀 MAIN SCHEDULE BUTTON CLICKED");
-                              console.log("Email form data:", emailData);
-                              console.log("Client info:", { id: client?.id, email: client?.email });
-                              
-                              // Test API call directly
-                              try {
-                                const response = await fetch('/api/scheduled-emails', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    clientId: client?.id,
-                                    toEmail: client?.email || 'test@test.com',
-                                    subject: emailData.subject || 'Test Subject',
-                                    content: emailData.message || 'Test Content',
-                                    plainTextContent: emailData.message || 'Test Content',
-                                    scheduledFor: new Date('2025-09-25T10:00:00.000Z').toISOString(),
-                                    timezone: 'UTC'
-                                  })
-                                });
-                                const result = await response.json();
-                                console.log("✅ API Response:", result);
-                                alert("✅ Email scheduled successfully! Check console for details.");
-                              } catch (error) {
-                                console.error("❌ API Error:", error);
-                                alert("❌ Schedule failed! Check console for error.");
-                              }
-                            }}
+                            onClick={() => setShowSendModal(true)}
                             disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
                             data-testid="button-schedule-email"
                           >
                             <Clock className="h-4 w-4 mr-2" />
-                            🧪 TEST Schedule
+                            Schedule Email
                           </Button>
                         </div>
                       </>
