@@ -5021,6 +5021,7 @@ export default function EnhancedClientDetail() {
                       {paginatedCommunications.map((log) => {
                         const isExpanded = expandedMessages.has(log.id);
                         const fullMessage = log.newValues?.message || log.details || '';
+                        const emailSubject = log.newValues?.subject || '';
                         const shortDescription = log.details;
                         
                         return (
@@ -5064,9 +5065,22 @@ export default function EnhancedClientDetail() {
                             {/* Full message content - expandable */}
                             {isExpanded && fullMessage && fullMessage !== shortDescription && (
                               <div className="mt-3 pt-3 border-t border-gray-200" data-testid={`container-full-message-${log.id}`}>
-                                <p className="text-sm font-medium text-gray-700 mb-2">Full Message:</p>
-                                <div className="bg-gray-50 rounded-md p-3">
-                                  <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid={`text-full-message-${log.id}`}>{fullMessage}</p>
+                                <p className="text-sm font-medium text-gray-700 mb-2">
+                                  {log.entityType === 'email' || log.entity_type === 'email' ? 'Email Details:' : 'Full Message:'}
+                                </p>
+                                <div className="bg-gray-50 rounded-md p-3 space-y-2">
+                                  {/* Show subject line for emails */}
+                                  {(log.entityType === 'email' || log.entity_type === 'email') && emailSubject && (
+                                    <div>
+                                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">Subject:</p>
+                                      <p className="text-sm text-gray-800 font-medium" data-testid={`text-email-subject-${log.id}`}>{emailSubject}</p>
+                                    </div>
+                                  )}
+                                  {/* Show message content */}
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">Message:</p>
+                                    <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid={`text-full-message-${log.id}`}>{fullMessage}</p>
+                                  </div>
                                 </div>
                               </div>
                             )}

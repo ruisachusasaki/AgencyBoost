@@ -12941,8 +12941,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create audit log for email communication
       try {
         const userId = await getAuthenticatedUserIdOrFail(req);
-        console.log('DEBUG: Message content length:', message?.length || 'undefined');
-        console.log('DEBUG: Message preview:', message?.substring(0, 100) || 'no message');
         await createAuditLog(
           "created",
           "email", 
