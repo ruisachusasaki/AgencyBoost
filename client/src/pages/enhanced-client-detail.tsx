@@ -4458,6 +4458,7 @@ export default function EnhancedClientDetail() {
                         <SelectItem value="all">All Activity</SelectItem>
                         <SelectItem value="general">General</SelectItem>
                         <SelectItem value="contact">Client Updates</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
                         <SelectItem value="sms">SMS</SelectItem>
                         <SelectItem value="call">Call</SelectItem>
                         <SelectItem value="meeting">Meeting</SelectItem>
@@ -4493,14 +4494,14 @@ export default function EnhancedClientDetail() {
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
                   </div>
-                ) : auditLogs.filter(log => log.entityType !== 'email').length > 0 ? (
+                ) : auditLogs.length > 0 ? (
                   <>
                     {auditLogs
-                      .filter(log => log.entityType !== 'email')
                       .map((log) => (
                       <div key={log.id} className="border-l-2 border-gray-200 pl-4 pb-4" data-testid={`activity-item-${log.id}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
+                            {log.entityType === 'email' && <Mail className="h-4 w-4 text-blue-600" />}
                             {log.entityType === 'sms' && <MessageSquare className="h-4 w-4 text-primary" />}
                             {log.entityType === 'call' && <Phone className="h-4 w-4 text-green-600" />}
                             {log.entityType === 'meeting' && <Calendar className="h-4 w-4 text-purple-600" />}
@@ -4509,11 +4510,12 @@ export default function EnhancedClientDetail() {
                             {log.entityType === 'campaign' && <Target className="h-4 w-4 text-red-600" />}
                             {log.entityType === 'workflow' && <Workflow className="h-4 w-4 text-indigo-600" />}
                             {log.entityType === 'contact' && <User className="h-4 w-4 text-blue-600" />}
-                            {!['sms', 'call', 'meeting', 'task', 'note', 'campaign', 'workflow', 'contact'].includes(log.entityType) && 
+                            {!['email', 'sms', 'call', 'meeting', 'task', 'note', 'campaign', 'workflow', 'contact'].includes(log.entityType) && 
                               <Activity className="h-4 w-4 text-gray-600" />
                             }
                             <h4 className="font-medium text-gray-900 capitalize" data-testid={`activity-type-${log.id}`}>
                               {log.entityType === 'contact' ? 'Client Update' : 
+                               log.entityType === 'email' ? 'Email Sent' :
                                log.entityType === 'sms' ? 'SMS Sent' : 
                                `${log.entityType} Activity`}
                             </h4>
