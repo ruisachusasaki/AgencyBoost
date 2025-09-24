@@ -1810,6 +1810,9 @@ export default function EnhancedClientDetail() {
   const [showSmsChoiceModal, setShowSmsChoiceModal] = useState(false);
   const [showSmsScheduleModal, setShowSmsScheduleModal] = useState(false);
   
+  // Email choice modal state - same pattern as SMS
+  const [showEmailChoiceModal, setShowEmailChoiceModal] = useState(false);
+  
   // Debug the SMS modal state changes
   useEffect(() => {
     console.log('🎯 SMS MODAL STATE CHANGED:', showSmsChoiceModal);
@@ -5104,71 +5107,19 @@ export default function EnhancedClientDetail() {
                         </div>
                         
                         <div className="flex gap-2 pt-4">
+                          {/* CONSOLIDATED SEND EMAIL BUTTON - Same pattern as SMS */}
                           <Button
-                            onClick={handleSendEmail}
-disabled={false} // FORCE ENABLED FOR TESTING
+                            onClick={() => {
+                              console.log("📧 CONSOLIDATED EMAIL BUTTON CLICKED!");
+                              setShowEmailChoiceModal(true);
+                              console.log("✅ setShowEmailChoiceModal(true) called");
+                            }}
+                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
                             className="flex-1"
                             data-testid="button-send-email"
                           >
                             <Mail className="h-4 w-4 mr-2" />
                             Send Email
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              console.log("🚀 SCHEDULE BUTTON CLICKED!");
-                              console.log("📧 Email validation:", {
-                                fromEmail: emailData.fromEmail,
-                                subject: emailData.subject.trim(),
-                                message: emailData.message.trim(),
-                                clientEmail: client?.email
-                              });
-                              console.log("📝 Setting showSendModal to true...");
-                              setShowSendModal(true);
-                              console.log("✅ setShowSendModal(true) called");
-                            }}
-disabled={false} // FORCE ENABLED FOR TESTING
-                            data-testid="button-schedule-email"
-                          >
-                            <Clock className="h-4 w-4 mr-2" />
-                            Schedule Email
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            onClick={() => {
-                              console.log("🧪 TEST BUTTON CLICKED!");
-                              alert("TEST BUTTON CLICKED!"); // IMMEDIATE feedback
-                              setTestModalVisible(true);
-                              console.log("✅ setTestModalVisible(true) called");
-                            }}
-                            className="ml-2"
-                          >
-                            🧪 TEST
-                          </Button>
-                          
-                          {/* DEBUG BUTTON - CHECK VALIDATION VALUES */}
-                          <Button
-                            variant="destructive"
-                            onClick={() => {
-                              console.log("🔍 DEBUG VALUES:", {
-                                fromEmail: emailData.fromEmail,
-                                subject: emailData.subject,
-                                message: emailData.message,
-                                clientEmail: client?.email,
-                                validationFails: !emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email
-                              });
-                              
-                              const missing = [];
-                              if (!emailData.fromEmail) missing.push("fromEmail");
-                              if (!emailData.subject.trim()) missing.push("subject");
-                              if (!emailData.message.trim()) missing.push("message");
-                              if (!client?.email) missing.push("client email");
-                              
-                              alert(`Missing fields: ${missing.join(", ") || "NONE - buttons should work!"}`);
-                            }}
-                            className="ml-2"
-                          >
-                            🔍 DEBUG VALUES
                           </Button>
                         </div>
                       </>
@@ -6314,6 +6265,48 @@ disabled={false} // FORCE ENABLED FOR TESTING
             data-testid="button-cancel-sms-choice"
           >
             Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    
+    {/* EMAIL Choice Modal - Same pattern as SMS */}
+    <Dialog open={showEmailChoiceModal} onOpenChange={setShowEmailChoiceModal}>
+      <DialogContent className="sm:max-w-md" data-testid="modal-email-choice">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Send Email Options
+          </DialogTitle>
+          <DialogDescription>
+            Choose how you want to send your email to {clientDisplayName}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Button
+            onClick={() => {
+              console.log("📧 EMAIL SEND NOW CLICKED!");
+              setShowEmailChoiceModal(false);
+              sendEmailNow(); // Send the already composed email immediately
+            }}
+            className="w-full justify-start gap-3 h-12"
+            data-testid="button-send-email-now"
+          >
+            <Mail className="h-5 w-5" />
+            Send Email Now
+          </Button>
+          <Button
+            onClick={() => {
+              console.log("🕐 EMAIL SCHEDULE CLICKED!");
+              setShowEmailChoiceModal(false);
+              setShowSendModal(true); // Open the existing schedule modal
+            }}
+            variant="outline"
+            className="w-full justify-start gap-3 h-12"
+            data-testid="button-schedule-email"
+          >
+            <Clock className="h-5 w-5" />
+            Schedule Email
           </Button>
         </div>
       </DialogContent>
