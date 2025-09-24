@@ -893,7 +893,7 @@ export default function Campaigns() {
     <div className="container mx-auto p-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
-          <Megaphone className="h-8 w-8 text-[#46a1a0]" />
+          <Megaphone className="h-8 w-8 text-primary" />
           <span>Marketing</span>
         </h1>
         <p className="text-muted-foreground">
@@ -986,7 +986,7 @@ export default function Campaigns() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" size="sm" onClick={() => setIsCreateTemplateDialogOpen(true)}>
+                  <Button className="bg-primary hover:bg-primary/90 h-10" size="sm" onClick={() => setIsCreateTemplateDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     New Email Template
                   </Button>
@@ -1063,7 +1063,7 @@ export default function Campaigns() {
               </p>
               <Button 
                 onClick={() => setIsCreateTemplateDialogOpen(true)}
-                className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                className="bg-primary hover:bg-primary/90"
                 data-testid="button-create-first-email"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -1274,7 +1274,7 @@ export default function Campaigns() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" size="sm" onClick={() => setIsCreateTemplateDialogOpen(true)}>
+                  <Button className="bg-primary hover:bg-primary/90 h-10" size="sm" onClick={() => setIsCreateTemplateDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     New SMS Template
                   </Button>
@@ -1350,7 +1350,7 @@ export default function Campaigns() {
               </p>
               <Button 
                 onClick={() => setIsCreateTemplateDialogOpen(true)}
-                className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                className="bg-primary hover:bg-primary/90"
                 data-testid="button-create-first-sms"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -1620,7 +1620,7 @@ export default function Campaigns() {
               <nav className="flex items-center space-x-2 text-sm">
                 <button
                   onClick={handleClearFolderFilter}
-                  className="text-[#46a1a0] hover:text-[#3a8b8a] flex items-center gap-1"
+                  className="text-primary hover:text-primary/90 flex items-center gap-1"
                   data-testid="button-back-to-all-forms"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -1682,7 +1682,7 @@ export default function Campaigns() {
 
               <Button 
                 asChild
-                className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" 
+                className="bg-primary hover:bg-primary/90 h-10" 
                 size="sm"
                 data-testid="button-create-form"
               >
@@ -1704,7 +1704,7 @@ export default function Campaigns() {
               </p>
               <Button 
                 asChild
-                className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                className="bg-primary hover:bg-primary/90"
                 data-testid="button-create-first-form"
               >
                 <a href="/form-builder">
@@ -1731,11 +1731,11 @@ export default function Campaigns() {
                         <div className="flex items-center gap-3">
                           {item.type === 'folder' ? (
                             <div 
-                              className="flex items-center gap-2 cursor-pointer hover:text-[#46a1a0]"
+                              className="flex items-center gap-2 cursor-pointer hover:text-primary"
                               onClick={() => handleViewFolder(item.id)}
                               data-testid={`folder-${item.id}`}
                             >
-                              <Folder className="h-4 w-4 text-[#46a1a0]" />
+                              <Folder className="h-4 w-4 text-primary" />
                               <div>
                                 <div className="font-medium">{item.name}</div>
                                 <div className="text-sm text-gray-500">

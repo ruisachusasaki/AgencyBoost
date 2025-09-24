@@ -153,7 +153,7 @@ export default function SocialMediaPage() {
             
             <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2 bg-[#46a1a0] hover:bg-[#3a8685]">
+                <Button className="gap-2 bg-primary hover:bg-primary/90">
                   <Plus className="h-4 w-4" />
                   Create Post
                 </Button>
@@ -339,7 +339,7 @@ function ConnectAccountForm({ onSubmit, isLoading }: { onSubmit: (data: any) => 
       </div>
       
       <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={isLoading} className="bg-[#46a1a0] hover:bg-[#3a8685]">
+        <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
           {isLoading ? "Connecting..." : "Connect Account"}
         </Button>
       </div>
@@ -440,7 +440,7 @@ function CreatePostForm({
       </div>
       
       <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={isLoading || !selectedAccount} className="bg-[#46a1a0] hover:bg-[#3a8685]">
+        <Button type="submit" disabled={isLoading || !selectedAccount} className="bg-primary hover:bg-primary/90">
           {isLoading ? "Creating..." : formData.scheduledAt ? "Schedule Post" : "Create Draft"}
         </Button>
       </div>
@@ -540,7 +540,7 @@ function PostsTab({ posts, accounts }: { posts: SocialMediaPost[]; accounts: Soc
             <Send className="h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
             <p className="text-gray-500 mb-4">Create your first social media post to get started</p>
-            <Button className="bg-[#46a1a0] hover:bg-[#3a8685]">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Create Post
             </Button>
@@ -642,7 +642,7 @@ function AccountsTab({ accounts }: { accounts: SocialMediaAccount[] }) {
             <Settings className="h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No accounts connected</h3>
             <p className="text-gray-500 mb-4">Connect your social media accounts to start managing posts</p>
-            <Button className="bg-[#46a1a0] hover:bg-[#3a8685]">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Connect Account
             </Button>
@@ -806,7 +806,7 @@ function TemplatesTab({ templates }: { templates: SocialMediaTemplate[] }) {
             <Copy className="h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No templates yet</h3>
             <p className="text-gray-500 mb-4">Create reusable templates to speed up your content creation</p>
-            <Button className="bg-[#46a1a0] hover:bg-[#3a8685]">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Create Template
             </Button>

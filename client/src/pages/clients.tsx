@@ -975,7 +975,7 @@ export default function Clients() {
                     onClick={() => handleTabChange(tab.id)}
                     className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                       activeTab === tab.id
-                        ? "border-[#46a1a0] text-[#46a1a0]"
+                        ? "border-primary text-primary"
                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                   >
@@ -1025,7 +1025,7 @@ export default function Clients() {
                       <button
                         className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                           hiddenTabs.some(tab => activeTab === tab.id)
-                            ? "border-[#46a1a0] text-[#46a1a0]"
+                            ? "border-primary text-primary"
                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                         }`}
                       >
@@ -1042,7 +1042,7 @@ export default function Clients() {
                             <DropdownMenuItem
                               onClick={() => handleTabChange(tab.id)}
                               className={`flex-1 ${
-                                activeTab === tab.id ? "bg-[#46a1a0]/10 text-[#46a1a0]" : ""
+                                activeTab === tab.id ? "bg-primary/10 text-primary" : ""
                               }`}
                             >
                               <Icon className="mr-2 h-4 w-4" />
