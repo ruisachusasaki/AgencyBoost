@@ -3127,12 +3127,78 @@ export default function EnhancedClientDetail() {
   };
 
   const scheduleEmail = async () => {
-    // Implementation for scheduling email
-    toast({
-      title: "Email Scheduled",
-      description: `Your email has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
-    });
-    setShowSendModal(false);
+    try {
+      // Validate required fields
+      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email || !scheduledDate || !scheduledTime) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields: from email, subject, message, date, and time.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check DND settings before scheduling
+      if (client?.dndAll || client?.dndEmail) {
+        toast({
+          title: "Cannot Schedule Email",
+          description: `${client?.name} has email communications disabled (DND active)`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create scheduled date/time
+      const scheduleDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+      const now = new Date();
+      
+      // Check if scheduled time is in the past
+      if (scheduleDateTime <= now) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Scheduled time must be in the future."
+        });
+        return;
+      }
+
+      // Schedule email through API (fromUserId will be derived from authenticated session)
+      const response = await apiRequest('POST', '/api/scheduled-emails', {
+        clientId: client.id,
+        toEmail: client.email,
+        subject: emailData.subject,
+        content: emailData.message,
+        plainTextContent: emailData.message, // For now, use same content for plain text
+        scheduledFor: scheduleDateTime.toISOString(),
+        timezone: scheduledTimezone || 'UTC',
+        status: 'pending'
+      });
+
+      const result = await response.json();
+      
+      toast({
+        title: "Email Scheduled Successfully",
+        description: `Email scheduled for ${client?.name} on ${scheduledDate} at ${scheduledTime} (${scheduledTimezone})`,
+      });
+      
+      // Clear the form after successful scheduling
+      setEmailData({
+        fromEmail: emailData.fromEmail, // Keep from email
+        fromName: emailData.fromName,   // Keep from name
+        subject: "",                    // Clear subject
+        message: ""                     // Clear message
+      });
+      
+      setShowSendModal(false);
+      
+    } catch (error) {
+      console.error('Error scheduling email:', error);
+      toast({
+        title: "Failed to Schedule Email",
+        description: "There was an error scheduling your email. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const scheduleSms = async () => {

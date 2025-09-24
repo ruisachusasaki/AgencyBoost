@@ -25,6 +25,7 @@ import {
   insertCalendarIntegrationSchema, insertSmsIntegrationSchema,
   insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
+  insertScheduledEmailSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
   insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema,
   insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingQuizSchema,
@@ -5090,11 +5091,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const validatedData = insertScheduledEmailSchema.parse(req.body);
-      // SECURE: Use authenticated user ID only, not client-provided fromUserId
-      validatedData.fromUserId = userId;
+      // SECURE: Remove fromUserId from client payload, derive from authenticated session only
+      const { fromUserId, ...clientData } = req.body;
+      const validatedData = insertScheduledEmailSchema.omit({ fromUserId: true }).parse(clientData);
       
-      const scheduledEmail = await appStorage.createScheduledEmail(validatedData);
+      // Add the authenticated user's ID
+      const finalData = {
+        ...validatedData,
+        fromUserId: userId
+      };
+      
+      const scheduledEmail = await appStorage.createScheduledEmail(finalData);
       
       // Audit log for scheduled email creation
       await createAuditLog(

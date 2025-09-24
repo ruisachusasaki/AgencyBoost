@@ -25,6 +25,7 @@ import {
   type TemplateFolder, type InsertTemplateFolder, templateFolders,
   type EmailTemplate, type InsertEmailTemplate, emailTemplates,
   type SmsTemplate, type InsertSmsTemplate, smsTemplates,
+  type ScheduledEmail, type InsertScheduledEmail, scheduledEmails,
   type SmartList, type InsertSmartList, smartLists,
   type Workflow, type InsertWorkflow,
   type WorkflowExecution, type InsertWorkflowExecution,
