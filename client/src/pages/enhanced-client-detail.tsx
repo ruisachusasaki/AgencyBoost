@@ -32,6 +32,87 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ClientHealthModal from "@/components/client-health-modal";
 import type { HealthStatusResult } from "@shared/utils/healthAnalysis";
 
+// MergeTagSelector Component for Email and SMS
+function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFields }: {
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  onSelectTag: (tag: string) => void;
+  customFields: any[];
+}) {
+  // Basic merge tags
+  const basicMergeTags = [
+    { tag: '{{first_name}}', description: 'Client First Name' },
+    { tag: '{{last_name}}', description: 'Client Last Name' },
+    { tag: '{{full_name}}', description: 'Client Full Name' },
+    { tag: '{{email}}', description: 'Client Email' },
+    { tag: '{{phone}}', description: 'Client Phone' },
+    { tag: '{{company}}', description: 'Client Company' },
+    { tag: '{{today_date}}', description: 'Today\'s Date' },
+    { tag: '{{current_time}}', description: 'Current Time' }
+  ];
+
+  // Convert custom fields to merge tags
+  const customFieldMergeTags = (customFields || []).map((field: any) => {
+    // Generate a safe key from the field name
+    const fieldKey = field.name ? field.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'unknown_field';
+    return {
+      tag: `{{${fieldKey}}}`,
+      description: field.name || 'Custom Field'
+    };
+  });
+
+  // Combine all merge tags
+  const allMergeTags = [...basicMergeTags, ...customFieldMergeTags];
+
+  // Filter merge tags based on search
+  const filteredMergeTags = allMergeTags.filter(mergeTag =>
+    mergeTag.tag.toLowerCase().includes(searchValue.toLowerCase()) ||
+    mergeTag.description.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <Input
+          placeholder="Search merge tags..."
+          value={searchValue}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10"
+          data-testid="input-merge-tag-search"
+        />
+      </div>
+
+      {/* Merge Tags List */}
+      <div className="max-h-60 overflow-y-auto space-y-2">
+        <div className="text-sm font-medium text-gray-700">
+          Available Tags ({filteredMergeTags.length}):
+        </div>
+        {filteredMergeTags.length === 0 ? (
+          <div className="text-sm text-gray-500 py-4 text-center">
+            No merge tags found matching "{searchValue}"
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2">
+            {filteredMergeTags.map((mergeTag) => (
+              <button
+                key={mergeTag.tag}
+                className="text-left p-3 border rounded-md hover:bg-gray-50 transition-colors"
+                onClick={() => onSelectTag(mergeTag.tag)}
+                data-testid={`merge-tag-${mergeTag.tag.replace(/[{}]/g, '')}`}
+              >
+                <div className="font-mono text-sm text-primary">{mergeTag.tag}</div>
+                <div className="text-xs text-gray-600">{mergeTag.description}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // EmailTemplateSelector Component
 function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -3471,85 +3552,6 @@ export default function EnhancedClientDetail() {
     );
   }
 
-  // MergeTagSelector Component for Email and SMS
-  const MergeTagSelector = ({ searchValue, onSearchChange, onSelectTag }: {
-    searchValue: string;
-    onSearchChange: (value: string) => void;
-    onSelectTag: (tag: string) => void;
-  }) => {
-    // Basic merge tags
-    const basicMergeTags = [
-      { tag: '{{first_name}}', description: 'Client First Name' },
-      { tag: '{{last_name}}', description: 'Client Last Name' },
-      { tag: '{{full_name}}', description: 'Client Full Name' },
-      { tag: '{{email}}', description: 'Client Email' },
-      { tag: '{{phone}}', description: 'Client Phone' },
-      { tag: '{{company}}', description: 'Client Company' },
-      { tag: '{{today_date}}', description: 'Today\'s Date' },
-      { tag: '{{current_time}}', description: 'Current Time' }
-    ];
-
-    // Convert custom fields to merge tags
-    const customFieldMergeTags = (customFields || []).map((field: any) => {
-      // Generate a safe key from the field name
-      const fieldKey = field.name ? field.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'unknown_field';
-      return {
-        tag: `{{${fieldKey}}}`,
-        description: field.name || 'Custom Field'
-      };
-    });
-
-    // Combine all merge tags
-    const allMergeTags = [...basicMergeTags, ...customFieldMergeTags];
-
-    // Filter merge tags based on search
-    const filteredMergeTags = allMergeTags.filter(mergeTag =>
-      mergeTag.tag.toLowerCase().includes(searchValue.toLowerCase()) ||
-      mergeTag.description.toLowerCase().includes(searchValue.toLowerCase())
-    );
-
-    return (
-      <div className="space-y-4">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Search merge tags..."
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-            data-testid="input-merge-tag-search"
-          />
-        </div>
-
-        {/* Merge Tags List */}
-        <div className="max-h-60 overflow-y-auto space-y-2">
-          <div className="text-sm font-medium text-gray-700">
-            Available Tags ({filteredMergeTags.length}):
-          </div>
-          {filteredMergeTags.length === 0 ? (
-            <div className="text-sm text-gray-500 py-4 text-center">
-              No merge tags found matching "{searchValue}"
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-2">
-              {filteredMergeTags.map((mergeTag) => (
-                <button
-                  key={mergeTag.tag}
-                  className="text-left p-3 border rounded-md hover:bg-gray-50 transition-colors"
-                  onClick={() => onSelectTag(mergeTag.tag)}
-                  data-testid={`merge-tag-${mergeTag.tag.replace(/[{}]/g, '')}`}
-                >
-                  <div className="font-mono text-sm text-primary">{mergeTag.tag}</div>
-                  <div className="text-xs text-gray-600">{mergeTag.description}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <>
@@ -6335,6 +6337,7 @@ export default function EnhancedClientDetail() {
           <MergeTagSelector
             searchValue={smsMergeTagsSearch}
             onSearchChange={setSmsMergeTagsSearch}
+            customFields={customFields}
             onSelectTag={(tag) => {
               const currentMessage = emailData.message;
               const newMessage = currentMessage + tag;
