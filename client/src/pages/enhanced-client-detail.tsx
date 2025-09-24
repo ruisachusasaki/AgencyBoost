@@ -5106,7 +5106,7 @@ export default function EnhancedClientDetail() {
                         <div className="flex gap-2 pt-4">
                           <Button
                             onClick={handleSendEmail}
-                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
+disabled={false} // FORCE ENABLED FOR TESTING
                             className="flex-1"
                             data-testid="button-send-email"
                           >
@@ -5127,7 +5127,7 @@ export default function EnhancedClientDetail() {
                               setShowSendModal(true);
                               console.log("✅ setShowSendModal(true) called");
                             }}
-                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
+disabled={false} // FORCE ENABLED FOR TESTING
                             data-testid="button-schedule-email"
                           >
                             <Clock className="h-4 w-4 mr-2" />
