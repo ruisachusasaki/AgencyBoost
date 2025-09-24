@@ -2991,8 +2991,8 @@ export default function EnhancedClientDetail() {
           updates.fromEmail = fromEmail;
         }
         
-        // Update to field if client email is available and it's empty or different
-        if (client?.email && (!prev.to || prev.to !== client.email)) {
+        // Update to field ONLY if it's currently empty (prevent infinite loop)
+        if (client?.email && !prev.to) {
           updates.to = client.email;
         }
         
