@@ -12949,7 +12949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           `Sent email to ${to}: "${subject}"`,
           null,
-          { to, subject, fromEmail: actualFromEmail, fromName: actualFromName, messageId: result.id, clientId },
+          { to, subject, message, fromEmail: actualFromEmail, fromName: actualFromName, messageId: result.id, clientId },
           req
         );
         console.log('Email communication audit log created');
