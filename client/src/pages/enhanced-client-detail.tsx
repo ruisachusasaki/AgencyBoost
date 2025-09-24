@@ -1496,9 +1496,9 @@ export default function EnhancedClientDetail() {
     setSmsData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleEmailFieldChange = (field: string, value: string) => {
+  const handleEmailFieldChange = useCallback((field: string, value: string) => {
     setEmailData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   // SMS sending functionality
   const sendSmsMutation = useMutation({
