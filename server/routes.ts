@@ -12958,9 +12958,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue with response even if audit log fails
       }
 
-      // Skip activity logging for emails - Communication History audit logs provide the needed tracking
-      console.log('Email activity tracking handled by Communication History audit logs');
-
       res.json({
         message: "Email sent successfully!",
         messageId: result.id,
