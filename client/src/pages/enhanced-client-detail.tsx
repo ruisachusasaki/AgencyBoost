@@ -4162,111 +4162,31 @@ export default function EnhancedClientDetail() {
 
             {/* Send Options Modal - Custom Modal */}
             {console.log("🔍 RENDER CHECK: showSendModal =", showSendModal)}
-            {showSendModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center" style={{backgroundColor: 'rgba(255, 0, 0, 0.5)'}}>
-                
-                {/* Backdrop */}
-                <div 
-                  className="absolute inset-0 bg-black bg-opacity-50" 
-                  onClick={() => setShowSendModal(false)}
-                ></div>
-                
-                {/* Modal Content */}
-                <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Send Email</h3>
-                    <button 
-                      onClick={() => setShowSendModal(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <Button
-                      onClick={sendEmailNow}
-                      className="w-full justify-start"
-                      size="lg"
-                      data-testid="button-send-now"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Now
-                    </Button>
-                    
-                    {/* OR Divider */}
-                    <div className="flex items-center my-4">
-                      <div className="flex-1 h-px bg-gray-300"></div>
-                      <span className="px-3 text-sm text-gray-500 font-medium">OR</span>
-                      <div className="flex-1 h-px bg-gray-300"></div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Schedule Email</h4>
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-sm">Date</Label>
-                          <Input
-                            type="date"
-                            value={scheduledDate}
-                            onChange={(e) => {
-                              console.log("📅 Email Date changed:", e.target.value);
-                              setScheduledDate(e.target.value);
-                            }}
-                            className="mt-1"
-                            min={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm">Time</Label>
-                          <Input
-                            type="time"
-                            value={scheduledTime}
-                            onChange={(e) => {
-                              console.log("⏰ Email Time changed:", e.target.value);
-                              setScheduledTime(e.target.value);
-                            }}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm">Timezone</Label>
-                          <Select value={scheduledTimezone} onValueChange={setScheduledTimezone}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="America/New_York">Eastern Time (EST/EDT)</SelectItem>
-                              <SelectItem value="America/Chicago">Central Time (CST/CDT)</SelectItem>
-                              <SelectItem value="America/Denver">Mountain Time (MST/MDT)</SelectItem>
-                              <SelectItem value="America/Los_Angeles">Pacific Time (PST/PDT)</SelectItem>
-                              <SelectItem value="UTC">UTC</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowSendModal(false)}
-                          className="flex-1"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={scheduleEmail}
-                          disabled={!scheduledDate || !scheduledTime}
-                          className="flex-1"
-                        >
-                          <Clock className="h-4 w-4 mr-2" />
-                          Schedule Email
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {showSendModal && <div style={{
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              backgroundColor: 'red', 
+              zIndex: 9999
+            }}>
+              <h1 style={{color: 'white', fontSize: '48px', textAlign: 'center', paddingTop: '200px'}}>
+                MODAL IS WORKING!
+              </h1>
+              <button 
+                onClick={() => setShowSendModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  padding: '10px 20px',
+                  fontSize: '16px'
+                }}
+              >
+                CLOSE
+              </button>
+            </div>}
 
 
 
