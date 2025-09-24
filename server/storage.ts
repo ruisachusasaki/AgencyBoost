@@ -287,6 +287,16 @@ export interface IStorage {
   updateEmailTemplate(id: string, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined>;
   deleteEmailTemplate(id: string): Promise<boolean>;
 
+  // Scheduled Emails
+  getScheduledEmails(): Promise<ScheduledEmail[]>;
+  getScheduledEmail(id: string): Promise<ScheduledEmail | undefined>;
+  getScheduledEmailsByClient(clientId: string): Promise<ScheduledEmail[]>;
+  createScheduledEmail(scheduledEmail: InsertScheduledEmail): Promise<ScheduledEmail>;
+  updateScheduledEmail(id: string, scheduledEmail: Partial<InsertScheduledEmail>): Promise<ScheduledEmail | undefined>;
+  deleteScheduledEmail(id: string): Promise<boolean>;
+  markScheduledEmailAsSent(id: string, sentAt: Date): Promise<void>;
+  markScheduledEmailAsFailed(id: string, failureReason: string): Promise<void>;
+
   // SMS Templates
   getSmsTemplates(): Promise<SmsTemplate[]>;
   getSmsTemplate(id: string): Promise<SmsTemplate | undefined>;
@@ -524,6 +534,7 @@ export class MemStorage implements IStorage {
   private templateFolders: Map<string, TemplateFolder> = new Map();
   private emailTemplates: Map<string, EmailTemplate> = new Map();
   private smsTemplates: Map<string, SmsTemplate> = new Map();
+  private scheduledEmails: Map<string, ScheduledEmail> = new Map();
   private customFields: Map<string, CustomField> = new Map();
   private customFieldFolders: Map<string, CustomFieldFolder> = new Map();
   private workflows: Map<string, Workflow> = new Map();
@@ -3483,6 +3494,88 @@ export class MemStorage implements IStorage {
     return this.emailTemplates.delete(id);
   }
 
+  // Scheduled Emails
+  async getScheduledEmails(): Promise<ScheduledEmail[]> {
+    return Array.from(this.scheduledEmails.values());
+  }
+
+  async getScheduledEmail(id: string): Promise<ScheduledEmail | undefined> {
+    return this.scheduledEmails.get(id);
+  }
+
+  async getScheduledEmailsByClient(clientId: string): Promise<ScheduledEmail[]> {
+    return Array.from(this.scheduledEmails.values()).filter(email => email.clientId === clientId);
+  }
+
+  async createScheduledEmail(scheduledEmailData: InsertScheduledEmail): Promise<ScheduledEmail> {
+    const scheduledEmail: ScheduledEmail = {
+      id: randomUUID(),
+      clientId: scheduledEmailData.clientId,
+      fromUserId: scheduledEmailData.fromUserId,
+      toEmail: scheduledEmailData.toEmail,
+      ccEmails: scheduledEmailData.ccEmails || null,
+      bccEmails: scheduledEmailData.bccEmails || null,
+      subject: scheduledEmailData.subject,
+      content: scheduledEmailData.content,
+      plainTextContent: scheduledEmailData.plainTextContent || null,
+      templateId: scheduledEmailData.templateId || null,
+      scheduledFor: scheduledEmailData.scheduledFor,
+      timezone: scheduledEmailData.timezone,
+      status: scheduledEmailData.status || "pending",
+      sentAt: null,
+      failureReason: null,
+      retryCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.scheduledEmails.set(scheduledEmail.id, scheduledEmail);
+    return scheduledEmail;
+  }
+
+  async updateScheduledEmail(id: string, scheduledEmailData: Partial<InsertScheduledEmail>): Promise<ScheduledEmail | undefined> {
+    const existing = this.scheduledEmails.get(id);
+    if (!existing) return undefined;
+    
+    const updated: ScheduledEmail = {
+      ...existing,
+      ...scheduledEmailData,
+      updatedAt: new Date(),
+    };
+    this.scheduledEmails.set(id, updated);
+    return updated;
+  }
+
+  async deleteScheduledEmail(id: string): Promise<boolean> {
+    return this.scheduledEmails.delete(id);
+  }
+
+  async markScheduledEmailAsSent(id: string, sentAt: Date): Promise<void> {
+    const existing = this.scheduledEmails.get(id);
+    if (existing) {
+      const updated: ScheduledEmail = {
+        ...existing,
+        status: "sent",
+        sentAt,
+        updatedAt: new Date(),
+      };
+      this.scheduledEmails.set(id, updated);
+    }
+  }
+
+  async markScheduledEmailAsFailed(id: string, failureReason: string): Promise<void> {
+    const existing = this.scheduledEmails.get(id);
+    if (existing) {
+      const updated: ScheduledEmail = {
+        ...existing,
+        status: "failed",
+        failureReason,
+        retryCount: (existing.retryCount || 0) + 1,
+        updatedAt: new Date(),
+      };
+      this.scheduledEmails.set(id, updated);
+    }
+  }
+
   // SMS Templates
   async getSmsTemplates(): Promise<SmsTemplate[]> {
     try {
@@ -5113,6 +5206,133 @@ export class DbStorage implements IStorage {
   async deleteEmailTemplate(id: string): Promise<boolean> {
     const result = await db.delete(emailTemplates).where(eq(emailTemplates.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // Scheduled Emails
+  async getScheduledEmails(): Promise<ScheduledEmail[]> {
+    try {
+      const result = await db.select({
+        id: scheduledEmails.id,
+        clientId: scheduledEmails.clientId,
+        fromUserId: scheduledEmails.fromUserId,
+        toEmail: scheduledEmails.toEmail,
+        ccEmails: scheduledEmails.ccEmails,
+        bccEmails: scheduledEmails.bccEmails,
+        subject: scheduledEmails.subject,
+        content: scheduledEmails.content,
+        plainTextContent: scheduledEmails.plainTextContent,
+        templateId: scheduledEmails.templateId,
+        scheduledFor: scheduledEmails.scheduledFor,
+        timezone: scheduledEmails.timezone,
+        status: scheduledEmails.status,
+        sentAt: scheduledEmails.sentAt,
+        failureReason: scheduledEmails.failureReason,
+        retryCount: scheduledEmails.retryCount,
+        createdAt: scheduledEmails.createdAt,
+        updatedAt: scheduledEmails.updatedAt
+      }).from(scheduledEmails).orderBy(desc(scheduledEmails.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching scheduled emails:", error);
+      return [];
+    }
+  }
+
+  async getScheduledEmail(id: string): Promise<ScheduledEmail | undefined> {
+    try {
+      const result = await db.select({
+        id: scheduledEmails.id,
+        clientId: scheduledEmails.clientId,
+        fromUserId: scheduledEmails.fromUserId,
+        toEmail: scheduledEmails.toEmail,
+        ccEmails: scheduledEmails.ccEmails,
+        bccEmails: scheduledEmails.bccEmails,
+        subject: scheduledEmails.subject,
+        content: scheduledEmails.content,
+        plainTextContent: scheduledEmails.plainTextContent,
+        templateId: scheduledEmails.templateId,
+        scheduledFor: scheduledEmails.scheduledFor,
+        timezone: scheduledEmails.timezone,
+        status: scheduledEmails.status,
+        sentAt: scheduledEmails.sentAt,
+        failureReason: scheduledEmails.failureReason,
+        retryCount: scheduledEmails.retryCount,
+        createdAt: scheduledEmails.createdAt,
+        updatedAt: scheduledEmails.updatedAt
+      }).from(scheduledEmails).where(eq(scheduledEmails.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching scheduled email:", error);
+      return undefined;
+    }
+  }
+
+  async getScheduledEmailsByClient(clientId: string): Promise<ScheduledEmail[]> {
+    try {
+      const result = await db.select({
+        id: scheduledEmails.id,
+        clientId: scheduledEmails.clientId,
+        fromUserId: scheduledEmails.fromUserId,
+        toEmail: scheduledEmails.toEmail,
+        ccEmails: scheduledEmails.ccEmails,
+        bccEmails: scheduledEmails.bccEmails,
+        subject: scheduledEmails.subject,
+        content: scheduledEmails.content,
+        plainTextContent: scheduledEmails.plainTextContent,
+        templateId: scheduledEmails.templateId,
+        scheduledFor: scheduledEmails.scheduledFor,
+        timezone: scheduledEmails.timezone,
+        status: scheduledEmails.status,
+        sentAt: scheduledEmails.sentAt,
+        failureReason: scheduledEmails.failureReason,
+        retryCount: scheduledEmails.retryCount,
+        createdAt: scheduledEmails.createdAt,
+        updatedAt: scheduledEmails.updatedAt
+      }).from(scheduledEmails).where(eq(scheduledEmails.clientId, clientId)).orderBy(desc(scheduledEmails.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching scheduled emails for client:", error);
+      return [];
+    }
+  }
+
+  async createScheduledEmail(scheduledEmail: InsertScheduledEmail): Promise<ScheduledEmail> {
+    const result = await db.insert(scheduledEmails).values({
+      ...scheduledEmail,
+      id: sql`gen_random_uuid()`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return result[0];
+  }
+
+  async updateScheduledEmail(id: string, scheduledEmail: Partial<InsertScheduledEmail>): Promise<ScheduledEmail | undefined> {
+    const updatedEmail = { ...scheduledEmail, updatedAt: new Date() };
+    await db.update(scheduledEmails).set(updatedEmail).where(eq(scheduledEmails.id, id));
+    return await this.getScheduledEmail(id);
+  }
+
+  async deleteScheduledEmail(id: string): Promise<boolean> {
+    const result = await db.delete(scheduledEmails).where(eq(scheduledEmails.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async markScheduledEmailAsSent(id: string, sentAt: Date): Promise<void> {
+    await db.update(scheduledEmails).set({
+      status: "sent",
+      sentAt,
+      updatedAt: new Date(),
+    }).where(eq(scheduledEmails.id, id));
+  }
+
+  async markScheduledEmailAsFailed(id: string, failureReason: string): Promise<void> {
+    const existing = await this.getScheduledEmail(id);
+    await db.update(scheduledEmails).set({
+      status: "failed",
+      failureReason,
+      retryCount: (existing?.retryCount || 0) + 1,
+      updatedAt: new Date(),
+    }).where(eq(scheduledEmails.id, id));
   }
 
   async getSmsTemplates(): Promise<SmsTemplate[]> {
