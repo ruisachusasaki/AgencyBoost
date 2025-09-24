@@ -1812,6 +1812,7 @@ export default function EnhancedClientDetail() {
   
   // Email choice modal state - same pattern as SMS
   const [showEmailChoiceModal, setShowEmailChoiceModal] = useState(false);
+  const [showEmailScheduleModal, setShowEmailScheduleModal] = useState(false);
   
   // Debug the SMS modal state changes
   useEffect(() => {
@@ -6299,7 +6300,7 @@ export default function EnhancedClientDetail() {
             onClick={() => {
               console.log("🕐 EMAIL SCHEDULE CLICKED!");
               setShowEmailChoiceModal(false);
-              setShowSendModal(true); // Open the existing schedule modal
+              setShowEmailScheduleModal(true); // Open dedicated email schedule modal
             }}
             variant="outline"
             className="w-full justify-start gap-3 h-12"
@@ -6379,6 +6380,80 @@ export default function EnhancedClientDetail() {
             data-testid="button-continue-schedule"
           >
             Continue
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* EMAIL Schedule Modal - Same pattern as SMS */}
+    <Dialog open={showEmailScheduleModal} onOpenChange={setShowEmailScheduleModal}>
+      <DialogContent className="sm:max-w-lg" data-testid="modal-email-schedule">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Schedule Email to {clientDisplayName}
+          </DialogTitle>
+          <DialogDescription>
+            Choose when you want to send your email.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Date</label>
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                data-testid="input-schedule-date"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Time</label>
+              <input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                data-testid="input-schedule-time"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Timezone</label>
+            <select
+              value={scheduledTimezone}
+              onChange={(e) => setScheduledTimezone(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              data-testid="select-timezone"
+            >
+              <option value="America/New_York">Eastern Time (EST/EDT)</option>
+              <option value="America/Chicago">Central Time (CST/CDT)</option>
+              <option value="America/Denver">Mountain Time (MST/MDT)</option>
+              <option value="America/Los_Angeles">Pacific Time (PST/PDT)</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <Button
+            variant="ghost"
+            onClick={() => setShowEmailScheduleModal(false)}
+            data-testid="button-cancel-email-schedule"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              console.log("📅 EMAIL SCHEDULE BUTTON CLICKED!");
+              // Close schedule modal and schedule the already composed email
+              setShowEmailScheduleModal(false);
+              scheduleEmail(); // Schedule the already composed email
+            }}
+            disabled={!scheduledDate || !scheduledTime}
+            data-testid="button-continue-email-schedule"
+          >
+            Schedule Email
           </Button>
         </div>
       </DialogContent>
