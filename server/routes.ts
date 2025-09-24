@@ -5066,6 +5066,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Scheduled Email routes - SECURED (Users with client access)
+  app.get("/api/scheduled-emails", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const scheduledEmails = await appStorage.getScheduledEmails();
+      res.json(scheduledEmails);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch scheduled emails" });
+    }
+  });
+
+  app.get("/api/scheduled-emails/client/:clientId", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const scheduledEmails = await appStorage.getScheduledEmailsByClient(req.params.clientId);
+      res.json(scheduledEmails);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch scheduled emails for client" });
+    }
+  });
+
+  app.post("/api/scheduled-emails", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      const validatedData = insertScheduledEmailSchema.parse(req.body);
+      // SECURE: Use authenticated user ID only, not client-provided fromUserId
+      validatedData.fromUserId = userId;
+      
+      const scheduledEmail = await appStorage.createScheduledEmail(validatedData);
+      
+      // Audit log for scheduled email creation
+      await createAuditLog(
+        "created",
+        "scheduled_email",
+        scheduledEmail.id,
+        `Scheduled Email to ${scheduledEmail.toEmail}`,
+        userId, // SECURE: Use authenticated user ID only
+        `SCHEDULED EMAIL: Created scheduled email to '${scheduledEmail.toEmail}' for ${new Date(scheduledEmail.scheduledFor).toLocaleString()}`,
+        null,
+        scheduledEmail,
+        req
+      );
+      
+      res.status(201).json(scheduledEmail);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating scheduled email:", error);
+      res.status(500).json({ message: "Failed to create scheduled email", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.patch("/api/scheduled-emails/:id", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const validatedData = insertScheduledEmailSchema.partial().parse(req.body);
+      const scheduledEmail = await appStorage.updateScheduledEmail(req.params.id, validatedData);
+      if (!scheduledEmail) {
+        return res.status(404).json({ message: "Scheduled email not found" });
+      }
+      res.json(scheduledEmail);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update scheduled email" });
+    }
+  });
+
+  app.delete("/api/scheduled-emails/:id", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // Get scheduled email details before deletion for audit
+      const scheduledEmail = await appStorage.getScheduledEmail(req.params.id);
+      
+      const deleted = await appStorage.deleteScheduledEmail(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Scheduled email not found" });
+      }
+      
+      // Audit log for scheduled email deletion
+      if (scheduledEmail) {
+        await createAuditLog(
+          "deleted",
+          "scheduled_email",
+          scheduledEmail.id,
+          `Scheduled Email to ${scheduledEmail.toEmail}`,
+          userId, // SECURE: Use authenticated user ID only
+          `SCHEDULED EMAIL: Deleted scheduled email to '${scheduledEmail.toEmail}' that was scheduled for ${new Date(scheduledEmail.scheduledFor).toLocaleString()}`,
+          scheduledEmail,
+          null,
+          req
+        );
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete scheduled email" });
+    }
+  });
+
   // SMS Template routes - SECURED (Admin Only)
   app.get("/api/sms-templates", requireAuth(), requireAdmin(), async (req, res) => {
     try {
