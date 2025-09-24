@@ -1835,6 +1835,16 @@ export default function EnhancedClientDetail() {
   const [scheduledTime, setScheduledTime] = useState('');
   const [scheduledTimezone, setScheduledTimezone] = useState('America/New_York');
 
+  // Debug scheduling state
+  useEffect(() => {
+    console.log("🔄 SCHEDULING STATE DEBUG:", {
+      scheduledDate,
+      scheduledTime,
+      scheduledTimezone,
+      buttonDisabled: !scheduledDate || !scheduledTime
+    });
+  }, [scheduledDate, scheduledTime, scheduledTimezone]);
+
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<'contact' | 'hub' | 'health' | 'products' | 'communication' | 'activity'>('contact');
 
