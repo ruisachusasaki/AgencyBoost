@@ -470,6 +470,28 @@ export const smsTemplates = pgTable("sms_templates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Scheduled Emails for delayed sending
+export const scheduledEmails = pgTable("scheduled_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  fromUserId: varchar("from_user_id").notNull().references(() => users.id),
+  toEmail: text("to_email").notNull(),
+  ccEmails: text("cc_emails").array(),
+  bccEmails: text("bcc_emails").array(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(), // HTML content
+  plainTextContent: text("plain_text_content"),
+  templateId: varchar("template_id").references(() => emailTemplates.id),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  timezone: text("timezone").notNull().default("America/New_York"),
+  status: text("status").notNull().default("pending"), // pending, sent, failed, cancelled
+  sentAt: timestamp("sent_at"),
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Lead Pipeline Stages - Customizable stages for lead management
 export const leadPipelineStages = pgTable("lead_pipeline_stages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -979,6 +1001,15 @@ export const insertSmsTemplateSchema = createInsertSchema(smsTemplates).omit({
   usageCount: true,
 });
 
+export const insertScheduledEmailSchema = createInsertSchema(scheduledEmails).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentAt: true,
+  failureReason: true,
+  retryCount: true,
+});
+
 export const insertSmartListSchema = createInsertSchema(smartLists).omit({
   id: true,
   createdAt: true,
@@ -1200,6 +1231,9 @@ export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
 
 export type SmsTemplate = typeof smsTemplates.$inferSelect;
 export type InsertSmsTemplate = z.infer<typeof insertSmsTemplateSchema>;
+
+export type ScheduledEmail = typeof scheduledEmails.$inferSelect;
+export type InsertScheduledEmail = z.infer<typeof insertScheduledEmailSchema>;
 
 export type SmartList = typeof smartLists.$inferSelect;
 export type InsertSmartList = z.infer<typeof insertSmartListSchema>;
