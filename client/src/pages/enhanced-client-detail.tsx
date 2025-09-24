@@ -2972,44 +2972,29 @@ export default function EnhancedClientDetail() {
     setShowFollowerSuggestions(filtered.length > 0);
   }, [followerSearchTerm, staffData, client?.followers, client?.contactOwner]);
 
-  // DISABLED - This useEffect was causing infinite render loops!
-  // The dependencies [currentUser?.id, currentUser?.firstName, etc.] are unstable React Query objects
-  // that get recreated on every render, causing this effect to run constantly
-  /*
+  // STABLE email auto-population using memoized values to prevent infinite loops
+  const stableUserEmail = useMemo(() => currentUser?.email || '', [currentUser?.email]);
+  const stableUserName = useMemo(() => {
+    return `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim();
+  }, [currentUser?.firstName, currentUser?.lastName]);
+  const stableClientEmail = useMemo(() => client?.email || '', [client?.email]);
+
+  // Auto-populate email fields ONCE when stable values are available
   useEffect(() => {
-    // Always try to populate fromName and fromEmail when currentUser is available
-    if (currentUser?.id) {
-      const fromName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-      const fromEmail = currentUser.email || '';
-      
+    if (stableUserEmail && stableUserName) {
       setEmailData(prev => {
         const updates: any = {};
         
-        // Update fromName if it's empty or different
-        if (!prev.fromName || prev.fromName !== fromName) {
-          updates.fromName = fromName;
-        }
-        
-        // Update fromEmail if it's empty or different
-        if (!prev.fromEmail || prev.fromEmail !== fromEmail) {
-          updates.fromEmail = fromEmail;
-        }
-        
-        // Update to field ONLY if it's currently empty (prevent infinite loop)
-        if (client?.email && !prev.to) {
-          updates.to = client.email;
-        }
+        // Only update if currently empty (don't override user input)
+        if (!prev.fromName) updates.fromName = stableUserName;
+        if (!prev.fromEmail) updates.fromEmail = stableUserEmail;
+        if (!prev.to && stableClientEmail) updates.to = stableClientEmail;
         
         // Only update if there are actual changes
-        if (Object.keys(updates).length > 0) {
-          return { ...prev, ...updates };
-        }
-        
-        return prev;
+        return Object.keys(updates).length > 0 ? { ...prev, ...updates } : prev;
       });
     }
-  }, [currentUser?.id, currentUser?.firstName, currentUser?.lastName, currentUser?.email, client?.email]);
-  */
+  }, [stableUserEmail, stableUserName, stableClientEmail]);
 
   // Track what's resetting the modal
   useEffect(() => {
