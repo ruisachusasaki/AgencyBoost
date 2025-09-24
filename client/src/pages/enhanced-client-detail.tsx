@@ -4163,6 +4163,7 @@ export default function EnhancedClientDetail() {
             {/* Send Options Modal - Custom Modal */}
             {showSendModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center" style={{backgroundColor: 'rgba(255, 0, 0, 0.5)'}}>
+                
                 {/* Backdrop */}
                 <div 
                   className="absolute inset-0 bg-black bg-opacity-50" 
