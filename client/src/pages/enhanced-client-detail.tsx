@@ -2665,7 +2665,7 @@ export default function EnhancedClientDetail() {
   // Memoized communications filtering to prevent re-render loops
   const communications = useMemo(() => {
     return auditLogs
-      .filter(log => log.entityType === 'sms' || log.entityType === 'email')
+      .filter(log => log.entityType === 'sms' || log.entityType === 'email' || log.entity_type === 'sms' || log.entity_type === 'email')
       .filter(log => {
         if (!deferredCommunicationSearch.trim()) return true;
         const searchLower = deferredCommunicationSearch.toLowerCase();
