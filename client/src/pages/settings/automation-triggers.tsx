@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -346,13 +345,35 @@ export default function AutomationTriggers() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="triggers">Triggers</TabsTrigger>
-          <TabsTrigger value="actions">Actions</TabsTrigger>
-        </TabsList>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "triggers", name: "Triggers", icon: Zap, count: triggers.length },
+            { id: "actions", name: "Actions", icon: Settings, count: actions.length }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} ({tab.count})
+              </button>
+            );
+          })}
+        </nav>
+      </div>
         
-        <TabsContent value="triggers" className="space-y-4">
+        {/* Triggers Tab */}
+        {activeTab === "triggers" && (
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Automation Triggers</h2>
@@ -447,9 +468,12 @@ export default function AutomationTriggers() {
               </Card>
             )}
           </div>
-        </TabsContent>
+        </div>
+        )}
 
-        <TabsContent value="actions" className="space-y-4">
+        {/* Actions Tab */}
+        {activeTab === "actions" && (
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Automation Actions</h2>
@@ -551,8 +575,8 @@ export default function AutomationTriggers() {
               </Card>
             )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+        )}
 
       {/* Create/Edit Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
