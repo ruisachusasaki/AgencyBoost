@@ -762,7 +762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         try {
           // Use direct database access through storage
-          const staffData = await appStorage.getStaffById(userId);
+          const staffData = await appStorage.getStaffMember(userId);
           if (staffData) {
             const fullName = `${staffData.firstName} ${staffData.lastName}`;
             userLookupCache.set(userId, fullName);
