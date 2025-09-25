@@ -9,6 +9,7 @@ interface TimeEntry {
   taskTitle: string;
   startTime: string;
   userId: string;
+  userName?: string;
   isRunning: boolean;
 }
 
@@ -136,6 +137,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
       taskTitle,
       startTime: now,
       userId: currentUser.id,
+      userName: `${currentUser.firstName} ${currentUser.lastName}`,
       isRunning: true
     };
 
