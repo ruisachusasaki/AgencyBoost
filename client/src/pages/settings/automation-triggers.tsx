@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 interface AutomationTrigger {
   id: string;
@@ -324,13 +325,25 @@ export default function AutomationTriggers() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Automation Management</h1>
-          <p className="text-muted-foreground">
-            Manage triggers and actions for workflow automation
-          </p>
+      {/* Back to Settings */}
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
+      </div>
+
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <Zap className="h-6 w-6 text-primary" />
+          <h2 className="text-3xl font-bold tracking-tight">Automation Management</h2>
         </div>
+        <p className="text-muted-foreground">
+          Manage triggers and actions for workflow automation
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

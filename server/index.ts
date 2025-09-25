@@ -4,9 +4,8 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
-import { clientBriefSections } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
+import { clientBriefSections, automationTriggers } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -51,6 +50,181 @@ async function ensureClientBriefColumns() {
     log(`Migration error: ${error.message}`);
     // Don't crash the server if migration fails - log warning and continue
     log("WARNING: Client brief columns migration failed - server will continue but brief sections may not work correctly");
+  }
+}
+
+/**
+ * Initialize default automation triggers
+ * Creates sample automation triggers in the database for system functionality
+ */
+async function initializeDefaultAutomationTriggers() {
+  try {
+    log("Running startup migration: initializeDefaultAutomationTriggers");
+    
+    // Check if triggers already exist
+    const existingTriggers = await db.select().from(automationTriggers).limit(1);
+    
+    if (existingTriggers.length > 0) {
+      log("Automation triggers already exist - skipping initialization");
+      return;
+    }
+    
+    // Sample automation triggers
+    const sampleTriggers = [
+      {
+        id: "trigger-1",
+        name: "New Client Created",
+        type: "client_created",
+        description: "Triggers when a new client is added to the system",
+        category: "contact_management",
+        configSchema: {
+          status: { 
+            type: "string", 
+            options: ["active", "inactive", "pending"],
+            label: "Client Status"
+          },
+          contactType: { 
+            type: "string", 
+            options: ["lead", "client"],
+            label: "Contact Type"
+          },
+          contactSource: { 
+            type: "string", 
+            options: ["website", "referral", "cold_outreach", "social_media", "paid_ads", "manual", "import"],
+            label: "Contact Source"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-1a",
+        name: "New Lead Created",
+        type: "lead_created", 
+        description: "Triggers when a new lead is added to the pipeline",
+        category: "contact_management",
+        configSchema: {
+          source: { 
+            type: "string", 
+            options: ["website", "referral", "social_media", "advertising", "cold_outreach"],
+            label: "Lead Source"
+          },
+          status: {
+            type: "string",
+            options: ["new", "contacted", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "Lead Status"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-2",
+        name: "Form Submitted",
+        type: "form_submitted",
+        description: "Triggers when a specific form is submitted",
+        category: "form_management",
+        configSchema: {
+          form_id: { type: "string", required: true },
+          fields: { type: "object" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-3",
+        name: "Tag Added",
+        type: "tag_added",
+        description: "Triggers when a specific tag is added to a contact",
+        category: "contact_management",
+        configSchema: {
+          tag_name: { type: "string", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-4",
+        name: "Client Status Changed",
+        type: "client_status_changed",
+        description: "Triggers when a client's status changes",
+        category: "contact_management",
+        configSchema: {
+          from_status: { 
+            type: "string", 
+            options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "From Status"
+          },
+          to_status: { 
+            type: "string", 
+            options: ["lead", "prospect", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"],
+            label: "To Status",
+            required: true
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-appointment-booked",
+        name: "Appointment Booked",
+        type: "appointment_booked",
+        description: "Triggers when a new appointment is scheduled",
+        category: "calendar_management",
+        configSchema: {
+          calendar_id: {
+            type: "calendar_select",
+            label: "Calendar",
+            required: false
+          },
+          staff_id: {
+            type: "staff_select", 
+            label: "Assigned Staff Member",
+            required: false
+          },
+          booking_source: {
+            type: "string",
+            label: "Booking Source",
+            options: ["external_calendar_link", "manually", "api", "sync_google", "sync_microsoft"],
+            required: false
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-appointment-status-changed",
+        name: "Appointment Status Changed",
+        type: "appointment_status_changed",
+        description: "Triggers when an appointment status changes from one state to another",
+        category: "calendar_management",
+        configSchema: {
+          from_status: {
+            type: "string",
+            label: "From Status",
+            options: ["scheduled", "confirmed", "cancelled", "completed", "no_show"],
+            required: false
+          },
+          to_status: {
+            type: "string", 
+            label: "To Status",
+            options: ["scheduled", "confirmed", "cancelled", "completed", "no_show"],
+            required: true
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+
+    // Insert all sample triggers
+    await db.insert(automationTriggers).values(sampleTriggers);
+    
+    log(`Automation triggers initialization completed successfully - ${sampleTriggers.length} triggers created`);
+  } catch (error: any) {
+    log(`Automation triggers initialization error: ${error.message}`);
+    // Don't crash the server if initialization fails
+    log("WARNING: Automation triggers initialization failed - some automation functionality may not work correctly");
   }
 }
 
@@ -258,6 +432,7 @@ app.use((req, res, next) => {
   // Run startup migrations before setting up routes
   await ensureClientBriefColumns();
   await initializeCoreClientBriefSections();
+  await initializeDefaultAutomationTriggers();
   
   const server = await registerRoutes(app);
 
