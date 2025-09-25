@@ -78,13 +78,16 @@ export function MentionInput({
 
   // Check for @ symbol and show dropdown
   const checkForMention = useCallback((text: string, position: number) => {
+    console.log("🔍 checkForMention called:", { text, position, staff: staff.length });
     const beforeCursor = text.slice(0, position);
     const lastAtSymbol = beforeCursor.lastIndexOf('@');
     
     if (lastAtSymbol !== -1) {
       const afterAt = beforeCursor.slice(lastAtSymbol + 1);
+      console.log("🔍 afterAt:", afterAt);
       // Check if there's no space after @ (valid mention start)
       if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
+        console.log("✅ Valid mention detected! Setting dropdown open");
         setMentionQuery(afterAt);
         setIsDropdownOpen(true);
         setSelectedIndex(0);
@@ -105,15 +108,17 @@ export function MentionInput({
       }
     }
     
+    console.log("❌ No valid mention found, closing dropdown");
     setIsDropdownOpen(false);
     setMentionQuery("");
-  }, []);
+  }, [staff]);
 
   // Handle text change
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const newPosition = e.target.selectionStart || 0;
     
+    console.log("🔍 MentionInput handleTextChange:", { newValue, newPosition });
     setCursorPosition(newPosition);
     checkForMention(newValue, newPosition);
     
