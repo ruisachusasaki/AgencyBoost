@@ -322,6 +322,17 @@ function Router() {
         )}
       </Route>
       
+      {/* Additional route for /articles/:id - redirect to correct path */}
+      <Route path="/articles/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <ArticleView />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
       <Route path="/calendar">
         {() => (
           <AuthGate>
