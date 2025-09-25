@@ -75,16 +75,22 @@ export function MentionInput({
     const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
     return fullName.includes(mentionQuery.toLowerCase());
   }).slice(0, 5); // Limit to 5 suggestions
+  
+  console.log("🔍 Filtered staff:", { mentionQuery, filteredStaff: filteredStaff.map(s => `${s.firstName} ${s.lastName}`), isDropdownOpen });
 
   // Check for @ symbol and show dropdown
   const checkForMention = useCallback((text: string, position: number) => {
+    console.log("🔍 checkForMention called with:", { text, position });
     const beforeCursor = text.slice(0, position);
     const lastAtSymbol = beforeCursor.lastIndexOf('@');
+    console.log("🔍 lastAtSymbol:", lastAtSymbol, "beforeCursor:", beforeCursor);
     
     if (lastAtSymbol !== -1) {
       const afterAt = beforeCursor.slice(lastAtSymbol + 1);
+      console.log("🔍 afterAt:", afterAt);
       // Check if there's no space after @ (valid mention start)
       if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
+        console.log("✅ Valid mention detected! Query:", afterAt);
         setMentionQuery(afterAt);
         setIsDropdownOpen(true);
         setSelectedIndex(0);
@@ -100,11 +106,16 @@ export function MentionInput({
             top: rect.top + window.scrollY + (lines * lineHeight) + 30,
             left: rect.left + window.scrollX + 10,
           });
+          console.log("🔍 Dropdown position set:", {
+            top: rect.top + window.scrollY + (lines * lineHeight) + 30,
+            left: rect.left + window.scrollX + 10,
+          });
         }
         return;
       }
     }
     
+    console.log("❌ No valid mention found, closing dropdown");
     setIsDropdownOpen(false);
     setMentionQuery("");
   }, []);
