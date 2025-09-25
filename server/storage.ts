@@ -5426,11 +5426,33 @@ export class DbStorage implements IStorage {
   async reorderCustomFieldFolders(folderOrders: Array<{id: string, order: number}>): Promise<void> { return this.memStorage.reorderCustomFieldFolders(folderOrders); }
 
   // Staff
-  async getStaff(): Promise<Staff[]> { return this.memStorage.getStaff(); }
-  async getStaffMember(id: string): Promise<Staff | undefined> { return this.memStorage.getStaffMember(id); }
-  async createStaffMember(staff: InsertStaff): Promise<Staff> { return this.memStorage.createStaffMember(staff); }
-  async updateStaffMember(id: string, staff: Partial<InsertStaff>): Promise<Staff | undefined> { return this.memStorage.updateStaffMember(id, staff); }
-  async deleteStaffMember(id: string): Promise<boolean> { return this.memStorage.deleteStaffMember(id); }
+  async getStaff(): Promise<Staff[]> {
+    const result = await db.select().from(staff).orderBy(asc(staff.firstName), asc(staff.lastName));
+    return result;
+  }
+  
+  async getStaffMember(id: string): Promise<Staff | undefined> {
+    const result = await db.select().from(staff).where(eq(staff.id, id));
+    return result[0];
+  }
+  
+  async createStaffMember(staffData: InsertStaff): Promise<Staff> {
+    const result = await db.insert(staff).values(staffData).returning();
+    return result[0];
+  }
+  
+  async updateStaffMember(id: string, staffData: Partial<InsertStaff>): Promise<Staff | undefined> {
+    const result = await db.update(staff).set({
+      ...staffData,
+      updatedAt: new Date(),
+    }).where(eq(staff.id, id)).returning();
+    return result[0];
+  }
+  
+  async deleteStaffMember(id: string): Promise<boolean> {
+    const result = await db.delete(staff).where(eq(staff.id, id)).returning();
+    return result.length > 0;
+  }
 
   // Departments
   async getDepartments(): Promise<Department[]> {
