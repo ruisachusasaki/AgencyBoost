@@ -1671,7 +1671,7 @@ export default function Tasks() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-          <CheckCircle className="h-8 w-8 text-[#46a1a0]" />
+          <CheckCircle className="h-8 w-8 text-primary" />
           Tasks
         </h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -1879,7 +1879,7 @@ export default function Tasks() {
                     ? "text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
-                style={viewMode === "table" ? { backgroundColor: "#44a1a0" } : {}}
+                style={viewMode === "table" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
               >
                 <TableIcon className="h-4 w-4" />
                 Table
@@ -1891,7 +1891,7 @@ export default function Tasks() {
                     ? "text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
-                style={viewMode === "kanban" ? { backgroundColor: "#44a1a0" } : {}}
+                style={viewMode === "kanban" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
               >
                 <Columns className="h-4 w-4" />
                 Kanban

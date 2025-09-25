@@ -743,7 +743,7 @@ export default function ProductsSettings() {
 
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
-          <Package className="h-8 w-8 text-[#46a1a0]" />
+          <Package className="h-8 w-8 text-primary" />
           <span>Products & Services</span>
         </h1>
         <p className="text-muted-foreground">
@@ -803,7 +803,7 @@ export default function ProductsSettings() {
               }
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
+                <Button className="bg-primary hover:bg-primary/90 h-10">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Product
                 </Button>
@@ -1031,7 +1031,7 @@ export default function ProductsSettings() {
               }
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
+                <Button className="bg-primary hover:bg-primary/90 h-10">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Bundle
                 </Button>
@@ -1147,7 +1147,7 @@ export default function ProductsSettings() {
           {activeTab === "categories" && (
             <Dialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10" data-testid="button-create-category">
+                <Button className="bg-primary hover:bg-primary/90 h-10" data-testid="button-create-category">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Category
                 </Button>

@@ -170,7 +170,7 @@ export default function TagsPage() {
     resolver: zodResolver(insertTagSchema),
     defaultValues: {
       name: "",
-      color: "#46a1a0",
+      color: "#00C9C6",
       description: "",
     },
   });
@@ -180,7 +180,7 @@ export default function TagsPage() {
     resolver: zodResolver(insertTagSchema),
     defaultValues: {
       name: "",
-      color: "#46a1a0",
+      color: "#00C9C6",
       description: "",
     },
   });
@@ -190,7 +190,7 @@ export default function TagsPage() {
     if (editingTag) {
       editForm.reset({
         name: editingTag.name,
-        color: editingTag.color || "#46a1a0",
+        color: editingTag.color || "#00C9C6",
         description: editingTag.description || "",
       });
     }
@@ -305,7 +305,7 @@ export default function TagsPage() {
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <TagIcon className="h-6 w-6 text-[#46a1a0]" />
+          <TagIcon className="h-6 w-6 text-primary" />
           <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
         </div>
         <p className="text-muted-foreground">
@@ -317,7 +317,7 @@ export default function TagsPage() {
       <div className="flex justify-end">
         <Dialog open={showAddDialog} onOpenChange={handleAddDialogClose}>
           <DialogTrigger asChild>
-            <Button className="bg-[#46a1a0] hover:bg-[#46a1a0]/90">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Add Tag
             </Button>
@@ -356,13 +356,13 @@ export default function TagsPage() {
                           <Input
                             type="color"
                             {...field}
-                            value={field.value || "#46a1a0"}
+                            value={field.value || "#00C9C6"}
                             className="w-12 h-10 p-1 border rounded cursor-pointer"
                           />
                           <Input
                             {...field}
-                            value={field.value || "#46a1a0"}
-                            placeholder="#46a1a0"
+                            value={field.value || "#00C9C6"}
+                            placeholder="#00C9C6"
                             className="flex-1"
                           />
                         </div>
@@ -398,7 +398,7 @@ export default function TagsPage() {
                   <Button 
                     type="submit" 
                     disabled={createTagMutation.isPending}
-                    className="bg-[#46a1a0] hover:bg-[#46a1a0]/90"
+                    className="bg-primary hover:bg-primary/90"
                   >
                     {createTagMutation.isPending ? "Creating..." : "Create Tag"}
                   </Button>
@@ -469,7 +469,7 @@ export default function TagsPage() {
                         <div className="flex items-center space-x-2">
                           <div 
                             className="w-4 h-4 rounded-full border" 
-                            style={{ backgroundColor: tag.color || "#46a1a0" }}
+                            style={{ backgroundColor: tag.color || "#00C9C6" }}
                           />
                           <div>
                             <div className="font-medium">{tag.name}</div>
@@ -552,13 +552,13 @@ export default function TagsPage() {
                         <Input
                           type="color"
                           {...field}
-                          value={field.value || "#46a1a0"}
+                          value={field.value || "#00C9C6"}
                           className="w-12 h-10 p-1 border rounded cursor-pointer"
                         />
                         <Input
                           {...field}
-                          value={field.value || "#46a1a0"}
-                          placeholder="#46a1a0"
+                          value={field.value || "#00C9C6"}
+                          placeholder="#00C9C6"
                           className="flex-1"
                         />
                       </div>
@@ -594,7 +594,7 @@ export default function TagsPage() {
                 <Button 
                   type="submit" 
                   disabled={updateTagMutation.isPending}
-                  className="bg-[#46a1a0] hover:bg-[#46a1a0]/90"
+                  className="bg-primary hover:bg-primary/90"
                 >
                   {updateTagMutation.isPending ? "Updating..." : "Update Tag"}
                 </Button>

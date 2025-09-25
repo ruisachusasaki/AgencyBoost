@@ -129,7 +129,7 @@ export default function PermissionAudit() {
 
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
-          <Activity className="h-8 w-8 text-[#46a1a0]" />
+          <Activity className="h-8 w-8 text-primary" />
           <span>Permission Audit Trail</span>
         </h1>
         <p className="text-muted-foreground">

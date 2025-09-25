@@ -150,7 +150,7 @@ export default function CalendarSettings() {
 
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
-          <Calendar className="h-8 w-8 text-[#46a1a0]" />
+          <Calendar className="h-8 w-8 text-primary" />
           <span>Calendar Settings</span>
         </h1>
         <p className="text-muted-foreground">

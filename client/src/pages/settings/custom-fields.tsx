@@ -425,7 +425,7 @@ export default function CustomFields() {
 
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
-          <Database className="h-8 w-8 text-[#46a1a0]" />
+          <Database className="h-8 w-8 text-primary" />
           <span>Custom Fields</span>
         </h1>
         <p className="text-muted-foreground">
@@ -477,7 +477,7 @@ export default function CustomFields() {
               <div className="flex space-x-3">
                 <Dialog open={isAddFieldDialogOpen} onOpenChange={setIsAddFieldDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a] h-10">
+                    <Button className="bg-primary hover:bg-primary/90 h-10">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Custom Field
                     </Button>
@@ -736,7 +736,7 @@ export default function CustomFields() {
                                     variant={currentPage === page ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => setCurrentPage(page)}
-                                    className={currentPage === page ? "bg-[#46a1a0] hover:bg-[#46a1a0]/90" : ""}
+                                    className={currentPage === page ? "bg-primary hover:bg-primary/90" : ""}
                                   >
                                     {page}
                                   </Button>
@@ -778,7 +778,7 @@ export default function CustomFields() {
               </div>
               <Dialog open={isAddFolderDialogOpen} onOpenChange={setIsAddFolderDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#46a1a0] hover:bg-[#46a1a0]/90">
+                  <Button className="bg-primary hover:bg-primary/90">
                     <Folder className="h-4 w-4 mr-2" />
                     New Folder
                   </Button>
@@ -863,7 +863,7 @@ export default function CustomFields() {
                                       </TableCell>
                                       <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
-                                          <FolderOpen className="h-4 w-4 text-[#46a1a0]" />
+                                          <FolderOpen className="h-4 w-4 text-primary" />
                                           {folder.name}
                                         </div>
                                       </TableCell>
