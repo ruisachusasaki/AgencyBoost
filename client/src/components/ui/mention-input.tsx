@@ -75,6 +75,8 @@ export function MentionInput({
     const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
     return fullName.includes(mentionQuery.toLowerCase());
   }).slice(0, 5); // Limit to 5 suggestions
+  
+  console.log("🔍 Dropdown state:", { isDropdownOpen, mentionQuery, filteredStaff: filteredStaff.length, dropdownPosition });
 
   // Check for @ symbol and show dropdown
   const checkForMention = useCallback((text: string, position: number) => {
