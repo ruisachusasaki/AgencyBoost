@@ -16510,18 +16510,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/knowledge-base/articles/:articleId/comments", async (req, res) => {
+  app.post("/api/knowledge-base/articles/:articleId/comments", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
     try {
       const userId = req.session?.userId;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const { content, parentId, mentions } = req.body;
+      // Validate request body
+      const commentSchema = z.object({
+        content: z.string().min(1, "Comment content is required").trim(),
+        parentId: z.string().optional(),
+        mentions: z.array(z.string()).optional().default([])
+      });
       
-      if (!content || content.trim() === '') {
-        return res.status(400).json({ message: "Comment content is required" });
+      const validationResult = commentSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors 
+        });
       }
+      
+      const { content, parentId, mentions } = validationResult.data;
       
       const [newComment] = await db.insert(knowledgeBaseComments).values({
         articleId: req.params.articleId,
@@ -16530,6 +16541,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mentions: mentions || [],
         authorId: userId,
       }).returning();
+
+      // Send notifications to mentioned users
+      if (mentions && mentions.length > 0) {
+        try {
+          // Get article title and author name for notification
+          const [article] = await db.select({
+            title: knowledgeBaseArticles.title,
+          })
+          .from(knowledgeBaseArticles)
+          .where(eq(knowledgeBaseArticles.id, req.params.articleId));
+
+          const [author] = await db.select({
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+          })
+          .from(staff)
+          .where(eq(staff.id, userId));
+
+          const authorName = author ? `${author.firstName} ${author.lastName}` : 'Someone';
+          const articleTitle = article?.title || 'an article';
+
+          // Create notifications for each mentioned user
+          for (const mentionedUserId of mentions) {
+            // Skip self-mentions
+            if (mentionedUserId === userId) continue;
+
+            // Create in-app notification
+            await db.insert(notifications).values({
+              userId: mentionedUserId,
+              type: 'mention',
+              title: 'You were mentioned in a comment',
+              message: `${authorName} mentioned you in a comment on "${articleTitle}"`,
+              entityType: 'knowledge_base_article',
+              entityId: req.params.articleId,
+              priority: 'normal',
+              isRead: false,
+            });
+          }
+        } catch (notificationError) {
+          console.error('Error creating mention notifications:', notificationError);
+          // Don't fail the comment creation if notifications fail
+        }
+      }
       
       res.status(201).json(newComment);
     } catch (error) {

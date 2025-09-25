@@ -28,12 +28,15 @@ import { apiRequest } from "@/lib/queryClient";
 import type { KnowledgeBaseArticle } from "@shared/schema";
 import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
 import type { Descendant } from 'slate';
+import { MentionInput } from '@/components/ui/mention-input';
+import { MentionText } from '@/components/ui/mention-text';
 
 export default function ArticleView() {
   const { id } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
+  const [commentMentions, setCommentMentions] = useState<any[]>([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -243,14 +246,16 @@ export default function ArticleView() {
   });
 
   const commentMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, mentions }: { content: string; mentions: any[] }) => {
       const response = await apiRequest("POST", `/api/knowledge-base/articles/${id}/comments`, {
         content,
+        mentions,
       });
       return await response.json();
     },
     onSuccess: () => {
       setComment("");
+      setCommentMentions([]);
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}/comments`] });
       toast({
         title: "Success",
@@ -616,16 +621,25 @@ export default function ArticleView() {
 
           {/* Add Comment */}
           <div className="mb-6">
-            <Textarea
+            <MentionInput
               data-testid="textarea-comment"
-              placeholder="Share your thoughts..."
+              placeholder="Share your thoughts... Type @ to mention someone"
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(newValue, mentions) => {
+                setComment(newValue);
+                setCommentMentions(mentions);
+              }}
               className="mb-3"
             />
             <Button
               data-testid="button-submit-comment"
-              onClick={() => commentMutation.mutate(comment)}
+              onClick={() => {
+                // Extract just the user IDs for the backend
+                const mentionUserIds = commentMentions
+                  .map(mention => mention.userId)
+                  .filter(Boolean) as string[];
+                commentMutation.mutate({ content: comment, mentions: mentionUserIds });
+              }}
               disabled={!comment.trim() || commentMutation.isPending}
             >
               <Send className="w-4 h-4 mr-2" />
@@ -656,7 +670,9 @@ export default function ArticleView() {
                         {format(new Date(comment.createdAt), 'MMM d, yyyy at h:mm a')}
                       </span>
                     </div>
-                    <p className="text-sm">{comment.content}</p>
+                    <div className="text-sm">
+                      <MentionText text={comment.content} />
+                    </div>
                   </div>
                 </div>
               ))
