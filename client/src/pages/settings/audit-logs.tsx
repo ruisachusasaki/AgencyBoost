@@ -33,7 +33,7 @@ export default function AuditLogs() {
   const userLookup: Record<string, string> = staff.reduce((acc: Record<string, string>, staffMember: any) => {
     acc[staffMember.id] = `${staffMember.firstName} ${staffMember.lastName}`;
     return acc;
-  });
+  }, {});
   
   // Add system fallback for unknown users
   userLookup["system"] = "System Admin";
