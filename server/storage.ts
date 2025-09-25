@@ -4206,6 +4206,7 @@ export class MemStorage implements IStorage {
 // Database storage implementation using PostgreSQL
 
 export class DbStorage implements IStorage {
+  private memStorage = new MemStorage();
   
   constructor() {
     // Initialize auth methods as instance properties to ensure accessibility
