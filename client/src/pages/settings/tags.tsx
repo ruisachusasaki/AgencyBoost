@@ -313,100 +313,113 @@ export default function TagsPage() {
         </p>
       </div>
 
-      {/* Add Tag Button */}
-      <div className="flex justify-end">
-        <Dialog open={showAddDialog} onOpenChange={handleAddDialogClose}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Tag
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Tag</DialogTitle>
-              <DialogDescription>
-                Create a new tag to organize your clients.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...addForm}>
-              <form onSubmit={addForm.handleSubmit(handleAddSubmit)} className="space-y-4">
-                <FormField
-                  control={addForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tag Name *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Enter tag name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={addForm.control}
-                  name="color"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Color</FormLabel>
-                      <FormControl>
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            type="color"
-                            {...field}
-                            value={field.value || "#00C9C6"}
-                            className="w-12 h-10 p-1 border rounded cursor-pointer"
-                          />
-                          <Input
-                            {...field}
-                            value={field.value || "#00C9C6"}
-                            placeholder="#00C9C6"
-                            className="flex-1"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      {/* Search and Add Tag Button */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-80"
+            />
+          </div>
+        </div>
+        <div className="flex space-x-3">
+          <Dialog open={showAddDialog} onOpenChange={handleAddDialogClose}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Tag
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Tag</DialogTitle>
+                <DialogDescription>
+                  Create a new tag to organize your clients.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...addForm}>
+                <form onSubmit={addForm.handleSubmit(handleAddSubmit)} className="space-y-4">
+                  <FormField
+                    control={addForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tag Name *</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter tag name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={addForm.control}
+                    name="color"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Color</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              type="color"
+                              {...field}
+                              value={field.value || "#00C9C6"}
+                              className="w-12 h-10 p-1 border rounded cursor-pointer"
+                            />
+                            <Input
+                              {...field}
+                              value={field.value || "#00C9C6"}
+                              placeholder="#00C9C6"
+                              className="flex-1"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={addForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field}
-                          value={field.value || ""}
-                          placeholder="Optional description for this tag"
-                          rows={3}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={addForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field}
+                            value={field.value || ""}
+                            placeholder="Optional description for this tag"
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => handleAddDialogClose(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createTagMutation.isPending}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    {createTagMutation.isPending ? "Creating..." : "Create Tag"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => handleAddDialogClose(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={createTagMutation.isPending}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      {createTagMutation.isPending ? "Creating..." : "Create Tag"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Tags Table */}
@@ -418,18 +431,6 @@ export default function TagsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-
           <div className="border rounded-md">
             <Table>
               <TableHeader>
