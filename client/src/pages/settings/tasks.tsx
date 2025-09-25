@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, X } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, ArrowLeft, X } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -725,13 +726,25 @@ export default function TasksSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Task Settings</h1>
-          <p className="text-muted-foreground mt-2">
-            Configure task statuses, priorities, categories, and other task management options.
-          </p>
+      {/* Back to Settings */}
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
+      </div>
+
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <Layers className="h-6 w-6 text-primary" />
+          <h2 className="text-3xl font-bold tracking-tight">Task Settings</h2>
         </div>
+        <p className="text-muted-foreground">
+          Configure task statuses, priorities, categories, and other task management options.
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
