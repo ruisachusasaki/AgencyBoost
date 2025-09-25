@@ -751,8 +751,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
+      // Create a cache for user lookups to avoid repeated database queries
+      const userLookupCache = new Map();
+      
+      // Helper function to get user name from database
+      const getUserName = async (userId) => {
+        if (userLookupCache.has(userId)) {
+          return userLookupCache.get(userId);
+        }
+        
+        try {
+          // Use direct database access through storage
+          const staffData = await appStorage.getStaffById(userId);
+          if (staffData) {
+            const fullName = `${staffData.firstName} ${staffData.lastName}`;
+            userLookupCache.set(userId, fullName);
+            return fullName;
+          }
+        } catch (error) {
+          console.error('Error looking up user:', userId, error);
+        }
+        
+        userLookupCache.set(userId, 'Development User');
+        return 'Development User';
+      };
+
       // Calculate user summaries from real data
       const userMap = new Map();
+      
+      // First pass: collect all unique user IDs and batch lookup their names
+      const uniqueUserIds = new Set();
+      tasksWithDetails.forEach(task => {
+        if (!task.timeEntries) return;
+        task.timeEntries.forEach(entry => {
+          if (!entry.startTime || !entry.userId) return;
+          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          if (entryDate >= dateFrom && entryDate <= dateTo) {
+            let resolvedEntryUserId = entry.userId;
+            if (IS_DEVELOPMENT && entry.userId === 'current-user') {
+              resolvedEntryUserId = authenticatedUserId;
+            }
+            uniqueUserIds.add(resolvedEntryUserId);
+          }
+        });
+      });
+
+      // Batch lookup all user names at once
+      for (const userId of uniqueUserIds) {
+        await getUserName(userId);
+      }
       
       tasksWithDetails.forEach(task => {
         if (!task.timeEntries) return;
@@ -777,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!userMap.has(resolvedEntryUserId)) {
             userMap.set(resolvedEntryUserId, {
               userId: resolvedEntryUserId,
-              userName: entry.userName || 'Development User',
+              userName: entry.userName || userLookupCache.get(resolvedEntryUserId) || 'Development User',
               userRole: entry.userRole || 'User',
               totalTime: 0,
               tasksWorked: new Set(),
@@ -838,7 +885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!client.userMap.has(resolvedEntryUserId)) {
             client.userMap.set(resolvedEntryUserId, {
               userId: resolvedEntryUserId,
-              userName: entry.userName || 'Development User',
+              userName: entry.userName || userLookupCache.get(resolvedEntryUserId) || 'Development User',
               userRole: entry.userRole || 'User',
               totalTime: 0,
               tasksWorked: new Set(),
