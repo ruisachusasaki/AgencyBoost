@@ -78,32 +78,33 @@ export function MentionInput({
 
   // Convert display format (@Name) to storage format (@[Name](id)) using stored mentions
   const convertToStorage = useCallback((displayText: string, mentions: MentionMatch[]): string => {
-    let result = displayText;
+    // Updated regex to handle punctuation boundaries and name characters
+    const mentionRegex = /@([A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*){0,2})(?=[\s.,!?;:)\]]|$)/g;
     
-    // Find all @Name patterns in the text (limit to 1-3 words for typical names)
-    const displayMentions = displayText.match(/@[A-Za-z]+(?:\s+[A-Za-z]+){0,2}(?=\s|$)/g) || [];
-    
-    displayMentions.forEach(displayMention => {
-      const name = displayMention.slice(1); // Remove @
+    const result = displayText.replace(mentionRegex, (fullMatch, name) => {
+      const normalizedName = name.trim();
       
       // First try to find in stored mentions (from previous selections)
-      const storedMention = mentions.find(m => m.userName === name);
+      const storedMention = mentions.find(m => 
+        (m.userName || '').trim().toLowerCase() === normalizedName.toLowerCase()
+      );
       if (storedMention) {
-        result = result.replace(displayMention, `@[${storedMention.userName}](${storedMention.userId})`);
-        return;
+        return `@[${storedMention.userName}](${storedMention.userId})`;
       }
       
       // If not found in stored mentions, try to match against staff data
-      // This handles manually typed mentions like "@Dustin Mathews"
       const matchedStaff = staff.find(s => {
-        const fullName = `${s.firstName} ${s.lastName}`;
-        return fullName.toLowerCase() === name.toLowerCase();
+        const fullName = `${s.firstName} ${s.lastName}`.trim();
+        return fullName.toLowerCase() === normalizedName.toLowerCase();
       });
       
       if (matchedStaff) {
         const fullName = `${matchedStaff.firstName} ${matchedStaff.lastName}`;
-        result = result.replace(displayMention, `@[${fullName}](${matchedStaff.id})`);
+        return `@[${fullName}](${matchedStaff.id})`;
       }
+      
+      // If no match found, return original text unchanged
+      return fullMatch;
     });
     
     return result;
