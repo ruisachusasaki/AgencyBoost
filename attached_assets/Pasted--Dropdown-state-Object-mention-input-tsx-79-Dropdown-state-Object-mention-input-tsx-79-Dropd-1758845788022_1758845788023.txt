@@ -1,0 +1,83 @@
+ Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+youtube.js:11 [YOUTUBEJS][Player]: Failed to extract signature decipher algorithm.
+2 @ youtube.js:11Understand this warning
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:118 ❌ No valid mention found, closing dropdown
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:118 ❌ No valid mention found, closing dropdown
+mention-input.tsx:128 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: 
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: 
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:128 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: b
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: b
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:128 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: br
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: br
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:128 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: bri
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: bri
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:128 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: bria
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: bria
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:128 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: brian
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:88 🔍 checkForMention called: Object
+mention-input.tsx:94 🔍 afterAt: brian
+mention-input.tsx:97 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🎯 SHOULD BE RENDERING DROPDOWN AT: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+7298 log entries are not shown.Understand this warning

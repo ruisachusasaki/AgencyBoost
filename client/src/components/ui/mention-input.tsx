@@ -268,52 +268,56 @@ export function MentionInput({
       />
       
       {/* Mention suggestions dropdown - rendered via portal */}
-      {isDropdownOpen && filteredStaff.length > 0 && createPortal(
-        <Card 
-          ref={dropdownRef}
-          className="fixed z-[9999] w-64 max-h-48 overflow-y-auto shadow-lg border"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-            backgroundColor: 'red', // DEBUG: Make it obvious
-            border: '5px solid blue', // DEBUG: Make it obvious
-          }}
-        >
-          <div className="p-2">
-            <div className="text-xs text-muted-foreground mb-2 px-2">
-              Select a team member:
-            </div>
-            {filteredStaff.map((member, index) => (
-              <div
-                key={member.id}
-                className={cn(
-                  "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors",
-                  index === selectedIndex 
-                    ? "bg-primary text-primary-foreground" 
-                    : "hover:bg-muted"
-                )}
-                onClick={() => insertMention(member)}
-                data-testid={`mention-option-${member.id}`}
-              >
-                <Avatar className="w-6 h-6">
-                  <AvatarFallback className="text-xs">
-                    {member.firstName[0]}{member.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {member.firstName} {member.lastName}
-                  </div>
-                  <div className="text-xs opacity-70 truncate">
-                    {member.email}
+      {isDropdownOpen && filteredStaff.length > 0 && (() => {
+        console.log("🚀 ATTEMPTING TO RENDER DROPDOWN VIA PORTAL!");
+        console.log("🎯 Portal target exists?", !!document.body);
+        return createPortal(
+          <Card 
+            ref={dropdownRef}
+            className="fixed z-[9999] w-64 max-h-48 overflow-y-auto shadow-lg border"
+            style={{
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              backgroundColor: 'red', // DEBUG: Make it obvious
+              border: '5px solid blue', // DEBUG: Make it obvious
+            }}
+          >
+            <div className="p-2">
+              <div className="text-xs text-muted-foreground mb-2 px-2">
+                Select a team member:
+              </div>
+              {filteredStaff.map((member, index) => (
+                <div
+                  key={member.id}
+                  className={cn(
+                    "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors",
+                    index === selectedIndex 
+                      ? "bg-primary text-primary-foreground" 
+                      : "hover:bg-muted"
+                  )}
+                  onClick={() => insertMention(member)}
+                  data-testid={`mention-option-${member.id}`}
+                >
+                  <Avatar className="w-6 h-6">
+                    <AvatarFallback className="text-xs">
+                      {member.firstName[0]}{member.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {member.firstName} {member.lastName}
+                    </div>
+                    <div className="text-xs opacity-70 truncate">
+                      {member.email}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </Card>,
-        document.body
-      )}
+              ))}
+            </div>
+          </Card>,
+          document.body
+        );
+      })()}
     </div>
   );
 }
