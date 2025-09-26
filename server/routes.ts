@@ -16225,13 +16225,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to check if user has access to an article
   async function canUserAccessArticle(userId: string, articleId: string, userRole: string): Promise<boolean> {
     try {
-      // Get article info
-      const [article] = await db.select({
-        isPublic: knowledgeBaseArticles.isPublic,
-        createdBy: knowledgeBaseArticles.createdBy,
-      })
-      .from(knowledgeBaseArticles)
-      .where(eq(knowledgeBaseArticles.id, articleId));
+      // Get article info using raw SQL
+      const articleResult = await db.execute(sql`
+        SELECT is_public as "isPublic", created_by as "createdBy"
+        FROM knowledge_base_articles 
+        WHERE id = ${articleId}
+      `);
+      
+      const articles = Array.isArray(articleResult) ? articleResult : articleResult.rows;
+      const article = articles && articles.length > 0 ? articles[0] : null;
       
       if (!article) return false;
       
@@ -16241,27 +16243,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If user is the author, they can access
       if (article.createdBy === userId) return true;
       
-      // Check if user has specific permissions
-      const permissions = await db.select()
-        .from(knowledgeBasePermissions)
-        .where(
-          and(
-            eq(knowledgeBasePermissions.resourceType, 'article'),
-            eq(knowledgeBasePermissions.resourceId, articleId),
-            or(
-              and(
-                eq(knowledgeBasePermissions.accessType, 'user'),
-                eq(knowledgeBasePermissions.accessId, userId)
-              ),
-              and(
-                eq(knowledgeBasePermissions.accessType, 'role'),
-                eq(knowledgeBasePermissions.accessId, userRole)
-              )
-            )
+      // Check if user has specific permissions using raw SQL
+      const permissionsResult = await db.execute(sql`
+        SELECT * FROM knowledge_base_permissions
+        WHERE resource_type = 'article' 
+          AND resource_id = ${articleId}
+          AND (
+            (access_type = 'user' AND access_id = ${userId})
+            OR (access_type = 'role' AND access_id = ${userRole})
           )
-        );
+      `);
       
-      return permissions.length > 0;
+      const permissions = Array.isArray(permissionsResult) ? permissionsResult : permissionsResult.rows;
+      return permissions && permissions.length > 0;
     } catch (error) {
       console.error('Error checking article access:', error);
       return false;
@@ -16310,10 +16304,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      // Get user role
-      const [currentUser] = await db.select({ role: staff.role })
-        .from(staff)
-        .where(eq(staff.id, userId));
+      // Get user role using raw SQL
+      const userResult = await db.execute(sql`
+        SELECT role_id as role FROM staff WHERE id = ${userId}
+      `);
+      const users = Array.isArray(userResult) ? userResult : userResult.rows;
+      const currentUser = users && users.length > 0 ? users[0] : null;
       
       if (!currentUser) {
         return res.status(401).json({ message: "User not found" });
@@ -16325,28 +16321,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this article" });
       }
       
-      const [article] = await db.select({
-        id: knowledgeBaseArticles.id,
-        title: knowledgeBaseArticles.title,
-        content: knowledgeBaseArticles.content,
-        excerpt: knowledgeBaseArticles.excerpt,
-        categoryId: knowledgeBaseArticles.categoryId,
-        parentId: knowledgeBaseArticles.parentId,
-        slug: knowledgeBaseArticles.slug,
-        status: knowledgeBaseArticles.status,
-        featuredImage: knowledgeBaseArticles.featuredImage,
-        tags: knowledgeBaseArticles.tags,
-        viewCount: knowledgeBaseArticles.viewCount,
-        likeCount: knowledgeBaseArticles.likeCount,
-        isPublic: knowledgeBaseArticles.isPublic,
-        createdAt: knowledgeBaseArticles.createdAt,
-        updatedAt: knowledgeBaseArticles.updatedAt,
-        authorName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown Author')`,
-        authorId: knowledgeBaseArticles.createdBy,
-      })
-      .from(knowledgeBaseArticles)
-      .leftJoin(staff, eq(knowledgeBaseArticles.createdBy, staff.id))
-      .where(eq(knowledgeBaseArticles.id, req.params.id));
+      const articleResult = await db.execute(sql`
+        SELECT 
+          kba.id,
+          kba.title,
+          kba.content,
+          kba.excerpt,
+          kba.category_id as "categoryId",
+          kba.parent_id as "parentId",
+          kba.slug,
+          kba.status,
+          kba.featured_image as "featuredImage",
+          kba.tags,
+          kba.view_count as "viewCount",
+          kba.like_count as "likeCount",
+          kba.is_public as "isPublic",
+          kba.created_at as "createdAt",
+          kba.updated_at as "updatedAt",
+          COALESCE(s.first_name || ' ' || s.last_name, 'Unknown Author') as "authorName",
+          kba.created_by as "authorId"
+        FROM knowledge_base_articles kba
+        LEFT JOIN staff s ON kba.created_by = s.id
+        WHERE kba.id = ${req.params.id}
+      `);
+      
+      const articles = Array.isArray(articleResult) ? articleResult : articleResult.rows;
+      const article = articles && articles.length > 0 ? articles[0] : null;
       
       if (!article) {
         return res.status(404).json({ message: "Article not found" });
@@ -16354,15 +16354,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Track view if user is logged in
       if (userId) {
-        await db.insert(knowledgeBaseViews).values({
-          articleId: req.params.id,
-          userId,
-        });
-        
-        // Increment view count
-        await db.update(knowledgeBaseArticles)
-          .set({ viewCount: sql`${knowledgeBaseArticles.viewCount} + 1` })
-          .where(eq(knowledgeBaseArticles.id, req.params.id));
+        try {
+          await db.execute(sql`
+            INSERT INTO knowledge_base_views (article_id, user_id, created_at)
+            VALUES (${req.params.id}, ${userId}, NOW())
+          `);
+          
+          // Increment view count
+          await db.execute(sql`
+            UPDATE knowledge_base_articles
+            SET view_count = view_count + 1
+            WHERE id = ${req.params.id}
+          `);
+        } catch (viewError) {
+          // View tracking errors shouldn't block article display
+          console.warn('View tracking error:', viewError);
+        }
       }
       
       res.json(article);
