@@ -242,9 +242,9 @@ export function MentionInput({
       parts.push(
         <span key={index}>
           <span className="bg-primary/20 text-primary rounded">@</span>
-          <span className="opacity-0 select-none">[</span>
+          <span className="absolute opacity-0 select-none pointer-events-none w-0 h-0 overflow-hidden">[</span>
           <span className="bg-primary/20 text-primary rounded">{mention.userName}</span>
-          <span className="opacity-0 select-none">]({mention.userId})</span>
+          <span className="absolute opacity-0 select-none pointer-events-none w-0 h-0 overflow-hidden">]({mention.userId})</span>
         </span>
       );
       
