@@ -16705,13 +16705,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      // Check if user can manage permissions for this article
-      const [article] = await db.select({
-        isPublic: knowledgeBaseArticles.isPublic,
-        createdBy: knowledgeBaseArticles.createdBy,
-      })
-      .from(knowledgeBaseArticles)
-      .where(eq(knowledgeBaseArticles.id, req.params.id));
+      // Check if user can manage permissions for this article using raw SQL
+      const articleResult = await db.execute(sql`
+        SELECT is_public, created_by FROM knowledge_base_articles WHERE id = ${req.params.id}
+      `);
+      const articleRows = Array.isArray(articleResult) ? articleResult : articleResult.rows;
+      const article = articleRows && articleRows.length > 0 ? articleRows[0] : null;
 
       if (!article) {
         return res.status(404).json({ message: "Article not found" });
@@ -16742,7 +16741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       res.json({
-        isPublic: article.isPublic,
+        isPublic: article.is_public,
         permissions: permissions
       });
     } catch (error) {
@@ -16758,13 +16757,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { isPublic, permissions } = req.body;
 
-      // Check if user can manage permissions for this article
-      const [article] = await db.select({
-        isPublic: knowledgeBaseArticles.isPublic,
-        createdBy: knowledgeBaseArticles.createdBy,
-      })
-      .from(knowledgeBaseArticles)
-      .where(eq(knowledgeBaseArticles.id, req.params.id));
+      // Check if user can manage permissions for this article using raw SQL
+      const articleResult = await db.execute(sql`
+        SELECT is_public, created_by FROM knowledge_base_articles WHERE id = ${req.params.id}
+      `);
+      const articleRows = Array.isArray(articleResult) ? articleResult : articleResult.rows;
+      const article = articleRows && articleRows.length > 0 ? articleRows[0] : null;
 
       if (!article) {
         return res.status(404).json({ message: "Article not found" });
@@ -16775,18 +16773,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(staff)
         .where(eq(staff.id, userId));
 
-      if (!currentUser || (article.createdBy !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
+      if (!currentUser || (article.created_by !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Update article visibility
+      // Update article visibility using raw SQL
       if (typeof isPublic === 'boolean') {
-        await db.update(knowledgeBaseArticles)
-          .set({ 
-            isPublic: isPublic,
-            updatedAt: new Date()
-          })
-          .where(eq(knowledgeBaseArticles.id, req.params.id));
+        await db.execute(sql`
+          UPDATE knowledge_base_articles 
+          SET is_public = ${isPublic}, updated_at = NOW() 
+          WHERE id = ${req.params.id}
+        `);
       }
 
       // Update permissions
