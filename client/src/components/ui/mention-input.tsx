@@ -45,6 +45,7 @@ export function MentionInput({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   // Fetch staff data for mentions
   const { data: staff = [] } = useQuery<Staff[]>({
@@ -84,8 +85,10 @@ export function MentionInput({
     
     if (lastAtSymbol !== -1) {
       const afterAt = beforeCursor.slice(lastAtSymbol + 1);
-      // Check if there's no space after @ (valid mention start)
-      if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
+      // Check if there's no space after @ and we're not inside an existing mention
+      if (!afterAt.includes(' ') && !afterAt.includes('\n') && 
+          !/^[\w.-]*\[/.test(afterAt) && // Don't trigger if we're inside @[Name](id)
+          /^[\w.-]*$/.test(afterAt)) {    // Only alphanumeric, dots, dashes
         setMentionQuery(afterAt);
         setIsDropdownOpen(true);
         setSelectedIndex(0);
@@ -118,6 +121,14 @@ export function MentionInput({
     
     const mentions = parseMentions(newValue);
     onChange(newValue, mentions);
+  };
+
+  // Handle scroll synchronization
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (overlayRef.current && textareaRef.current) {
+      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
+      overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
   };
 
   // Handle cursor position change
@@ -204,7 +215,15 @@ export function MentionInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Render text with highlighted mentions
+  // Sync scroll position on value change
+  useEffect(() => {
+    if (overlayRef.current && textareaRef.current) {
+      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
+      overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  }, [value]);
+
+  // Render text with highlighted mentions while preserving exact width
   const renderTextWithMentions = () => {
     const mentions = parseMentions(value);
     if (mentions.length === 0) return value;
@@ -218,13 +237,14 @@ export function MentionInput({
         parts.push(value.slice(lastIndex, mention.start));
       }
       
-      // Add highlighted mention
+      // Render mention with exact character-by-character width preservation
+      // Source: @[Name](id) -> visible: @ + Name, hidden: [ + ](id)
       parts.push(
-        <span 
-          key={index} 
-          className="bg-primary/20 text-primary px-1 rounded"
-        >
-          @{mention.userName}
+        <span key={index}>
+          <span className="bg-primary/20 text-primary rounded">@</span>
+          <span className="opacity-0 select-none">[</span>
+          <span className="bg-primary/20 text-primary rounded">{mention.userName}</span>
+          <span className="opacity-0 select-none">]({mention.userId})</span>
         </span>
       );
       
@@ -241,6 +261,26 @@ export function MentionInput({
 
   return (
     <div className="relative">
+      {/* Visual overlay showing styled text with @Name only */}
+      <div 
+        ref={overlayRef}
+        className={cn(
+          "absolute inset-0 pointer-events-none z-10 px-3 py-2 min-h-[80px] border border-transparent rounded-md text-sm whitespace-pre-wrap break-words overflow-auto text-foreground",
+          disabled && "opacity-50"
+        )}
+        style={{
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+        }}
+      >
+        {value === "" ? (
+          <span className="text-muted-foreground">{placeholder}</span>
+        ) : (
+          renderTextWithMentions()
+        )}
+      </div>
+      
+      {/* Actual textarea - transparent text for functionality */}
       <Textarea
         ref={textareaRef}
         value={value}
@@ -248,10 +288,14 @@ export function MentionInput({
         onKeyDown={handleKeyDown}
         onSelect={handleCursorChange}
         onClick={handleCursorChange}
-        placeholder={placeholder}
-        className={cn("min-h-[80px]", className)}
+        onScroll={handleScroll}
+        placeholder="" // Hide native placeholder
+        className={cn("min-h-[80px] relative z-20 text-transparent caret-neutral-900 dark:caret-neutral-100 selection:bg-blue-200", className)}
         disabled={disabled}
         data-testid={dataTestId}
+        style={{
+          background: 'transparent',
+        }}
       />
       
       {/* Mention suggestions dropdown - rendered via portal */}
