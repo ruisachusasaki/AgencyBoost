@@ -197,18 +197,48 @@ export function MentionInput({
     }
   };
 
-  // Handle blur - final chance to convert any unresolved mentions
+  // Handle blur - SIMPLE AND GUARANTEED conversion
   const handleBlur = () => {
-    if (staff.length > 0 && displayValue) {
-      const existingMentions = parseMentions(value);
-      const newStorageValue = convertToStorage(displayValue, existingMentions);
-      const newMentions = parseMentions(newStorageValue);
+    if (staff.length === 0) {
+      setIsDropdownOpen(false);
+      return;
+    }
+
+    // Simple pattern: find @Name and convert to storage format
+    let converted = displayValue;
+    const newMentions: MentionMatch[] = [];
+    
+    // Find all @Name patterns (allowing for common punctuation)
+    const mentionMatches = displayValue.matchAll(/@([A-Za-z][A-Za-z\s'-]{1,30})(?=[\s.,!?;:)\]]|$)/g);
+    
+    for (const match of mentionMatches) {
+      const fullMatch = match[0]; // "@Dustin Mathews"
+      const nameCandidate = match[1].trim(); // "Dustin Mathews"
       
-      // Emit the final converted value
-      if (newStorageValue !== value) {
-        onChange(newStorageValue, newMentions);
+      // Skip if already converted to storage format  
+      if (converted.includes(`@[${nameCandidate}](`)) continue;
+      
+      // Find exact staff match
+      const staffMatch = staff.find(s => {
+        const fullName = `${s.firstName} ${s.lastName}`;
+        return fullName.toLowerCase() === nameCandidate.toLowerCase();
+      });
+      
+      if (staffMatch) {
+        const fullName = `${staffMatch.firstName} ${staffMatch.lastName}`;
+        const storageFormat = `@[${fullName}](${staffMatch.id})`;
+        converted = converted.replace(fullMatch, storageFormat);
+        
+        newMentions.push({
+          userId: staffMatch.id,
+          userName: fullName
+        });
       }
     }
+    
+    // Always emit the result
+    onChange(converted, newMentions);
+    setDisplayValue(convertToDisplay(converted));
     setIsDropdownOpen(false);
   };
 
