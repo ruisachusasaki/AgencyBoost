@@ -114,6 +114,20 @@ export function MentionInput({
     setDisplayValue(convertToDisplay(value));
   }, [value, convertToDisplay]);
 
+  // Re-run conversion when staff data loads to catch any unresolved mentions
+  useEffect(() => {
+    if (staff.length > 0 && displayValue) {
+      const existingMentions = parseMentions(value);
+      const newStorageValue = convertToStorage(displayValue, existingMentions);
+      const newMentions = parseMentions(newStorageValue);
+      
+      // Only emit if the storage value actually changed
+      if (newStorageValue !== value) {
+        onChange(newStorageValue, newMentions);
+      }
+    }
+  }, [staff.length, displayValue, value, convertToStorage, parseMentions, onChange]);
+
   // Filter staff based on mention query
   const filteredStaff = staff.filter((member) => {
     const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
@@ -180,6 +194,21 @@ export function MentionInput({
       setCursorPosition(newPosition);
       checkForMention(displayValue, newPosition);
     }
+  };
+
+  // Handle blur - final chance to convert any unresolved mentions
+  const handleBlur = () => {
+    if (staff.length > 0 && displayValue) {
+      const existingMentions = parseMentions(value);
+      const newStorageValue = convertToStorage(displayValue, existingMentions);
+      const newMentions = parseMentions(newStorageValue);
+      
+      // Emit the final converted value
+      if (newStorageValue !== value) {
+        onChange(newStorageValue, newMentions);
+      }
+    }
+    setIsDropdownOpen(false);
   };
 
   // Insert mention
@@ -268,6 +297,7 @@ export function MentionInput({
         ref={textareaRef}
         value={displayValue}
         onChange={handleTextChange}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onSelect={handleCursorChange}
         onClick={handleCursorChange}
