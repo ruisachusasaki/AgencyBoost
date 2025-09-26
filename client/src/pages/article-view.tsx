@@ -634,11 +634,32 @@ export default function ArticleView() {
             <Button
               data-testid="button-submit-comment"
               onClick={() => {
-                // Extract just the user IDs for the backend
-                const mentionUserIds = commentMentions
-                  .map(mention => mention.userId)
-                  .filter(Boolean) as string[];
-                commentMutation.mutate({ content: comment, mentions: mentionUserIds });
+                // SIMPLE CONVERSION: Convert @Name to @[Name](id) format before sending
+                let finalContent = comment;
+                const finalMentions: string[] = [];
+                
+                // Find all @Name patterns and convert them
+                const staffList = staff || [];
+                const mentionMatches = comment.matchAll(/@([A-Za-z][A-Za-z\s'-]+?)(?=[\s.,!?;:)\]\n]|$)/g);
+                
+                for (const match of mentionMatches) {
+                  const fullMatch = match[0]; // "@Dustin Mathews"
+                  const name = match[1].trim(); // "Dustin Mathews"
+                  
+                  // Find matching staff member
+                  const staffMatch = staffList.find(s => {
+                    const fullName = `${s.firstName} ${s.lastName}`;
+                    return fullName.toLowerCase() === name.toLowerCase();
+                  });
+                  
+                  if (staffMatch) {
+                    const storageFormat = `@[${staffMatch.firstName} ${staffMatch.lastName}](${staffMatch.id})`;
+                    finalContent = finalContent.replace(fullMatch, storageFormat);
+                    finalMentions.push(staffMatch.id);
+                  }
+                }
+                
+                commentMutation.mutate({ content: finalContent, mentions: finalMentions });
               }}
               disabled={!comment.trim() || commentMutation.isPending}
             >
